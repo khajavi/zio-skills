@@ -1,0 +1,20 @@
+{
+  "name": "zio-skills-dev",
+  "description": "Development marketplace for ZIO skills library",
+  "owner": {
+    "name": "khajavi",
+    "email": "khajavi@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "zio-skills",
+      "description": "Coding agent skills for building applications with ZIO and ZIO HTTP. Start here for server scaffolding, OpenAPI code generation, endpoint API patterns, and more.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "khajavi",
+        "email": "khajavi@gmail.com"
+      }
+    }
+  ]
+}
