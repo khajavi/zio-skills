@@ -62,53 +62,6 @@ Add to `opencode.json`:
 }
 ```
 
-## Uninstallation
-
-### Claude Code
-
-If installed from GitHub marketplace:
-```bash
-claude plugin uninstall khajavi/zio-skills
-```
-
-If installed locally from a marketplace:
-```bash
-claude plugin uninstall zio-skills@<marketplace-name>
-```
-
-For example, if installed from local path:
-```bash
-claude plugin uninstall zio-skills@zio-skills-dev
-```
-
-Or manually remove from `~/.claude/settings.json`:
-```bash
-# Edit ~/.claude/settings.json and remove the zio-skills plugin entry
-```
-
-### Cursor
-```bash
-cursor plugin uninstall khajavi/zio-skills
-```
-
-### Gemini CLI
-Remove the `@plugin` directive from your `.gemini` file or Gemini config:
-```bash
-# Remove or comment out this line:
-# @plugin khajavi/zio-skills/GEMINI.md
-```
-
-### Codex
-```bash
-rm -rf ~/.agents/skills/zio-skills
-```
-
-### OpenCode
-Remove from `opencode.json`:
-```bash
-# Edit opencode.json and remove the zio-skills plugin entry
-```
-
 ## Skills
 
 ### ZIO HTTP
