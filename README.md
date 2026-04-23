@@ -6,26 +6,19 @@ Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to bui
 
 ### Claude Code
 
-Clone the repository and install from local path:
+First, add the plugin to your marketplace and then install it from the marketplace:
 
 ```bash
-git clone https://github.com/khajavi/zio-skills.git
-cd zio-skills
-claude plugin marketplace add .
+claude plugin marketplace add khajavi/zio-skills
 claude plugin install zio-skills@zio-skills-dev
 ```
 
 Then invoke a skill in Claude Code:
 ```
-/skill zio-http-scaffold
-/skill zio-http-openapi-to-endpoint
-/skill zio-http-endpoint-to-openapi
-/skill zio-http-imperative-to-declarative
-```
-
-**Note:** Once published to the official marketplace, you'll be able to install with:
-```bash
-claude plugin install khajavi/zio-skills
+/zio-http-scaffold
+/zio-http-openapi-to-endpoint
+/zio-http-endpoint-to-openapi
+/zio-http-imperative-to-declarative
 ```
 
 ### Cursor
