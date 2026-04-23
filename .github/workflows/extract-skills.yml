@@ -1,0 +1,45 @@
+name: Extract Skills from Packages
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+    branches:
+      - 'renovate/**'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  extract-skills:
+    runs-on: ubuntu-latest
+    if: contains(github.head_ref, 'renovate')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Extract skills from packages
+        run: npm run extract-skills
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if git diff --quiet skills/; then
+            echo "No skills changes detected"
+          else
+            git add skills/
+            git commit -m "chore: sync skills from npm packages" || echo "No changes to commit"
+            git push origin ${{ github.head_ref }}
+          fi
