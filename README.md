@@ -30,8 +30,14 @@ Skills auto-load in Cursor's agent context.
 
 ### Gemini CLI
 
-```
+```bash
 gemini extensions install https://github.com/khajavi/zio-skills
+```
+
+To update:
+
+```bash
+gemini extensions update zio-skills
 ```
 
 ### Codex
