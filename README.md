@@ -126,4 +126,4 @@ Skills are curated learning resources. See [CLAUDE.md](CLAUDE.md) for contributi
 
 ## License
 
-MIT
+[License](LICENSE)
