@@ -20,6 +20,37 @@ This skill teaches a 6-step workflow to create production-ready developer skills
 
 **Key outcome:** 1-4 SKILL.md files that teach agents WHEN and HOW to use a library pattern, complete with working code examples verified to compile and run.
 
+### Where Skills Live (Distributed Architecture)
+
+Skills are **maintained in each library's source repo**, not in a central registry:
+
+```
+zio/zio-http/docs/skills/          ← Maintained by zio-http team
+├── zio-http-scaffold/
+│   └── SKILL.md
+├── zio-http-openapi-to-endpoint/
+│   └── SKILL.md
+└── ...
+
+zio/zio-streams/docs/skills/       ← Maintained by zio-streams team (future)
+├── zio-streams-consume/
+│   └── SKILL.md
+└── ...
+
+zio/zio-skills/skills/             ← Auto-generated from npm packages
+├── zio-http-scaffold/             (copied from @zio.dev/zio-http)
+├── zio-streams-consume/           (copied from @zio.dev/zio-streams)
+└── ...
+```
+
+**How it works:**
+1. Library teams create/update skills in `<lib>/docs/skills/` within their own repo
+2. At release time, skills are published to npm as `@zio.dev/<lib>`
+3. Renovate bot in `zio/zio-skills` detects new versions and auto-syncs skills
+4. Central registry is always in sync with the latest library release
+
+This ensures skills are always up-to-date because library maintainers update them when APIs change.
+
 ---
 
 ## Step 1 — Gather Library Information
@@ -158,11 +189,32 @@ Use the canonical template proven by the 4 ZIO HTTP skills.
 
 ### Directory structure for each skill
 
+Skills are created in the **library's own source repo**, not in zio-skills:
+
 ```
-zio-skills/skills/
+zio/<lib-name>/docs/skills/
 └── <lib-short>-<feature>/
     └── SKILL.md
 ```
+
+**Example for zio-http:**
+```
+zio/zio-http/docs/skills/
+├── zio-http-scaffold/SKILL.md
+├── zio-http-openapi-to-endpoint/SKILL.md
+├── zio-http-endpoint-to-openapi/SKILL.md
+└── zio-http-imperative-to-declarative/SKILL.md
+```
+
+**Example for zio-config (future):**
+```
+zio/zio-config/docs/skills/
+├── zio-config-load/SKILL.md
+├── zio-config-typesafe/SKILL.md
+└── zio-config-validate/SKILL.md
+```
+
+The central `zio/zio-skills` registry will auto-extract these during npm package publish.
 
 ### Template: SKILL.md structure
 
