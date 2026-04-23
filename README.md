@@ -54,12 +54,15 @@ $skill-installer khajavi/zio-skills
 ```
 
 ### OpenCode
+
 Add to `opencode.json`:
 ```json
 {
-  "plugin": ["zio-skills@git+https://github.com/khajavi/zio-skills.git"]
+  "plugin": ["zio-skills@git://github.com/khajavi/zio-skills.git"]
 }
 ```
+
+**Note:** Use `git://` protocol, not `git+https://`. OpenCode resolves `git://` URLs correctly for plugin discovery.
 
 ## Uninstallation
 
