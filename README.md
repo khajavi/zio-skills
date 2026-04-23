@@ -5,8 +5,16 @@ Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to bui
 ## Installation
 
 ### Claude Code
+
+From GitHub marketplace (once published):
 ```bash
 claude plugin install khajavi/zio-skills
+```
+
+Or from a local marketplace path:
+```bash
+claude plugin marketplace add /path/to/zio-skills
+claude plugin install zio-skills@<marketplace-name>
 ```
 
 Then invoke a skill in Claude Code:
@@ -47,11 +55,23 @@ Add to `opencode.json`:
 ## Uninstallation
 
 ### Claude Code
+
+If installed from GitHub marketplace:
 ```bash
 claude plugin uninstall khajavi/zio-skills
 ```
 
-Or remove from `~/.claude/settings.json`:
+If installed locally from a marketplace:
+```bash
+claude plugin uninstall zio-skills@<marketplace-name>
+```
+
+For example, if installed from local path:
+```bash
+claude plugin uninstall zio-skills@zio-skills-dev
+```
+
+Or manually remove from `~/.claude/settings.json`:
 ```bash
 # Edit ~/.claude/settings.json and remove the zio-skills plugin entry
 ```
