@@ -22,11 +22,10 @@ Then invoke a skill in Claude Code:
 ```
 
 ### Cursor
-```bash
-cursor plugin install khajavi/zio-skills
-```
 
-Skills auto-load in Cursor's agent context.
+```bash
+/add-plugin zio-skills
+```
 
 ### Gemini CLI
 
