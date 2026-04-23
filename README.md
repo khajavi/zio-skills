@@ -1,6 +1,6 @@
-# ZIO Skills — Teach Your Agent to Build Production-Grade ZIO Applications
+# ZIO Skills — Teach Your Agent to Build ZIO Applications
 
-Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to build production-grade ZIO applications.
+Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to build ZIO applications.
 
 ## Installation
 
