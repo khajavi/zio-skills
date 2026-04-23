@@ -40,9 +40,17 @@ gemini extensions update zio-skills
 ```
 
 ### Codex
+
 Clone the repo and symlink:
+
 ```bash
 git clone https://github.com/khajavi/zio-skills.git ~/.agents/skills/zio-skills
+```
+
+or user Skill Installer inside codex cli:
+
+```bash
+$skill-installer khajavi/zio-skills
 ```
 
 ### OpenCode
