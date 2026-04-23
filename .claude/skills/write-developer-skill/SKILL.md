@@ -287,14 +287,6 @@ See existing `skills/zio-http-scaffold/SKILL.md` for a working reference. Your `
 
 Confirm all code examples actually compile against real dependencies by creating a clean, isolated test project.
 
-### Why a fresh project?
-
-Creating a new project from scratch for each library:
-- Isolates dependencies (don't pollute shared example projects)
-- Tests that users can follow your SKILL.md in a virgin environment
-- Prevents conflicts between multiple libraries being tested
-- Allows proper cleanup after testing
-
 ### Procedure
 
 #### 1. Create a temporary test project directory
