@@ -29,9 +29,9 @@ cursor plugin install khajavi/zio-skills
 Skills auto-load in Cursor's agent context.
 
 ### Gemini CLI
-Add to your Gemini config or project `.gemini` file:
+
 ```
-@plugin khajavi/zio-skills/GEMINI.md
+gemini extensions install https://github.com/khajavi/zio-skills
 ```
 
 ### Codex
