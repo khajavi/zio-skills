@@ -62,8 +62,6 @@ Add to `opencode.json`:
 }
 ```
 
-**Note:** Use `git://` protocol, not `git+https://`. OpenCode resolves `git://` URLs correctly for plugin discovery.
-
 ## Uninstallation
 
 ### Claude Code
