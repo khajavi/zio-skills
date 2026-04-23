@@ -285,71 +285,148 @@ See existing `skills/zio-http-scaffold/SKILL.md` for a working reference. Your `
 
 ## Step 5 — Verify Code Compiles (Phase 3)
 
-Confirm all code examples actually compile against real dependencies.
+Confirm all code examples actually compile against real dependencies by creating a clean, isolated test project.
 
-### Where to compile
+### Why a fresh project?
 
-Use the existing **zio-http monorepo** at `/home/milad/sources/scala/zio-http/` as your test environment. It has:
-- All ZIO library artifacts cached in `~/.ivy2/cache`
-- sbt configured correctly
-- An example project (`zio-http-example`) ready for compilation tests
+Creating a new project from scratch for each library:
+- Isolates dependencies (don't pollute shared example projects)
+- Tests that users can follow your SKILL.md in a virgin environment
+- Prevents conflicts between multiple libraries being tested
+- Allows proper cleanup after testing
 
 ### Procedure
 
-#### 1. Create a verification Scala file
+#### 1. Create a temporary test project directory
 
-In `zio-http-example/src/main/scala/example/`, create:
+```bash
+TEMP_PROJECT="/tmp/zio-skill-verify-<lib-name>"
+mkdir -p "$TEMP_PROJECT/src/main/scala"
+cd "$TEMP_PROJECT"
+```
+
+#### 2. Create `build.sbt`
 
 ```scala
-// example/SkillVerification<LibName>.scala
-package example
+// build.sbt
+name := "skill-verify"
+version := "0.1.0"
+scalaVersion := "2.13.13"
 
+libraryDependencies ++= Seq(
+  "dev.zio" %% "zio" % "2.1.25",
+  "dev.zio" %% "{{ARTIFACT_1}}" % "{{VERSION}}",
+  "dev.zio" %% "{{ARTIFACT_2}}" % "{{VERSION}}"  // Add all your skill dependencies
+)
+```
+
+#### 3. Create test Scala files
+
+For each skill, create a separate verification file:
+
+```bash
+# For skill: zio-config-load
+cat > src/main/scala/SkillVerificationZioConfig.scala << 'EOF'
 import zio._
-import zio.{{lib}}._
+import zio.config._
 
-// Skill 1: {{Name}}
-object {{Skill1Name}} {
-  // Copy the code from Step 2 of your SKILL.md
-  // Make it top-level vals/objects (not inside a class)
+// Copy code from Step 2 of zio-config-load SKILL.md
+object VerifyZioConfigLoad {
+  // Top-level vals/objects (not inside a class)
+  val example1 = ConfigProvider.fromHocon
+  
+  // Skill code here...
 }
+EOF
+```
 
-// Skill 2: {{Name}}
-object {{Skill2Name}} {
-  // ...
+Do this for each skill you're testing. One file per skill.
+
+#### 4. Compile with sbt
+
+```bash
+cd "$TEMP_PROJECT"
+sbt compile
+```
+
+#### 5. Check for success
+
+```bash
+ls -la target/scala-2.13/classes/SkillVerification*.class
+```
+
+If files exist: ✅ **Compilation succeeded**
+
+#### 6. Handle compilation errors
+
+If `sbt compile` fails:
+
+```
+[error] /tmp/zio-skill-verify-config/src/main/scala/SkillVerificationZioConfig.scala:5:10
+[error] not found: value ConfigProvider
+```
+
+**Fix process:**
+1. Read the error carefully (missing import, wrong type, API changed)
+2. Check [Scaladoc](https://javadoc.io/doc/dev.zio/) for correct API
+3. Update your SKILL.md code block to match the actual library API
+4. Fix the test file and re-run `sbt compile`
+5. Repeat until all skills compile
+
+Common issues:
+- **Missing import**: Add `import zio.<module>._` to the test file
+- **Wrong artifact name**: Verify Maven coordinates on [mvnrepository.com](https://mvnrepository.com)
+- **Version mismatch**: Check that `build.sbt` version matches your skill documentation
+- **Deprecated API**: Check GitHub issues or Scaladoc for the new API name
+
+#### 7. Clean up
+
+```bash
+rm -rf "$TEMP_PROJECT"
+```
+
+### Example: Full test for zio-config-load
+
+```bash
+# Create project
+mkdir -p /tmp/zio-skill-verify-config/src/main/scala
+cd /tmp/zio-skill-verify-config
+
+# Create build.sbt
+cat > build.sbt << 'EOF'
+name := "skill-verify"
+scalaVersion := "2.13.13"
+libraryDependencies ++= Seq(
+  "dev.zio" %% "zio" % "2.1.25",
+  "dev.zio" %% "zio-config" % "4.0.1",
+  "dev.zio" %% "zio-config-typesafe" % "4.0.1"
+)
+EOF
+
+# Create test file
+cat > src/main/scala/SkillVerificationZioConfig.scala << 'EOF'
+import zio._
+import zio.config._
+import zio.config.typesafe.TypesafeConfigProvider
+
+object VerifyZioConfigLoad {
+  // Code from zio-config-load SKILL.md step 2
+  val provider = TypesafeConfigProvider.fromResourcePath("application.conf")
 }
+EOF
+
+# Compile
+sbt compile
+
+# Verify
+ls -la target/scala-2.13/classes/SkillVerification*.class
+
+# Clean up
+cd /tmp
+rm -rf /tmp/zio-skill-verify-config
 ```
 
-#### 2. Compile
-
-```bash
-cd /home/milad/sources/scala/zio-http
-sbt "zioHttpExample/compile"
-```
-
-#### 3. Verify success
-
-Check for `.class` files:
-```bash
-ls -la zio-http-example/target/scala-2.13/classes/example/SkillVerification*.class
-```
-
-**If compilation fails:**
-- Read the error message (missing import, wrong type, API mismatch)
-- Update your SKILL.md code block to match the actual API
-- Re-run `sbt compile` and verify
-
-**If you hit `-Werror` on unrelated files:**
-```bash
-# Temporarily move the problematic example file
-mv zio-http-example/src/main/scala/example/ExampleAopp.scala \
-   zio-http-example/src/main/scala/example/ExampleAopp.scala.bak
-
-sbt "zioHttpExample/compile"
-
-# Restore it
-mv zio-http-example/src/main/scala/example/ExampleAopp.scala.bak \
-   zio-http-example/src/main/scala/example/ExampleAopp.scala
-```
+**Result:** ✅ If `target/scala-2.13/classes/SkillVerificationZioConfig.class` exists, your skill examples compile correctly.
 
 ---
 
