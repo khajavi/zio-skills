@@ -518,8 +518,9 @@ End with:
 
 ```bash
 # One time per skill
-mkdir -p /home/milad/sources/zio-skills/skills/<lib-short>-<feature>
-cat > /home/milad/sources/zio-skills/skills/<lib-short>-<feature>/SKILL.md << 'EOF'
+SKILL_DIR="skills/<lib-short>-<feature>"
+mkdir -p "$SKILL_DIR"
+cat > "$SKILL_DIR/SKILL.md" << 'EOF'
 ---
 name: <lib-short>-<feature>
 ...
@@ -529,11 +530,12 @@ EOF
 ### Commit and push
 
 ```bash
-cd /home/milad/sources/zio-skills
 git add skills/<lib-short>-<feature>/SKILL.md
 git commit -m "feat: add <lib-short>-<feature> skill"
 git push origin main
 ```
+
+**Note:** Run these commands from the root of the zio-skills repository.
 
 ---
 
@@ -573,4 +575,4 @@ A: Start with 2-4 that cover the "first steps" a user would ask. More can be add
 - **ZIO documentation**: [zio.dev](https://zio.dev)
 - **ZIO GitHub**: [github.com/zio](https://github.com/zio)
 - **Maven Central**: [mvnrepository.com](https://mvnrepository.com)
-- **Existing skills**: [/home/milad/sources/zio-skills/skills/](file:///home/milad/sources/zio-skills/skills/)
+- **Existing skills**: Browse the `skills/` directory in the zio-skills repository
