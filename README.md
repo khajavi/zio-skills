@@ -10,7 +10,7 @@ First, add the plugin to your marketplace and then install it from the marketpla
 
 ```bash
 claude plugin marketplace add khajavi/zio-skills
-claude plugin install zio-skills@zio-skills-dev
+claude plugin install zio-skills@ziogenetics
 ```
 
 Then invoke a skill in Claude Code:

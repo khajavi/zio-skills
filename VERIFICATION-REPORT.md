@@ -13,8 +13,8 @@ The `khajavi/zio-skills` plugin has been successfully created, installed, and in
 ### ✅ Phase 1: Plugin Installation — PASSED
 
 - Hook script executable: `/home/milad/sources/zio-skills/hooks/session-start`
-- Marketplace registered: `zio-skills-dev` (local path)
-- Plugin installed: `zio-skills@zio-skills-dev`
+- Marketplace registered: `ziogenetics` (local path)
+- Plugin installed: `zio-skills@ziogenetics`
 - Plugin enabled in `~/.claude/settings.json`
 
 ### ✅ Phase 2: Skill Discovery — VERIFIED
@@ -119,7 +119,7 @@ All 4 ZIO HTTP skill patterns are **fully functional and production-ready**. The
 
 ### Claude Code:
 ```bash
-claude plugin install zio-skills@zio-skills-dev
+claude plugin install zio-skills@ziogenetics
 /skill zio-http-scaffold
 ```
 
