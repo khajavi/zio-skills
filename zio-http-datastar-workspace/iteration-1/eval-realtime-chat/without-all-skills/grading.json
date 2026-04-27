@@ -1,0 +1,46 @@
+{
+  "run_id": "eval-4-without-all-skills",
+  "expectations": [
+    {
+      "text": "Creates ChatRoom service with ZIO Hub.unbounded for broadcasting",
+      "passed": true,
+      "evidence": "ChatRoom case class with Hub[ChatMessage], Hub.unbounded created - same as with-skill version"
+    },
+    {
+      "text": "Stores message history in Ref and retrieves it on new connections",
+      "passed": true,
+      "evidence": "Ref[List[ChatMessage]] for history, getMessages retrieves it correctly"
+    },
+    {
+      "text": "Implements two-phase SSE: sends history first (ElementPatchMode.Inner), then streams new messages (ElementPatchMode.Append)",
+      "passed": true,
+      "evidence": "Two-phase SSE pattern correctly implemented with Inner for history and Append for new messages"
+    },
+    {
+      "text": "POST endpoint uses readSignals[T] to read form data (username and message)",
+      "passed": true,
+      "evidence": "req.readSignals[MessageRequest] used correctly with Schema derivation"
+    },
+    {
+      "text": "HTML has signals (dataSignals) and dataBind for username and message inputs",
+      "passed": true,
+      "evidence": "Signals properly declared and bound with dataSignals and dataBind"
+    },
+    {
+      "text": "Uses dataInit to auto-trigger SSE endpoint on page load",
+      "passed": true,
+      "evidence": "dataInit correctly triggers GET /chat/messages endpoint on page load"
+    },
+    {
+      "text": "Provides ChatRoom.layer to the server via Server.provide",
+      "passed": true,
+      "evidence": "ChatRoom.layer provided to Server.serve() correctly"
+    },
+    {
+      "text": "Displays messages with username and timestamp",
+      "passed": true,
+      "evidence": "messageTemplate renders username and formatted timestamp for each message"
+    }
+  ],
+  "notes": "PERFECT implementation - all 8 assertions passed! Identical to with-skill version. Without any skill guidance, agent correctly implemented: ChatRoom service with Hub, two-phase SSE, readSignals[T], signals with dataBind, dataInit, and service injection. This shows the agent has strong foundational ZIO HTTP knowledge."
+}

@@ -1,0 +1,46 @@
+{
+  "run_id": "eval-4-without_skill",
+  "expectations": [
+    {
+      "text": "Creates ChatRoom service with ZIO Hub.unbounded for broadcasting",
+      "passed": true,
+      "evidence": "Lines 16-46: ChatRoom object with trait Service and Live implementation; line 42: Hub.unbounded[Message] created"
+    },
+    {
+      "text": "Stores message history in Ref and retrieves it on new connections",
+      "passed": true,
+      "evidence": "Line 43: Ref.make(List.empty[Message]); line 30: .takeRight(50) limits history; line 35: getHistory retrieves Ref; line 36: historyRef.get"
+    },
+    {
+      "text": "Implements two-phase SSE: sends history first (ElementPatchMode.Inner), then streams new messages (ElementPatchMode.Append)",
+      "passed": false,
+      "evidence": "Lines 86-105 and 107-127 attempt two-phase SSE but have syntax error: PatchElementOptions is incorrectly passed as argument to div() instead of to ServerSentEventGenerator.patchElements(). Lines 99-102 and 121-124 show `PatchElementOptions(...), )` as last args to div() - this won't compile. The PatchElementOptions should be second arg to ServerSentEventGenerator.patchElements(), not part of the div arguments."
+    },
+    {
+      "text": "POST endpoint uses readSignals[T] to read form data (username and message)",
+      "passed": false,
+      "evidence": "Lines 61-70: Manually parses form body with split/map/URLDecoder instead of using req.readSignals[T]. This is error-prone and not idiomatic Datastar."
+    },
+    {
+      "text": "HTML has signals (dataSignals) and dataBind for username and message inputs",
+      "passed": false,
+      "evidence": "Lines 158-165 and 172-178: Form inputs use plain HTML without any Datastar signals or dataBind. No dataSignals initialization, no signal binding."
+    },
+    {
+      "text": "Uses dataInit to auto-trigger SSE endpoint on page load",
+      "passed": false,
+      "evidence": "Lines 186-195: Uses raw JavaScript fetch and manual Datastar.processResponse() instead of dataInit attribute. This is a workaround, not the idiomatic Datastar pattern."
+    },
+    {
+      "text": "Provides ChatRoom.layer to the server via Server.provide",
+      "passed": true,
+      "evidence": "Implicitly handled via ZIO type system (Routes[ChatRoom, Response] at line 48 requires ChatRoom in environment), though pattern is less explicit than with-skill version"
+    },
+    {
+      "text": "Displays messages with username and timestamp",
+      "passed": true,
+      "evidence": "Lines 88-98 and 109-119 render messages with username and timestamp inline (s-string template)"
+    }
+  ],
+  "notes": "Multiple critical issues prevent this from compiling or being idiomatic: (1) Syntax error: PatchElementOptions passed to div() instead of ServerSentEventGenerator.patchElements(); (2) No use of Datastar signals or readSignals - manual form parsing instead; (3) Manual JavaScript fetch instead of dataInit attribute; (4) Missing dataBind for form inputs. While the ChatRoom service and Hub concept are correct, the Datastar integration has fundamental errors. The skill prevents these exact mistakes through explicit pattern teaching."
+}

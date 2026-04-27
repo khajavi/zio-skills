@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-2-with_skill",
+  "expectations": [
+    {
+      "text": "Uses event { handler { ... } } wrapper (not events) for single-shot response",
+      "passed": true,
+      "evidence": "Line 12: `Method.GET / \"\" -> event { handler {...} }` and line 18: `Method.GET / \"greet\" -> event { handler {...} }` - correct wrapper"
+    },
+    {
+      "text": "Handler returns DatastarEvent.patchElements(...) directly (not a ZIO effect)",
+      "passed": true,
+      "evidence": "Lines 13-15 and 19-26: Both handlers return `DatastarEvent.patchElements(...)` as values, not wrapped in ZIO"
+    },
+    {
+      "text": "Uses dataOn.submit attribute for form submission without page reload",
+      "passed": true,
+      "evidence": "Line 47: `dataOn.submit := js\"@get('/greet')\"` - correct Datastar attribute for form submission"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 36: `datastarScript` included in head element"
+    },
+    {
+      "text": "Reads form input (name) from request and personalizes the greeting",
+      "passed": true,
+      "evidence": "Line 20: `val name = req.queryParam(\"name\").getOrElse(\"Guest\")` - correctly reads name from query params and personalizes greeting at line 24"
+    },
+    {
+      "text": "Serves the initial HTML page (with form visible initially, greeting hidden until submitted)",
+      "passed": true,
+      "evidence": "Lines 12-15: First route serves initial page; line 69: `div(id(\"greeting\"), className := \"greeting-container\")` - greeting div initially empty and hidden via CSS at line 167"
+    }
+  ],
+  "notes": "Excellent implementation. Follows Step 4 (Single-Shot Response) exactly from the skill. Clean use of event wrapper, returns DatastarEvent values directly, uses proper form submission via dataOn.submit. Code is correct and would compile without issues."
+}

@@ -1,0 +1,42 @@
+{
+  "eval_id": 3,
+  "eval_name": "live-search",
+  "prompt": "Build a live product search in ZIO HTTP where the results update as the user types, with a 300ms debounce so it doesn't fire on every keystroke, using Datastar.",
+  "assertions": [
+    {
+      "text": "Uses events { handler { ... } } for SSE streaming (not event)",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Uses dataOn.input.debounce(300.millis) to debounce input events",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Declares Signal[String] and uses dataSignals + dataBind for search input",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Uses ServerSentEventGenerator.patchElements with PatchElementOptions.Append for appending results",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Reads search term from request and implements search filter logic",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Has sample product list to search against (at least 10 products)",
+      "passed": null,
+      "evidence": null
+    }
+  ]
+}

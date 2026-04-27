@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-3-without_skill",
+  "expectations": [
+    {
+      "text": "Uses events { handler { ... } } for SSE streaming (not event)",
+      "passed": true,
+      "evidence": "Line 21: `Method.GET / \"search\" -> events { handler { ... } }` - correct streaming wrapper"
+    },
+    {
+      "text": "Uses dataOn.input.debounce(300.millis) to debounce input events",
+      "passed": true,
+      "evidence": "Line 71: `dataOn.input.debounce(300.millis) := js\"@get('/search?q=' + ${$query})\"` - correct debounce timing"
+    },
+    {
+      "text": "Declares Signal[String] and uses dataSignals + dataBind for search input",
+      "passed": true,
+      "evidence": "Lines 63, 68, 69: `Signal[String](\"query\")`, `dataSignals($query) := \"\"`, `dataBind($query.name)` - all patterns implemented"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 55: `datastarScript` included in head"
+    },
+    {
+      "text": "Uses ServerSentEventGenerator.patchElements with PatchElementOptions.Append for appending results",
+      "passed": true,
+      "evidence": "Lines 32-43: `ServerSentEventGenerator.patchElements` with `PatchElementOptions(selector = Some(CssSelector.id(\"list\")), mode = ElementPatchMode.Append)` and `useViewTransition = true`"
+    },
+    {
+      "text": "Reads search term from request and implements search filter logic",
+      "passed": true,
+      "evidence": "Line 23: `req.url.queryParameters.getAll(\"q\").headOption`; lines 81-115: Products with descriptions; line 114: Filter logic"
+    },
+    {
+      "text": "Has sample product list to search against (at least 10 products)",
+      "passed": true,
+      "evidence": "Lines 83-112: 27 products with descriptions across 3 categories (fruits, books, electronics)"
+    }
+  ],
+  "notes": "Excellent implementation without the skill. Demonstrates all required patterns (debounce, signals, targeted patching). Includes product descriptions which enhance user experience. Uses 100ms stagger and includes logging. Code is clean and well-structured."
+}

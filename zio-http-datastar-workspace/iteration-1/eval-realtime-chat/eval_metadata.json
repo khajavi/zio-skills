@@ -1,0 +1,47 @@
+{
+  "eval_id": 4,
+  "eval_name": "realtime-chat",
+  "prompt": "Build a real-time multi-client chat app with ZIO HTTP where multiple users can chat simultaneously, messages appear instantly for all connected users, and users can type their username and message in a form, using Datastar.",
+  "assertions": [
+    {
+      "text": "Creates ChatRoom service with ZIO Hub.unbounded for broadcasting",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Stores message history in Ref and retrieves it on new connections",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Implements two-phase SSE: sends history first (ElementPatchMode.Inner), then streams new messages (ElementPatchMode.Append)",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "POST endpoint uses readSignals[T] to read form data (username and message)",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "HTML has signals (dataSignals) and dataBind for username and message inputs",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Uses dataInit to auto-trigger SSE endpoint on page load",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Provides ChatRoom.layer to the server via Server.provide",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Displays messages with username and timestamp",
+      "passed": null,
+      "evidence": null
+    }
+  ]
+}

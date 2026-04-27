@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-3-with_skill",
+  "expectations": [
+    {
+      "text": "Uses events { handler { ... } } for SSE streaming (not event)",
+      "passed": true,
+      "evidence": "Line 21: `Method.GET / \"search\" -> events { handler { ... } }` - correct streaming wrapper"
+    },
+    {
+      "text": "Uses dataOn.input.debounce(300.millis) to debounce input events",
+      "passed": true,
+      "evidence": "Line 72: `dataOn.input.debounce(300.millis) := js\"@get('/search?q=' + ${$query})\"` - correct debounce applied"
+    },
+    {
+      "text": "Declares Signal[String] and uses dataSignals + dataBind for search input",
+      "passed": true,
+      "evidence": "Lines 64, 69, 70: `Signal[String](\"query\")`, `dataSignals($query) := \"\"`, `dataBind($query.name)` - all signal patterns present"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 55: `datastarScript` included in head element"
+    },
+    {
+      "text": "Uses ServerSentEventGenerator.patchElements with PatchElementOptions.Append for appending results",
+      "passed": true,
+      "evidence": "Lines 33-41: Uses `ServerSentEventGenerator.patchElements` with `PatchElementOptions(selector = Some(CssSelector.id(\"list\")), mode = ElementPatchMode.Append)`"
+    },
+    {
+      "text": "Reads search term from request and implements search filter logic",
+      "passed": true,
+      "evidence": "Line 23: Reads from `req.url.queryParameters.getAll(\"q\").headOption`; lines 83-106: Product list; line 106: Filter logic with `.filter(_.toLowerCase.contains(term.get.toLowerCase))`"
+    },
+    {
+      "text": "Has sample product list to search against (at least 10 products)",
+      "passed": true,
+      "evidence": "Lines 84-102: 45 products across 4 categories (fruits, books, electronics, home & garden) - far exceeds minimum"
+    }
+  ],
+  "notes": "Perfect implementation of Step 3 (Signal Reading) + Common Patterns (Targeted Patching). Clean two-phase approach: clear container, then append results. Excellent CSS with animations and empty state messaging. 50ms stagger between appends."
+}

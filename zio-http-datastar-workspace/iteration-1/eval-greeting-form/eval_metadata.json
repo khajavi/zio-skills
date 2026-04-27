@@ -1,0 +1,37 @@
+{
+  "eval_id": 2,
+  "eval_name": "greeting-form",
+  "prompt": "Add a name input form to a ZIO HTTP app where the user types their name and clicks Submit to get a personalized greeting without a page reload, using Datastar.",
+  "assertions": [
+    {
+      "text": "Uses event { handler { ... } } wrapper (not events) for single-shot response",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Handler returns DatastarEvent.patchElements(...) directly (not a ZIO effect)",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Uses dataOn.submit attribute for form submission without page reload",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Reads form input (name) from request and personalizes the greeting",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Serves the initial HTML page (with form visible initially, greeting hidden until submitted)",
+      "passed": null,
+      "evidence": null
+    }
+  ]
+}

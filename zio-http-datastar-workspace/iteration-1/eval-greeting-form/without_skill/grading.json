@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-2-without_skill",
+  "expectations": [
+    {
+      "text": "Uses event { handler { ... } } wrapper (not events) for single-shot response",
+      "passed": true,
+      "evidence": "Lines 12 and 18: Both use `event { handler { ... } }` - correct wrapper"
+    },
+    {
+      "text": "Handler returns DatastarEvent.patchElements(...) directly (not a ZIO effect)",
+      "passed": false,
+      "evidence": "Lines 20-35: Handler body returns `name.map { n => DatastarEvent.patchElements(...) }` - the result is wrapped in a ZIO (from req.body.asString), not a direct DatastarEvent. This won't compile: event handlers must return DatastarEvent, not ZIO[..., DatastarEvent]"
+    },
+    {
+      "text": "Uses dataOn.submit attribute for form submission without page reload",
+      "passed": true,
+      "evidence": "Line 54: `dataOn.submit := js\"@post('/greet')\"` - correct attribute for form submission"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 44: `datastarScript` included in head"
+    },
+    {
+      "text": "Reads form input (name) from request and personalizes the greeting",
+      "passed": true,
+      "evidence": "Lines 20-24: Attempts to parse name from request body; line 31: personalizes greeting with $n"
+    },
+    {
+      "text": "Serves the initial HTML page (with form visible initially, greeting hidden until submitted)",
+      "passed": true,
+      "evidence": "Lines 12-15: Serves initial page; line 72: greeting div is empty and hidden via CSS"
+    }
+  ],
+  "notes": "Has a critical compilation error: the event handler attempts to return a ZIO-wrapped DatastarEvent (from name.map) instead of a direct DatastarEvent value. Additionally, manual form body parsing is unnecessarily complex - should use req.queryParam() or req.readSignals[T]. Would not compile as written."
+}

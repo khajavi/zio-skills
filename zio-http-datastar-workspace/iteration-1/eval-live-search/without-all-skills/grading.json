@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-3-without-all-skills",
+  "expectations": [
+    {
+      "text": "Uses events { handler { ... } } for SSE streaming (not event)",
+      "passed": true,
+      "evidence": "Line 21: `Method.GET / \"search\" -> events { handler {...} }` - correct wrapper"
+    },
+    {
+      "text": "Uses dataOn.input.debounce(300.millis) to debounce input events",
+      "passed": true,
+      "evidence": "dataOn.input.debounce(300.millis) present in input - correct debounce timing"
+    },
+    {
+      "text": "Declares Signal[String] and uses dataSignals + dataBind for search input",
+      "passed": true,
+      "evidence": "Signal[String] declared, dataSignals and dataBind used correctly"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "datastarScript present in head"
+    },
+    {
+      "text": "Uses ServerSentEventGenerator.patchElements with PatchElementOptions.Append for appending results",
+      "passed": true,
+      "evidence": "Lines 34-40: Correct use of PatchElementOptions with ElementPatchMode.Append"
+    },
+    {
+      "text": "Reads search term from request and implements search filter logic",
+      "passed": true,
+      "evidence": "Line 23: Reads from queryParameters; search function filters products"
+    },
+    {
+      "text": "Has sample product list to search against (at least 10 products)",
+      "passed": true,
+      "evidence": "Sample product list with fruits, books, electronics"
+    }
+  ],
+  "notes": "Perfect implementation all 7 assertions passed. Agent correctly implemented all patterns without skill guidance."
+}

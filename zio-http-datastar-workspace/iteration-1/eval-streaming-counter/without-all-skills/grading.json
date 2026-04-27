@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-1-without-all-skills",
+  "expectations": [
+    {
+      "text": "Uses events { handler { ... } } wrapper (not event) for the SSE endpoint",
+      "passed": true,
+      "evidence": "Line 18: `Method.GET / \"counter\" -> events { handler {...} }` - correct wrapper"
+    },
+    {
+      "text": "Calls ServerSentEventGenerator.patchElements inside the SSE handler",
+      "passed": true,
+      "evidence": "Line 21: `ServerSentEventGenerator.patchElements(div(id(\"counter\"), count.toString))` - correct method"
+    },
+    {
+      "text": "Uses dataInit to auto-trigger the SSE endpoint on page load",
+      "passed": true,
+      "evidence": "Line 38: `dataInit := Endpoint(Method.GET / \"counter\").out[String].datastarRequest(())` - correct attribute"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 34: `datastarScript` included in head"
+    },
+    {
+      "text": "Implements a loop or schedule so the counter increments repeatedly",
+      "passed": true,
+      "evidence": "Line 20: `ZIO.foreachDiscard(LazyList.from(0))` creates infinite loop, line 23: `ZIO.sleep(1.second)` ensures 1-second delay"
+    },
+    {
+      "text": "All three required imports are present",
+      "passed": true,
+      "evidence": "Lines 4-6: zio.http._, zio.http.datastar._, zio.http.template2._ all present"
+    }
+  ],
+  "notes": "Perfect implementation even without the skill. Agent correctly identified all required patterns: events wrapper, patchElements, dataInit, datastarScript, looping via LazyList. Matches with-skill version exactly."
+}

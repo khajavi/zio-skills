@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-1-with_skill",
+  "expectations": [
+    {
+      "text": "Uses events { handler { ... } } wrapper (not event) for the SSE endpoint",
+      "passed": true,
+      "evidence": "Line 18: `Method.GET / \"counter\" -> events { handler { ... } }` - correct wrapper"
+    },
+    {
+      "text": "Calls ServerSentEventGenerator.patchElements or patchSignals inside the SSE handler",
+      "passed": true,
+      "evidence": "Line 21: `ServerSentEventGenerator.patchElements(div(id(\"counter\"), count.toString))` - correct method used"
+    },
+    {
+      "text": "Uses dataInit (not deprecated dataOn.load) to auto-trigger the SSE endpoint on page load",
+      "passed": true,
+      "evidence": "Line 38: `dataInit := Endpoint(Method.GET / \"counter\").out[String].datastarRequest(())` - modern attribute used"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 34: `datastarScript` included in head element"
+    },
+    {
+      "text": "Implements a loop or schedule so the counter increments repeatedly (not just once)",
+      "passed": true,
+      "evidence": "Line 20: `ZIO.foreachDiscard(LazyList.from(0))` creates an infinite loop over counter values 0, 1, 2, ..."
+    },
+    {
+      "text": "All three required imports are present: zio.http.datastar._, zio.http.template2._, and zio.http._",
+      "passed": true,
+      "evidence": "Lines 3-6: All imports present including `import zio.http.datastar._`, `import zio.http.template2._`, `import zio.http._`"
+    }
+  ],
+  "notes": "Excellent implementation using the patchElements pattern from Step 2 of the skill. Uses LazyList.from(0) to generate infinite counter values and updates the DOM every 1 second. Clean and correct."
+}

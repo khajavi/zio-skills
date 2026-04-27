@@ -1,0 +1,70 @@
+{
+  "skill_name": "zio-http-datastar",
+  "benchmark": {
+    "eval_1_streaming_counter": {
+      "with_skill": {
+        "assertions_passed": 6,
+        "assertions_total": 6,
+        "pass_rate": 1.0,
+        "approach": "DOM patching with patchElements and LazyList loop"
+      },
+      "without_skill": {
+        "assertions_passed": 6,
+        "assertions_total": 6,
+        "pass_rate": 1.0,
+        "approach": "Signal updates with patchSignals and Schedule.spaced"
+      }
+    },
+    "eval_2_greeting_form": {
+      "with_skill": {
+        "assertions_passed": 6,
+        "assertions_total": 6,
+        "pass_rate": 1.0,
+        "approach": "Single-shot event wrapper, direct DatastarEvent return, form submission via dataOn.submit"
+      },
+      "without_skill": {
+        "assertions_passed": 4,
+        "assertions_total": 6,
+        "pass_rate": 0.667,
+        "approach": "Attempted event wrapper but wrapped return in ZIO (compilation error), manual body parsing"
+      }
+    },
+    "eval_3_live_search": {
+      "with_skill": {
+        "assertions_passed": 7,
+        "assertions_total": 7,
+        "pass_rate": 1.0,
+        "approach": "Streaming SSE, debounce 300ms, Signal+dataBind, targeted patching with Append"
+      },
+      "without_skill": {
+        "assertions_passed": 7,
+        "assertions_total": 7,
+        "pass_rate": 1.0,
+        "approach": "Streaming SSE, debounce 300ms, Signal+dataBind, targeted patching with Append, product descriptions"
+      }
+    },
+    "eval_4_realtime_chat": {
+      "with_skill": {
+        "assertions_passed": 8,
+        "assertions_total": 8,
+        "pass_rate": 1.0,
+        "approach": "ChatRoom service, Hub broadcast, two-phase SSE, readSignals[T], signals+dataBind, dataInit, service injection"
+      },
+      "without_skill": {
+        "assertions_passed": 3,
+        "assertions_total": 8,
+        "pass_rate": 0.375,
+        "approach": "Attempted ChatRoom+Hub but multiple Datastar pattern errors: PatchElementOptions syntax error, no signals/readSignals, manual fetch instead of dataInit"
+      }
+    }
+  },
+  "summary": {
+    "total_evals": 4,
+    "total_assertions": 28,
+    "skill_perfect_rate": 1.0,
+    "without_skill_perfect_rate": 0.821,
+    "with_skill_total": "28/28 (100%)",
+    "without_skill_total": "23/28 (82.1%)",
+    "notes": "Eval 1: Both passed (streaming counter). Eval 2: Skill 6/6, without-skill 4/6 (ZIO-wrapping bug). Eval 3: Both passed 7/7 (live search). Eval 4: Skill 8/8 (perfect multi-client chat), without-skill 3/8 (multiple Datastar pattern errors: syntax error with PatchElementOptions, no signals/readSignals, manual JS instead of dataInit). The skill's value increases significantly with pattern complexity - it prevents errors agents would make without guidance."
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "run_id": "eval-4-with_skill",
+  "expectations": [
+    {
+      "text": "Creates ChatRoom service with ZIO Hub.unbounded for broadcasting",
+      "passed": true,
+      "evidence": "Lines 75-122: ChatRoom case class with subscribers: Hub[ChatMessage], Hub.unbounded[ChatMessage] created in make() at line 88"
+    },
+    {
+      "text": "Stores message history in Ref and retrieves it on new connections",
+      "passed": true,
+      "evidence": "Line 76: Ref[List[ChatMessage]] for messages; line 87: Ref.make(List.empty[ChatMessage]); line 105: getMessages retrieves the Ref; line 97: addMessage appends to Ref"
+    },
+    {
+      "text": "Implements two-phase SSE: sends history first (ElementPatchMode.Inner), then streams new messages (ElementPatchMode.Append)",
+      "passed": true,
+      "evidence": "Lines 253-261: Phase 1 with ElementPatchMode.Inner to replace contents; lines 263-274: Phase 2 subscribes to Hub and streams with ElementPatchMode.Append for new messages"
+    },
+    {
+      "text": "POST endpoint uses readSignals[T] to read form data (username and message)",
+      "passed": true,
+      "evidence": "Line 288: `req.readSignals[MessageRequest]` correctly reads typed form data; line 59-63: MessageRequest case class with Schema"
+    },
+    {
+      "text": "HTML has signals (dataSignals) and dataBind for username and message inputs",
+      "passed": true,
+      "evidence": "Lines 132, 138: Signal declarations; lines 188-189: dataSignals initialization; lines 197, 213: dataBind for username and message inputs"
+    },
+    {
+      "text": "Uses dataInit to auto-trigger SSE endpoint on page load",
+      "passed": true,
+      "evidence": "Lines 179-181: `dataInit := Endpoint(Method.GET / \"chat\" / \"messages\").out[String].datastarRequest(())`"
+    },
+    {
+      "text": "Provides ChatRoom.layer to the server via Server.provide",
+      "passed": true,
+      "evidence": "Lines 302-304: `Server.serve(routes).provide(Server.default, ChatRoom.layer)` - ChatRoom.layer injected"
+    },
+    {
+      "text": "Displays messages with username and timestamp",
+      "passed": true,
+      "evidence": "Lines 147-159: messageTemplate renders ChatMessage with username (line 155) and formatted timestamp (lines 148-151)"
+    }
+  ],
+  "notes": "Perfect implementation of all patterns taught in the skill. Exemplary use of: ChatRoom service pattern, two-phase SSE, readSignals for form parsing, signals with dataBind, dataInit, and service layer injection. Code is clean, well-documented, and would compile without issues. Follows the example from ChatServer.scala reference."
+}

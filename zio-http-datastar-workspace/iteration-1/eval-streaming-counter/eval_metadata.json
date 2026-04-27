@@ -1,0 +1,37 @@
+{
+  "eval_id": 1,
+  "eval_name": "streaming-counter",
+  "prompt": "Create a ZIO HTTP server with a counter that starts at 0 and auto-increments by 1 every second, displaying the current count in real-time on a web page using Datastar.",
+  "assertions": [
+    {
+      "text": "Uses events { handler { ... } } wrapper (not event) for the SSE endpoint",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Calls ServerSentEventGenerator.patchElements or patchSignals inside the SSE handler",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Uses dataInit (not deprecated dataOn.load) to auto-trigger the SSE endpoint on page load",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Implements a loop or schedule so the counter increments repeatedly (not just once)",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "All three required imports are present: zio.http.datastar._, zio.http.template2._, and zio.http._",
+      "passed": null,
+      "evidence": null
+    }
+  ]
+}

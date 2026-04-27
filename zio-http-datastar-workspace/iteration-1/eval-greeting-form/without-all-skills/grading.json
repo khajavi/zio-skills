@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-2-without-all-skills",
+  "expectations": [
+    {
+      "text": "Uses event { handler { ... } } wrapper (not events) for single-shot response",
+      "passed": true,
+      "evidence": "Lines 12 and 18: Both use `event { handler { ... } }` - correct wrapper"
+    },
+    {
+      "text": "Handler returns DatastarEvent.patchElements(...) directly (not a ZIO effect)",
+      "passed": false,
+      "evidence": "Lines 20-35: Handler attempts to return `name.map { ... DatastarEvent.patchElements(...) }` - ZIO-wrapped result (from req.body.asString). Event handlers must return plain DatastarEvent values. Won't compile."
+    },
+    {
+      "text": "Uses dataOn.submit attribute for form submission without page reload",
+      "passed": true,
+      "evidence": "form uses `dataOn.submit := js\"@post('/greet')\"` - correct attribute"
+    },
+    {
+      "text": "Includes datastarScript in the HTML head",
+      "passed": true,
+      "evidence": "Line 44: `datastarScript` in head"
+    },
+    {
+      "text": "Reads form input (name) from request and personalizes the greeting",
+      "passed": true,
+      "evidence": "Lines 20-24: Reads and parses name from body; line 31: personalizes greeting"
+    },
+    {
+      "text": "Serves the initial HTML page (with form visible initially, greeting hidden until submitted)",
+      "passed": true,
+      "evidence": "Lines 12-15: Serves initial page; greeting div is empty and hidden via CSS"
+    }
+  ],
+  "notes": "SAME BUG as without-skill version: ZIO-wrapping in event handler. Returns `name.map {...}` instead of direct DatastarEvent. This is the canonical error the skill prevents. Won't compile."
+}

@@ -1,0 +1,29 @@
+{
+  "skill_name": "zio-http-datastar",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a ZIO HTTP server with a counter that starts at 0 and auto-increments by 1 every second, displaying the current count in real-time on a web page using Datastar.",
+      "expected_output": "Scala app with events { handler { ... } } SSE endpoint, dataInit trigger on page load, ServerSentEventGenerator.patchElements or patchSignals in a ZIO.schedule(Schedule.spaced) loop, datastarScript in head",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Add a name input form to a ZIO HTTP app where the user types their name and clicks Submit to get a personalized greeting without a page reload, using Datastar.",
+      "expected_output": "event { handler { DatastarEvent.patchElements(...) } } route, dataOn.submit form attribute, datastarScript in head, Response serving HTML page",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Build a live product search in ZIO HTTP where the results update as the user types, with a 300ms debounce so it doesn't fire on every keystroke, using Datastar.",
+      "expected_output": "events { handler } SSE route, Signal[String] for query, dataSignals + dataBind, dataOn.input.debounce(300.millis), either URL query param or readSignals[T] approach",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Build a real-time multi-client chat app with ZIO HTTP where multiple users can chat simultaneously, messages appear instantly for all connected users, and users can type their username and message in a form, using Datastar.",
+      "expected_output": "ChatRoom service with ZIO Hub.unbounded[Message], events { handler } SSE endpoint that sends history with ElementPatchMode.Inner then subscribes and streams new messages with ElementPatchMode.Append, POST /send endpoint using readSignals[T], dataSignals + dataBind for username and message inputs, dataInit to trigger SSE on load, ChatRoom.layer provided to server",
+      "files": []
+    }
+  ]
+}
