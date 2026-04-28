@@ -1,0 +1,46 @@
+{
+  "skill_name": "zio-http-template2",
+  "description": "Evaluation cases for template2 skill - testing agent ability to build correct HTML pages with proper attribute/child syntax, multi-value attributes, void elements, and conditional rendering",
+  "evals": [
+    {
+      "id": 1,
+      "name": "form-with-bootstrap-classes",
+      "prompt": "Build a form with two inputs (username field and email field) with their corresponding labels. Apply Bootstrap CSS classes (form-group, form-control, form-label) to the appropriate elements. Include validation attributes like required on the inputs. Make it look professional with proper Bootstrap styling.",
+      "expected_output": "Scala code with form element containing label+input pairs, Bootstrap classes applied correctly as tuples, validation attributes (type, required, name), proper structure for the form",
+      "error_types_targeted": [
+        "Mixing attributes and children incorrectly",
+        "Multi-value attributes (space-separated classes)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "conditional-user-profile",
+      "prompt": "Create a user profile page that displays different content based on a user's state. The user has: name (always shown), optional email address, optional avatar image, and a special role badge that only shows if the user is an admin. Show how you would handle these optional fields and conditional elements.",
+      "expected_output": "Scala code demonstrating Option.map for optional fields, if/else for conditional content, proper use of img element without attempting to add children, page that compiles and renders correctly",
+      "error_types_targeted": [
+        "Void elements with children (img element)",
+        "Conditional rendering and Option/map handling"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "styled-card-component",
+      "prompt": "Create a reusable card component function that accepts optional title, flexible content, and optional footer. The card should also have a 'starred' parameter that, when true, adds a 'card-highlighted' CSS class. Show how to build flexible, reusable components with conditional attributes.",
+      "expected_output": "Scala function returning Dom.Element, accepts varargs for children, handles optional parameters with Option pattern, conditional className based on starred parameter, component compiles and renders correctly",
+      "error_types_targeted": [
+        "Mixing attributes and children in component patterns",
+        "Multi-value attributes (CSS classes)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "advanced-page-with-scripts",
+      "prompt": "Build a complete web page with: a semantic structure (header, nav, main, footer), inline CSS for layout using style.inlineCss(), inline JavaScript for interactivity using script.inlineJs(), data attributes on interactive elements, and multiple CSS classes on elements. Show how to properly integrate CSS and JavaScript with template2.",
+      "expected_output": "Scala code with style.inlineCss(css\"\"\"), script.inlineJs(js\"\"\"), data attributes using data(), multiple classes via className tuples, semantic HTML structure, all code properly integrated and renderable",
+      "error_types_targeted": [
+        "Multi-value attributes (style syntax, class syntax)",
+        "Proper CSS and JavaScript integration patterns"
+      ]
+    }
+  ]
+}
