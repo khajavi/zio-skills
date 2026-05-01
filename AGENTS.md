@@ -2,11 +2,14 @@
 
 ## For AI Agents
 
-This repo contains high-quality developer skills for teaching coding agents (Claude Code, Cursor, Codex, Gemini) how to build ZIO applications.
+This repo is a Claude Code marketplace (`ziogenetics`) containing two plugins:
+
+- **`zio-skills`** (`plugins/zio-skills/`) — building ZIO and ZIO HTTP applications
+- **`documentation`** (`plugins/documentation/`) — writing documentation for ZIO libraries
 
 Before modifying any SKILL.md file or adding a new skill:
 
-1. **Understand the pattern** — Read an existing skill like `skills/zio-http-scaffold/SKILL.md` to understand the structure and tone.
+1. **Understand the pattern** — Read an existing skill like `plugins/zio-skills/skills/zio-http-scaffold/SKILL.md` to understand the structure and tone.
 2. **Test your skill** — If you're modifying or creating a skill, verify:
    - The YAML frontmatter is valid (name, description, tags)
    - Code examples compile against the stated dependencies
@@ -18,7 +21,7 @@ Before modifying any SKILL.md file or adding a new skill:
 ## For Humans
 
 Contributing skills is welcome. Open a PR with:
-- A new `skills/<library>-<feature>/SKILL.md` file
+- A new `plugins/<plugin>/skills/<skill-name>/SKILL.md` file
 - A brief description of what it teaches
 - References to working examples in the relevant ZIO library repo
 - Testing notes (did you validate with an agent?)

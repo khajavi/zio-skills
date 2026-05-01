@@ -20,7 +20,7 @@
     "openapi",
     "code-generation"
   ],
-  "skills": "./skills/",
-  "agents": "./agents/",
-  "commands": "./commands/"
+  "skills": "./plugins/zio-skills/skills/",
+  "agents": "./plugins/zio-skills/agents/",
+  "commands": "./plugins/zio-skills/commands/"
 }
