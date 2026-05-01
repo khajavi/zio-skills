@@ -287,11 +287,9 @@ Rules for this section:
 
 ### Embedding Example Files with `SourceFile`
 
-**Required for "Running the Examples" section:** Use `SourceFile.print` to embed full source from `<module_name>-examples/` for each example.
+**Required for "Running the Examples" section:** Use `SourceFile.print` to embed full source from `<module_name>-examples/` for each example. `SourceFile.print` reads the file at mdoc compile time and emits a fenced code block with the file path as the title — docs and examples stay in sync automatically.
 
-`SourceFile.print` reads the file at mdoc compile time and emits a fenced code block with the file path shown as the title. This keeps docs and examples in sync automatically.
-
-**Pattern:**
+The minimal pattern:
 
 ```scala mdoc:passthrough
 import docs.SourceFile
@@ -299,12 +297,7 @@ import docs.SourceFile
 SourceFile.print("<module_name>-examples/src/main/scala/<package>/<ExampleFile>.scala")
 ```
 
-**Important:** Import as `import docs.SourceFile` and call `SourceFile.print(...)` — do NOT use `import docs.SourceFile._` with bare `print(...)` because `print` conflicts with `Predef.print` inside mdoc sessions.
-
-**Optional parameters:**
-- `lines = Seq((from, to))` — include only specific line ranges (1-indexed)
-- `showLineNumbers = true` — render with line numbers
-- `showTitle = false` — suppress the file path title
+For optional parameters (`lines`, `showLineNumbers`, `showTitle`), import-form gotchas, and a Common Failures table, load **[`references/embedding-examples.md`](references/embedding-examples.md)**.
 
 ### Writing Rules
 

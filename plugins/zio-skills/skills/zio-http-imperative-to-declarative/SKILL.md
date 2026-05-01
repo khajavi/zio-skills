@@ -381,6 +381,7 @@ When converting an imperative route to declarative:
 
 ## References
 
+- **Complete runnable companion example**: [`references/examples/BookEndpointsApp.scala`](references/examples/BookEndpointsApp.scala) — combines the snippets shown across Steps 2–4 into a single runnable file (data types, endpoint declarations, service logic, routes, OpenAPI + Swagger UI). Read this first when you want a copy-paste starting point instead of stitching the snippets together.
 - [Endpoint API GitHub](https://github.com/zio/zio-http/blob/main/zio-http/src/main/scala/zio/http/endpoint/Endpoint.scala)
 - [ImperativeProgrammingExample.scala](https://github.com/zio/zio-http/blob/main/zio-http-example/src/main/scala/example/endpoint/style/ImperativeProgrammingExample.scala)
 - [DeclarativeProgrammingExample.scala](https://github.com/zio/zio-http/blob/main/zio-http-example/src/main/scala/example/endpoint/style/DeclarativeProgrammingExample.scala)

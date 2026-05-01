@@ -317,57 +317,9 @@ When you invoke this skill:
 
 ---
 
-## Example Invocation
+## Example Invocations
 
-### Example 1: New Reference Page
-
-**User:** "Document PR #1016 - Add XML support module"
-
-**Your response:**
-1. Run `gh pr view 1016 --json title,body,labels,commits,closingIssuesReferences`
-2. Parse: "feat(schema-xml): Add XML support module with schema-driven codec derivation" + label `feat`
-3. Fetch linked issues for motivation
-4. **Decision:** New reference page (substantial feature, no existing XML doc)
-5. **Invoke** `docs-data-type-ref` skill:
-   ```
-   "Create a reference page for the new Schema XML type from PR #1016.
-    The PR introduces XML codec support.
-    Key motivation: [from issues].
-    Key types: [from commits]."
-   ```
-6. Skill returns: `docs/reference/schema-xml.md` created
-7. **Invoke** `docs-integrate` skill to add to sidebar
-8. **Report:** "Created `docs/reference/schema-xml.md` and added to sidebar under Reference"
-
-### Example 2: How-To Guide
-
-**User:** "Document PR #1032 - Schema derivation improvements"
-
-**Your response:**
-1. Fetch PR metadata
-2. **Decision:** New how-to guide (teaches users a technique)
-3. **Invoke** `docs-how-to-guide` skill:
-   ```
-   "Create a how-to guide for deriving schemas using the Derivable type class.
-    From PR #1032. Key example from commits: [extract example]."
-   ```
-4. Skill returns: `docs/guides/deriving-schemas.md` created
-5. **Invoke** `docs-integrate` skill
-6. **Report:** "Created `docs/guides/deriving-schemas.md`"
-
-### Example 3: Subsection Addition
-
-**User:** "Document PR #1138 - CI improvements"
-
-**Your response:**
-1. Fetch PR metadata
-2. **Decision:** CI fix, not user-facing docs (or add subsection to setup guide if one exists)
-3. If subsection needed:
-   - Find existing page: `docs/guides/setup.md`
-   - Read it, consult `docs-writing-style` skill for prose rules
-   - Append section: "## CI Configuration" with the CI changes
-   - Consult `docs-mdoc-conventions` skill for any code block formatting
-4. **Report:** "Added subsection to `docs/guides/setup.md`" or "This PR is a CI-only change; no user-facing docs needed."
+For worked examples covering the common PR shapes (new reference page, new how-to guide, subsection addition, behaviour-change bugfix, and ambiguous PRs), load **[`references/example-invocations.md`](references/example-invocations.md)**. Use it when you've identified the PR's shape in Phase 2 and want to confirm the workflow, or when a PR doesn't fit one of the obvious patterns.
 
 ---
 

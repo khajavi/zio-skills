@@ -27,70 +27,25 @@ libraryDependencies += "dev.zio" %% "zio-http-gen" % "3.3.2"
 
 Create `scripts/generateFromOpenAPI.scala` or add to your build:
 
+A complete worked example using the Pet Store OpenAPI 3.0 spec is in
+[`references/examples/petstore.json`](references/examples/petstore.json) — load that file when you need a realistic spec to demonstrate generation. The Scala generator program looks like:
+
 ```scala
 import zio._
 import zio.http.endpoint.openapi._
 import zio.http.gen.openapi._
 import zio.http.gen.scala._
 
+import java.nio.file.{Files, Paths}
+
 object GenerateEndpointsFromOpenAPI extends ZIOAppDefault {
   def run = {
-    val openAPIJsonString = """
-    {
-      "openapi": "3.0.0",
-      "info": {"title": "Pet Store API", "version": "1.0.0"},
-      "paths": {
-        "/api/v1/pets": {
-          "get": {
-            "operationId": "listPets",
-            "parameters": [
-              {"name": "limit", "in": "query", "schema": {"type": "integer"}}
-            ],
-            "responses": {
-              "200": {
-                "description": "A list of pets",
-                "content": {
-                  "application/json": {
-                    "schema": {"type": "array", "items": {"$ref": "#/components/schemas/Pet"}}
-                  }
-                }
-              }
-            }
-          },
-          "post": {
-            "operationId": "createPet",
-            "requestBody": {
-              "required": true,
-              "content": {
-                "application/json": {"schema": {"$ref": "#/components/schemas/Pet"}}
-              }
-            },
-            "responses": {
-              "201": {
-                "description": "Pet created",
-                "content": {
-                  "application/json": {"schema": {"$ref": "#/components/schemas/Pet"}}
-                }
-              }
-            }
-          }
-        }
-      },
-      "components": {
-        "schemas": {
-          "Pet": {
-            "type": "object",
-            "required": ["id", "name"],
-            "properties": {
-              "id": {"type": "integer", "format": "int64"},
-              "name": {"type": "string"},
-              "status": {"type": "string", "enum": ["available", "pending", "sold"]}
-            }
-          }
-        }
-      }
-    }
-    """
+    // Read the OpenAPI spec from disk (see references/examples/petstore.json
+    // for a complete worked example):
+    val openAPIJsonString = new String(
+      Files.readAllBytes(Paths.get("openapi-spec.json")),
+      java.nio.charset.StandardCharsets.UTF_8
+    )
 
     val program = for {
       // Parse the OpenAPI spec

@@ -122,87 +122,13 @@ Match the section type to its canonical position from Step 1:
 - `/docs-writing-style` — prose rules
 - `/docs-mdoc-conventions` — code block rules
 
-Follow these section-type-specific patterns:
+Each section type has a specific structural template covering subsection layout, table layout, and the minimal code-block pattern. Load **[`references/section-patterns.md`](references/section-patterns.md)** when you reach this step — it contains templates for:
 
-### Construction Section Pattern
-
-One `###` subsection per major factory method or constructor group.
-
-**For each subsection:**
-1. Subsection heading: method name (e.g., `### apply`, `### empty`, `### from[B]`)
-2. One sentence explaining what the method does and its typical use case
-3. Signature block in plain `scala` (not mdoc):
-   ```
-   ```scala
-   object TypeName {
-     def method(...): TypeName[...]
-   }
-   ```
-   ```
-4. Prose sentence ending in `:` introducing the example
-5. Self-contained code block using `mdoc:compile-only`:
-   ```
-   ```scala mdoc:compile-only
-   // Complete example, no output needed
-   ```
-   ```
-
-### Predefined Instances Section Pattern
-
-Use a Markdown table with columns: **Instance Name**, **Type**, **Description**.
-
-Group instances by category (e.g., "Common Types", "Numeric Types", "Collections") if more than 5 instances exist.
-
-After the table, add one example demonstrating usage of a few predefined instances:
-
-```
-```scala mdoc:compile-only
-// Show using 2–3 predefined instances together
-```
-```
-
-### Comparison Section Pattern
-
-1. Create a dimensions table with:
-   - Column 1: Type/Alternative name
-   - Columns 2–N: Dimensions (Mutability, Performance, API Breadth, Laziness, etc.)
-   - Use `✓` / `✗` for binary dimensions or short text for continuous dimensions
-
-2. Follow the table with **mandatory** "Use X when… Use Y instead when…" paragraphs:
-
-   > **Use `TypeA` when:**
-   > - You need immutability
-   > - Performance is critical
-   >
-   > **Use `TypeB` instead when:**
-   > - You need lazy evaluation
-   > - API breadth is more important than performance
-
-3. Include a code example only if API differences require demonstration of calling conventions. Otherwise, skip the example (comparison is conceptual, not operational).
-
-### Advanced Usage Section Pattern
-
-Create 2–4 `###` subsections, each with:
-1. Subsection heading: realistic scenario name (e.g., `### Composing with Results`, `### Custom Derivations`)
-2. Brief explanation of the scenario
-3. Prose sentence ending in `:` introducing the example
-4. Code block using `mdoc:compile-only`:
-   ```
-   ```scala mdoc:compile-only
-   // Realistic scenario code
-   ```
-   ```
-
-### Motivation Section Pattern
-
-1. Problem paragraph: describe a limitation or gap that motivated the type's creation
-2. Naive approach paragraph: show what a reader might try without this type and why it fails
-3. Working example: show how this type solves the problem:
-   ```
-   ```scala mdoc:compile-only
-   // Solution using the type
-   ```
-   ```
+- Construction (factory methods, `apply`, `empty`, `from[B]`)
+- Predefined Instances (table + example)
+- Comparison (dimensions table + "Use X when… Use Y instead when…")
+- Advanced Usage (2–4 realistic scenarios)
+- Motivation (problem → naive approach → working solution)
 
 ---
 
