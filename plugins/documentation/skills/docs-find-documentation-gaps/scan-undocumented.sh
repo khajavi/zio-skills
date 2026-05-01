@@ -75,10 +75,16 @@ trap cleanup EXIT
 # Exclude generated tracking docs from the corpus so the scan is idempotent
 EXCLUDE_PATTERN='undocumented-report'
 
+# Newline-separated list of doc files (still used by later stages for streaming
+# read with `read -r`; stages 2+ tolerate filenames with spaces because they
+# never word-split this list).
 DOC_FILES_LIST=$(find "$DOCS_DIR" -name '*.md' -type f | grep -v "$EXCLUDE_PATTERN" | sort)
 
-# Build a word-frequency file from all docs (one pass over all doc content)
-echo "$DOC_FILES_LIST" | xargs cat 2>/dev/null \
+# Build a word-frequency file from all docs (one pass over all doc content).
+# Use -print0 / xargs -0 so filenames with spaces or special chars are handled
+# correctly. Replicates the EXCLUDE_PATTERN filter inside the find expression.
+find "$DOCS_DIR" -name '*.md' -type f -not -path "*${EXCLUDE_PATTERN}*" -print0 \
+  | xargs -0 cat 2>/dev/null \
   | grep -oE '\b[A-Z][A-Za-z0-9]+\b' \
   | sort | uniq -c | sort -rn > "$DOCS_WORDS_FILE"
 
