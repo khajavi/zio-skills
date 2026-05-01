@@ -1,36 +1,74 @@
 #!/bin/bash
-# Documentation style checker — mechanical rules for ZIO project docs
-# Usage: check-docs-style.sh <file.md>
-# Exit codes: 0 = no violations, 1 = violations found
-#
-# Rules checked (from docs-writing-style/SKILL.md):
-#   Rule 2:  Present tense only (detect past-tense verbs in prose)
-#   Rule 3:  No padding/filler phrases
-#   Rule 4:  Bullet capitalization (full-sentence bullets must start with capital)
-#   Rule 7:  Link to related docs (enforce relative paths for doc links)
-#   Rule 8:  Always qualify method/constructor names
-#   Rule 10: No duplicate markdown heading
-#   Rule 11: Heading hierarchy (no skipped levels)
-#   Rule 12: No bare subheaders (### or #### immediately after ## or ###)
-#   Rule 13: No lone subheaders (subsections must have ≥2 children)
-#   Rule 15: Code block preceded by prose sentence ending with ":", and bridging prose between consecutive code blocks
-#   Rule 16: Always include imports in code blocks
-#   Rule 18: Prefer "val" over "var" in Scala code blocks
-#   Rule 22: Table column alignment (proper padding in separators)
-#   Rule 23: Default to Scala 2.13.x syntax (no Scala 3 glob imports)
-#   Rule 25: Use @VERSION@ placeholder for version strings
+# Documentation style checker — mechanical rules for ZIO project docs.
 
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: check-docs-style.sh <file.md>
+
+Mechanical style checker for ZIO project documentation. Validates a single
+Markdown file against the rules defined in docs-writing-style/SKILL.md.
+Violations are printed to stdout in the format:
+  <file>:<line>: [Rule N] <description>
+
+Arguments:
+  <file.md>       Markdown file to check (required).
+
+Options:
+  -h, --help      Print this help message and exit.
+
+Exit codes:
+  0  No violations found.
+  1  One or more style violations found (details printed to stdout).
+  2  Invocation error (missing/extra arguments, file not found).
+
+Rules checked:
+  Rule 2   Present tense only (detect past-tense verbs in prose)
+  Rule 3   No padding/filler phrases
+  Rule 4   Bullet capitalization (full-sentence bullets start with capital)
+  Rule 7   Link to related docs (relative paths for doc links)
+  Rule 8   Always qualify method/constructor names
+  Rule 10  No duplicate markdown heading
+  Rule 11  Heading hierarchy (no skipped levels)
+  Rule 12  No bare subheaders (### or #### immediately after ## or ###)
+  Rule 13  No lone subheaders (subsections must have ≥2 children)
+  Rule 15  Code block preceded by prose sentence ending with ":",
+           and bridging prose between consecutive code blocks
+  Rule 16  Executable code blocks (scala mdoc*, python, etc.) include imports
+  Rule 18  Prefer "val" over "var" in Scala code blocks
+  Rule 22  Table column alignment (proper padding in separators)
+  Rule 23  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
+  Rule 25  Use @VERSION@ placeholder for version strings
+
+Examples:
+  check-docs-style.sh docs/reference/chunk.md
+  check-docs-style.sh docs/how-to/writing.md && echo "Style check passed"
+EOF
+}
+
+# Argument parsing.
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  "")
+    usage >&2
+    exit 2
+    ;;
+esac
+
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <file.md>" >&2
-  exit 1
+  echo "Error: expected exactly one argument, got $#" >&2
+  usage >&2
+  exit 2
 fi
 
 FILE="$1"
 if [[ ! -f "$FILE" ]]; then
   echo "Error: File not found: $FILE" >&2
-  exit 1
+  exit 2
 fi
 
 VIOLATIONS=0

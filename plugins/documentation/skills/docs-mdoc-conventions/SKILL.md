@@ -203,6 +203,22 @@ add(2, 3)
 - **Group related setup blocks** — define all prerequisites in one `silent` block if possible
 - **Use `:reset` sparingly** — prefer `:nest` for minor redefinitions
 
+## Mechanical Validation
+
+Before submitting changes, run the mdoc-conventions checker against the file. It flags any plain ```` ```scala ```` block that should carry an mdoc modifier:
+
+```
+bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>
+```
+
+Run with `--help` for full usage. **Exit codes:**
+
+| Code | Meaning                                                          |
+|------|------------------------------------------------------------------|
+| `0`  | No violations — every executable Scala block has an mdoc modifier. |
+| `1`  | One or more code blocks are missing mdoc modifiers.              |
+| `2`  | Invocation error (missing/extra arguments, file not found).      |
+
 ## Troubleshooting
 
 If mdoc produces more than 3 compilation errors, the blocks are likely not properly isolated. Check for missing `:reset` or `:nest` modifiers, or name collisions between blocks. If the issue persists, strip all mdoc modifiers from the reported lines, confirm the errors are gone, then re-apply the correct modifiers one by one using the decision tree — running `sbt mdoc --in <path>.md` after each change to verify before continuing.

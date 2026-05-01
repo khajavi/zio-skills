@@ -1,0 +1,22 @@
+# scala-cli build artifacts
+.scala-build/
+.bloop/
+.metals/
+project/metals.sbt
+project/project/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (Cursor / OpenCode plugin tooling)
+node_modules/
+
+# Local-only files
+.envrc
+*.log

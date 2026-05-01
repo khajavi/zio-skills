@@ -3,10 +3,7 @@
  * Scala-aware parser to extract public methods from Scala source files.
  * Categorizes methods into: companion object, direct API, and inherited.
  *
- * Usage: scala extract-members.scala <source-file> [<type-name>]
- *
- * If type-name is provided, extracts and categorizes methods from that specific class/trait.
- * Otherwise, extracts all top-level public methods.
+ * Run `scala extract-members.scala --help` for usage and exit codes.
  */
 
 import scala.io.Source
@@ -150,16 +147,67 @@ object MethodExtractor {
   }
 }
 
+def printUsage(toStderr: Boolean = false): Unit = {
+  val out = if (toStderr) System.err else System.out
+  out.println("""Usage: scala extract-members.scala <source-file> [<type-name>]
+                |
+                |Parses a Scala source file and prints public methods grouped into
+                |sections: companion-object members, direct public API of the named
+                |type, and inherited methods. If <type-name> is omitted, all top-level
+                |public methods are printed.
+                |
+                |Arguments:
+                |  <source-file>   Path to the .scala file to parse (required).
+                |  <type-name>     Optional class/trait/object name to focus on.
+                |                  When omitted, all public top-level methods are listed.
+                |
+                |Options:
+                |  -h, --help      Print this help message and exit.
+                |
+                |Output sections (each preceded by a header line ending in '==='):
+                |  === Companion Object Members ===
+                |  === Public API ===
+                |  === Inherited Methods ===
+                |
+                |Exit codes:
+                |  0  Success — at least one public member was extracted.
+                |  1  No public members found in the file or named type.
+                |  2  Invocation error (missing arguments, file not found).
+                |
+                |Examples:
+                |  scala extract-members.scala src/main/scala/zio/Chunk.scala Chunk
+                |  scala extract-members.scala Reader.scala Reader \
+                |    | check-method-coverage.sh Reader docs/reference/reader.md""".stripMargin)
+}
+
 @main def run(args: String*): Unit = {
-  if (args.length < 1) {
-    System.err.println("Usage: scala extract-members.scala <source-file> [<type-name>]")
-    System.exit(1)
+  // Argument parsing — handle --help / -h first.
+  args.headOption match {
+    case Some("-h") | Some("--help") =>
+      printUsage()
+      System.exit(0)
+    case None =>
+      printUsage(toStderr = true)
+      System.exit(2)
+    case _ =>
+  }
+
+  if (args.length > 2) {
+    System.err.println(s"Error: expected at most 2 arguments, got ${args.length}")
+    printUsage(toStderr = true)
+    System.exit(2)
   }
 
   val sourceFile = args(0)
   val typeName = if (args.length > 1) Some(args(1)) else None
 
-  val (companionMethods, directMethods, inheritedMethods) = MethodExtractor.extractMethods(sourceFile, typeName)
+  if (!new File(sourceFile).exists()) {
+    System.err.println(s"Error: File not found: $sourceFile")
+    System.exit(2)
+  }
+
+  val (companionMethods, directMethods, inheritedMethods) =
+    MethodExtractor.extractMethods(sourceFile, typeName)
 
   var hasOutput = false
 
@@ -184,8 +232,9 @@ object MethodExtractor {
   }
 
   if (!hasOutput) {
-    System.exit(2) // Indicate no methods found
+    System.err.println(s"No public members found${typeName.map(t => s" for type $t").getOrElse("")} in $sourceFile")
+    System.exit(1) // No members found.
   } else {
-    System.exit(0) // Success
+    System.exit(0) // Success.
   }
 }

@@ -1,22 +1,55 @@
 #!/bin/bash
-# mdoc conventions checker — mechanical rules for ZIO project docs
-# Usage: check-mdoc-conventions.sh <file.md>
-# Exit codes: 0 = no violations, 1 = violations found
-#
-# Rules checked:
-#   Missing mdoc modifiers on Scala code blocks (except data type definitions)
+# mdoc conventions checker — mechanical rules for ZIO project docs.
 
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: check-mdoc-conventions.sh <file.md>
+
+Mechanical mdoc-conventions checker for ZIO project documentation. Validates
+that every executable Scala code block in a Markdown file has an appropriate
+mdoc modifier (mdoc, mdoc:silent, mdoc:compile-only, mdoc:reset, …).
+Plain ```scala blocks are treated as type-definition illustrations and skipped.
+
+Arguments:
+  <file.md>       Markdown file to check (required).
+
+Options:
+  -h, --help      Print this help message and exit.
+
+Exit codes:
+  0  No violations found.
+  1  One or more code blocks are missing mdoc modifiers.
+  2  Invocation error (missing/extra arguments, file not found).
+
+Examples:
+  check-mdoc-conventions.sh docs/reference/chunk.md
+  check-mdoc-conventions.sh docs/how-to/writing.md && echo "mdoc OK"
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  "")
+    usage >&2
+    exit 2
+    ;;
+esac
+
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <file.md>" >&2
-  exit 1
+  echo "Error: expected exactly one argument, got $#" >&2
+  usage >&2
+  exit 2
 fi
 
 FILE="$1"
 if [[ ! -f "$FILE" ]]; then
   echo "Error: File not found: $FILE" >&2
-  exit 1
+  exit 2
 fi
 
 VIOLATIONS=0

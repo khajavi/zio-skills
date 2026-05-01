@@ -1,24 +1,53 @@
 #!/bin/bash
-# Documentation coverage checker for ZIO library reference pages
+# Documentation coverage checker for ZIO library reference pages.
 # Compares extracted data type members against documentation.
-#
-# Usage: check-method-coverage.sh <TypeName> <doc-file.md> [members-file]
-# Or:    extract-members.scala ... | check-method-coverage.sh <TypeName> <doc-file.md>
-#
-# Exit codes: 0 = full coverage, 1 = missing documentation, 2 = error
-#
-# Reads member lists (from file or stdin) and checks that all are documented
-# in the reference page. Supports categorized output from extract-members.
 
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: check-method-coverage.sh <TypeName> <doc-file.md> [members-file]
+   Or: extract-members.scala <Source.scala> <TypeName> | check-method-coverage.sh <TypeName> <doc-file.md>
+
+Cross-checks the public members of a Scala data type (extracted from source
+or supplied as a list) against a reference documentation page, and reports
+any members that are not documented.
+
+Arguments:
+  <TypeName>       Scala type name (e.g., Chunk, Reader, Schema).
+  <doc-file.md>    Reference documentation page to audit.
+  [members-file]   Optional file with one member name per line,
+                   or sections produced by extract-members.scala.
+                   If omitted, members are read from stdin.
+
+Options:
+  -h, --help       Print this help message and exit.
+
+Exit codes:
+  0  Full coverage — every public member is documented.
+  1  One or more members are missing from the documentation.
+  2  Invocation error (missing arguments, file not found, no input).
+
+Examples:
+  check-method-coverage.sh Reader docs/reference/reader.md members.txt
+  ./extract-members.scala Reader.scala Reader | check-method-coverage.sh Reader docs/reference/reader.md
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  "")
+    usage >&2
+    exit 2
+    ;;
+esac
+
 if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 <TypeName> <doc-file.md> [members-file]" >&2
-  echo "   Or: extract-members.scala ... | $0 <TypeName> <doc-file.md>" >&2
-  echo "" >&2
-  echo "Examples:" >&2
-  echo "  \$0 Reader docs/reference/reader.md members.txt" >&2
-  echo "  ./extract-members.scala Reader.scala Reader | \$0 Reader docs/reference/reader.md" >&2
+  echo "Error: expected at least two arguments (<TypeName> <doc-file.md>)" >&2
+  usage >&2
   exit 2
 fi
 

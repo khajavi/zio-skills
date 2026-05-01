@@ -20,10 +20,18 @@ If a specific module name is given (e.g., `schema`, `chunk`, `scope`), focus the
 Run the automated scanner to produce raw coverage data:
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-find-documentation-gaps/scan-undocumented.sh
+bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-find-documentation-gaps/scan-undocumented.sh \
+  > docs/undocumented-report.md
 ```
 
-Save the output to `docs/undocumented-report.md`.
+Pass an optional project root to scan a sub-module: `scan-undocumented.sh <path>`. Run with `--help` for the full usage.
+
+**Exit codes:**
+
+| Code | Meaning                                                                |
+|------|------------------------------------------------------------------------|
+| `0`  | Scan completed; report written to stdout. Inspect the report to see whether undocumented types were found — the exit code does not reflect coverage. |
+| `2`  | Invocation error (extra arguments, project root not found, missing `docs/` directory). |
 
 ## Step 2: Enrich the Report with Manual Analysis
 

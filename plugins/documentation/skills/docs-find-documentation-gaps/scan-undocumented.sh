@@ -1,14 +1,63 @@
 #!/usr/bin/env bash
 #
 # scan-undocumented.sh — Scans a ZIO library project for documentation gaps.
-#
-# Outputs a Markdown report comparing source-code types/modules against
-# existing documentation in docs/.
-#
-# Usage:  bash .claude/skills/finding-undocumented/scan-undocumented.sh [PROJECT/SUB_MODULE ROOT]
-#
+
+usage() {
+  cat <<'EOF'
+Usage: scan-undocumented.sh [project-root]
+
+Scans a ZIO library project for documentation gaps. Compares public Scala
+types found in main source roots against existing pages under docs/, and
+prints a Markdown report to stdout listing types that appear undocumented.
+
+The report can be redirected to docs/undocumented-report.md (the scanner
+excludes its own output file from the corpus, so re-runs are idempotent).
+
+Arguments:
+  [project-root]   Project root to scan. Defaults to the current git
+                   top-level (or the working directory if not in a git repo).
+                   Useful for scanning a sub-module by passing its path.
+
+Options:
+  -h, --help       Print this help message and exit.
+
+Exit codes:
+  0  Scan completed; report written to stdout. The exit code does NOT reflect
+     whether undocumented types were found — inspect the report instead.
+  2  Invocation error (extra arguments, project root not found,
+     missing docs/ directory).
+
+Examples:
+  scan-undocumented.sh                                   # scan current project
+  scan-undocumented.sh /home/me/zio-blocks               # scan a specific repo
+  scan-undocumented.sh > docs/undocumented-report.md     # save report
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -gt 1 ]]; then
+  echo "Error: expected at most one argument, got $#" >&2
+  usage >&2
+  exit 2
+fi
 
 ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+if [[ ! -d "$ROOT" ]]; then
+  echo "Error: project root not found: $ROOT" >&2
+  exit 2
+fi
+if [[ ! -d "$ROOT/docs" ]]; then
+  echo "Error: docs/ directory not found under $ROOT" >&2
+  exit 2
+fi
+
 DOCS_DIR="$ROOT/docs"
 REF_DIR="$DOCS_DIR/reference"
 
