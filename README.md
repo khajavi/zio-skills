@@ -14,7 +14,7 @@ This marketplace currently ships two plugins:
 First, add the marketplace, then install one or both plugins:
 
 ```bash
-claude plugin marketplace add khajavi/zio-skills
+claude plugin marketplace add zio/zio-skills
 
 # build apps with ZIO / ZIO HTTP
 claude plugin install zio-skills@ziogenetics
@@ -44,7 +44,7 @@ Then invoke a skill in Claude Code:
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/khajavi/zio-skills
+gemini extensions install https://github.com/zio/zio-skills
 ```
 
 To update:
@@ -58,13 +58,13 @@ gemini extensions update zio-skills
 Clone the repo and symlink:
 
 ```bash
-git clone https://github.com/khajavi/zio-skills.git ~/.agents/skills/zio-skills
+git clone https://github.com/zio/zio-skills.git ~/.agents/skills/zio-skills
 ```
 
 or user Skill Installer inside codex cli:
 
 ```bash
-$skill-installer khajavi/zio-skills
+$skill-installer zio/zio-skills
 ```
 
 ### OpenCode
@@ -72,7 +72,7 @@ $skill-installer khajavi/zio-skills
 Add to `opencode.json`:
 ```json
 {
-  "plugin": ["zio-skills@git://github.com/khajavi/zio-skills.git"]
+  "plugin": ["zio-skills@git://github.com/zio/zio-skills.git"]
 }
 ```
 

@@ -1,7 +1,7 @@
 # ZIO Skills — Comprehensive Skill Review
 
 **Date**: 2026-05-01
-**Repo**: github.com/khajavi/zio-skills (marketplace `ziogenetics`)
+**Repo**: github.com/zio/zio-skills (marketplace `ziogenetics`)
 **Reviewer**: Skill Reviewer rubric (10 dimensions × 1–5)
 **Skills reviewed**: 28 across 2 plugins
 **Methodology**: Each `SKILL.md` (and any sibling `references/`, `scripts/`, `CHECKLIST.md`) was scored against the [Skill Reviewer rubric](https://github.com/agentskill-sh/learn) by domain-focused subagents. Per-dimension scores are 1–5 (3 is acceptable, not failure). Totals are out of 50 when scripts are bundled, out of 45 when not (D9 = N/A).

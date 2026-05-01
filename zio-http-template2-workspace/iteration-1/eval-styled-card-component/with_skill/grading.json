@@ -1,0 +1,41 @@
+{
+  "eval_id": 3,
+  "eval_name": "styled-card-component",
+  "baseline": "with_skill",
+  "total_assertions": 6,
+  "passed": 6,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "expectations": [
+    {
+      "text": "card() function returns Dom.Element as reusable component",
+      "passed": true,
+      "evidence": "Lines 23-49: Function signature returns Dom.Element, implementation returns div(...) element properly wrapping card structure"
+    },
+    {
+      "text": "Component accepts varargs (Dom*) for flexible children content",
+      "passed": true,
+      "evidence": "Line 27: Function parameter (content: Dom*): Dom.Element; Line 43: div(class := \"card-body\") accepts content variable containing all passed elements"
+    },
+    {
+      "text": "Optional title parameter with Option[String] type uses Option.map pattern",
+      "passed": true,
+      "evidence": "Lines 24, 36-39: title: Option[String] = None; title.map(t => div(class := \"card-header\")(h5(...)(t)))"
+    },
+    {
+      "text": "Optional footer parameter with Option[Dom] type uses Option.map pattern",
+      "passed": true,
+      "evidence": "Lines 25, 46-48: footer: Option[Dom] = None; footer.map(f => div(class := \"card-footer\")(f))"
+    },
+    {
+      "text": "Conditional className based on 'starred' parameter, adds 'card-highlighted' class correctly",
+      "passed": true,
+      "evidence": "Lines 28-33: className := (if (starred) (\"card\", \"card-highlighted\") else (\"card\",)) - properly uses conditional logic to add second class when starred is true"
+    },
+    {
+      "text": "Alternative .when() pattern demonstrated for conditional attributes (cardWithWhen function)",
+      "passed": true,
+      "evidence": "Lines 55-76: cardWithWhen uses .when(starred)(className := (\"card\", \"card-highlighted\")) pattern demonstrating recommended approach for conditional class addition"
+    }
+  ]
+}

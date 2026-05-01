@@ -1,0 +1,41 @@
+{
+  "eval_id": 1,
+  "eval_name": "form-with-bootstrap-classes",
+  "baseline": "without-all-skills",
+  "total_assertions": 6,
+  "passed": 6,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "expectations": [
+    {
+      "text": "Form structure with form element wrapping label+input pairs",
+      "passed": true,
+      "evidence": "Form element properly contains multiple div(class := 'form-group') sections, each with label+input pair for username and email fields"
+    },
+    {
+      "text": "Bootstrap className applied as tuple for multi-value attributes",
+      "passed": true,
+      "evidence": "All className attributes use proper tuple syntax without mixing string concatenation or space-separated values"
+    },
+    {
+      "text": "Validation attributes (required, minlength, maxlength) properly applied",
+      "passed": true,
+      "evidence": "input elements have required, minlength, maxlength attributes correctly set on appropriate fields"
+    },
+    {
+      "text": "Label-input linking with htmlFor and id attributes",
+      "passed": true,
+      "evidence": "Labels use htmlFor attribute matching corresponding input id values, ensuring accessibility"
+    },
+    {
+      "text": "Void elements (input) used without children, attributes only",
+      "passed": true,
+      "evidence": "input elements are self-closing with attributes only, no attempted child content"
+    },
+    {
+      "text": "Proper nesting: form > div.form-group > (label, input) structure",
+      "passed": true,
+      "evidence": "Form element contains properly nested div.form-group sections, each with label followed by input"
+    }
+  ]
+}

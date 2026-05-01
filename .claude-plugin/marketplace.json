@@ -2,8 +2,7 @@
   "name": "ziogenetics",
   "description": "Development marketplace for ZIO skills library",
   "owner": {
-    "name": "khajavi",
-    "email": "khajavi@gmail.com"
+    "name": "zio"
   },
   "plugins": [
     {
@@ -12,8 +11,7 @@
       "version": "0.1.0",
       "source": "./plugins/zio-skills",
       "author": {
-        "name": "khajavi",
-        "email": "khajavi@gmail.com"
+        "name": "zio"
       }
     },
     {
@@ -22,8 +20,7 @@
       "version": "0.1.0",
       "source": "./plugins/documentation",
       "author": {
-        "name": "khajavi",
-        "email": "khajavi@gmail.com"
+        "name": "zio"
       }
     }
   ]
