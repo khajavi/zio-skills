@@ -1,7 +1,7 @@
 ---
 name: docs-research
 description: Shared research procedure for documentation skills. Find source files, tests, examples, patterns, and GitHub history when researching a topic. Used by docs-how-to-guide, docs-tutorial, and docs-data-type-ref.
-allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*)
+allowed-tools: Read, Glob, Grep, Bash(gh:*), Bash(sbt:*)
 ---
 
 # Source Code Research for Documentation
@@ -43,15 +43,28 @@ Search for realistic usage patterns:
 
 ## Step 1d: Search GitHub History
 
-Run `sbt "gh-query --verbose <topic>"` to search GitHub issues, PRs, and comments related to the topic. Use the results to:
+Use the GitHub CLI (`gh`, available in every project) to search issues, pull requests, and discussions related to the topic. The goal is to surface:
 
-- Understand design decisions and rationale behind the APIs involved
-- Find known caveats, gotchas, or non-obvious behavior surfaced in issues
-- Discover common user questions, pain points, or misconceptions to address
-- Identify real-world use cases shared by contributors
-- Surface concrete examples or idioms mentioned in discussions
+- Design decisions and rationale behind the APIs involved
+- Known caveats, gotchas, or non-obvious behavior raised in issues
+- Common user questions, pain points, or misconceptions to address
+- Real-world use cases shared by contributors
+- Concrete examples or idioms mentioned in discussions
 
-Run multiple queries as needed — use the topic, type names, and related feature keywords for thorough coverage.
+**Default queries:**
+
+```bash
+# Closed issues and PRs that mention the topic (most informative)
+gh issue list  --repo <owner>/<repo> --state all --search "<topic>"      --limit 30
+gh pr    list  --repo <owner>/<repo> --state all --search "<topic>"      --limit 30
+
+# Code search across the repo for usage patterns
+gh search code --repo <owner>/<repo> "<topic>"                            --limit 20
+```
+
+Run multiple queries — vary the topic, type names, and related feature keywords for thorough coverage. Read the bodies of the most-commented issues/PRs (`gh issue view <n> --comments`) to capture the discussion, not just the title.
+
+**Project-specific helpers (optional):** some ZIO projects ship an sbt task that wraps these queries with richer formatting (e.g., `sbt "gh-query --verbose <topic>"` in zio-blocks). Use it if it exists in the project's `build.sbt`; otherwise fall back to the `gh` commands above.
 
 ---
 
