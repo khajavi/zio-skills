@@ -13,7 +13,13 @@ allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*)
 
 ## Target Type
 
+<!-- $ARGUMENTS is the slash-command argument the user passed (see argument-hint
+     in the frontmatter). Claude Code substitutes the user's input here at
+     invocation time. -->
+
 $ARGUMENTS
+
+If no type name appears above (or the literal text `$ARGUMENTS` is shown), ask the user which data type they want to document before proceeding. Do not invent a type name.
 
 ## Step 1: Deep Source Code Research
 

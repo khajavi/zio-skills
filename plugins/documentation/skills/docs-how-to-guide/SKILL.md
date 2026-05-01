@@ -11,7 +11,14 @@ Write a comprehensive, goal-oriented how-to guide for the ZIO library being docu
 
 ## Guide Topic
 
+<!-- $ARGUMENTS is the slash-command argument the user passed (see argument-hint in
+     the frontmatter). Claude Code substitutes the user's input here before
+     loading the skill. If the substituted value is empty or just "$ARGUMENTS",
+     the skill was invoked without a topic — fall back to the rule below. -->
+
 $ARGUMENTS
+
+If no topic appears above (or the literal text `$ARGUMENTS` is shown), ask the user what guide they want to write before proceeding. Do not invent a topic.
 
 ## Overview: What Makes a Good How-To Guide
 

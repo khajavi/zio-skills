@@ -11,7 +11,13 @@ Write a comprehensive, learning-oriented tutorial for newcomers to the ZIO libra
 
 ## Tutorial Topic
 
+<!-- $ARGUMENTS is the slash-command argument the user passed (see argument-hint
+     in the frontmatter). Claude Code substitutes the user's input here at
+     invocation time. -->
+
 $ARGUMENTS
+
+If no topic appears above (or the literal text `$ARGUMENTS` is shown), ask the user what tutorial they want to write before proceeding. Do not invent a topic.
 
 ## Overview: What Makes a Good Tutorial
 
