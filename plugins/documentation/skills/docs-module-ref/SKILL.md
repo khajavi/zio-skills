@@ -44,23 +44,28 @@ Key Goals:
 
 ## Step 2: Decide Structure (Flat vs. Hierarchical)
 
-Ask the user which structure they prefer for this module:
+Apply the **default rule** below, surface it to the user, and proceed unless the user picks the other option.
 
-**Option A: Flat** (.md single file)
-- Single file: `docs/reference/<module-name>.md`
+**Default rule (apply this without asking):**
+
+| Module shape                                                    | Default        |
+|-----------------------------------------------------------------|----------------|
+| ≤ 4 core types, or types always used together                   | **Flat**       |
+| ≥ 5 core types, **or** ≥ 3 types with rich self-contained APIs  | **Hierarchical** |
+
+Tell the user which default applies and why (e.g., "This module exposes 7 types with diverse APIs, so I'll use the hierarchical structure unless you'd prefer flat"). Move on unless the user objects.
+
+**Option A: Flat** (single `.md` file)
+- File: `docs/reference/<module-name>.md`
 - All types documented inline with `##` headings
-- Best for modules with ≤4 core types or focused, concise APIs
 - Pattern example: `http-model.md` (1,716 lines, 140+ types)
-- Use when types are always used together and separating them is artificial
+- Best when types are always used together and separating them is artificial
 
-**Option B: Hierarchical** (subdirectory/)
+**Option B: Hierarchical** (subdirectory)
 - Module index: `docs/reference/<module-name>/index.md`
 - Individual type pages: `docs/reference/<module-name>/<type>.md`
-- Best for modules with ≥3 core types with rich, diverse APIs
 - Pattern example: `resource-management/` (index.md + scope.md, resource.md, wire.md)
-- Use when types have significant self-contained value and readers benefit from per-type pages
-
-**User decision:** Ask explicitly which structure the user wants. Do not auto-detect or recommend — let the user choose based on their module and documentation goals.
+- Best when types have significant self-contained value and readers benefit from per-type pages
 
 ---
 
