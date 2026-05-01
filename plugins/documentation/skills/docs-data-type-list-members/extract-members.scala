@@ -149,7 +149,7 @@ object MethodExtractor {
 
 def printUsage(toStderr: Boolean = false): Unit = {
   val out = if (toStderr) System.err else System.out
-  out.println("""Usage: scala extract-members.scala <source-file> [<type-name>]
+  out.println("""Usage: scala extract-members.scala [--json] <source-file> [<type-name>]
                 |
                 |Parses a Scala source file and prints public methods grouped into
                 |sections: companion-object members, direct public API of the named
@@ -162,9 +162,18 @@ def printUsage(toStderr: Boolean = false): Unit = {
                 |                  When omitted, all public top-level methods are listed.
                 |
                 |Options:
+                |  --json          Emit machine-readable JSON instead of the default
+                |                  human-readable sectioned output. The schema is:
+                |                    {
+                |                      "sourceFile": "<path>",
+                |                      "typeName":   "<name>" | null,
+                |                      "companion":  ["foo", "bar", …],
+                |                      "publicApi":  ["baz", …],
+                |                      "inherited":  []
+                |                    }
                 |  -h, --help      Print this help message and exit.
                 |
-                |Output sections (each preceded by a header line ending in '==='):
+                |Default text output sections (each preceded by '===' header line):
                 |  === Companion Object Members ===
                 |  === Public API ===
                 |  === Inherited Methods ===
@@ -177,11 +186,51 @@ def printUsage(toStderr: Boolean = false): Unit = {
                 |Examples:
                 |  scala extract-members.scala src/main/scala/zio/Chunk.scala Chunk
                 |  scala extract-members.scala Reader.scala Reader \
-                |    | check-method-coverage.sh Reader docs/reference/reader.md""".stripMargin)
+                |    | check-method-coverage.sh Reader docs/reference/reader.md
+                |  scala extract-members.scala --json Reader.scala Reader | jq '.publicApi'""".stripMargin)
+}
+
+// Minimal JSON string-escape for member names (handles backslash, quote, control chars).
+def jsonEscape(s: String): String = {
+  val sb = new StringBuilder(s.length + 2)
+  sb.append('"')
+  s.foreach {
+    case '"'  => sb.append("\\\"")
+    case '\\' => sb.append("\\\\")
+    case '\b' => sb.append("\\b")
+    case '\f' => sb.append("\\f")
+    case '\n' => sb.append("\\n")
+    case '\r' => sb.append("\\r")
+    case '\t' => sb.append("\\t")
+    case c if c < 0x20 => sb.append(f"\\u${c.toInt}%04x")
+    case c    => sb.append(c)
+  }
+  sb.append('"')
+  sb.toString
+}
+
+def jsonArray(items: List[String]): String =
+  items.map(jsonEscape).mkString("[", ",", "]")
+
+def emitJson(
+  sourceFile: String,
+  typeName: Option[String],
+  companion: List[String],
+  publicApi: List[String],
+  inherited: List[String],
+): Unit = {
+  val typeNameJson = typeName.fold("null")(jsonEscape)
+  println(
+    s"""{"sourceFile":${jsonEscape(sourceFile)},""" +
+    s""""typeName":$typeNameJson,""" +
+    s""""companion":${jsonArray(companion)},""" +
+    s""""publicApi":${jsonArray(publicApi)},""" +
+    s""""inherited":${jsonArray(inherited)}}"""
+  )
 }
 
 @main def run(args: String*): Unit = {
-  // Argument parsing — handle --help / -h first.
+  // Argument parsing — handle --help / -h first, then the optional --json flag.
   args.headOption match {
     case Some("-h") | Some("--help") =>
       printUsage()
@@ -192,14 +241,23 @@ def printUsage(toStderr: Boolean = false): Unit = {
     case _ =>
   }
 
-  if (args.length > 2) {
-    System.err.println(s"Error: expected at most 2 arguments, got ${args.length}")
+  // Strip --json from anywhere in the argument list (positional args remain).
+  val jsonOutput = args.contains("--json")
+  val positional = args.filter(_ != "--json")
+
+  if (positional.isEmpty) {
+    System.err.println("Error: <source-file> is required")
+    printUsage(toStderr = true)
+    System.exit(2)
+  }
+  if (positional.length > 2) {
+    System.err.println(s"Error: expected at most 2 positional arguments, got ${positional.length}")
     printUsage(toStderr = true)
     System.exit(2)
   }
 
-  val sourceFile = args(0)
-  val typeName = if (args.length > 1) Some(args(1)) else None
+  val sourceFile = positional(0)
+  val typeName = if (positional.length > 1) Some(positional(1)) else None
 
   if (!new File(sourceFile).exists()) {
     System.err.println(s"Error: File not found: $sourceFile")
@@ -209,32 +267,38 @@ def printUsage(toStderr: Boolean = false): Unit = {
   val (companionMethods, directMethods, inheritedMethods) =
     MethodExtractor.extractMethods(sourceFile, typeName)
 
-  var hasOutput = false
-
-  if (companionMethods.nonEmpty) {
-    println("=== Companion Object Members ===")
-    companionMethods.foreach(println)
-    hasOutput = true
-  }
-
-  if (directMethods.nonEmpty) {
-    if (hasOutput) println()
-    println("=== Public API ===")
-    directMethods.foreach(println)
-    hasOutput = true
-  }
-
-  if (inheritedMethods.nonEmpty) {
-    if (hasOutput) println()
-    println("=== Inherited Methods ===")
-    inheritedMethods.foreach(println)
-    hasOutput = true
-  }
-
-  if (!hasOutput) {
-    System.err.println(s"No public members found${typeName.map(t => s" for type $t").getOrElse("")} in $sourceFile")
-    System.exit(1) // No members found.
+  if (jsonOutput) {
+    emitJson(sourceFile, typeName, companionMethods, directMethods, inheritedMethods)
+    val hasAny = companionMethods.nonEmpty || directMethods.nonEmpty || inheritedMethods.nonEmpty
+    System.exit(if (hasAny) 0 else 1)
   } else {
-    System.exit(0) // Success.
+    var hasOutput = false
+
+    if (companionMethods.nonEmpty) {
+      println("=== Companion Object Members ===")
+      companionMethods.foreach(println)
+      hasOutput = true
+    }
+
+    if (directMethods.nonEmpty) {
+      if (hasOutput) println()
+      println("=== Public API ===")
+      directMethods.foreach(println)
+      hasOutput = true
+    }
+
+    if (inheritedMethods.nonEmpty) {
+      if (hasOutput) println()
+      println("=== Inherited Methods ===")
+      inheritedMethods.foreach(println)
+      hasOutput = true
+    }
+
+    if (!hasOutput) {
+      System.err.println(s"No public members found${typeName.map(t => s" for type $t").getOrElse("")} in $sourceFile")
+      System.exit(1) // No members found.
+    } else {
+      System.exit(0) // Success.
+    }
   }
 }

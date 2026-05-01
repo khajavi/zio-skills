@@ -6,8 +6,8 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: check-method-coverage.sh <TypeName> <doc-file.md> [members-file]
-   Or: extract-members.scala <Source.scala> <TypeName> | check-method-coverage.sh <TypeName> <doc-file.md>
+Usage: check-method-coverage.sh [--json] <TypeName> <doc-file.md> [members-file]
+   Or: extract-members.scala <Source.scala> <TypeName> | check-method-coverage.sh [--json] <TypeName> <doc-file.md>
 
 Cross-checks the public members of a Scala data type (extracted from source
 or supplied as a list) against a reference documentation page, and reports
@@ -21,6 +21,19 @@ Arguments:
                    If omitted, members are read from stdin.
 
 Options:
+  --json           Emit machine-readable JSON instead of the default human
+                   report. Schema:
+                     {
+                       "typeName":    "<TypeName>",
+                       "docFile":     "<path>",
+                       "categories": {
+                         "companion": { "total": N, "documented": N, "missing": [...] },
+                         "publicApi": { "total": N, "documented": N, "missing": [...] },
+                         "inherited": { "total": N, "documented": N, "missing": [...] }
+                       },
+                       "fullCoverage": true|false
+                     }
+                   Categories with no input members are omitted.
   -h, --help       Print this help message and exit.
 
 Exit codes:
@@ -31,19 +44,31 @@ Exit codes:
 Examples:
   check-method-coverage.sh Reader docs/reference/reader.md members.txt
   ./extract-members.scala Reader.scala Reader | check-method-coverage.sh Reader docs/reference/reader.md
+  ./extract-members.scala Reader.scala Reader \
+    | check-method-coverage.sh --json Reader docs/reference/reader.md \
+    | jq '.categories.publicApi.missing'
 EOF
 }
 
-case "${1:-}" in
-  -h|--help)
-    usage
-    exit 0
-    ;;
-  "")
-    usage >&2
-    exit 2
-    ;;
-esac
+# Filter --json out of positional argument list.
+JSON_OUTPUT=0
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --json) JSON_OUTPUT=1 ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *) ARGS+=("$arg") ;;
+  esac
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+
+if [[ $# -eq 0 ]]; then
+  usage >&2
+  exit 2
+fi
 
 if [[ $# -lt 2 ]]; then
   echo "Error: expected at least two arguments (<TypeName> <doc-file.md>)" >&2
@@ -116,15 +141,20 @@ extract_methods_from_doc() {
     sort -u
 }
 
-echo "=== Documentation Coverage Check for '$TYPE_NAME' ==="
-echo ""
+if [[ $JSON_OUTPUT -eq 0 ]]; then
+  echo "=== Documentation Coverage Check for '$TYPE_NAME' ==="
+  echo ""
+fi
 
 # Prepare temp files
 COMPANION_MEMBERS=$(mktemp)
 API_MEMBERS=$(mktemp)
 INHERITED_MEMBERS=$(mktemp)
 DOC_METHODS=$(mktemp)
-trap "rm -f '$COMPANION_MEMBERS' '$API_MEMBERS' '$INHERITED_MEMBERS' '$DOC_METHODS'" EXIT
+COMPANION_MISSING=$(mktemp)
+API_MISSING=$(mktemp)
+INHERITED_MISSING=$(mktemp)
+trap "rm -f '$COMPANION_MEMBERS' '$API_MEMBERS' '$INHERITED_MEMBERS' '$DOC_METHODS' '$COMPANION_MISSING' '$API_MISSING' '$INHERITED_MISSING'" EXIT
 
 # Parse member input into categories
 current_section=""
@@ -152,70 +182,109 @@ done < "$MEMBERS_INPUT"
 # Collect documented methods
 extract_methods_from_doc "$DOC_FILE" > "$DOC_METHODS"
 
-# Report on each category
+# Compute missing-set per category (drives both text and JSON output)
+[[ -s "$COMPANION_MEMBERS" ]] && comm -23 <(sort "$COMPANION_MEMBERS") "$DOC_METHODS" > "$COMPANION_MISSING" 2>/dev/null || true
+[[ -s "$API_MEMBERS"       ]] && comm -23 <(sort "$API_MEMBERS")       "$DOC_METHODS" > "$API_MISSING"       2>/dev/null || true
+[[ -s "$INHERITED_MEMBERS" ]] && comm -23 <(sort "$INHERITED_MEMBERS") "$DOC_METHODS" > "$INHERITED_MISSING" 2>/dev/null || true
+
 has_missing=0
+[[ -s "$COMPANION_MISSING" ]] && has_missing=1
+[[ -s "$API_MISSING"       ]] && has_missing=1
+[[ -s "$INHERITED_MISSING" ]] && has_missing=1
 
-# Check Companion Object Members
-if [[ -s "$COMPANION_MEMBERS" ]]; then
-  echo "=== Companion Object Members ==="
-  wc -l < "$COMPANION_MEMBERS" | xargs echo "Total methods:" | sed 's/^/  /'
+# ─── Output ───────────────────────────────────────────────────────────────────
 
-  MISSING=$(mktemp)
-  trap "rm -f '$MISSING'" EXIT
-  comm -23 <(sort "$COMPANION_MEMBERS") "$DOC_METHODS" > "$MISSING" 2>/dev/null || true
+if [[ $JSON_OUTPUT -eq 1 ]]; then
+  # JSON output: build a single object using the awk JSON encoder below.
+  json_array_from_file() {
+    # Emits a JSON array of strings, one per line of $1; missing/empty file → "[]"
+    local f="$1"
+    if [[ ! -s "$f" ]]; then
+      printf '[]'
+      return
+    fi
+    awk 'BEGIN { printf "[" }
+      {
+        gsub(/\\/, "\\\\")
+        gsub(/"/,  "\\\"")
+        gsub(/\b/, "\\b"); gsub(/\f/, "\\f")
+        gsub(/\n/, "\\n"); gsub(/\r/, "\\r"); gsub(/\t/, "\\t")
+        if (NR > 1) printf ","
+        printf "\"%s\"", $0
+      }
+      END { printf "]" }' "$f"
+  }
+  json_string() {
+    # JSON-escape a single string and wrap in quotes.
+    printf '"%s"' "$(printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\t/\\t/g')"
+  }
 
-  if [[ -s "$MISSING" ]]; then
-    echo "  ❌ Missing from documentation:"
-    sed 's/^/    /' "$MISSING"
-    has_missing=1
-  else
-    echo "  ✓ All documented"
+  count_lines() {
+    # Always print an integer (0 if file missing/empty).
+    if [[ -s "$1" ]]; then wc -l < "$1" | tr -d ' '; else printf 0; fi
+  }
+
+  comp_total=$(count_lines "$COMPANION_MEMBERS")
+  api_total=$(count_lines "$API_MEMBERS")
+  inh_total=$(count_lines "$INHERITED_MEMBERS")
+  comp_miss_count=$(count_lines "$COMPANION_MISSING")
+  api_miss_count=$(count_lines "$API_MISSING")
+  inh_miss_count=$(count_lines "$INHERITED_MISSING")
+
+  # Emit a single JSON object; categories with no input members are omitted.
+  full_coverage="false"
+  [[ $has_missing -eq 0 ]] && full_coverage="true"
+
+  printf '{'
+  printf '"typeName":'; json_string "$TYPE_NAME"; printf ','
+  printf '"docFile":'; json_string "$DOC_FILE"; printf ','
+  printf '"categories":{'
+  first=1
+  if [[ "$comp_total" -gt 0 ]]; then
+    [[ $first -eq 0 ]] && printf ','
+    printf '"companion":{"total":%s,"documented":%s,"missing":' "$comp_total" "$((comp_total - comp_miss_count))"
+    json_array_from_file "$COMPANION_MISSING"
+    printf '}'
+    first=0
   fi
-  echo ""
-  rm -f "$MISSING"
+  if [[ "$api_total" -gt 0 ]]; then
+    [[ $first -eq 0 ]] && printf ','
+    printf '"publicApi":{"total":%s,"documented":%s,"missing":' "$api_total" "$((api_total - api_miss_count))"
+    json_array_from_file "$API_MISSING"
+    printf '}'
+    first=0
+  fi
+  if [[ "$inh_total" -gt 0 ]]; then
+    [[ $first -eq 0 ]] && printf ','
+    printf '"inherited":{"total":%s,"documented":%s,"missing":' "$inh_total" "$((inh_total - inh_miss_count))"
+    json_array_from_file "$INHERITED_MISSING"
+    printf '}'
+  fi
+  printf '},"fullCoverage":%s}\n' "$full_coverage"
+
+  [[ $has_missing -eq 0 ]] && exit 0 || exit 1
 fi
 
-# Check Public API
-if [[ -s "$API_MEMBERS" ]]; then
-  echo "=== Public API ==="
-  wc -l < "$API_MEMBERS" | xargs echo "Total methods:" | sed 's/^/  /'
-
-  MISSING=$(mktemp)
-  trap "rm -f '$MISSING'" EXIT
-  comm -23 <(sort "$API_MEMBERS") "$DOC_METHODS" > "$MISSING" 2>/dev/null || true
-
-  if [[ -s "$MISSING" ]]; then
-    echo "  ❌ Missing from documentation:"
-    sed 's/^/    /' "$MISSING"
-    has_missing=1
-  else
-    echo "  ✓ All documented"
+# Default text output
+report_category() {
+  local label="$1" members_file="$2" missing_file="$3" missing_marker="$4"
+  if [[ -s "$members_file" ]]; then
+    echo "=== $label ==="
+    wc -l < "$members_file" | xargs echo "Total methods:" | sed 's/^/  /'
+    if [[ -s "$missing_file" ]]; then
+      echo "  $missing_marker Missing from documentation:"
+      sed 's/^/    /' "$missing_file"
+    else
+      echo "  ✓ All documented"
+    fi
+    echo ""
   fi
-  echo ""
-  rm -f "$MISSING"
-fi
+}
 
-# Check Inherited Methods
-if [[ -s "$INHERITED_MEMBERS" ]]; then
-  echo "=== Inherited Methods ==="
-  wc -l < "$INHERITED_MEMBERS" | xargs echo "Total methods:" | sed 's/^/  /'
+report_category "Companion Object Members" "$COMPANION_MEMBERS" "$COMPANION_MISSING" "❌"
+report_category "Public API"                "$API_MEMBERS"       "$API_MISSING"       "❌"
+report_category "Inherited Methods"         "$INHERITED_MEMBERS" "$INHERITED_MISSING" "⚠"
 
-  MISSING=$(mktemp)
-  trap "rm -f '$MISSING'" EXIT
-  comm -23 <(sort "$INHERITED_MEMBERS") "$DOC_METHODS" > "$MISSING" 2>/dev/null || true
-
-  if [[ -s "$MISSING" ]]; then
-    echo "  ⚠ Missing from documentation:"
-    sed 's/^/    /' "$MISSING"
-    has_missing=1
-  else
-    echo "  ✓ All documented"
-  fi
-  echo ""
-  rm -f "$MISSING"
-fi
-
-# Final summary
 echo "=== Coverage Summary ==="
 if [[ $has_missing -eq 0 ]]; then
   echo "✓ Complete coverage: all members documented"

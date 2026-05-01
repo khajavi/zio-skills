@@ -14,12 +14,33 @@ scala-cli ${CLAUDE_PLUGIN_ROOT}/skills/docs-data-type-list-members/extract-membe
 
 Run with `--help` for the full usage.
 
-**Output sections** (each preceded by a header line ending in `===`):
+**Default text output sections** (each preceded by a header line ending in `===`):
 - **Companion Object Members** — factory methods, utilities, and static operations
 - **Public API** — instance methods on the type itself
 - **Inherited Methods** — methods from parent classes/traits (when cross-file analysis is available)
 
 Excludes private/protected members and internal helpers.
+
+## JSON Output
+
+For machine-readable output (e.g., when piping into other scripts or filtering with `jq`), pass `--json`:
+
+```bash
+scala-cli ${CLAUDE_PLUGIN_ROOT}/skills/docs-data-type-list-members/extract-members.scala \
+  -- --json <source-file> [<type-name>] | jq '.publicApi'
+```
+
+The JSON schema is:
+
+```json
+{
+  "sourceFile": "<path>",
+  "typeName":   "<name> or null",
+  "companion":  ["..."],
+  "publicApi":  ["..."],
+  "inherited":  []
+}
+```
 
 **Exit codes:**
 
