@@ -12,38 +12,74 @@
 
 This section tracks recommendations from the original review that have been addressed. Per-skill score tables below reflect the **state at review time** and do not yet incorporate these fixes — they will be re-scored at the next quarterly review.
 
-| # | Recommendation                                                            | Status     | Commit    | Date       |
-|---|---------------------------------------------------------------------------|------------|-----------|------------|
-| 3 | Document exit codes and add `--help` to every helper script               | ✅ Resolved | `ac2591f` | 2026-05-01 |
+| #  | Recommendation                                                            | Status     | Commit    | Date       |
+|----|---------------------------------------------------------------------------|------------|-----------|------------|
+| 1  | Add Common Failures tables to skills with weakest D7                      | ✅ Resolved | `1560e68` | 2026-05-01 |
+| 2  | Add CHECKLIST.md siblings for doc-authoring skills                        | ✅ Resolved | (multi)   | 2026-05-01 |
+| 3  | Document exit codes and add `--help` to every helper script               | ✅ Resolved | `ac2591f` | 2026-05-01 |
+| 4  | Move embedded examples and JSON blocks into `references/examples/`        | ✅ Resolved | (multi)   | 2026-05-01 |
+| 5  | Resolve `docs-module-ref` flat-vs-hierarchical contradiction              | ✅ Resolved | `06f4ce4` | 2026-05-01 |
+| 6  | Add structured (JSON) output mode to helper scripts                       | ✅ Resolved | `8e06ce0` | 2026-05-01 |
+| 7  | `docs-how-to-guide` `$ARGUMENTS` placeholder + clarification              | ✅ Resolved | `c4f76c6` | 2026-05-01 |
+| 8  | `docs-integrate` sidebars.js example + Step 3 quantification + mdoc recovery | ✅ Resolved | `fc57193` | 2026-05-01 |
+| 9  | `docs-research` standardize on `gh` CLI; treat `sbt gh-query` as optional | ✅ Resolved | `081b338` | 2026-05-01 |
+| 10 | `scan-undocumented.sh` `xargs cat` quoting fix                            | ✅ Resolved | `5e07ffd` | 2026-05-01 |
+
+All 10 recommendations from the original review have been addressed. The branch `add-documentation-plugin` contains the full set of fixes.
+
+### Resolved #1 — Common Failures tables (`1560e68`)
+
+Nine skills with the weakest D7 (Error Handling) scores received a `Common Failures` table covering realistic top-of-mind failure modes (symptom → likely cause → fix). Affected: `zio-http-scaffold`, `zio-http-knowledge`, `zio-http-template2`, `zio-http-test`, `zio-http-endpoint-to-openapi`, `zio-http-imperative-to-declarative`, `zio-http-openapi-to-endpoint` (replaced existing prose-style troubleshooting with a structured table), `zio-http-datastar`, `docs-organize-types`. Several documentation skills already gained equivalent failure guidance through earlier commits — `docs-integrate` (mdoc-failure table), `docs-mdoc-conventions` (`references/troubleshooting.md`), `docs-data-type-ref` (`references/embedding-examples.md` Common Failures), and the helper-script SKILL.md exit-code tables.
+
+### Resolved #2 — CHECKLIST.md siblings (multi-commit)
+
+Created `CHECKLIST.md` for `docs-data-type-ref`, `docs-module-ref`, `docs-add-missing-section`, `docs-document-pr`, and `docs-enrich-section`. Each one ends with the three mandatory compliance gates (writing-style, mdoc-conventions, mdoc compile). Every parent SKILL.md now ends with a "Final Verification" / "Before Publishing" pointer to its CHECKLIST.md.
 
 ### Resolved #3 — Helper script polish (`ac2591f`)
 
-All five bundled helper scripts now expose a `-h` / `--help` flag with full usage, an arguments table, an exit-code table, and worked examples. Exit codes were also standardized to a grep-style convention across all five:
+All five bundled helper scripts (`check-docs-style.sh`, `check-mdoc-conventions.sh`, `check-method-coverage.sh`, `extract-members.scala`, `scan-undocumented.sh`) now expose a `-h` / `--help` flag with full usage, arguments, exit-code table, and worked examples. Exit codes were standardized to a grep-style convention:
 
 - `0` — success
-- `1` — result indicates a problem (violations found / no public members)
+- `1` — result indicates a problem (violations found / no members)
 - `2` — invocation error (missing/extra arguments, file not found)
 
-Previously, several scripts conflated invocation errors with "result-has-issues" by using exit `1` for both — downstream callers could not distinguish "the check ran and found problems" from "the check couldn't run at all". They can now.
+The corresponding `SKILL.md` files publish the exit-code table inline.
 
-The corresponding `SKILL.md` files (`docs-writing-style`, `docs-mdoc-conventions`, `docs-report-method-coverage`, `docs-data-type-list-members`, `docs-find-documentation-gaps`) now publish the exit-code table inline so agents and CI scripts know what to expect without spawning the script.
+### Resolved #4 — Embedded examples extracted (multi-commit)
 
-**Expected score impact at next review:**
+Five skills had large blocks of example content embedded in their main `SKILL.md`. Each block is now in a sibling reference file with a one-line load trigger:
 
-- **D9 (Scripts Quality)** mean was 3.83 across the 5 scripts → expected ~4.6 (5/5 if structured-output is also added; the next item to address).
-- **D7 (Error Handling)** for the five host skills was 4.0 → expected ~4.4 because invocation errors now have a documented separate exit code.
-- **D5 (Instruction Clarity)** for `docs-data-type-list-members` and `docs-report-method-coverage` was 5/5 already; their SKILL.md content is now richer (exit-code table + cross-skill pipeline example) but the score is already ceilinged.
+- `zio-http-openapi-to-endpoint/references/examples/petstore.json` (was 55-line inline JSON)
+- `zio-http-imperative-to-declarative/references/examples/BookEndpointsApp.scala` (full runnable companion)
+- `docs-document-pr/references/example-invocations.md` (5 worked examples)
+- `docs-data-type-ref/references/embedding-examples.md` (`SourceFile.print` deep dive)
+- `docs-add-missing-section/references/section-patterns.md` (5 section-type templates)
 
-### Open recommendations
+Net result: −167 lines across the five SKILL.md files, with the detailed material discoverable via load triggers when needed.
 
-The following from the original "High-priority" list are still open:
+### Resolved #5 — docs-module-ref structure decision (`06f4ce4`)
 
-- **#1** Add a "Common Failures" mini-table to every skill (~10–15 lines per skill).
-- **#2** Adopt the `CHECKLIST.md` sibling pattern for all doc-authoring skills (currently only `docs-tutorial` and `docs-how-to-guide` use it).
-- **#4** Move embedded examples and JSON blocks into `references/examples/` (5 specific cases identified in this report).
-- **#5** Resolve the `docs-module-ref` flat-vs-hierarchical contradiction (lines 52–63).
-- **#6** Add structured (JSON) output mode to helper scripts — would lift the remaining D9 gap on `extract-members.scala` and `check-method-coverage.sh`.
-- Plus low-priority polish items #7–#10.
+Step 2's contradictory guidance (criteria for each option followed by "do not auto-detect or recommend") was replaced with an explicit default-rule table the agent applies upfront, plus a one-line surface-and-confirm prompt to the user. The agent now picks a default and lets the user override, instead of presenting a menu.
+
+### Resolved #6 — JSON output mode for scripts (`8e06ce0`)
+
+`extract-members.scala` and `check-method-coverage.sh` both gained a `--json` flag with a documented schema. Default text output is unchanged. Exit codes preserved across both modes. Downstream tooling can now parse JSON instead of regex-matching the `=== Section ===` headers.
+
+### Resolved #7 — `$ARGUMENTS` clarification (`c4f76c6`)
+
+`docs-how-to-guide`, `docs-tutorial`, and `docs-data-type-ref` now include a HTML-comment explaining that `$ARGUMENTS` is Claude Code's slash-command substitution token, plus an explicit fallback ("if no value was substituted, ask the user instead of inventing one"). `docs-find-documentation-gaps` already had a sensible fallback.
+
+### Resolved #8 — `docs-integrate` sidebars.js example (`fc57193`)
+
+Replaced the truncated single-object fragment with a complete `sidebars.docs` array showing the new category clearly marked. Added a one-line `node -e "require('./docs/sidebars.js')"` syntax-validation check. Step 3 now quantifies "at least two inbound cross-references" and provides a `grep` helper. Step 4 gained an "If mdoc Fails" subsection with a return-to-offending-page workflow and a four-row error/cause/fix table.
+
+### Resolved #9 — `docs-research` GitHub queries (`081b338`)
+
+Step 1d previously instructed agents to run `sbt "gh-query --verbose <topic>"`, which is a zio-blocks-specific sbt task. Replaced with three default `gh` CLI queries (`gh issue list`, `gh pr list`, `gh search code`) that work in every GitHub project. Note the optional `sbt gh-query` helper for projects that ship one. Tightened `allowed-tools` to `Bash(gh:*), Bash(sbt:*)`.
+
+### Resolved #10 — `xargs cat` quoting (`5e07ffd`)
+
+`scan-undocumented.sh` word-frequency stage piped `find ... | xargs cat`, which word-splits filenames on whitespace. Replaced with `find ... -print0 | xargs -0 cat` so filenames containing spaces or special characters are handled correctly. Other stages were already safe (they used `read -r`).
 
 ---
 
