@@ -99,3 +99,9 @@ sbt "docs/mdoc --in docs/reference/file1.md --out out/file1.md --in docs/referen
 **Success criterion:** The output contains **zero `[error]` lines**. Warnings are acceptable.
 
 **If mdoc reports errors:** Fix them immediately before marking the enrichment as complete. Do not commit or claim the work is done until all errors are resolved.
+
+---
+
+## Final Verification
+
+Walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)** before committing. It covers diagnosis, the five-part expansion pattern, content quality, technical accuracy, mandatory compliance gates, bloat avoidance, and commit hygiene.

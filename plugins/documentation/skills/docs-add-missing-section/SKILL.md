@@ -227,13 +227,4 @@ Example commit messages:
 
 ## Verification Checklist
 
-After completing all steps:
-
-- [ ] New section appears at the correct canonical position
-- [ ] Section follows section-type-specific patterns (Construction, Comparison, etc.)
-- [ ] All code blocks have preceding prose sentences ending in `:`
-- [ ] No hardcoded output comments (`// result`, `// None`, etc.)
-- [ ] All examples use `mdoc:compile-only` or Setup + Evaluated Output pattern
-- [ ] `sbt "docs/mdoc --in <path>"` runs with zero `[error]` lines
-- [ ] One blank line above the `##` heading and one below the section's last line
-- [ ] Commit message matches format: `docs(<stem>): add <section-name> section`
+Before committing, walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)**. It covers section selection, content quality, technical accuracy, mandatory compliance gates, cross-references, and commit hygiene.

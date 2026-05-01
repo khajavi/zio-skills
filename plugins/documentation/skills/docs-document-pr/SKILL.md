@@ -329,3 +329,9 @@ For worked examples covering the common PR shapes (new reference page, new how-t
 - **PR numbers:** Assume user provides `#123` format; extract the number
 - **No commits/issues:** If a PR has no linked issues, use only PR title and body
 - **Ambiguous cases:** If unsure whether to create a new page or subsection, default to a new page (easier to reorganize later) or ask the user
+
+---
+
+## Final Verification
+
+Before reporting back to the user, walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)**. It covers PR analysis, doc-type routing, per-doc quality (delegated), integration, and reporting.

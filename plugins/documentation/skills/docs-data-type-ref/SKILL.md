@@ -369,3 +369,7 @@ sbt "docs/mdoc --in docs/reference/<subdirectory>/"
 ## Step 6: Integrate
 
 Use the **`docs-integrate`** skill for integration checklist (sidebars.js, index.md, cross-references).
+
+## Step 7: Final Verification
+
+Before claiming the page is done, walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)**. It covers content, method coverage, technical accuracy, compliance gates, companion examples, and integration. Do not skip — agents that skipped checklists were the most common cause of incomplete pages in past reviews.

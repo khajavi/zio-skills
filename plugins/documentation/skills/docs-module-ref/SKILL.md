@@ -402,15 +402,4 @@ Use skill({ name: "docs-data-type-ref" }) when:
 
 ## Checklist: Before Publishing
 
-- [ ] **Research complete:** All types identified, relationships mapped, patterns understood
-- [ ] **Structure chosen:** Flat or hierarchical, with clear rationale
-- [ ] **Module index written:** Opening Definition, Motivation, Installation, Overview (if hierarchical), **How They Work Together**, Common Patterns, Integration Points
-- [ ] **Type pages written:** Comprehensive coverage following `docs-data-type-ref` structure, contextualized to module
-- [ ] **Examples:** Multi-type composition shown, all examples compile (mdoc zero errors)
-- [ ] **Prose:** All method references qualified, relative links work, follows `docs-writing-style`
-- [ ] **Code blocks:** All follow `docs-mdoc-conventions` (modifiers correct, Setup + Evaluated Output pattern)
-- [ ] **Links:** Tested all relative links (module ↔ types, sidebar entries, index.md)
-- [ ] **Lint:** `sbt scalafmtAll` and `sbt check` pass
-- [ ] **mdoc:** `sbt "docs/mdoc --in ..."` zero [error] lines
-- [ ] **Integration:** `docs-integrate` checklist complete (sidebars.js, index.md, cross-references)
-- [ ] **Quality:** Reader can understand module composition and relationships from index alone
+Walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)** before claiming the page is done. It covers structure, content quality, per-type coverage, technical accuracy, compliance gates, and integration. Do not skip — agents that skipped checklists were the most common cause of incomplete pages in past reviews.
