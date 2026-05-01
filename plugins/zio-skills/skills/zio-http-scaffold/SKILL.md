@@ -189,6 +189,18 @@ Once your basic server is working, explore:
 
 ---
 
+## Common Failures
+
+| Symptom                                                              | Likely cause                                                              | Fix                                                                                              |
+|----------------------------------------------------------------------|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `java.net.BindException: Address already in use`                     | Port 8080 (default) is already taken.                                     | Use a different port: `Server.defaultWith(_.port(9090))` or stop the other process.              |
+| `Server.default` is not a member of object `Server`                  | Old `zio-http` version that pre-dates the layer rename.                   | Bump `zio-http` to ≥ 3.0; older releases used `Server.live`.                                     |
+| `not a member of object zio.http.Routes`                             | API version mismatch between `Routes` and the Endpoint API.              | Verify all `zio-http*` artifacts share the same version in `build.sbt`.                          |
+| Client request hangs forever                                         | Server not running, or client URL doesn't match the server's port.        | Confirm `Server started on http://0.0.0.0:8080` in the server log; align client URL.             |
+| `java.lang.NoSuchMethodError` at runtime                             | Two `zio-http` versions on the classpath (via a transitive dep).          | Run `sbt evicted`; pin a single version with `dependencyOverrides`.                              |
+
+---
+
 ## References
 
 - [ZIO HTTP GitHub](https://github.com/zio/zio-http)

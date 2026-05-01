@@ -212,17 +212,16 @@ val openAPIJson = response.body.getOrElse("")
 
 ---
 
-## Troubleshooting
+## Common Failures
 
-**"Failed to parse OpenAPI"**
-- Ensure your JSON/YAML is valid. Use [swagger.io/tools/swagger-editor](https://editor.swagger.io) to validate.
-
-**"Field type not found"**
-- The OpenAPI spec references a schema that doesn't exist. Check `#/components/schemas/` definitions.
-
-**"Generated code doesn't compile"**
-- Ensure `zio-http` and `zio-schema` are in your classpath.
-- If using custom formats, add them to the `stringFormatTypes` map in `Config`.
+| Symptom                                                              | Likely cause                                                                            | Fix                                                                                                                          |
+|----------------------------------------------------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| `Failed to parse OpenAPI`                                            | Invalid JSON/YAML, or unsupported OpenAPI dialect.                                      | Validate at https://editor.swagger.io. Confirm the spec is OpenAPI 3.0/3.1 (Swagger 2.0 is not supported by `zio-http-gen`). |
+| `Field type not found`                                               | Spec references a schema (`$ref`) that isn't defined under `#/components/schemas/`.    | Add the missing schema to `components.schemas`, or fix the broken `$ref` path.                                               |
+| Generated code doesn't compile                                       | `zio-http` and/or `zio-schema` missing from `build.sbt`, or version mismatch.           | Add both deps with the same major version. Run `sbt evicted` to confirm no conflicting transitive versions.                  |
+| Generated code compiles but field names look wrong (`personId` etc.) | `fieldNamesNormalization = true` is rewriting from the spec's `person_id`.              | Either accept the normalization (idiomatic Scala) or set `fieldNamesNormalization = false` to keep spec field names.         |
+| Custom string formats produce `String` instead of a typed value      | The format isn't registered in `Config.stringFormatTypes`.                              | Add the mapping: `Config(..., stringFormatTypes = Map("uuid" -> "java.util.UUID", ...))`.                                    |
+| Circular `$ref` chains cause non-termination                          | Self-referential schemas without recursion limits.                                      | Restructure the spec to use `oneOf` / `anyOf` at the recursion boundary, or split into multiple smaller schemas.             |
 
 ---
 

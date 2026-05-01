@@ -351,6 +351,19 @@ span(
 
 ---
 
+## Common Failures
+
+| Symptom                                                              | Likely cause                                                                       | Fix                                                                                                                  |
+|----------------------------------------------------------------------|------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| Browser shows the page but no updates arrive                         | Route's `Content-Type` isn't `text/event-stream`, or proxy buffering is on.        | Use `ServerSentEventsResponse(...)` (sets the correct headers) and disable buffering on any reverse proxy.           |
+| Updates arrive but the DOM doesn't change                            | Wrong element selector, or `mergeFragments` used where replacement was intended.   | Match `selector` to an existing element ID; choose the patching mode that matches your intent (merge vs replace).    |
+| Updates duplicate elements after the first emission                  | `mergeFragments` accumulates when `replaceFragments` was intended.                 | Use `replaceFragments` (or `mergeMode := Replace`) when new HTML should overwrite the existing block.                |
+| Signals don't reach the server                                       | Datastar form/element isn't bound, or `data-on-*` attribute typo.                  | Confirm the page sends signals via `data-signals-*` and triggers via `data-on-click` / `data-on-submit`.             |
+| `Channel.send` succeeds but client never observes the event          | Client closed the EventSource before the event arrived (e.g., navigation).         | Defer side effects until after `onopen`; reconnect on `onerror`.                                                     |
+| One client's signal leaks into another client's view                 | Server-side state shared without per-connection scoping.                           | Scope state with a per-connection `Ref`, or include a session ID in the signal.                                      |
+
+---
+
 ## References
 
 - **[ZIO HTTP Datastar SDK](https://github.com/zio/zio-http/tree/main/zio-http-datastar-sdk)** — Source code

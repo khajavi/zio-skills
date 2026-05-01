@@ -379,6 +379,18 @@ When converting an imperative route to declarative:
 
 ---
 
+## Common Failures
+
+| Symptom                                                                   | Likely cause                                                                | Fix                                                                                                                  |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `not found: type Schema` or `Schema[T]`                                   | Missing `zio-schema` dep or missing `DeriveSchema.gen` for case class.      | Add `"dev.zio" %% "zio-schema-derivation"`; `implicit val schema: Schema[T] = DeriveSchema.gen` for each type.       |
+| `value implement is not a member of Endpoint[...]`                        | Imperative-style binding used; Endpoint expects a typed handler.            | Use `endpoint.implement { case (path, query) => ... }`. The lambda must match the endpoint's input arity.            |
+| Compile error: `lambda parameter count mismatch`                          | Handler arity doesn't match the endpoint's typed input.                     | An endpoint with `Method.GET / "x" / int("id")` plus `.query(...)` produces `(Int, Option[Q]) => …`.               |
+| Endpoint compiles but returns 404 at runtime                              | Routes object built from endpoints not bound to the server, or path typo.   | Pass `Routes(...)` to `Server.serve(...)`; verify the endpoint's path string matches the request URL.                |
+| Migration leaves an unused `Request => Response` handler somewhere         | Imperative residue not removed during refactor.                             | Search for `handler {` blocks and confirm each is either deleted or paired with a typed endpoint via `.implement`.   |
+
+---
+
 ## References
 
 - **Complete runnable companion example**: [`references/examples/BookEndpointsApp.scala`](references/examples/BookEndpointsApp.scala) — combines the snippets shown across Steps 2–4 into a single runnable file (data types, endpoint declarations, service logic, routes, OpenAPI + Swagger UI). Read this first when you want a copy-paste starting point instead of stitching the snippets together.

@@ -773,3 +773,17 @@ sbt "testOnly com.example.HelloWorldSpec -- -t \"handler returns OK\""
 - `references/examples/06-middleware-test.scala` — Middleware and cross-cutting concerns
 - `references/examples/07-websocket-test.scala` — WebSocket communication testing
 - `references/examples/08-advanced-patterns.scala` — Error handling, custom assertions, parameterized tests
+
+---
+
+## Common Failures
+
+| Symptom                                                                   | Likely cause                                                                | Fix                                                                                                                       |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `not found: value TestClient` / `value TestServer`                        | Missing the `zio-http-testkit` dependency.                                  | Add `"dev.zio" %% "zio-http-testkit" % <version> % Test` to `build.sbt`.                                                  |
+| Test hangs / times out                                                    | A test depends on the real network or a server that never responds.         | Use `TestClient`/`TestServer` instead of `Client.default`/`Server.default` so the layer stays in-process.                 |
+| `LayerError: ZLayer composition error`                                    | Test layer doesn't include all dependencies the handler needs.              | Build the layer explicitly: `(TestClient.layer ++ Server.default ++ <YourService>.layer)` for handlers that need services. |
+| Assertion fires but error message says "actual: <empty>"                  | Response body wasn't read; assertion ran on the streaming wrapper.          | Read the body once with `response.body.asString` (or `asJson`) and assert on the result.                                  |
+| `Status.Ok != Status.NotFound` for routes that should match               | Trailing slash mismatch (`"/api/foo"` vs `"/api/foo/"`).                    | Normalize either the route path or the test request URL; ZIO HTTP routes are exact-match by default.                     |
+| Endpoint test compiles but fails at runtime with `IllegalStateException`  | Endpoint declared but not registered with the test server.                  | Pass the endpoint's implementation to `TestServer.addRoutes(routes)` before making the request.                           |
+| WebSocket test never receives messages                                    | Closed the channel before the server-side handler emitted.                  | Use `Channel.receive` with a timeout, and let the server emit before closing the test channel.                            |

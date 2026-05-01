@@ -752,6 +752,18 @@ Explore related skills:
 
 ---
 
+## Common Failures
+
+| Symptom                                                              | Likely cause                                                                | Fix                                                                                                  |
+|----------------------------------------------------------------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| `type mismatch; found String, required (String, String)`             | Passing a CSS class as a bare string instead of `(name, value)` tuple.      | Use the `class :=` form or pass `("class", "btn-primary")`. See the attribute-types section.        |
+| Conditional class doesn't render                                     | `.when(...)` was used on a `Boolean`, not on the attribute.                 | Apply `.when(condition)` on the attribute itself: `(class := "active").when(isActive)`.             |
+| Form submission posts no values                                      | Missing `name` attribute on inputs, or the form's `action`/`method` is wrong. | Every submittable input needs `name := "<key>"`; the form needs `method := "post"`.                |
+| Boolean attribute rendered as `disabled="false"` instead of omitted  | Used `disabled := false` (string assignment) instead of the boolean form.   | Use `disabled.when(false)` to omit, or `disabled := true` only when you want it present.            |
+| Page renders but CSS / JS doesn't load                               | Used a relative path that breaks under Docusaurus / nested routes.          | Prefer absolute paths from the site root, or use the helper that resolves base-URL automatically.   |
+
+---
+
 ## References
 
 - **Full API Reference**: See `references/api-guide.md` for complete element and attribute listings

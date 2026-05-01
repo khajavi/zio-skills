@@ -284,6 +284,18 @@ This JSON can be imported into other tools like Postman, Insomnia, or API regist
 
 ---
 
+## Common Failures
+
+| Symptom                                                              | Likely cause                                                                 | Fix                                                                                                                  |
+|----------------------------------------------------------------------|------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| Generated spec is missing field descriptions                         | Endpoint missing `@description` annotations, or schemas missing `?? "..."`.  | Add `@description("…")` on case-class fields and `?? "…"` on endpoint codecs to enrich the generated spec.            |
+| `OpenAPIGen.fromEndpoints` returns an empty spec                     | Empty list of endpoints, or wrong type.                                      | Pass each `Endpoint` value as a separate argument; verify the list contains entries before calling.                  |
+| Swagger UI loads but says "Failed to load API definition"            | Mounted path mismatch between `SwaggerUI.routes("docs", openAPI)` and the UI's fetch URL. | The path passed as first arg to `SwaggerUI.routes` is where the spec is served — align the UI URL.            |
+| Multiple errors collapsed into one in the spec                       | `.outError[E1]` followed by `.outError[E2]` — the second replaces the first. | Use `.outErrors[E1, E2]` (one call), or keep separate endpoints per error type.                                      |
+| Codegen complains about missing types in the generated spec          | Some types referenced but lack `Schema` instances.                           | Derive `Schema` for every type used in `.in[T]` / `.out[T]` / `.outError[E]`. Use `DeriveSchema.gen`.                 |
+
+---
+
 ## References
 
 - [OpenAPIGen GitHub](https://github.com/zio/zio-http/blob/main/zio-http/src/main/scala/zio/http/endpoint/openapi/OpenAPIGen.scala)

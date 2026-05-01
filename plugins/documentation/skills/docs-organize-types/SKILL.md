@@ -268,3 +268,16 @@ Preview:
 - **Syntax validation** is mandatory — invalid changes are reverted
 - **No breaking changes** — existing structure is preserved; only new categories are added
 
+---
+
+## Common Failures
+
+| Symptom                                                              | Likely cause                                                              | Fix                                                                                                            |
+|----------------------------------------------------------------------|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| `node -e "require('./docs/sidebars.js')"` reports a syntax error     | Edit introduced an unmatched brace, trailing comma in unsupported syntax, or stray quote. | **Revert the edit** and reapply more carefully. Validate after each insertion before moving on.                |
+| Docusaurus build complains "Doc id ... not found"                    | A type was added to a category but the file at `docs/reference/<id>.md` doesn't exist. | Confirm every sidebar entry corresponds to a real file. Either create the missing page first, or remove the entry. |
+| The same type appears in two categories                              | Auto-categorization fired twice, or a manual entry was added without removing the old one. | Sidebar entries must be unique. Pick the better-fitting category, remove the other entry.                       |
+| Category link 404s in Docusaurus                                     | `link: { type: "doc", id: "reference/<cat>/index" }` set but `index.md` is missing.   | Either create `docs/reference/<cat>/index.md` (recommended for hierarchical layout) or omit the `link` field.   |
+| Type that doesn't fit any obvious category                           | Genuinely cross-cutting type (e.g., a utility used by many categories).   | **Stop and ask the user.** Don't force a fit; cross-cutting types often belong in their own "Utilities" category. |
+| Edit duplicated existing structure (no diff)                         | Skill ran in idempotency-check mode but produced no change.               | Confirm with `git diff sidebars.js` — if empty, the structure was already correct. Report and exit.            |
+
