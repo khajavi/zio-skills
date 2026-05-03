@@ -111,7 +111,7 @@ Gaps:
   - Technical accuracy (does code match implementation?)
   - Completeness (are all aspects covered?)
   - Consistency (does it match other documentation?)
-- Makes generate fixes and iterates up to 3 rounds
+- Maker applies fixes and iterates up to 3 rounds
 - Terminates when documentation is APPROVED
 
 **Step 2 — Structural Completeness**
@@ -145,14 +145,13 @@ Gaps:
 
 ### `docs-researcher`
 
-**Purpose**: Deeply analyzes source code to extract everything needed for documentation
+**Purpose**: Invokes the `/docs-research` skill to analyze source code and synthesizes findings for documentation authoring
 
 **Focus areas:**
-- Public API surface (methods, signatures, categories)
-- Test-driven usage patterns
-- Edge cases and design decisions
-- Related types and integrations
-- Documentation gaps
+- Coordinating source code exploration (delegated to `/docs-research`)
+- Synthesizing findings into structured research reports
+- Identifying critical source files to read
+- Extracting public API surface and usage patterns
 
 **When triggered:**
 - Automatically in Phase 2
