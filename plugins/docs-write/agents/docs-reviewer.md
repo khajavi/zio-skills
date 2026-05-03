@@ -31,19 +31,9 @@ Rate each potential issue on a scale from 0-100:
 
 ### 1. Writing Style Compliance
 
-Check against the 25 rules from `docs-writing-style`:
-- Pronouns: use "we" for guiding, "you" for choices
-- Present tense only (no past tense)
-- No filler phrases ("as we can see", "it's worth noting", "interestingly")
-- Always qualify method names: `Chunk#map` not just `map`
-- No duplicate headings matching the frontmatter title
-- Heading hierarchy: `##` → `###` → `####`, no bare subheaders, no lone subheaders
-- Every code block preceded by a prose sentence ending with `:`
-- All code blocks include necessary imports
-- Prefer `val` over `var`
-- Table columns must be padded for alignment
-- Scala 2.13.x syntax by default (`import x._`, not `import x.*`)
-- Use `@VERSION@` placeholder for version strings
+Check that the documentation adheres to the all writing style rules defined in the `docs-writing-style` skill:
+
+Skill({name: "docs-writing-style"})
 
 ### 2. mdoc Modifier Correctness
 
