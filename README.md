@@ -2,10 +2,11 @@
 
 Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to build and document ZIO applications.
 
-This marketplace currently ships two plugins:
+This marketplace currently ships three plugins:
 
 - **`zio-skills`** — Build ZIO and ZIO HTTP applications (server scaffolding, OpenAPI code generation, endpoint API, …).
 - **`documentation`** — Write high-quality documentation for ZIO libraries (reference pages, how-to guides, tutorials, mdoc conventions, writing-style enforcement).
+- **`docs-write`** — Guided documentation authoring workflow (research, generation, and quality review for existing code).
 
 ## Installation
 
@@ -14,13 +15,16 @@ This marketplace currently ships two plugins:
 First, add the marketplace, then install one or both plugins:
 
 ```bash
-claude plugin marketplace add khajavi/zio-skills
+claude plugin marketplace add zio/zio-skills
 
 # build apps with ZIO / ZIO HTTP
 claude plugin install zio-skills@ziogenetics
 
 # write documentation for ZIO libraries
 claude plugin install documentation@ziogenetics
+
+# guided documentation authoring workflow
+claude plugin install docs-write@ziogenetics
 ```
 
 Then invoke a skill in Claude Code:
@@ -29,6 +33,7 @@ Then invoke a skill in Claude Code:
 /zio-http-openapi-to-endpoint
 /zio-http-endpoint-to-openapi
 /zio-http-imperative-to-declarative
+/docs-write
 /docs-data-type-ref
 /docs-how-to-guide
 /docs-tutorial
@@ -44,7 +49,7 @@ Then invoke a skill in Claude Code:
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/khajavi/zio-skills
+gemini extensions install https://github.com/zio/zio-skills
 ```
 
 To update:
@@ -58,13 +63,13 @@ gemini extensions update zio-skills
 Clone the repo and symlink:
 
 ```bash
-git clone https://github.com/khajavi/zio-skills.git ~/.agents/skills/zio-skills
+git clone https://github.com/zio/zio-skills.git ~/.agents/skills/zio-skills
 ```
 
 or user Skill Installer inside codex cli:
 
 ```bash
-$skill-installer khajavi/zio-skills
+$skill-installer zio/zio-skills
 ```
 
 ### OpenCode
@@ -72,7 +77,7 @@ $skill-installer khajavi/zio-skills
 Add to `opencode.json`:
 ```json
 {
-  "plugin": ["zio-skills@git://github.com/khajavi/zio-skills.git"]
+  "plugin": ["zio-skills@git://github.com/zio/zio-skills.git"]
 }
 ```
 
@@ -86,6 +91,9 @@ Add to `opencode.json`:
 - **`zio-http-imperative-to-declarative`** — Convert imperative routes to typed Endpoint API
 
 ### Documentation (`documentation` plugin)
+
+Orchestration:
+- **`docs-write`** — Guided 5-phase workflow for writing documentation (research, generation, quality review)
 
 Authoring skills:
 - **`docs-data-type-ref`** — Write a reference page for a single data type
@@ -107,7 +115,7 @@ Quality checks:
 - **`docs-mdoc-conventions`** — mdoc code-block modifiers and Docusaurus admonitions
 - **`docs-check-compliance`** — Audit a doc file against a rule skill
 - **`docs-verify-compliance`** — Fix compliance issues in a doc file
-- **`docs-critique`** — Run a doc-creation skill in a maker-critic review loop
+- **`docs-critique`** — Review and fix an existing documentation file using a maker-critic loop
 - **`docs-find-documentation-gaps`** — Scan project for undocumented types/modules
 - **`docs-report-method-coverage`** — Check that all public members are documented
 - **`docs-data-type-list-members`** — Extract public members from a Scala type

@@ -5,13 +5,12 @@
   "type": "module",
   "main": ".opencode/plugins/zio-skills.js",
   "author": {
-    "name": "Milad Khajavi",
-    "email": "milad.khajavi@ziverge.com"
+    "name": "Milad Khajavi"
   },
   "license": "MIT",
   "keywords": ["zio", "zio-http", "skills", "scala"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/khajavi/zio-skills"
+    "url": "https://github.com/zio/zio-skills"
   }
 }

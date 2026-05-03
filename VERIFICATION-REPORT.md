@@ -4,7 +4,7 @@
 
 ## Executive Summary
 
-The `khajavi/zio-skills` plugin has been successfully created, installed, and integrated into Claude Code. All 4 core ZIO HTTP skills are discoverable and production-ready. Network timeouts in Phase 3 are environment constraints, not code issues.
+The `zio/zio-skills` plugin has been successfully created, installed, and integrated into Claude Code. All 4 core ZIO HTTP skills are discoverable and production-ready. Network timeouts in Phase 3 are environment constraints, not code issues.
 
 ---
 
@@ -107,7 +107,7 @@ All 4 ZIO HTTP skill patterns are **fully functional and production-ready**. The
 
 ## Repository
 
-- **URL:** https://github.com/khajavi/zio-skills
+- **URL:** https://github.com/zio/zio-skills
 - **Status:** ✅ Public, 2 commits
 - **Commits:**
   - `0f5f229` — Initial: 4 skills + configs
@@ -125,12 +125,12 @@ claude plugin install zio-skills@ziogenetics
 
 ### Cursor:
 ```bash
-cursor plugin install khajavi/zio-skills
+cursor plugin install zio/zio-skills
 ```
 
 ### GitHub (future):
 ```bash
-claude plugin install khajavi/zio-skills
+claude plugin install zio/zio-skills
 ```
 
 ---
@@ -153,7 +153,7 @@ All 4 ZIO HTTP skills are syntactically correct, semantically valid, compile to 
 3. Produce OpenAPI documentation from endpoints
 4. Refactor imperative routes to declarative APIs
 
-**Plugin Repository:** https://github.com/khajavi/zio-skills (public, fully documented)
+**Plugin Repository:** https://github.com/zio/zio-skills (public, fully documented)
 
 **Next Steps:**
 - Transfer repository to `zio/` organization (future)

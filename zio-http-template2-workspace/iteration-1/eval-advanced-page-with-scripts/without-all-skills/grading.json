@@ -1,0 +1,51 @@
+{
+  "eval_id": 4,
+  "eval_name": "advanced-page-with-scripts",
+  "baseline": "without-all-skills",
+  "total_assertions": 8,
+  "passed": 7,
+  "failed": 1,
+  "pass_rate": 0.875,
+  "expectations": [
+    {
+      "text": "Semantic HTML structure with header, nav, main, footer elements",
+      "passed": true,
+      "evidence": "Page demonstrates proper semantic HTML structure with all required landmark elements"
+    },
+    {
+      "text": "Inline CSS properly integrated using style.inlineCss(css\"\"\" \"\"\") syntax",
+      "passed": true,
+      "evidence": "style.inlineCss() wraps CSS content with proper syntax"
+    },
+    {
+      "text": "Inline JavaScript properly integrated using script.inlineJs(js\"\"\" \"\"\") syntax",
+      "passed": false,
+      "evidence": "script.inlineJs() pattern present but proper js\"\"\" interpolation syntax not fully confirmed"
+    },
+    {
+      "text": "Data attributes applied using data(\"key\") := \"value\" pattern",
+      "passed": true,
+      "evidence": "data() function calls properly format data attributes"
+    },
+    {
+      "text": "Multiple CSS classes applied via className tuple syntax",
+      "passed": true,
+      "evidence": "className := (\"class1\", \"class2\") syntax used consistently throughout"
+    },
+    {
+      "text": "Form elements with proper accessibility attributes (htmlFor, id, role)",
+      "passed": true,
+      "evidence": "Form structure includes proper accessibility attributes"
+    },
+    {
+      "text": "Interactive JavaScript demonstrates event handling and DOM manipulation",
+      "passed": true,
+      "evidence": "Script content shows proper event handling patterns"
+    },
+    {
+      "text": "Complete page composition with multiple sections and proper element nesting",
+      "passed": true,
+      "evidence": "Page demonstrates proper hierarchical nesting of elements"
+    }
+  ]
+}

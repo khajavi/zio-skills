@@ -1,0 +1,159 @@
+{
+  "skill_name": "zio-http-template2",
+  "description": "Evaluation results for template2 HTML templating skill - testing agent ability to build correct HTML pages with proper attributes, void elements, and conditional rendering",
+  "evaluation_date": "2026-04-28",
+  "baselines": [
+    "with_skill",
+    "without-all-skills"
+  ],
+  "summary": {
+    "with_skill": {
+      "baseline_name": "With Skill (zio-http-template2 available)",
+      "total_assertions": 28,
+      "total_passed": 27,
+      "total_failed": 1,
+      "pass_rate": 0.964285714,
+      "pass_rate_percent": "96.4%"
+    },
+    "without_all_skills": {
+      "baseline_name": "Without All Skills (pure training data)",
+      "total_assertions": 28,
+      "total_passed": 27,
+      "total_failed": 1,
+      "pass_rate": 0.964285714,
+      "pass_rate_percent": "96.4%"
+    },
+    "improvement": {
+      "delta_absolute": 0.0,
+      "delta_percent": "0.0%",
+      "delta_assertions": 0,
+      "improvement_direction": "equal"
+    }
+  },
+  "detailed_results": [
+    {
+      "eval_id": 1,
+      "eval_name": "form-with-bootstrap-classes",
+      "total_assertions": 6,
+      "baselines": {
+        "with_skill": {
+          "passed": 6,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        },
+        "without_all_skills": {
+          "passed": 6,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        }
+      },
+      "discriminative_power": "low",
+      "note": "Both baselines achieve perfect score on Bootstrap form patterns"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "conditional-user-profile",
+      "total_assertions": 7,
+      "baselines": {
+        "with_skill": {
+          "passed": 7,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        },
+        "without_all_skills": {
+          "passed": 7,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        }
+      },
+      "discriminative_power": "low",
+      "note": "Both baselines perfect on Option.map and void element patterns"
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "styled-card-component",
+      "total_assertions": 6,
+      "baselines": {
+        "with_skill": {
+          "passed": 6,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        },
+        "without_all_skills": {
+          "passed": 6,
+          "failed": 0,
+          "pass_rate": 1.0,
+          "pass_rate_percent": "100%"
+        }
+      },
+      "discriminative_power": "low",
+      "note": "Both baselines perfect on reusable component patterns"
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "advanced-page-with-scripts",
+      "total_assertions": 8,
+      "baselines": {
+        "with_skill": {
+          "passed": 7,
+          "failed": 1,
+          "pass_rate": 0.875,
+          "pass_rate_percent": "87.5%"
+        },
+        "without_all_skills": {
+          "passed": 7,
+          "failed": 1,
+          "pass_rate": 0.875,
+          "pass_rate_percent": "87.5%"
+        }
+      },
+      "discriminative_power": "low",
+      "failing_assertions": [
+        "Inline JavaScript properly integrated using script.inlineJs(js\"\"\" \"\"\") syntax"
+      ],
+      "note": "Both baselines identical failure: script.inlineJs() string interpolation syntax verification"
+    }
+  ],
+  "error_type_coverage": {
+    "error_1_mixing_attributes_children": {
+      "tested_in": ["eval-form-with-bootstrap-classes", "eval-styled-card-component"],
+      "with_skill_pass_rate": 1.0,
+      "without_all_skills_pass_rate": 1.0,
+      "improvement_delta": 0.0
+    },
+    "error_2_multi_value_attributes": {
+      "tested_in": ["eval-form-with-bootstrap-classes", "eval-styled-card-component", "eval-advanced-page-with-scripts"],
+      "with_skill_pass_rate": 1.0,
+      "without_all_skills_pass_rate": 1.0,
+      "improvement_delta": 0.0
+    },
+    "error_3_void_elements": {
+      "tested_in": ["eval-conditional-user-profile"],
+      "with_skill_pass_rate": 1.0,
+      "without_all_skills_pass_rate": 1.0,
+      "improvement_delta": 0.0
+    },
+    "error_4_conditional_rendering": {
+      "tested_in": ["eval-conditional-user-profile", "eval-styled-card-component"],
+      "with_skill_pass_rate": 1.0,
+      "without_all_skills_pass_rate": 1.0,
+      "improvement_delta": 0.0
+    }
+  },
+  "findings": {
+    "key_observation": "Identical performance across both baselines suggests agents have strong foundational template2 knowledge from training data. The skill did not show measurable improvement in this evaluation.",
+    "discriminative_assertions": [],
+    "non_discriminative_assertions": [
+      "form-with-bootstrap-classes (all 6)",
+      "conditional-user-profile (all 7)",
+      "styled-card-component (all 6)",
+      "advanced-page-with-scripts (7 of 8)"
+    ],
+    "failure_analysis": "Single assertion failure in eval-4 (advanced-page) affecting both baselines: script.inlineJs() syntax verification. This suggests either: (a) minor edge case in string interpolation syntax, or (b) assertion definition needs refinement"
+  }
+}

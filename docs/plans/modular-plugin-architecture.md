@@ -169,4 +169,4 @@ The modular approach with plugin dependencies was chosen because:
 
 - Claude Code Plugins Reference: https://code.claude.com/docs/en/plugins-reference
 - Plugin Dependencies Feature: https://github.com/anthropics/claude-code/issues/9444
-- Current repository: https://github.com/khajavi/zio-skills
+- Current repository: https://github.com/zio/zio-skills

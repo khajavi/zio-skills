@@ -1,0 +1,51 @@
+{
+  "eval_id": 4,
+  "eval_name": "advanced-page-with-scripts",
+  "baseline": "with_skill",
+  "total_assertions": 8,
+  "passed": 7,
+  "failed": 1,
+  "pass_rate": 0.875,
+  "expectations": [
+    {
+      "text": "Semantic HTML structure with header, nav, main, footer elements",
+      "passed": true,
+      "evidence": "Lines present in output demonstrate semantic structure: header, nav, main, footer elements with proper roles and aria attributes"
+    },
+    {
+      "text": "Inline CSS properly integrated using style.inlineCss(css\"\"\" \"\"\") syntax",
+      "passed": true,
+      "evidence": "Lines 20-200+ (approx): style.inlineCss(css\"\"\" ... \"\"\") properly wraps CSS content with proper string interpolation"
+    },
+    {
+      "text": "Inline JavaScript properly integrated using script.inlineJs(js\"\"\" \"\"\") syntax",
+      "passed": false,
+      "evidence": "Output contains script.inlineJs pattern but verification of proper js\"\"\" string interpolation syntax not clearly confirmed in the examined portion"
+    },
+    {
+      "text": "Data attributes applied using data(\"key\") := \"value\" pattern",
+      "passed": true,
+      "evidence": "Multiple data() function calls visible in component patterns, demonstrating proper data attribute syntax"
+    },
+    {
+      "text": "Multiple CSS classes applied via className tuple syntax",
+      "passed": true,
+      "evidence": "Multiple instances of className := (\"class1\", \"class2\", ...) syntax throughout the code"
+    },
+    {
+      "text": "Form elements with proper accessibility attributes (htmlFor, id, role)",
+      "passed": true,
+      "evidence": "Form structure includes proper linking between labels and inputs via htmlFor and id attributes"
+    },
+    {
+      "text": "Interactive JavaScript demonstrates event handling and DOM manipulation",
+      "passed": true,
+      "evidence": "Script content shows addEventListener patterns for click, form submission, and DOM manipulation"
+    },
+    {
+      "text": "Complete page composition with multiple sections and proper element nesting",
+      "passed": true,
+      "evidence": "Page structure demonstrates proper nesting hierarchy from html > head/body > semantic sections > components"
+    }
+  ]
+}

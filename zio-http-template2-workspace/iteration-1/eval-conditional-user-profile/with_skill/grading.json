@@ -1,0 +1,46 @@
+{
+  "eval_id": 2,
+  "eval_name": "conditional-user-profile",
+  "baseline": "with_skill",
+  "total_assertions": 7,
+  "passed": 7,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "expectations": [
+    {
+      "text": "Optional email field uses Option.map pattern for conditional rendering",
+      "passed": true,
+      "evidence": "Lines 287-291: user.email.map(emailAddr => div(class := \"email-section\")(label(\"Contact Email\"), a(href := s\"mailto:$emailAddr\")(emailAddr)))"
+    },
+    {
+      "text": "Optional avatar image uses Option.map with img element (void element, no children)",
+      "passed": true,
+      "evidence": "Lines 274-282: user.avatar.map(avatarUrl => div(...)(img(src := avatarUrl, alt := s\"${user.name}'s avatar image\")))"
+    },
+    {
+      "text": "Conditional role badge uses if/else pattern for admin status",
+      "passed": true,
+      "evidence": "Lines 296-304: if (user.isAdmin) div(class := \"role-badge-section\")(div(class := \"role-badge\")(\"Administrator\"), ...) else Dom.empty"
+    },
+    {
+      "text": "img element correctly uses alt attribute instead of attempting children",
+      "passed": true,
+      "evidence": "Line 280: img(src := avatarUrl, alt := s\"${user.name}'s avatar image\") - img is self-closing with attributes only, no children attempted"
+    },
+    {
+      "text": "Semantic HTML structure with proper landmark elements (article, section, dl)",
+      "passed": true,
+      "evidence": "Lines 263-335: article with role=\"main\", section elements for semantic grouping, dl for definition list, proper nesting of header content"
+    },
+    {
+      "text": "Rendering produces valid HTML with proper handling of Option.empty and when false",
+      "passed": true,
+      "evidence": "Lines 287, 304, 325: Multiple .map() calls and if/else patterns with Dom.empty for false branches, proper composition with other elements"
+    },
+    {
+      "text": "Example users demonstrate all scenarios: admin+avatar, regular+email, avatar-only, minimal",
+      "passed": true,
+      "evidence": "Lines 347-377: Four User examples (adminUserWithAvatar, regularUserWithEmail, userWithAvatarNoEmail, minimalUser) covering all optional field combinations"
+    }
+  ]
+}

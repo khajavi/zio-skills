@@ -1,0 +1,46 @@
+{
+  "eval_id": 2,
+  "eval_name": "conditional-user-profile",
+  "baseline": "without-all-skills",
+  "total_assertions": 7,
+  "passed": 7,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "expectations": [
+    {
+      "text": "Optional email field uses Option.map pattern for conditional rendering",
+      "passed": true,
+      "evidence": "user.email.map() pattern correctly wraps conditional email display"
+    },
+    {
+      "text": "Optional avatar image uses Option.map with img element (void element, no children)",
+      "passed": true,
+      "evidence": "user.avatar.map() correctly applies to img element without attempting to add children"
+    },
+    {
+      "text": "Conditional role badge uses if/else pattern for admin status",
+      "passed": true,
+      "evidence": "if (user.isAdmin) ... else Dom.empty pattern properly handles role badge visibility"
+    },
+    {
+      "text": "img element correctly uses alt attribute instead of attempting children",
+      "passed": true,
+      "evidence": "img element self-closing with attributes only, no child content attempted"
+    },
+    {
+      "text": "Semantic HTML structure with proper landmark elements (article, section, dl)",
+      "passed": true,
+      "evidence": "Page uses semantic HTML5 elements: article, section, dl for proper document structure"
+    },
+    {
+      "text": "Rendering produces valid HTML with proper handling of Option.empty and when false",
+      "passed": true,
+      "evidence": "Multiple conditional branches properly render or return Dom.empty as appropriate"
+    },
+    {
+      "text": "Example users demonstrate all scenarios: admin+avatar, regular+email, avatar-only, minimal",
+      "passed": true,
+      "evidence": "Four distinct User examples cover all combinations of optional fields"
+    }
+  ]
+}

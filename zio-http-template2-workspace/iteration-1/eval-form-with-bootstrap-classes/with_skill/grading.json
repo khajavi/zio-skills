@@ -1,0 +1,41 @@
+{
+  "eval_id": 1,
+  "eval_name": "form-with-bootstrap-classes",
+  "baseline": "with_skill",
+  "total_assertions": 6,
+  "passed": 6,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "expectations": [
+    {
+      "text": "Form structure with form element wrapping label+input pairs",
+      "passed": true,
+      "evidence": "Line 43-87: form element properly contains multiple div(class := 'form-group') sections, each with label+input pair for username and email fields"
+    },
+    {
+      "text": "Bootstrap className applied as tuple for multi-value attributes",
+      "passed": true,
+      "evidence": "Lines 35, 36, 48, 65, 80: All className attributes use proper tuple syntax: className := (\"container\", \"mt-5\"), className := (\"row\", \"justify-content-center\"), className := (\"d-grid\", \"gap-2\"), className := (\"btn\", \"btn-primary\")"
+    },
+    {
+      "text": "Validation attributes (required, minlength, maxlength) properly applied",
+      "passed": true,
+      "evidence": "Lines 59-61: input elements have required, minlength := \"3\", maxlength := \"20\" attributes; Line 76: email field has required attribute"
+    },
+    {
+      "text": "Label-input linking with htmlFor and id attributes",
+      "passed": true,
+      "evidence": "Lines 50-51: label(htmlFor := \"username\", class := \"form-label\"); Lines 56: id := \"username\" matches. Same pattern for email field at lines 67-68 and 73"
+    },
+    {
+      "text": "Void elements (input) used without children, attributes only",
+      "passed": true,
+      "evidence": "Lines 53-62 and 70-77: input elements are self-closing with attributes only, no attempted child content"
+    },
+    {
+      "text": "Proper nesting: form > div.form-group > (label, input) structure",
+      "passed": true,
+      "evidence": "Lines 43-87: form element contains multiple div(class := \"form-group\") sections, each wrapping a label followed by an input element in correct hierarchy"
+    }
+  ]
+}
