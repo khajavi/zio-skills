@@ -17,9 +17,9 @@ You are helping a developer write documentation for already-written code. Follow
 
 ---
 
-## Phase 1: Topic + Doc Type Detection
+## Phase 1: Topic + Doc Type Detection + Phase Selection
 
-**Goal**: Understand what to document and which documentation type to generate
+**Goal**: Understand what to document, which documentation type to generate, and which workflow phases to run
 
 **Actions**:
 1. Receive `$ARGUMENTS` as the raw topic (type name, module name, or free-text description)
@@ -30,12 +30,21 @@ You are helping a developer write documentation for already-written code. Follow
    - How-to guide — goal-oriented guide for accomplishing a specific task
    - Tutorial — learning-oriented guide for newcomers to a concept
 4. Confirm the chosen type and topic before proceeding
+5. **Phase Selection**: Ask the user which of the remaining phases to run using `AskUserQuestion` with `multiSelect: true`:
+   - Phase 2: Source Research — Explore the codebase, gather API details, and build context before writing
+   - Phase 3: Documentation Generation — Generate the documentation file using the appropriate skill
+   - Phase 4: Documentation Review — Run critique loop, structural check, and style/mdoc compliance review
+   - Phase 5: Summary — Report what was created and suggest next steps
+   
+   All four phases are pre-selected by default. Store the user's selection for use in subsequent phases.
 
 ---
 
 ## Phase 2: Source Research
 
 **Goal**: Understand the codebase deeply before writing documentation
+
+**Guard**: If Phase 2 was not selected by the user in Phase 1, skip this phase entirely and proceed to Phase 3.
 
 **Actions**:
 1. Determine agent count based on scope:
@@ -58,6 +67,10 @@ You are helping a developer write documentation for already-written code. Follow
 
 **Goal**: Generate documentation using the appropriate skill
 
+**Guard**: 
+- If Phase 3 was not selected by the user in Phase 1, skip this phase and proceed to Phase 4.
+- If Phase 3 was selected **and** Phase 2 was skipped, ask the user: "Phase 2 (Research) was skipped. Please provide any research notes or context to use during generation, or press enter to proceed with the topic name only." (Optional input — generation can proceed without it.)
+
 **Actions**:
 1. Invoke the chosen skill via the `Skill` tool:
    - Data type reference → `/docs-data-type-ref <topic>`
@@ -74,6 +87,10 @@ You are helping a developer write documentation for already-written code. Follow
 
 **Goal**: Ensure documentation is technically accurate, structurally sound, and stylistically compliant
 
+**Guard**:
+- If Phase 4 was not selected by the user in Phase 1, skip this phase and proceed to Phase 5.
+- If Phase 4 was selected **and** Phase 3 was skipped, ask the user: "Phase 3 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
+
 **Actions**:
 1. Invoke the `docs-reviewer` agent via the Agent tool, passing:
    - The generated documentation file path
@@ -89,16 +106,23 @@ You are helping a developer write documentation for already-written code. Follow
 
 **Goal**: Document what was accomplished and suggest next steps
 
-**Actions**:
-1. Report to user:
-   - Documentation type generated
-   - File path created
-   - Key decisions made during review and revision
-   - Any remaining issues (if user chose "Fix later" or "Proceed as-is")
-2. Suggest next steps:
-   - Run `sbt docs/mdoc` to verify full documentation compiles
-   - Open a pull request with the new documentation
+**Guard**: If Phase 5 was not selected by the user in Phase 1, end the workflow here.
+
+**Actions** (when Phase 5 runs):
+1. Adapt the report based on which phases executed:
+   - **If all phases ran** (full workflow):
+     - Documentation type generated
+     - File path created
+     - Key decisions made during review and revision
+     - Any remaining issues (if user chose "Fix later" or "Proceed as-is")
+   - **If only some phases ran** (partial workflow):
+     - Clearly state which phases were executed (e.g., "Phases 2, 4, and 5 executed; Phases 1 and 3 were skipped")
+     - Report outcomes from each executed phase
+     - Note any limitations due to skipped phases
+2. Suggest next steps (adapted to the workflow):
+   - If Phase 3 or 4 ran: Run `sbt docs/mdoc` to verify documentation compiles
+   - If Phase 3 ran: Suggest opening a pull request with the new documentation
    - Link to related documentation pages
-   - Mention any follow-up documentation work (e.g., expand examples, add related types)
+   - Mention any follow-up documentation work
 
 ---
