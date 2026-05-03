@@ -1,11 +1,10 @@
 ---
 name: docs-critique
 description: >
-  Run a documentation creation skill with automatic maker-critic review loop.
-  Spawns a maker agent to run the skill, then a critic agent to review the output.
-  The maker receives critique and fixes its own work. Iterates until approved or
-  max 3 rounds. Pure coordinator — never edits files itself.
-argument-hint: "<skill-name> <skill-args>"
+  Critique and fix an existing documentation file using an automatic maker-critic
+  review loop. Spawns a critic to review the doc, then a maker to fix issues.
+  Iterates until approved or max 3 rounds. Pure coordinator — never edits files itself.
+argument-hint: "<doc-file-path>"
 allowed-tools: Agent, Glob, Grep, Read, SendMessage
 ---
 
@@ -13,10 +12,13 @@ allowed-tools: Agent, Glob, Grep, Read, SendMessage
 
 ## Arguments
 
-1. **skill-name** — The documentation skill to run (e.g., `docs-data-type-ref`, `docs-how-to-guide`, `docs-tutorial`, `docs-document-pr`, `docs-enrich-section`, `docs-add-missing-section`)
-2. **skill-args** — Arguments to pass to the skill (e.g., `Schema`, `TypeId`)
+`$ARGUMENTS` — The path to the existing documentation file to critique
+(e.g., `docs/reference/schema.md`).
 
-Example invocation: `/docs-critique docs-data-type-ref Schema`
+If `$ARGUMENTS` is empty, ask the user to provide the documentation file path
+before proceeding.
+
+Example invocation: `/docs-critique docs/reference/schema.md`
 
 ## Role
 
@@ -26,71 +28,27 @@ You are a **pure coordinator**. You NEVER read, write, or edit documentation fil
 3. Parse critic reports to decide next action
 4. Report final status to the user
 
-## Phase 0: Pre-flight Check
+## Phase 1: Resolve Doc Path and Spawn Fixer Agent
 
-Before spawning the maker, ask the user whether to generate the documentation from scratch or improve an existing doc.
+1. Use `$ARGUMENTS` directly as the doc file path.
+2. If `$ARGUMENTS` is empty, ask the user to provide the documentation file path before proceeding.
+3. Verify the file exists using `Glob`. If not found, inform the user and stop.
+4. Spawn a general-purpose agent as the **maker** (used in Phase 5 to apply fixes):
 
-**Skip Phase 0 entirely** for skills where the doc path cannot be predicted (`docs-document-pr`) — go directly to Phase 1.
+   ```
+   Agent(
+     description: "Doc fixer agent",
+     prompt: "You are a documentation fixer for ZIO project documentation.
+              Your doc file is <doc-path>.
+              Wait for instructions on what to fix. For each fix:
+              - Make a separate git commit
+              - Commit format: docs(<file-stem>): fix <SEVERITY>/<dimension> — <description>
+              - If multiple findings target the same paragraph, combine into one commit
+                using the highest severity level"
+   )
+   ```
 
-**For all other skills**, ask the user:
-
-> How would you like to proceed?
-> - **Generate** — create the doc from scratch using the skill, then critique it
-> - **Improve** — skip creation, critique an existing doc and fix issues
-
-- If the user chooses **"Generate"** → Proceed to Phase 1.
-- If the user chooses **"Improve"** →  Skip Phase 1. Instead:
-  1. Derive the expected doc path from the skill and its arguments:
-
-     | Skill | Path pattern |
-     |-------|-------------|
-     | `docs-data-type-ref` | `docs/reference/<kebab-case-arg>.md` |
-     | `docs-how-to-guide` | `docs/guides/<kebab-case-arg>.md` |
-     | `docs-tutorial` | `docs/tutorials/<kebab-case-arg>.md` |
-     | `docs-enrich-section` | User provides path directly — use as-is |
-     | `docs-add-missing-section` | User provides path directly — use as-is |
-
-     To convert an argument to kebab-case: `TypeId` → `typeid`, `Schema` → `schema`, `DynamicValue` → `dynamicvalue`. Use lowercase of the argument as-is (these are single-word type names in practice).
-
-  2. Verify the file exists using `Glob`. If it does not exist, inform the user and fall back to Phase 1.
-  3. Set the doc path to the existing file path.
-  4. Spawn a general-purpose agent as the maker (for the fix loop later):
-     ```
-     Agent(
-       description: "Doc fixer agent",
-       prompt: "You are a documentation fixer for ZIO project documentation. Your doc file is <doc-path>.
-                Wait for instructions on what to fix. For each fix:
-                - Make a separate git commit
-                - Commit format: docs(<file-stem>): fix <SEVERITY>/<dimension> — <description>
-                - If multiple findings target the same paragraph, combine into one commit
-                  using the highest severity level"
-     )
-     ```
-  5. Save the maker's agent ID, then jump directly to Phase 2.
-
-## Phase 1: Spawn Maker Agent
-
-> **Note:** Phase 1 is skipped when the user chose "Improve" in Phase 0.
-
-Spawn a general-purpose agent via the `Agent` tool:
-
-```
-Agent(
-  description: "Run doc creation skill",
-  prompt: "Run /<skill-name> <skill-args>. Complete all steps of the skill.
-           When done, report the absolute path of the generated/modified
-           documentation file as the LAST line of your response, in the format:
-           DOC_PATH: <absolute-path>"
-)
-```
-
-Parse the maker's response to extract the doc file path from the `DOC_PATH:` line.
-
-**Error handling:** If the maker does not return a `DOC_PATH:` line, ask the user which file was generated and use that path.
-
-If the Agent tool returns an error or the maker reports that the skill failed, report the error to the user and stop. Do not proceed to Phase 2.
-
-Save the maker's agent ID for later `SendMessage` calls. The `Agent` tool returns an `agentId` in its result — store this value. You will use it as the `to` field in `SendMessage` to route critique back to the maker.
+5. Save the maker's `agentId` for later `SendMessage` calls. You will use it as the `to` field in `SendMessage` to route critique back to the maker.
 
 ## Phase 2: Gather Critic Context
 

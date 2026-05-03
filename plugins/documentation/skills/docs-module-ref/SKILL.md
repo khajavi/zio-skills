@@ -24,7 +24,7 @@ This skill produces comprehensive reference documentation for modules with multi
 
 ## Step 1: Research & Map the Module
 
-Run the `docs-reasearch` skill:
+Run the `docs-research` skill:
 
 skill({ name: "docs-research" })
 
