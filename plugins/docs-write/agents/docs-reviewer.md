@@ -1,7 +1,7 @@
 ---
 name: docs-reviewer
 description: Reviews generated documentation for writing style compliance, mdoc correctness, required section presence, and method coverage completeness using confidence-based filtering
-tools: Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput
+tools: Skill, Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput
 model: haiku
 color: red
 ---

@@ -1,7 +1,7 @@
 ---
 name: docs-researcher
 description: Invokes the docs-research skill to perform source code exploration for documentation authoring — finds source files, tests, examples, patterns, GitHub history
-tools: Agent, Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput
+tools: Skill, Agent, Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput
 model: haiku
 color: yellow
 ---
