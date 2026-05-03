@@ -37,15 +37,9 @@ Skill({name: "docs-writing-style"})
 
 ### 2. mdoc Modifier Correctness
 
-Check that each Scala code block uses the correct modifier according to the decision tree in `docs-mdoc-conventions`:
-- Non-executable (pseudocode, type illustrations) → plain `` ```scala ``
-- Executable, isolated, no output → `mdoc:compile-only`
-- Executable, isolated, show output → `mdoc`
-- Executable, setup shared with later blocks → `mdoc:silent`
-- Redefining a name from earlier block → `mdoc:silent:nest`
-- Switching to completely different context → `mdoc:silent:reset`
+Check that all mdoc code blocks have appropriate modifiers by calling the `docs-mdoc-conventions` skill:
 
-Reference the `docs-mdoc-conventions` skill rules for the complete decision tree and detailed guidance on when to use each modifier.
+Skill({name: "docs-mdoc-conventions"})
 
 ### 3. Structural Completeness
 
