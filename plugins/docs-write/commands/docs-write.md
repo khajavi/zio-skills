@@ -40,15 +40,17 @@ You are helping a developer write documentation for already-written code. Follow
 **Actions**:
 1. Determine agent count based on scope:
    - **1 agent** for data type references (single type = single focus)
-   - **2 parallel agents** for module references or complex how-to/tutorial topics (split into "API surface" and "usage patterns")
-2. Launch `docs-researcher` agent(s) with clear focus areas
-3. Each agent returns:
-   - Public API surface (all public methods / entry points)
-   - Test locations and common usage patterns
-   - Relevant existing documentation gaps
-   - List of 5-10 critical source files
-4. After agents return, read all identified critical files to build deep understanding
-5. Present findings to user before proceeding
+   - **2 parallel agents** for module references or complex how-to/tutorial topics (split into different focus areas)
+2. Launch `docs-researcher` agent(s) which will:
+   - Invoke the `/docs-research` skill to analyze source code, tests, examples, and GitHub history
+   - Return structured findings including:
+     - Core and supporting types with source file paths
+     - Public API surface organized by category
+     - Test-driven usage patterns and edge cases
+     - Existing documentation coverage and gaps
+     - List of 5-10 critical files to read
+3. After agents return, read all identified critical files to build deep understanding
+4. Present consolidated findings to user before proceeding
 
 ---
 
