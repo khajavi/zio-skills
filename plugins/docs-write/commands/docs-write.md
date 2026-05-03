@@ -74,39 +74,14 @@ You are helping a developer write documentation for already-written code. Follow
 
 **Goal**: Ensure documentation is technically accurate, structurally sound, and stylistically compliant
 
-**Actions** (run sequentially — content quality first, then structure, then style):
-
-**Step 1 — Maker-Critic Review Loop** (launch first, wait for result):
-- Invoke `/docs-critique <doc-file-path>` on the generated documentation
-- This skill now acts as a pure critique-and-fix loop (after our modifications):
-  - Spawns `docs-critic` agent to review content quality, technical accuracy, completeness, consistency
-  - Feeds issues back to a maker agent for fixes
-  - Iterates up to 3 rounds until documentation is APPROVED or max rounds reached
-- Wait for the critique loop to complete
-
-**Step 2 — Structural Completeness Check** (after critique loop, wait for result):
-- For **data type reference** pages:
-  - Use `docs-data-type-list-members` to extract all public members from source
-  - Use `docs-report-method-coverage` to verify every public method has a corresponding subsection
-  - Report any missing methods with confidence ≥ 80
-- For **module reference, how-to guides, and tutorials**:
-  - Verify all required sections are present:
-    - Reference pages: Opening Definition, Quick Showcase, Construction, Core Operations, Running the Examples (if applicable)
-    - Guides & tutorials: Introduction, The Problem, Prerequisites, Step-by-step sections, Putting It Together
-  - Verify `docs-integrate` checklist items (sidebars.js, index.md updates)
-  - Report structural gaps with confidence ≥ 80
-- Present findings; if critical gaps exist, ask user to address them before proceeding
-
-**Step 3 — Prose + Code Quality** (launch after structural check):
-- Launch `docs-reviewer` agent to check:
-  - **Writing style** (25 rules): pronouns, present tense, no filler, qualified method names, heading hierarchy, code blocks preceded by prose, table formatting, etc.
-  - **mdoc conventions**: each Scala code block uses the correct modifier (`mdoc:compile-only`, `mdoc:silent`, `mdoc:reset`, etc.)
-  - Optionally invoke `/docs-verify-compliance` if `sbt mdoc` is available
-- Report only issues with confidence ≥ 80
-- Present findings and ask user:
-  - Fix now
-  - Fix later
-  - Proceed as-is
+**Actions**:
+1. Invoke the `docs-reviewer` agent via the Agent tool, passing:
+   - The generated documentation file path
+   - The documentation type (data type reference, module reference, how-to guide, or tutorial)
+2. Based on the agent's report, ask the user whether to:
+   - Fix issues now
+   - Fix later
+   - Proceed as-is
 
 ---
 
