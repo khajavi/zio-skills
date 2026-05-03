@@ -8,66 +8,131 @@ allowed-tools: Read, Glob, Grep, Bash(gh:*), Bash(sbt:*)
 
 Use this procedure when researching a topic to understand the complete landscape of types, methods, patterns, and integrations before writing documentation.
 
-## Step 1a: Identify Core Source Files
+## Core Mission
 
-Based on the topic/type name, identify which library data types or concepts are central. Use Glob and Grep to find their source files:
+Provide documentation authors with comprehensive understanding of:
+- Complete public API surface (all methods, signatures, variants)
+- Real-world usage patterns and composition examples
+- Design decisions and architectural relationships
+- Dependencies, integrations, and supported use cases
+- Gaps, edge cases, and performance characteristics
 
-```
-Glob: **/src/main/scala*/**/<TypeName>.scala
-Grep: "class <TypeName>" or "trait <TypeName>" or "object <TypeName>"
-```
+## Analysis Approach
 
-For each core type:
+### 1. Discovery Phase
 
-1. **Read the full source file** — understand every public method, type parameter, companion object, and factory method.
-2. **Read existing documentation** — check `docs/reference/` and `docs/` for any existing page. Understand what is already documented vs. what you need to explain.
-3. **Read the tests** — search `*/src/test/scala/` for test files. Tests reveal idiomatic usage patterns, edge cases, and realistic examples to mirror in your documentation.
+**Locate core source files:**
+- Use Glob and Grep to find source files for the topic:
+  ```
+  Glob: **/src/main/scala*/**/<TypeName>.scala
+  Grep: "class <TypeName>" or "trait <TypeName>" or "object <TypeName>"
+  ```
+- For modules: identify all core types and their source file locations
 
-## Step 1b: Identify Supporting Types and Concepts
+**Identify scope and boundaries:**
+- Read the full source file(s) — understand every public method, type parameter, companion object, and factory method
+- Map what is public API vs. internal implementation
+- Note accessibility modifiers, deprecated methods, and alternative names
 
-Beyond the core types, find every supporting type that readers will encounter:
+### 2. Code Flow & Usage Tracing
 
-1. **Grep for imports** in test files related to the core types — these reveal the full dependency graph.
-2. **Trace the type signatures** — if a core method returns `Result[String, A]`, then `Result` is a supporting type to understand.
-3. **Find implicit instances and type class derivation** — identify what derives automatically vs. must be created manually.
+**Understand how the API is used:**
+1. **Search test suites** (`*/src/test/scala/`) for idiomatic usage patterns
+   - Look for construction patterns (how objects are created)
+   - Trace method call sequences and data transformations
+   - Identify edge cases and boundary conditions (empty values, single elements, large inputs)
+   - Document error conditions and exception handling
 
-For each supporting type, read enough of its source and docs to explain it concisely in context (you do not need to be exhaustive—just what serves your documentation goal).
+2. **Find real-world examples**
+   - Glob `**/examples/**/*.scala` for companion examples
+   - Search integration tests combining multiple types
+   - Look for cross-module usages via Grep to reveal composition patterns
 
-## Step 1c: Find Real-World Patterns
+3. **Trace type dependencies**
+   - Grep imports in test files to reveal the full dependency graph
+   - For each public method returning a complex type, trace that type's documentation
+   - Identify implicit instances and type class derivation patterns
 
-Search for realistic usage patterns:
+### 3. Architecture & Design Analysis
 
-1. **Examples directory**: Glob for `**/examples/**/*.scala` and read any examples related to the topic.
-2. **Test suites**: The best source of idiomatic code. Look for integration tests that combine multiple types.
-3. **Cross-module usages**: Grep for how core types are used across different modules—this reveals integration patterns.
+**Map abstraction layers and patterns:**
+- Identify layers: constructors → transformations → queries → finalization
+- Document common patterns: builders, factories, functional chains, state management
+- Note which operations are composable vs. terminal
+- Understand type relationships: inheritance, composition, sealed traits vs. open hierarchies
 
-## Step 1d: Search GitHub History
+**Design rationale:**
+- Search GitHub history for design decisions, API evolution, known tradeoffs
+- Identify any documented anti-patterns or common misconceptions
 
-Use the GitHub CLI (`gh`, available in every project) to search issues, pull requests, and discussions related to the topic. The goal is to surface:
+### 4. Documentation Landscape
 
-- Design decisions and rationale behind the APIs involved
-- Known caveats, gotchas, or non-obvious behavior raised in issues
-- Common user questions, pain points, or misconceptions to address
-- Real-world use cases shared by contributors
-- Concrete examples or idioms mentioned in discussions
+**Understand existing coverage:**
+- Check `docs/reference/` and `docs/` for existing documentation
+- Identify what is already documented vs. gaps to address
+- Note examples or patterns already documented elsewhere
 
-**Default queries:**
+**Identify documentation gaps:**
+- Methods lacking test coverage
+- Performance characteristics not captured
+- Edge cases not exercised in tests
+- Composition examples not yet documented
+
+## Research Workflow
+
+### Step 1: Read Core Source Files
+For each core type, read the full source file to understand:
+- All public methods and their signatures
+- Type parameters, variance, constraints
+- Companion object and factory methods
+- Javadoc/scaladoc comments (design intent)
+
+### Step 2: Read Test Files
+Search and read test suites to understand:
+- Construction patterns and common usages
+- Method chaining and composition examples
+- Edge cases: empty inputs, single elements, large data
+- Error handling and exception cases
+- Integration with other types
+
+### Step 3: Find Supporting Types
+Identify every type that core methods depend on:
+1. Grep imports in test files for the full dependency graph
+2. For each supporting type, read enough source and documentation to explain it in context
+3. Trace return types through multiple layers if needed
+
+### Step 4: Search for Real-World Patterns
+1. **Examples directory**: `Glob` for `**/examples/**/*.scala`
+2. **Integration tests**: Look for tests combining multiple types from this module
+3. **Cross-module usage**: `Grep` across other modules to find how core types integrate
+4. **Documentation patterns**: Check if similar types have documented examples you can mirror
+
+### Step 5: GitHub History Research
+Use GitHub CLI to surface design rationale and common questions:
 
 ```bash
-# Closed issues and PRs that mention the topic (most informative)
-gh issue list  --repo <owner>/<repo> --state all --search "<topic>"      --limit 30
-gh pr    list  --repo <owner>/<repo> --state all --search "<topic>"      --limit 30
-
-# Code search across the repo for usage patterns
-gh search code --repo <owner>/<repo> "<topic>"                            --limit 20
+gh issue list  --repo <owner>/<repo> --state all --search "<topic>" --limit 30
+gh pr    list  --repo <owner>/<repo> --state all --search "<topic>" --limit 30
+gh search code --repo <owner>/<repo> "<topic>" --limit 20
 ```
 
-Run multiple queries — vary the topic, type names, and related feature keywords for thorough coverage. Read the bodies of the most-commented issues/PRs (`gh issue view <n> --comments`) to capture the discussion, not just the title.
+For high-value issues/PRs, read full discussion: `gh issue view <n> --comments`
 
-**Project-specific helpers (optional):** some ZIO projects ship an sbt task that wraps these queries with richer formatting (e.g., `sbt "gh-query --verbose <topic>"` in zio-blocks). Use it if it exists in the project's `build.sbt`; otherwise fall back to the `gh` commands above.
+## Output Structure
+
+Provide findings organized as:
+
+- **Core types** with fully qualified names and source file paths (with line numbers)
+- **Public API** organized by category (constructors, transformations, queries, etc.)
+- **Usage patterns** from tests: construction, composition, error handling
+- **Dependencies**: which types use which other types, and why
+- **Real-world examples**: concrete composition patterns from tests/examples
+- **Documentation gaps**: methods with no test coverage, undocumented behavior
+- **Architecture insights**: design patterns, abstraction layers, design decisions
+- **Critical files** (5-10 most important files) prioritized by relevance
 
 ---
 
 ## Design Rule
 
-This sub-skill targets ≤80 lines and covers the shared research procedure only. Document-specific research questions (which differ between guides, tutorials, and references) should remain in the parent skill.
+This sub-skill targets comprehensive research for documentation. Focus on understanding what documentation authors need, not on writing documentation itself.
