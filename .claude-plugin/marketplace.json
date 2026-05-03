@@ -22,6 +22,15 @@
       "author": {
         "name": "zio"
       }
+    },
+    {
+      "name": "docs-write",
+      "description": "Guided 5-phase documentation authoring workflow for ZIO libraries with research, generation, and quality review capabilities.",
+      "version": "0.1.0",
+      "source": "./plugins/docs-write",
+      "author": {
+        "name": "Milad Khajavi"
+      }
     }
   ]
 }
