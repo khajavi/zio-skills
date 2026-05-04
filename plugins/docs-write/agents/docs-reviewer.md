@@ -12,12 +12,13 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 
 **You MUST ALWAYS ask the user which review steps to execute before proceeding.**
 
-Use `AskUserQuestion` with `multiSelect: true` to present these 3 options:
+Use `AskUserQuestion` with `multiSelect: true` to present these 4 options:
 - **Step 1: Critique Review Loop** — Content quality, technical accuracy, completeness, and consistency via critique loop (up to 3 rounds)
 - **Step 2: Structural Completeness Check** — Required sections, method coverage, and docs-integrate checklist
-- **Step 3: Prose + Code Quality** — 25 writing style rules and mdoc modifier correctness
+- **Step 3: Writing Style Check** — 25 prose writing style rules (pronouns, tense, filler, heading hierarchy, etc.)
+- **Step 4: Code Style Check** — mdoc modifier correctness and code example quality
 
-**Default behavior**: All 3 steps are pre-selected. If the user does not change the selection, all 3 will run.
+**Default behavior**: All 4 steps are pre-selected. If the user does not change the selection, all 4 will run.
 
 **Store the user's selection** and use it in the review process below. Do not proceed past this question until you have received the user's step selection.
 
@@ -59,16 +60,24 @@ Use `AskUserQuestion` with `multiSelect: true` to present these 3 options:
 - Collect all findings but **do NOT wait for user response**. Continue immediately to Step 3.
 - **Mark the `Step 2` TodoWrite task as `completed` before proceeding to Step 3**
 
-### Step 3 — Prose + Code Quality (launch after structural check)
+### Step 3 — Writing Style Check (launch after structural check)
 
-**Guard**: If Step 3 was not selected by the user, skip to the Final Output section.
+**Guard**: If Step 3 was not selected by the user, skip to Step 4.
 
 **Actions**:
 - Invoke the `docs-writing-style` skill to check all 25 writing style rules
+- Report only issues with confidence ≥ 80
+- **Mark the `Step 3` TodoWrite task as `completed` before proceeding to Step 4**
+
+### Step 4 — Code Style Check (launch after writing style check)
+
+**Guard**: If Step 4 was not selected by the user, skip to the Final Output section.
+
+**Actions**:
 - Invoke the `docs-mdoc-conventions` skill to verify mdoc modifier correctness
 - Optionally invoke `/docs-verify-compliance` if `sbt mdoc` is available
 - Report only issues with confidence ≥ 80
-- **Mark the `Step 3` TodoWrite task as `completed` after this step finishes**
+- **Mark the `Step 4` TodoWrite task as `completed` after this step finishes**
 
 ## Confidence-Based Filtering
 
@@ -167,10 +176,15 @@ For data type reference pages, verify that:
 - Missing sections (for references, guides, tutorials)
 - Missing `docs-integrate` checklist items
 
-**Step 3: Style & Code Issues** (from writing-style and mdoc-conventions, if selected)
-- Style violations (reference specific rule number, e.g., "Rule 7: code blocks preceded by prose")
+**Step 3: Writing Style Issues** (from writing-style check, if selected)
+- Prose style violations (reference specific rule number, e.g., "Rule 7: code blocks preceded by prose")
+- Heading hierarchy issues
+- Tense, pronoun, and filler word issues
+
+**Step 4: Code Style Issues** (from mdoc-conventions check, if selected)
 - mdoc modifier correctness issues
 - Code example quality issues
+- mdoc compilation issues (if `/docs-verify-compliance` ran)
 
 **If no issues ≥ 80 from all selected steps:**
 - Confirm: "Documentation meets all ZIO standards across the selected review dimensions."
