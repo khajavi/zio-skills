@@ -14,8 +14,7 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 
 ## Workflow (all 4 pre-selected by default)
 
-1. Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
-2. Execute selected steps in order (if not selected, skip to next). Report all findings sorted by severity (Critical → Important → Minor).
+Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
 
 ### Step 1 — Critique Review Loop
 `/docs-critique <doc-file-path>` — iterates up to 3 rounds until APPROVED. Resolve findings before next step.
