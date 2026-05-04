@@ -92,9 +92,16 @@ You are helping a developer write documentation for already-written code. Follow
 - If Phase 4 was selected **and** Phase 3 was skipped, ask the user: "Phase 3 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
 
 **Action**:
-Invoke the `docs-reviewer` agent via the Agent tool, passing:
-  - The generated documentation file path
-  - The documentation type (data type reference, module reference, how-to guide, or tutorial)
+Invoke the `docs-reviewer` agent via the Agent tool with these explicit instructions:
+1. First, ask the user which of the 4 review steps to run using `AskUserQuestion` with `multiSelect: true`:
+   - Step 1: Critique Review Loop
+   - Step 2: Structural Completeness
+   - Step 3: Writing Style Check
+   - Step 4: Code Style Check
+2. Then execute the selected steps on the documentation file
+3. Pass the generated documentation file path and doc type to the agent
+
+All 4 steps are pre-selected by default.
 
 ---
 
