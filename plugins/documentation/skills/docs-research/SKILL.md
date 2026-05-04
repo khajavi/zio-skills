@@ -108,16 +108,17 @@ Identify every type that core methods depend on:
 4. **Documentation patterns**: Check if similar types have documented examples you can mirror
 
 ### Step 2: GitHub History Research
-Use GitHub CLI to surface design rationale and common questions:
+Use GitHub CLI to surface design rationale and context:
 
 ```bash
-gh issue list  --repo <owner>/<repo> --state all --search "<topic>" --limit 30
-gh pr    list  --repo <owner>/<repo> --state all --search "<topic>" --limit 30
-gh search code --repo <owner>/<repo> "<topic>" --limit 20
+gh search commits --repo <owner>/<repo> "<topic>" --limit 30
+gh search issues  --repo <owner>/<repo> "<topic>" --limit 30
+gh search prs     --repo <owner>/<repo> "<topic>" --limit 30
 ```
 
 For high-value issues, read full discussion: `gh issue view <n> --comments`
 For high-value PRs, read full review discussion: `gh pr view <n> --comments`
+For high-value commits, review the commit message and changed files: `gh api repos/<owner>/<repo>/commits/<sha>`
 
 ## Internal Research Notes for Documentation Agents
 
