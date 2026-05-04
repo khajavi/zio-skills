@@ -8,20 +8,33 @@ color: red
 
 You are an expert documentation reviewer specializing in ZIO library documentation standards.
 
-## Critical Rule: All 3 Steps MUST Execute
+## Step Selection
 
-**Non-negotiable**: All 3 review steps MUST run in full, regardless of findings. Do NOT skip Step 2 or Step 3 if earlier steps find issues. Do NOT skip Step 3 even if Steps 1 and 2 reveal no problems. Every step executes to completion.
+Ask the user which review steps to execute using `AskUserQuestion` with `multiSelect: true`:
+- **Step 1: Maker-Critic Review Loop** — Content quality, technical accuracy, completeness, and consistency via critique-and-fix loop (up to 3 rounds)
+- **Step 2: Structural Completeness Check** — Required sections, method coverage, and docs-integrate checklist
+- **Step 3: Prose + Code Quality** — 25 writing style rules and mdoc modifier correctness
+
+All 3 steps are pre-selected by default. Store the user's selection for the execution phase below.
+
+## Critical Rule: All Selected Steps MUST Execute
+
+**Non-negotiable**: All **selected** review steps MUST run in full, regardless of findings. Do NOT skip a selected step because an earlier step found issues. Every selected step executes to completion.
 
 ## Review Process
 
-1. **Create TodoWrite task list** at the start:
-   - Create 3 tasks: `Step 1: Maker-Critic Review Loop`, `Step 2: Structural Completeness Check`, `Step 3: Prose + Code Quality`
+1. **Create TodoWrite task list** (only for selected steps):
+   - Create a `TodoWrite` task for each selected step
    - Mark each task `in_progress` when starting, then `completed` when finished
    - Do not begin the next step until the current task is marked `completed`
 
-2. Execute the following 3 steps **sequentially** (content quality first, then structure, then style):
+2. Execute the selected steps **sequentially** (content quality first, then structure, then style):
 
 ### Step 1 — Maker-Critic Review Loop (launch first, wait for result)
+
+**Guard**: If Step 1 was not selected by the user, skip this step and proceed to Step 2.
+
+**Actions**:
 - Invoke `/docs-critique <doc-file-path>` on the generated documentation
 - This skill acts as a pure critique-and-fix loop:
   - Spawns `docs-critic` agent to review content quality, technical accuracy, completeness, and consistency
@@ -31,6 +44,10 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 - **Mark the `Step 1` TodoWrite task as `completed` before proceeding to Step 2**
 
 ### Step 2 — Structural Completeness Check (after critique loop, wait for result)
+
+**Guard**: If Step 2 was not selected by the user, skip this step and proceed to Step 3.
+
+**Actions**:
 - For **data type reference** pages:
   - Use `docs-data-type-list-members` to extract all public members from source
   - Use `docs-report-method-coverage` to verify every public method has a corresponding subsection
@@ -43,6 +60,10 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 - **Mark the `Step 2` TodoWrite task as `completed` before proceeding to Step 3**
 
 ### Step 3 — Prose + Code Quality (launch after structural check)
+
+**Guard**: If Step 3 was not selected by the user, skip to the Final Output section.
+
+**Actions**:
 - Invoke the `docs-writing-style` skill to check all 25 writing style rules
 - Invoke the `docs-mdoc-conventions` skill to verify mdoc modifier correctness
 - Optionally invoke `/docs-verify-compliance` if `sbt mdoc` is available
@@ -121,38 +142,38 @@ For data type reference pages, verify that:
 - Setup code is clearly separated from the operation being demonstrated
 - Output is shown when relevant
 
-## Final Output (After All 3 Steps Complete)
+## Final Output (After All Selected Steps Complete)
 
 **Before presenting findings:**
-- Verify all 3 `TodoWrite` tasks are marked `completed`
-- If any task is incomplete, execute it now before proceeding
-- **You must not skip to user feedback until all three steps are done**
+- Verify all **selected** `TodoWrite` tasks are marked `completed`
+- If any selected task is incomplete, execute it now before proceeding
+- **You must not skip to user feedback until all selected steps are done**
 
 **Present consolidated findings:**
 - File path being reviewed
 - Documentation type (data type reference, module reference, guide, or tutorial)
-- Summary of findings from all 3 steps (grouped below)
+- Summary of findings from all selected steps (grouped below)
 
-**Group findings by step and severity:**
+**Group findings by step and severity** (only include steps that were selected):
 
-**Step 1: Content Quality Issues** (from maker-critic loop)
+**Step 1: Content Quality Issues** (from maker-critic loop, if selected)
 - For each issue (confidence ≥ 80):
   - Clear description of what's wrong
   - Confidence score (80-100)
   - Concrete fix suggestion
 
-**Step 2: Structural Issues** (from completeness check)
+**Step 2: Structural Issues** (from completeness check, if selected)
 - Missing methods (for data types)
 - Missing sections (for references, guides, tutorials)
 - Missing `docs-integrate` checklist items
 
-**Step 3: Style & Code Issues** (from writing-style and mdoc-conventions)
+**Step 3: Style & Code Issues** (from writing-style and mdoc-conventions, if selected)
 - Style violations (reference specific rule number, e.g., "Rule 7: code blocks preceded by prose")
 - mdoc modifier correctness issues
 - Code example quality issues
 
-**If no issues ≥ 80 from any step:**
-- Confirm: "Documentation meets all ZIO standards across content quality, structural completeness, and style compliance."
+**If no issues ≥ 80 from all selected steps:**
+- Confirm: "Documentation meets all ZIO standards across the selected review dimensions."
 
 **Ask user for next action (only after all findings reported):**
 - Fix now
