@@ -15,36 +15,38 @@ You are helping a developer write documentation for already-written code. Follow
 - **Review rigorously**: Check structure, then content quality, then style compliance
 - **Use specialized agents**: Leverage `docs-researcher` for codebase exploration and `docs-reviewer` for quality checks
 
+## Documentation Types
+- **Data Type Reference** — full API documentation for a single Scala data type
+- **Module Reference** — reference documentation for a module with multiple related types
+- **How To Guide** — goal-oriented guide for accomplishing a specific task
+- **Tutorial** — learning-oriented guide for newcomers to a concept
+
+## Workflow Phases
+- Phase 1: Source Research
+- Phase 2: Documentation Generation
+- Phase 3: Documentation Review
+- Phase 4: Summary
+
 ---
 
-## Phase 1: Topic + Doc Type Detection + Phase Selection
+## Phase Zero: Topic + Doc Type Detection + Phase Selection
 
 **Goal**: Understand what to document, which documentation type to generate, and which workflow phases to run
 
 **Actions**:
 1. Receive `$ARGUMENTS` as the raw topic (type name, module name, or free-text description)
 2. If `$ARGUMENTS` is empty, ask the user to provide a topic using `AskUserQuestion`
-3. Use `AskUserQuestion` to ask which documentation type they want to write:
-    - Data type reference — full API documentation for a single Scala data type
-    - Module reference — reference documentation for a module with multiple related types
-    - How-to guide — goal-oriented guide for accomplishing a specific task
-    - Tutorial — learning-oriented guide for newcomers to a concept
+3. Use `AskUserQuestion` to ask which "Documentation Type" they want to write.
 4. Confirm the chosen type and topic before proceeding
-5. **Phase Selection**: Ask the user which of the remaining phases to run using `AskUserQuestion` with `multiSelect: true`:
-    - Phase 2: Source Research
-    - Phase 3: Documentation Generation
-    - Phase 4: Documentation Review
-    - Phase 5: Summary
-
-   All four phases are pre-selected by default. Store the user's selection for use in subsequent phases.
+5. **Phase Selection**: Ask the user which of the "Workflow Phases" to run using `AskUserQuestion` with `multiSelect: true`. All four phases are pre-selected by default. Store the user's selection for use in subsequent phases.
 
 ---
 
-## Phase 2: Source Research
+## Phase 1: Source Research
 
 **Goal**: Understand the codebase deeply before writing documentation
 
-**Guard**: If Phase 2 was not selected by the user in Phase 1, skip this phase entirely and proceed to Phase 3.
+**Guard**: If Phase 1 was not selected by the user in Phase 0, skip this phase entirely and proceed to Phase 2.
 
 **Actions**:
 1. Determine agent count based on scope:
@@ -63,33 +65,32 @@ You are helping a developer write documentation for already-written code. Follow
 
 ---
 
-## Phase 3: Documentation Generation
+## Phase 2: Documentation Generation
 
 **Goal**: Generate documentation using the appropriate skill
 
 **Guard**:
-- If Phase 3 was not selected by the user in Phase 1, skip this phase and proceed to Phase 4.
-- If Phase 3 was selected **and** Phase 2 was skipped, ask the user: "Phase 2 (Research) was skipped. Please provide any research notes or context to use during generation, or press enter to proceed with the topic name only." (Optional input — generation can proceed without it.)
+- If Phase 2 was not selected by the user in Phase 0, skip this phase and proceed to Phase 3.
+- If Phase 2 was selected **and** Phase 1 was skipped, ask the user: "Phase 1 (Research) was skipped. Please provide any research notes or context to use during generation, or press enter to proceed with the topic name only." (Optional input — generation can proceed without it.)
 
 **Actions**:
 1. Invoke the chosen skill via the `Skill` tool:
-    - Data type reference → `/docs-data-type-ref <topic>`
-    - Module reference → `/docs-module-ref <topic>`
-    - How-to guide → `/docs-how-to-guide <topic>`
+    - Data Type Reference → `/docs-data-type-ref <DataTypeName>`
+    - Module Reference → `/docs-module-ref <module-name>`
+    - How-to Guide → `/docs-how-to-guide <topic>`
     - Tutorial → `/docs-tutorial <topic>`
 2. Let the skill handle the complete workflow (structure, mdoc compilation, example creation, sidebars integration)
-3. Do **not** duplicate any of the skill's internal steps
-4. When the skill completes, capture the file path of the generated documentation
+3. When the skill completes, capture the file path of the generated documentation
 
 ---
 
-## Phase 4: Documentation Review
+## Phase 3: Documentation Review
 
 **Goal**: Ensure documentation is technically accurate, structurally sound, and stylistically compliant
 
 **Guard**:
-- If Phase 4 was not selected by the user in Phase 1, skip this phase and proceed to Phase 5.
-- If Phase 4 was selected **and** Phase 3 was skipped, ask the user: "Phase 3 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
+- If Phase 3 was not selected by the user in Phase 0, skip this phase and proceed to Phase 4.
+- If Phase 3 was selected **and** Phase 2 was skipped, ask the user: "Phase 2 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
 
 **Action**:
 Invoke the `docs-reviewer` agent via the Agent tool, passing:
@@ -98,13 +99,13 @@ Invoke the `docs-reviewer` agent via the Agent tool, passing:
 
 ---
 
-## Phase 5: Summary
+## Phase 4: Summary
 
 **Goal**: Document what was accomplished and suggest next steps
 
-**Guard**: If Phase 5 was not selected by the user in Phase 1, end the workflow here.
+**Guard**: If Phase 4 was not selected by the user in Phase 0, end the workflow here.
 
-**Actions** (when Phase 5 runs):
+**Actions**:
 1. Adapt the report based on which phases executed:
     - **If all phases ran** (full workflow):
         - Documentation type generated
@@ -112,13 +113,11 @@ Invoke the `docs-reviewer` agent via the Agent tool, passing:
         - Key decisions made during review and revision
         - Any remaining issues (if user chose "Fix later" or "Proceed as-is")
     - **If only some phases ran** (partial workflow):
-        - Clearly state which phases were executed (e.g., "Phases 2, 4, and 5 executed; Phases 1 and 3 were skipped")
+        - Clearly state which phases were executed (e.g., "Phases 1, 3, and 4 executed; Phases 0 and 2 were skipped")
         - Report outcomes from each executed phase
         - Note any limitations due to skipped phases
 2. Suggest next steps (adapted to the workflow):
-    - If Phase 3 or 4 ran: Run `sbt docs/mdoc` to verify documentation compiles
-    - If Phase 3 ran: Suggest opening a pull request with the new documentation
+    - If Phase 2 or 3 ran: Run `sbt docs/mdoc` to verify documentation compiles
     - Link to related documentation pages
-    - Mention any follow-up documentation work
 
 ---
