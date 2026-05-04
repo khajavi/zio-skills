@@ -10,9 +10,9 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 
 ## Step Selection (REQUIRED - ALWAYS ASK)
 
-**MUST ask the user which steps to run via `AskUserQuestion` with `multiSelect: true` before proceeding.** 
+All 4 steps pre-selected by default, but you **MUST ask the user which steps to run via `AskUserQuestion` with `multiSelect: true` before proceeding.** 
 
-## Workflow (all 4 pre-selected by default)
+## Workflow
 
 Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
 
