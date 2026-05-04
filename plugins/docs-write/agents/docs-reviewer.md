@@ -52,11 +52,11 @@ Use `AskUserQuestion` with `multiSelect: true` to present these 4 options:
 - For **data type reference** pages:
   - Use `docs-data-type-list-members` to extract all public members from source
   - Use `docs-report-method-coverage` to verify every public method has a corresponding subsection
-  - Report any missing methods with confidence ≥ 80
+  - Report any missing methods sorted by severity
 - For **module reference, how-to guides, and tutorials**:
   - Verify all required sections are present (see "Structural Completeness" details below)
   - Verify `docs-integrate` checklist items (sidebars.js, index.md updates)
-  - Report structural gaps with confidence ≥ 80
+  - Report structural gaps sorted by severity
 - Collect all findings but **do NOT wait for user response**. Continue immediately to Step 3.
 - **Mark the `Step 2` TodoWrite task as `completed` before proceeding to Step 3**
 
@@ -66,7 +66,7 @@ Use `AskUserQuestion` with `multiSelect: true` to present these 4 options:
 
 **Actions**:
 - Invoke the `docs-writing-style` skill to check all 25 writing style rules
-- Report only issues with confidence ≥ 80
+- Report all findings sorted by severity (Critical → Important → Minor)
 - **Mark the `Step 3` TodoWrite task as `completed` before proceeding to Step 4**
 
 ### Step 4 — Code Style Check (launch after writing style check)
@@ -76,19 +76,18 @@ Use `AskUserQuestion` with `multiSelect: true` to present these 4 options:
 **Actions**:
 - Invoke the `docs-mdoc-conventions` skill to verify mdoc modifier correctness
 - Optionally invoke `/docs-verify-compliance` if `sbt mdoc` is available
-- Report only issues with confidence ≥ 80
+- Report all findings sorted by severity (Critical → Important → Minor)
 - **Mark the `Step 4` TodoWrite task as `completed` after this step finishes**
 
-## Confidence-Based Filtering
+## Severity Classification
 
-Rate each potential issue on a scale from 0-100:
+Report ALL findings and sort them from most critical to least critical:
 
-- **0-25**: Not confident — false positive or pre-existing issue
-- **26-50**: Somewhat confident — might be a real issue, but uncertain
-- **51-75**: Moderately confident — real issue but may be nitpicky
-- **76-100**: Highly confident — definite issue that impacts quality
+- **Critical**: Structural gaps that break reading flow, code that won't compile, missing required sections, architectural issues
+- **Important**: Violations of style rules, missing method coverage, incorrect mdoc modifiers, incomplete integrations
+- **Minor**: Suggestions that improve clarity or polish but don't violate rules or break functionality
 
-**Only report issues with confidence ≥ 80.** Focus on what truly matters.
+Sort all findings within each step: Critical → Important → Minor.
 
 ## Reference Specifications
 
@@ -141,7 +140,7 @@ Rate each potential issue on a scale from 0-100:
 For data type reference pages, verify that:
 - Every public method listed in source code has a corresponding subsection
 - Every companion object method is documented
-- Missing methods are flagged only if confidence ≥ 80
+- Missing methods are reported and sorted by severity
 - Inherited methods are documented or explicitly noted as inherited
 
 ### 5. Code Example Quality
@@ -166,9 +165,10 @@ For data type reference pages, verify that:
 **Group findings by step and severity** (only include steps that were selected):
 
 **Step 1: Content Quality Issues** (from critique review, if selected)
-- For each issue (confidence ≥ 80):
+- Sort all findings by severity (Critical → Important → Minor)
+- For each issue:
+  - Severity level (Critical / Important / Minor)
   - Clear description of what's wrong
-  - Confidence score (80-100)
   - Concrete fix suggestion
 
 **Step 2: Structural Issues** (from completeness check, if selected)
@@ -186,7 +186,7 @@ For data type reference pages, verify that:
 - Code example quality issues
 - mdoc compilation issues (if `/docs-verify-compliance` ran)
 
-**If no issues ≥ 80 from all selected steps:**
+**If no issues found from all selected steps:**
 - Confirm: "Documentation meets all ZIO standards across the selected review dimensions."
 
 **Ask user for next action (only after all findings reported):**
