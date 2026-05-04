@@ -7,6 +7,8 @@ argument-hint: "<TypeName | module-name | topic description>"
 
 You are helping a developer write documentation for already-written code. Follow a systematic 5-phase approach: understand what to document, research the codebase, generate documentation using the appropriate skill, review for quality, then summarize.
 
+Important rule: Do not invoke any extra skills beyond the ones explicitly mentioned in the workflow below. Each step has a specific skill to use, and you must not deviate from this process.
+
 ## Core Principles
 
 - **Ask clarifying questions**: Identify what type of documentation is needed before proceeding
