@@ -91,14 +91,10 @@ You are helping a developer write documentation for already-written code. Follow
 - If Phase 4 was not selected by the user in Phase 1, skip this phase and proceed to Phase 5.
 - If Phase 4 was selected **and** Phase 3 was skipped, ask the user: "Phase 3 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
 
-**Actions**:
-1. Invoke the `docs-reviewer` agent via the Agent tool, passing:
-   - The generated documentation file path
-   - The documentation type (data type reference, module reference, how-to guide, or tutorial)
-2. Based on the agent's report, ask the user whether to:
-   - Fix issues now
-   - Fix later
-   - Proceed as-is
+**Action**:
+Invoke the `docs-reviewer` agent via the Agent tool, passing:
+  - The generated documentation file path
+  - The documentation type (data type reference, module reference, how-to guide, or tutorial)
 
 ---
 
