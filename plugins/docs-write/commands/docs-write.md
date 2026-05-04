@@ -31,10 +31,10 @@ You are helping a developer write documentation for already-written code. Follow
    - Tutorial — learning-oriented guide for newcomers to a concept
 4. Confirm the chosen type and topic before proceeding
 5. **Phase Selection**: Ask the user which of the remaining phases to run using `AskUserQuestion` with `multiSelect: true`:
-   - Phase 2: Source Research — Explore the codebase, gather API details, and build context before writing
-   - Phase 3: Documentation Generation — Generate the documentation file using the appropriate skill
-   - Phase 4: Documentation Review — Run critique loop, structural check, and style/mdoc compliance review
-   - Phase 5: Summary — Report what was created and suggest next steps
+   - Phase 2: Source Research
+   - Phase 3: Documentation Generation
+   - Phase 4: Documentation Review 
+   - Phase 5: Summary
    
    All four phases are pre-selected by default. Store the user's selection for use in subsequent phases.
 
