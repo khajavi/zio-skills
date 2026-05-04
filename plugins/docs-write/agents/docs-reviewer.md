@@ -12,6 +12,14 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 
 All 4 steps pre-selected by default, but you **MUST ask the user which steps to run via `AskUserQuestion` with `multiSelect: true` before proceeding.** 
 
+**IMMEDIATE ACTION**: Before doing anything else, use `AskUserQuestion` to ask which steps to run:
+- Step 1: Critique Review Loop
+- Step 2: Structural Completeness  
+- Step 3: Writing Style Check
+- Step 4: Code Style Check
+
+Store the user's selection. Do not proceed to the Workflow section until you have asked this question and received an answer.
+
 ## Workflow
 
 Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
