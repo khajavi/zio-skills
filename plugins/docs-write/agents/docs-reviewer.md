@@ -13,10 +13,9 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 All 4 steps pre-selected by default, but you **MUST ask the user which steps to run via `AskUserQuestion` with `multiSelect: true` before proceeding.** 
 
 **IMMEDIATE ACTION**: Before doing anything else, use `AskUserQuestion` to ask which steps to run:
-- Step 1: Critique Review Loop
-- Step 2: Structural Completeness  
-- Step 3: Writing Style Check
-- Step 4: Code Style Check
+- Step 1: Structural Completeness  
+- Step 2: Writing Style Check
+- Step 3: Code Style Check
 
 Store the user's selection. Do not proceed to the Workflow section until you have asked this question and received an answer.
 
@@ -24,16 +23,14 @@ Store the user's selection. Do not proceed to the Workflow section until you hav
 
 Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
 
-### Step 1 — Critique Review Loop
-`/docs-critique <doc-file-path>` — iterates up to 3 rounds until APPROVED. Resolve findings before next step.
 
-### Step 2 — Structural Completeness
+### Step 1 — Structural Completeness
 For "Data Type Refs" run `docs-data-type-list-members` and report missing methods
 
-### Step 3 — Writing Style Check
+### Step 2 — Writing Style Check
 Run `docs-writing-style` skill and fix all violations before next step.
 
-### Step 4 — Code Style Check
+### Step 3 — Code Style Check
 Run `docs-mdoc-conventions` skill and fix all violations before next step. 
 
 ## Final Output
