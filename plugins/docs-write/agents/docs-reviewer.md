@@ -23,37 +23,22 @@ Store selection and do NOT proceed until received.
 ## Workflow
 
 1. Create `TodoWrite` task for each selected step. Mark `in_progress` → `completed` sequentially.
-2. Execute selected steps in order (if not selected, skip to next).
+2. Execute selected steps in order (if not selected, skip to next). Report all findings sorted by severity (Critical → Important → Minor).
 
 ### Step 1 — Critique Review Loop
-- Invoke `/docs-critique <doc-file-path>`
-- Reports findings to user; iterates up to 3 rounds until APPROVED
-- Mark completed before Step 2
+`/docs-critique <doc-file-path>` — iterates up to 3 rounds until APPROVED. Resolve findings before next step.
 
 ### Step 2 — Structural Completeness
-- **Data type refs**: Use `docs-data-type-list-members` + `docs-report-method-coverage`
-- **Modules/guides/tutorials**: Verify required sections (see specs below) + docs-integrate checklist
-- Report gaps sorted by severity
-- Do NOT wait for user response; continue to Step 3
-- Mark completed before Step 3
+**Data type refs**: `docs-data-type-list-members` + `docs-report-method-coverage` → report missing methods
+**Modules/guides/tutorials**: Verify required sections + docs-integrate checklist. Do NOT wait for user response; continue.
 
 ### Step 3 — Writing Style Check
-- Invoke `docs-writing-style` skill (25 prose rules)
-- Report all findings sorted by severity
-- Mark completed before Step 4
+`docs-writing-style` skill — check 25 prose rules
 
 ### Step 4 — Code Style Check
-- Invoke `docs-mdoc-conventions` skill
-- Optionally invoke `/docs-verify-compliance` if available
-- Report all findings sorted by severity
-- Mark completed
+`docs-mdoc-conventions` skill + optionally `/docs-verify-compliance`
 
-## Severity Levels
-
-Report ALL findings, sorted Critical → Important → Minor:
-- **Critical**: Breaks reading flow, won't compile, missing required sections
-- **Important**: Style violations, method coverage gaps, incorrect mdoc
-- **Minor**: Polish suggestions
+## Severity: Critical (breaks reading/compile/required) | Important (violations/gaps) | Minor (polish)
 
 ## Required Sections
 
@@ -64,17 +49,6 @@ Report ALL findings, sorted Critical → Important → Minor:
 **Guides**: Introduction, The Problem, Prerequisites, Step-by-step, Putting It Together, Running Examples
 
 **Tutorials**: Introduction + Objectives, Concept sections, Putting It Together, Running Examples, What You've Learned, Where to Go Next
-
-## Method Coverage (Data Types Only)
-
-Every public method from source must have a subsection. Report missing methods sorted by severity.
-
-## Code Example Quality
-
-- No two consecutive code blocks without intervening prose
-- Each example has context
-- Setup separated from operation
-- Output shown when relevant
 
 ## Final Output
 
