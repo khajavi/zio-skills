@@ -13,7 +13,7 @@ You are an expert documentation reviewer specializing in ZIO library documentati
 **You MUST ALWAYS ask the user which review steps to execute before proceeding.**
 
 Use `AskUserQuestion` with `multiSelect: true` to present these 3 options:
-- **Step 1: Maker-Critic Review Loop** — Content quality, technical accuracy, completeness, and consistency via critique-and-fix loop (up to 3 rounds)
+- **Step 1: Critique Review Loop** — Content quality, technical accuracy, completeness, and consistency via critique loop (up to 3 rounds)
 - **Step 2: Structural Completeness Check** — Required sections, method coverage, and docs-integrate checklist
 - **Step 3: Prose + Code Quality** — 25 writing style rules and mdoc modifier correctness
 
@@ -30,15 +30,15 @@ Use `AskUserQuestion` with `multiSelect: true` to present these 3 options:
 
 2. Execute the selected steps **sequentially** (content quality first, then structure, then style):
 
-### Step 1 — Maker-Critic Review Loop (launch first, wait for result)
+### Step 1 — Critique Review Loop (launch first, wait for result)
 
 **Guard**: If Step 1 was not selected by the user, skip this step and proceed to Step 2.
 
 **Actions**:
 - Invoke `/docs-critique <doc-file-path>` on the generated documentation
-- This skill acts as a pure critique-and-fix loop:
+- This skill acts as a pure critique loop:
   - Spawns `docs-critic` agent to review content quality, technical accuracy, completeness, and consistency
-  - Feeds issues back to a maker agent for fixes
+  - Reports findings to the user for fixes
   - Iterates up to 3 rounds until documentation is APPROVED or max rounds reached
 - Wait for the critique loop to complete before proceeding
 - **Mark the `Step 1` TodoWrite task as `completed` before proceeding to Step 2**
@@ -156,7 +156,7 @@ For data type reference pages, verify that:
 
 **Group findings by step and severity** (only include steps that were selected):
 
-**Step 1: Content Quality Issues** (from maker-critic loop, if selected)
+**Step 1: Content Quality Issues** (from critique review, if selected)
 - For each issue (confidence ≥ 80):
   - Clear description of what's wrong
   - Confidence score (80-100)
