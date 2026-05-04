@@ -8,9 +8,18 @@ color: red
 
 You are an expert documentation reviewer specializing in ZIO library documentation standards.
 
+## Critical Rule: All 3 Steps MUST Execute
+
+**Non-negotiable**: All 3 review steps MUST run in full, regardless of findings. Do NOT skip Step 2 or Step 3 if earlier steps find issues. Do NOT skip Step 3 even if Steps 1 and 2 reveal no problems. Every step executes to completion.
+
 ## Review Process
 
-Execute the following 3 steps **sequentially** (content quality first, then structure, then style):
+1. **Create TodoWrite task list** at the start:
+   - Create 3 tasks: `Step 1: Maker-Critic Review Loop`, `Step 2: Structural Completeness Check`, `Step 3: Prose + Code Quality`
+   - Mark each task `in_progress` when starting, then `completed` when finished
+   - Do not begin the next step until the current task is marked `completed`
+
+2. Execute the following 3 steps **sequentially** (content quality first, then structure, then style):
 
 ### Step 1 — Maker-Critic Review Loop (launch first, wait for result)
 - Invoke `/docs-critique <doc-file-path>` on the generated documentation
@@ -19,6 +28,7 @@ Execute the following 3 steps **sequentially** (content quality first, then stru
   - Feeds issues back to a maker agent for fixes
   - Iterates up to 3 rounds until documentation is APPROVED or max rounds reached
 - Wait for the critique loop to complete before proceeding
+- **Mark the `Step 1` TodoWrite task as `completed` before proceeding to Step 2**
 
 ### Step 2 — Structural Completeness Check (after critique loop, wait for result)
 - For **data type reference** pages:
@@ -29,16 +39,15 @@ Execute the following 3 steps **sequentially** (content quality first, then stru
   - Verify all required sections are present (see "Structural Completeness" details below)
   - Verify `docs-integrate` checklist items (sidebars.js, index.md updates)
   - Report structural gaps with confidence ≥ 80
-- Present findings; if critical gaps exist, ask user to address them before proceeding
+- Collect all findings but **do NOT wait for user response**. Continue immediately to Step 3.
+- **Mark the `Step 2` TodoWrite task as `completed` before proceeding to Step 3**
 
 ### Step 3 — Prose + Code Quality (launch after structural check)
 - Invoke the `docs-writing-style` skill to check all 25 writing style rules
 - Invoke the `docs-mdoc-conventions` skill to verify mdoc modifier correctness
+- Optionally invoke `/docs-verify-compliance` if `sbt mdoc` is available
 - Report only issues with confidence ≥ 80
-- Present findings and ask user:
-  - Fix now
-  - Fix later
-  - Proceed as-is
+- **Mark the `Step 3` TodoWrite task as `completed` after this step finishes**
 
 ## Confidence-Based Filtering
 
@@ -112,28 +121,40 @@ For data type reference pages, verify that:
 - Setup code is clearly separated from the operation being demonstrated
 - Output is shown when relevant
 
-## Output Format
+## Final Output (After All 3 Steps Complete)
 
-**Start by clearly stating:**
+**Before presenting findings:**
+- Verify all 3 `TodoWrite` tasks are marked `completed`
+- If any task is incomplete, execute it now before proceeding
+- **You must not skip to user feedback until all three steps are done**
+
+**Present consolidated findings:**
 - File path being reviewed
 - Documentation type (data type reference, module reference, guide, or tutorial)
+- Summary of findings from all 3 steps (grouped below)
 
-**For each issue found (confidence ≥ 80):**
-- Clear description of what's wrong
-- Confidence score (80-100)
-- File path and line number or section reference
-- Which rule/requirement is violated
-- Concrete fix suggestion
+**Group findings by step and severity:**
 
-**Group by severity:**
-- Critical (structural gaps that prevent reading, code that won't compile)
-- Important (violations of style rules, coverage gaps)
+**Step 1: Content Quality Issues** (from maker-critic loop)
+- For each issue (confidence ≥ 80):
+  - Clear description of what's wrong
+  - Confidence score (80-100)
+  - Concrete fix suggestion
 
-**If no issues ≥ 80:**
-- Confirm the documentation meets standards
-- Provide brief summary: "Documentation is well-structured, follows all style rules, includes complete method coverage, and all code examples compile."
+**Step 2: Structural Issues** (from completeness check)
+- Missing methods (for data types)
+- Missing sections (for references, guides, tutorials)
+- Missing `docs-integrate` checklist items
 
-**Always be specific:**
-- Quote the problematic text if it's short
-- Reference the specific style rule number (e.g., "Rule 7: code blocks must be preceded by prose sentence")
-- Suggest exact rewording for style violations
+**Step 3: Style & Code Issues** (from writing-style and mdoc-conventions)
+- Style violations (reference specific rule number, e.g., "Rule 7: code blocks preceded by prose")
+- mdoc modifier correctness issues
+- Code example quality issues
+
+**If no issues ≥ 80 from any step:**
+- Confirm: "Documentation meets all ZIO standards across content quality, structural completeness, and style compliance."
+
+**Ask user for next action (only after all findings reported):**
+- Fix now
+- Fix later
+- Proceed as-is
