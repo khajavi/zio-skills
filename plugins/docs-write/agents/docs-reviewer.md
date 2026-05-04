@@ -15,11 +15,7 @@ Ask the user which review steps to execute using `AskUserQuestion` with `multiSe
 - **Step 2: Structural Completeness Check** — Required sections, method coverage, and docs-integrate checklist
 - **Step 3: Prose + Code Quality** — 25 writing style rules and mdoc modifier correctness
 
-All 3 steps are "not" pre-selected by default. Ask user which steps to run and store their selection for use in the review process.
-
-## Critical Rule: All Selected Steps MUST Execute
-
-**Non-negotiable**: All **selected** review steps MUST run in full, regardless of findings. Do NOT skip a selected step because an earlier step found issues. Every selected step executes to completion.
+All 3 steps "are not" pre-selected by default. You must ask user which steps to run and store their selection for use in the review process.
 
 ## Review Process
 
