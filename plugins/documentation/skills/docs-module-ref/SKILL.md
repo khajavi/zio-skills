@@ -374,22 +374,6 @@ After initial draft:
 
 ---
 
-## Decision Tree: docs-module-ref vs docs-data-type-ref
-
-Use skill({ name: "docs-module-ref" }) when:
-- Documenting a **module with multiple related types** designed to work together
-- Need to show **module narrative, relationships, and composition patterns**
-- Want readers to understand **the "why" and "how together"**, not just isolated APIs
-- Examples: HTTP Model, Resource Management, Schema Evolution
-
-Use skill({ name: "docs-data-type-ref" }) when:
-- Documenting a **single, standalone type**
-- Type doesn't require understanding other types to be useful
-- Want **exhaustive, encyclopedic reference** for one type in isolation
-- Examples: Chunk, TypeId, DynamicValue (when documented standalone)
-
----
-
 ## Checklist: Before Publishing
 
 Walk through every item in the sibling **[`CHECKLIST.md`](CHECKLIST.md)** before claiming the page is done. It covers structure, content quality, per-type coverage, technical accuracy, compliance gates, and integration. Do not skip — agents that skipped checklists were the most common cause of incomplete pages in past reviews.
