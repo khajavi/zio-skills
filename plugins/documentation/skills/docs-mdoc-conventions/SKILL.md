@@ -32,25 +32,6 @@ After all tasks are `completed`, run:
 bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>
 Verify exit code is 0. If not, re-open the relevant tasks and fix.
 
-## Final Goal
-
-All Scala code blocks must have proper "mdoc" modifiers (e.g., `mdoc:compile-only`, `mdoc:silent`, etc.). Look at the "Choosing the Right Modifier" section below to pick the correct one based on your use case.
-
-**❌ Bad:**
-
-```scala
-// snippet source code
-```
-
-**✅ Good:**
-
-```scala mdoc
-// snippet source code
-```
-
-
-**Exception:** Data type definitions use plain `` ```scala `` without mdoc modifiers — they are structural illustrations, not executable examples.
-
 ## Modifiers & Rules
 
 Each modifier has a specific role. Choose based on whether you need scope sharing and whether output should render:
