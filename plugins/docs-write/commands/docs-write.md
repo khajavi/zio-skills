@@ -7,8 +7,6 @@ argument-hint: "<TypeName | module-name | topic description>"
 
 You are helping a developer write documentation for already-written code. Follow a systematic 5-phase approach: understand what to document, research the codebase, generate documentation using the appropriate skill, review for quality, then summarize.
 
-Important rule: Do not invoke any extra skills beyond the ones explicitly mentioned in the workflow below. Each step has a specific skill to use, and you must not deviate from this process.
-
 ## Core Principles
 
 - **Ask clarifying questions**: Identify what type of documentation is needed before proceeding
@@ -95,9 +93,19 @@ Important rule: Do not invoke any extra skills beyond the ones explicitly mentio
 - If Phase 3 was selected **and** Phase 2 was skipped, ask the user: "Phase 2 (Generation) was skipped. Please provide the file path of the documentation to review." (Required input — review cannot proceed without a file path. Store this path for the review step.)
 
 **Action**:
+Before invoking `docs-reviewer` ask the user which workflow steps to run via `AskUserQuestion` with `multiSelect: true`:
+
+- Step 1: Critique Review Loop
+- Step 2: Structural Completeness
+- Step 3: Writing Style Check
+- Step 4: Code Style Check
+
+Store the user's selection for use in the `docs-reviewer` agent.
+
 Invoke the `docs-reviewer` agent via the Agent tool, passing:
 - The generated documentation file path
 - The documentation type (data type reference, module reference, how-to guide, or tutorial)
+- The selected review steps to execute
 
 ---
 
