@@ -36,7 +36,7 @@ Build a mental model of core types (primary exports), supporting types (helpers)
 
 ## Step 2: Decide Structure (Flat vs. Hierarchical)
 
-Apply the **default rule** below, surface it to the user, and proceed unless the user picks the other option.
+Use `AskUserQuestion` to confirm the structure choice if the user wants to override the default:
 
 **Default rule (apply this without asking):**
 
