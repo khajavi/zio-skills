@@ -231,18 +231,14 @@ Show how this type integrates with other data types in the same library and modu
 
 Add cross-references to related docs (e.g., `[Schema](./schema.md)`, `[Reflect](./reflect.md)`) after explaining the integration of each related type.
 
-#### 12. Running the Examples (required when examples exist)
+#### 12. Running the Examples (required when standalone examples exist)
 
-Use the **`docs-examples`** skill for complete guidance on:
-- Creating example files in the appropriate examples module
-- Structuring and naming examples
-- Verifying compilation and formatting
-- Embedding examples with `SourceFile.print`
-- Documenting the "Running the Examples" section
+**How to create the section:**
+1. Use the **`docs-examples`** skill to create example project or example files.
+2. Embed each example using `SourceFile.print` with: description paragraph → source link → run command.
+3. Place the section at the very end of the page (after Integration).
 
-**Briefly:** If substantial standalone examples exist, add a "Running the Examples" section at the very end of the page (after Integration). Each example should be embedded using `SourceFile.print` with a description paragraph, source link, and run command. If only inline examples within the documentation adequately cover the type, omit this section.
-
-When invoking `docs-examples`, pass: the examples module name (e.g., `schema-examples`), the repo name, the package name, and specify this is a **data type reference** (so the skill uses the SourceFile-embedding variant of the "Running the Examples" template, not the shell-command variant).
+**When invoking `docs-examples`:** Pass the examples module name (e.g., `schema-examples`), repo name, package name, and specify this is a **data type reference** (for SourceFile-embedding template).
 
 ### Writing Rules
 
