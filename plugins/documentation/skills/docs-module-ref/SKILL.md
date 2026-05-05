@@ -45,19 +45,17 @@ Use `AskUserQuestion` to confirm the structure choice if the user wants to overr
 | ≤ 4 core types, or types always used together                   | **Flat**       |
 | ≥ 5 core types, **or** ≥ 3 types with rich self-contained APIs  | **Hierarchical** |
 
-Tell the user which default applies and why (e.g., "This module exposes 7 types with diverse APIs, so I'll use the hierarchical structure unless you'd prefer flat"). Move on unless the user objects.
+Tell the user which applies and why, e.g.: "This module has 7 types with independent APIs, so I'll use hierarchical structure (index + individual type pages)."
 
-**Option A: Flat** (single `.md` file)
-- File: `docs/reference/<module-name>.md`
+**Flat** — Single file: `docs/reference/<module-name>.md`
 - All types documented inline with `##` headings
-- Pattern example: `http-model.md` (1,716 lines, 140+ types)
-- Best when types are always used together and separating them is artificial
+- Example: `http-model.md` (140+ types)
+- Best when types are tightly coupled or always used together
 
-**Option B: Hierarchical** (subdirectory)
-- Module index: `docs/reference/<module-name>/index.md`
-- Individual type pages: `docs/reference/<module-name>/<type>.md`
-- Pattern example: `resource-management/` (index.md + scope.md, resource.md, wire.md)
-- Best when types have significant self-contained value and readers benefit from per-type pages
+**Hierarchical** — Index + subpages: `docs/reference/<module-name>/index.md` + `docs/reference/<module-name>/<type>.md`
+- Separate page per type, linked from module index
+- Example: `resource-management/` (index.md, scope.md, resource.md, wire.md)
+- Best when types have self-contained value and readers benefit from deep-dive pages
 
 ---
 
@@ -218,10 +216,10 @@ Use the Skill({ name : "docs-examples"}) for writing example project and documen
 **Structure for each type:**
 1. **Opening definition (no heading for first type):** Brief definition, type signature, key properties
 2. **Subsections by category:**
-   - **Predefined Instances** (if applicable): List variants, constants
-   - **Parsing/Creating** (if applicable): How to construct or parse values
-   - **Key Operations**: 2-3 main methods per functionality group
-   - **Rendering** (if applicable): How to convert to string/wire format
+    - **Predefined Instances** (if applicable): List variants, constants
+    - **Parsing/Creating** (if applicable): How to construct or parse values
+    - **Key Operations**: 2-3 main methods per functionality group
+    - **Rendering** (if applicable): How to convert to string/wire format
 
 **Coverage:** Load and call Skill(`docs-data-type-ref`) for structure as a reference, but lighter:
 - Document every public method, but group concisely
@@ -279,9 +277,9 @@ title: "<TypeName>"
 
 **Special handling:**
 - **Running the Examples:** Can be at module level (one section covering all types) or omitted
-  - If module has companion examples covering all types together, put section in module index
-  - If each type has standalone examples, put section on individual type pages
-  - If no examples, omit entirely
+    - If module has companion examples covering all types together, put section in module index
+    - If each type has standalone examples, put section on individual type pages
+    - If no examples, omit entirely
 - **Comparison sections:** Can stay per-type (vs other languages, vs related types) or move to module index if comparing types within the module
 
 ---
