@@ -227,73 +227,8 @@ Use the **`docs-examples`** skill for complete guidance on:
 - Documenting the "Running the Examples" section
 
 **Briefly:** If substantial standalone examples exist, add a "Running the Examples" section at the very end of the page (after Integration). Each example should be embedded using `SourceFile.print` with a description paragraph, source link, and run command. If only inline examples within the documentation adequately cover the type, omit this section.
-```markdown
-## Running the Examples
 
-All code from this guide is available as runnable examples in the `schema-examples` module.
-
-**1. Clone the repository and navigate to the project:**
-
-```bash
-git clone https://github.com/zio/<repo-name>.git
-cd <repo-name>
-```
-
-**2. Run individual examples with sbt:**
-
-### <Example Title>
-
-<Short description of what this App demonstrates and the use case it covers.>
-
-```scala mdoc:passthrough
-import docs.SourceFile
-
-SourceFile.print("schema-examples/src/main/scala/<package>/<ObjectName>.scala")
-```
-
-([source](https://github.com/zio/<repo-name>/blob/main/schema-examples/src/main/scala/<package>/<ObjectName>.scala))
-
-```bash
-sbt "schema-examples/runMain <package>.<ObjectName>"
-```
-
-### <Next Example Title>
-
-<Short description of what this App demonstrates and the use case it covers.>
-
-```scala mdoc:passthrough
-import docs.SourceFile
-
-SourceFile.print("<module_name>-examples/src/main/scala/<package>/<ObjectName2>.scala")
-```
-
-([source](https://github.com/zio/<repo-name>/blob/main/schema-examples/src/main/scala/<package>/<ObjectName2>.scala))
-
-```bash
-sbt "<module_name>-examples/runMain <package>.<ObjectName2>"
-```
-
-Rules for this section:
-- List **every `App` object** written in Step 4, one entry per object.
-- For each entry: use a `###` heading (simple title), followed by a short descriptive paragraph, then embed the full source with `SourceFile.print`, source link, and run command.
-- The heading should be a simple, concise title (e.g., "Basic Usage", "Error Handling"). The paragraph below explains what the example demonstrates and the use case it covers.
-- Keep the two numbered steps (clone, run individually) in that order; do not add or remove steps.
-- If no example `App` objects were written (rare), omit this section entirely.
-- **Always embed full source** — `SourceFile.print` keeps docs and examples in sync automatically.
-
-### Embedding Example Files with `SourceFile`
-
-**Required for "Running the Examples" section:** Use `SourceFile.print` to embed full source from `<module_name>-examples/` for each example. `SourceFile.print` reads the file at mdoc compile time and emits a fenced code block with the file path as the title — docs and examples stay in sync automatically.
-
-The minimal pattern:
-
-```scala mdoc:passthrough
-import docs.SourceFile
-
-SourceFile.print("<module_name>-examples/src/main/scala/<package>/<ExampleFile>.scala")
-```
-
-For optional parameters (`lines`, `showLineNumbers`, `showTitle`), import-form gotchas, and a Common Failures table, load **[`references/embedding-examples.md`](references/embedding-examples.md)**.
+When invoking `docs-examples`, pass: the examples module name (e.g., `schema-examples`), the repo name, the package name, and specify this is a **data type reference** (so the skill uses the SourceFile-embedding variant of the "Running the Examples" template, not the shell-command variant).
 
 ### Writing Rules
 
@@ -322,14 +257,11 @@ Coverage report shows completeness by category: Companion Object, Public API, In
 
 ## Step 4: Write Examples
 
-Create focused `App` objects in `<module_name>-examples/src/main/scala/<type-name-lowercase>/`. Each demonstrates one use case — one `App` per concept.
+Use the **`docs-examples`** skill to create and document runnable examples. Invoke it after completing Step 3.5 (method coverage verification), so you know which use cases need illustration.
 
-- **Package**: matches directory name (e.g., `package into` for `into/`)
-- **Object**: extends `App` for independent execution
-- **Output**: use `util.ShowExpr.show(expr)` to print expression and result
-- **Naming**: name files after the scenario, not just the type (e.g., `IntoSchemaEvolutionExample.scala`)
-- **Coverage**: happy path + at least one failure/edge case, realistic domain types (`Person`, `Order`)
-- **Self-contained**: define all types and imports in the file
+Pass as context: the examples module name, the package name derived from the type name (lowercase, hyphens removed), and that this is a **data type reference** page. The skill covers directory setup, file templates, compilation, formatting, and the "Running the Examples" section.
+
+**Data-type-ref specific:** When printing expression results in examples, prefer `util.ShowExpr.show(expr)` to display both the expression and its evaluated value — this is more informative than `println` for reference documentation.
 
 ## Step 5: Format and Verify
 
