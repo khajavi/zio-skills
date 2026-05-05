@@ -6,6 +6,25 @@ allowed-tools: Read, Glob, Grep
 
 # ZIO Documentation Writing Style
 
+## Agent Workflow
+
+**Phase 1 — Planning only, no edits yet**
+Scan the document and identify every prose style violation (Rules 1–25 below). For each violation, create one task:
+
+> "Fix style – `<section>`:`<line>` (Rule `<N>`): `<short description>`"
+
+Do not touch any source file until the full task list is created and you have listed it for confirmation.
+
+**Phase 2 — Execution**
+Apply all fixes. Mark each task `completed` as you finish it.
+
+**Phase 3 — Mechanical validation**
+After all tasks are `completed`, run:
+```
+bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-writing-style/check-docs-style.sh <file.md>
+```
+Verify exit code is 0. If not, re-open the relevant tasks and fix.
+
 ## Mechanical Validation
 
 Before validating manually, run the mechanical style checks to catch common violations of the most critical rules:
