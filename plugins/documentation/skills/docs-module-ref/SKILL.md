@@ -205,26 +205,6 @@ How types relate architecturally and integrate with other modules in the same li
 
 ---
 
-## Step 4b: Running the Examples (Optional, applies to both Flat and Hierarchical)
-
-Decide where to place runnable examples:
-
-**Option 1: Module-level examples** (recommended for most modules)
-- Single section in module index or dedicated examples page
-- Shows cross-type workflows (e.g., "Create a Request, send it, parse the Response")
-- Use `Skill({ name: "docs-examples" })` to write and document companion projects
-
-**Option 2: Per-type examples** (only if each type has standalone value)
-- Examples in individual type pages (flat structure) or individual type files (hierarchical)
-- Use `Skill({ name: "docs-examples" })` separately for each type
-
-**Option 3: No examples** (skip if module is purely data model with no I/O)
-- Omit entirely; readers reference type signatures and "How They Work Together" section
-
-Choose one approach per module for consistency. If skipping examples, proceed directly to Step 5.
-
----
-
 ## Step 5: Write Type-Level Documentation (Flat Structure)
 
 **For flat (.md) files:** Write type sections inline using `##` headings.
@@ -296,7 +276,24 @@ title: "<TypeName>"
 
 ---
 
-## Step 7: Integration
+## Step 7: Running the Examples
+
+Decide where to place runnable examples:
+
+**Option 1: Module-level examples** (recommended for most modules)
+- Single section in module index or dedicated examples page
+- Shows cross-type workflows (e.g., "Create a Request, send it, parse the Response")
+- Use `Skill({ name: "docs-examples" })` to write and document companion projects
+
+**Option 2: Per-type examples** (only if each type has standalone value)
+- Examples in individual type pages (flat structure) or individual type files (hierarchical)
+- Use `Skill({ name: "docs-examples" })` separately for each type
+
+Choose one approach per module for consistency.
+
+---
+
+## Step 8: Integration
 
 Use the **`docs-integrate`** skill for the full checklist:
 1. Update `sidebars.js` with category entry (hierarchical) or single entry (flat)
@@ -340,7 +337,7 @@ Add line under "Reference Documentation" section:
 
 ---
 
-## Step 8: Format & Verify
+## Step 9: Format & Verify
 
 ### Scala Code Formatting
 ```bash
@@ -366,20 +363,4 @@ sbt "docs/mdoc --in docs/reference/<module-name>/"
 
 **Success criterion:** Zero `[error]` lines in output.
 
-### Link Verification
-
-Check all relative links work:
-- From module index to type pages (hierarchical)
-- From type pages back to module index
-- From "How They Work Together" examples to relevant type sections
-- From sidebar entries to correct files
-
 ---
-
-## Step 9: Test & Iterate
-
-After initial draft:
-1. **Test:** Can a new reader understand how to use the module by reading the module index first?
-2. **Test:** Can a reader find comprehensive API coverage per type?
-3. **Test:** Do "How They Work Together" examples show realistic composition?
-4. **Iterate:** Fix any gaps, clarify relationships, enhance examples if needed
