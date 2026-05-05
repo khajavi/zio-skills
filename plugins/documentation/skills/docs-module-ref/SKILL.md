@@ -203,7 +203,7 @@ How types relate architecturally and integrate with other modules in the same li
 - URL parsing uses Path and QueryParams
 ```
 
-#### 9. Running the Examples (Optional)
+#### 9. Running the Examples
 
 Invoke the `docs-examples` skill to find or create example project and document it here if the module has real-world usage patterns that benefit from runnable examples. 
 
