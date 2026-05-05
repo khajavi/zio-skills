@@ -203,9 +203,25 @@ How types relate architecturally and integrate with other modules in the same li
 - URL parsing uses Path and QueryParams
 ```
 
-#### 9. Running the Examples
+---
 
-Invoke the `docs-examples` skill to find or create example project and document it here if the module has real-world usage patterns that benefit from runnable examples. 
+## Step 4b: Running the Examples (Optional, applies to both Flat and Hierarchical)
+
+Decide where to place runnable examples:
+
+**Option 1: Module-level examples** (recommended for most modules)
+- Single section in module index or dedicated examples page
+- Shows cross-type workflows (e.g., "Create a Request, send it, parse the Response")
+- Use `Skill({ name: "docs-examples" })` to write and document companion projects
+
+**Option 2: Per-type examples** (only if each type has standalone value)
+- Examples in individual type pages (flat structure) or individual type files (hierarchical)
+- Use `Skill({ name: "docs-examples" })` separately for each type
+
+**Option 3: No examples** (skip if module is purely data model with no I/O)
+- Omit entirely; readers reference type signatures and "How They Work Together" section
+
+Choose one approach per module for consistency. If skipping examples, proceed directly to Step 5.
 
 ---
 
@@ -276,10 +292,6 @@ title: "<TypeName>"
 - In Integration, highlight module-level relationships (not just external modules)
 
 **Special handling:**
-- **Running the Examples:** Can be at module level (one section covering all types) or omitted
-    - If module has companion examples covering all types together, put section in module index
-    - If each type has standalone examples, put section on individual type pages
-    - If no examples, omit entirely
 - **Comparison sections:** Can stay per-type (vs other languages, vs related types) or move to module index if comparing types within the module
 
 ---
