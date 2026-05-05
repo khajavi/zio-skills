@@ -61,8 +61,8 @@ Tell the user which applies and why, e.g.: "This module has 7 types with indepen
 
 ## Step 3: Load Writing Rule Skills
 
-1. Load Skill({ name: "docs-writing-style" }) for prose conventions
-2. Load Skill({ name: "docs-mdoc-conventions" }) for code block syntax rules
+1. Invoke the `docs-writing-style` skill to ensure all prose follows ZIO documentation conventions (e.g., tone, formatting, terminology).
+2. Invoke the `docs-mdoc-conventions` skill to ensure all code blocks follow mdoc syntax rules for proper rendering and compilation.
 
 ---
 
