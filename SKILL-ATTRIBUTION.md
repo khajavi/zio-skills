@@ -4,30 +4,51 @@ The ZIO skills plugin includes an optional git post-commit hook that automatical
 
 ## Installation
 
-### Quick Setup
+### Option 1: One-Time Setup Skill (Easiest)
 
-Run the setup script from the repository root:
+From Claude Code, invoke:
+
+```
+/setup-skill-hook
+```
+
+This automatically installs the hook and tests it.
+
+### Option 2: Use Git's core.hooksPath (No Copying)
+
+For the cleanest setup with zero file copying:
+
+```bash
+bash .git-hooks-setup.sh
+```
+
+This tells git to use `.git-hooks/` directly. The hook is already there and runs automatically on every commit.
+
+**Advantages:**
+- ✅ No files copied to `.git/hooks/`
+- ✅ Hook updates automatically with the repo
+- ✅ Works across all team members with one git config
+
+### Option 3: Manual Copy Setup
 
 ```bash
 bash setup-skill-hook.sh
 ```
 
 This will:
-- ✅ Install the hook to `.git/hooks/post-commit`
+- ✅ Copy the hook to `.git/hooks/post-commit`
 - ✅ Make it executable
 - ✅ Preserve any existing hook (with confirmation)
 
-### Manual Setup
+### Option 4: Manual Setup
 
-If you prefer to set up manually:
-
-1. Copy the hook template:
 ```bash
 cp plugins/zio-skills/.claude-plugin/post-commit.template .git/hooks/post-commit
 chmod +x .git/hooks/post-commit
 ```
 
-2. Verify it works by making a commit:
+### Verify Installation
+
 ```bash
 echo "test" > file.txt
 git add file.txt
