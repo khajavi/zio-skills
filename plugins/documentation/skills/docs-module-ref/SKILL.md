@@ -13,6 +13,20 @@ allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*), AskUserQuesti
 
 $ARGUMENTS
 
+## Agent Workflow
+
+**Phase 1 — Plan (Steps 1–3, no files yet)**
+
+Complete Steps 1–3 (research, structure decision, loading writing skills). Before writing any file, create one task per remaining step: Step 4 through Step 9. Present the task list to the user for confirmation before proceeding.
+
+**Phase 2 — Write (Steps 4–7)**
+
+Execute Steps 4–7 in order. Mark each task `completed` as you finish it.
+
+**Phase 3 — Verify and Integrate (Steps 8–9)**
+
+Complete Steps 8–9. All `sbt` commands must exit with zero errors before claiming done.
+
 ## Overview
 
 This skill produces comprehensive reference documentation for modules with multiple related types. Unlike `docs-data-type-ref` (single type), `docs-module-ref` emphasizes:
