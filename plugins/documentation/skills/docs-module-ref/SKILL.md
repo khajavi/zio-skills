@@ -2,7 +2,7 @@
 name: docs-module-ref
 description: Write reference documentation for a module containing multiple related data types. Use when documenting a cohesive domain model (HTTP model, resource management) where types work together. Produces comprehensive type-level pages plus module-level narrative showing relationships, patterns, and composition.
 argument-hint: "[module-name (e.g., 'http-model', 'resource-management')]"
-allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*)
+allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*), AskUserQuestion, Skill
 ---
 
 # Module Reference Documentation
