@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+COMMIT_HASH=$(git rev-parse --short HEAD)
+SKILLS_USED=()
+
+# Auto-discover plugins and update versions
+if [ -d "plugins" ]; then
+  for plugin_dir in plugins/*/; do
+    plugin_json="$plugin_dir.claude-plugin/plugin.json"
+    if [ -f "$plugin_json" ]; then
+      # Extract skill name and base version
+      skill_name=$(jq -r '.name' "$plugin_json" 2>/dev/null || echo "unknown")
+      base_version=$(jq -r '.version' "$plugin_json" 2>/dev/null | cut -d'-' -f1)
+
+      if [ -n "$base_version" ]; then
+        new_version="$base_version-$COMMIT_HASH"
+
+        # Update version to include commit hash
+        jq ".version = \"$new_version\"" "$plugin_json" > "$plugin_json.tmp"
+        mv "$plugin_json.tmp" "$plugin_json"
+
+        # Store skill attribution
+        SKILLS_USED+=("$skill_name@$new_version")
+      fi
+    fi
+  done
+
+  # Stage the version changes
+  git add plugins/*/\.claude-plugin/plugin.json 2>/dev/null || true
+
+  # Build skills trailer
+  if [ ${#SKILLS_USED[@]} -gt 0 ]; then
+    SKILLS_TRAILER="Skills-Used: $(IFS=, ; echo "${SKILLS_USED[*]}")"
+
+    # Get current commit message and append skills trailer
+    COMMIT_MSG=$(git log -1 --pretty=%B)
+    git commit --amend -m "$(cat <<EOF
+$COMMIT_MSG
+
+$SKILLS_TRAILER
+EOF
+)" --no-edit
+  else
+    # Fallback if no skills found
+    git commit --amend --no-edit
+  fi
+fi

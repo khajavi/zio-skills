@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash show-versions.sh 2>/dev/null || true",
+            "statusMessage": "Checking versions...",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
