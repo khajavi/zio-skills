@@ -17,6 +17,20 @@ $ARGUMENTS
 
 If no type name appears above ask the user which data type they want to document before proceeding. Do not invent a type name.
 
+## Agent Workflow
+
+**Phase 1 — Plan (Steps 1–2, no writing yet)**
+
+Complete Step 1 (deep source code research). Study Step 2's document structure. Before writing any documentation file, create one task per section you'll write (e.g., "Write opening definition", "Write construction methods", "Write core operations", etc.) plus tasks for Step 3–7 (verification, examples, method coverage, formatting, integration). Present the task list to the user for confirmation before proceeding.
+
+**Phase 2 — Write (Step 2 sections)**
+
+Execute Step 2 in order (opening definition → motivation → quick showcase → installation → construction → core operations → subtypes/comparisons/advanced → integration). Mark each task `completed` as you finish it.
+
+**Phase 3 — Verify and Finalize (Steps 3–7)**
+
+Execute Steps 3–7 in order: verify compliance, check method coverage, write examples, format/verify compilation, and integrate. All `sbt` commands and checklist items must be complete before claiming done.
+
 ## Step 1: Deep Source Code Research
 
 Use the **`docs-research`** skill to find the source file, read tests, identify examples, find usages, read related docs, and search GitHub history. It covers steps for identifying the type, finding supporting information, and building a complete mental model.
