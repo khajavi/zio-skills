@@ -2,17 +2,35 @@
 name: docs-mdoc-conventions
 description: Shared reference for mdoc code block modifiers and Docusaurus admonitions used across ZIO library documentation skills. Include when writing any documentation that contains Scala code blocks.
 allowed_tools: Read, Glob, Grep
+color: silver
 ---
 
 ## Agent Workflow
 
-Before applying any rules, register these tasks using `TaskCreate`:
+**Phase 1 — Planning only, no edits yet**
+Scan the document and identify every Scala code block missing an mdoc modifier
+(skip pseudocode / type-signature-only blocks). For each block found:
 
-1. Apply correct mdoc modifiers to every Scala code block — use the Modifiers & Rules and Choosing the Right Modifier sections below to pick the right one for each block
-2. Run mechanical validation — `bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>` and verify exit code is `0`
-3. Test locally — run `sbt docs` and confirm no mdoc compilation errors
+1. Create a parent task: "Fix mdoc modifier – <section>:<line>"
+2. Under it, create two child tasks:
+  - "1. Choose and apply modifier"
+  - "2. Run `sbt mdoc --in <file>.md` and confirm zero errors"
 
-Use `TaskUpdate` to mark each task `in_progress` when you begin it and `completed` when done. Task 2 and 3 are blocked by task 1.
+Do not touch any source file until the full task tree is created and you have
+listed it for confirmation.
+
+**Phase 2 — Execution, one leaf task at a time**
+Work through the tree top-to-bottom. For each parent task:
+- Mark parent `in_progress`
+- Mark child 1 `in_progress` → apply modifier → mark child 1 `completed`
+- Mark child 2 `in_progress` → run `sbt mdoc` → confirm exit 0 → mark child 2 `completed`
+- Mark parent `completed`
+  Only then move to the next parent task.
+
+**Phase 3 — Mechanical validation**
+After all tasks are `completed`, run:
+bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>
+Verify exit code is 0. If not, re-open the relevant tasks and fix.
 
 ## Final Goal
 
