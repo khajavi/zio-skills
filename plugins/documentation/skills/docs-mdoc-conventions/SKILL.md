@@ -4,6 +4,16 @@ description: Shared reference for mdoc code block modifiers and Docusaurus admon
 allowed_tools: Read, Glob, Grep
 ---
 
+## Agent Workflow
+
+Before applying any rules, register these tasks using `TaskCreate`:
+
+1. Apply correct mdoc modifiers to every Scala code block — use the Modifiers & Rules and Choosing the Right Modifier sections below to pick the right one for each block
+2. Run mechanical validation — `bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>` and verify exit code is `0`
+3. Test locally — run `sbt docs` and confirm no mdoc compilation errors
+
+Use `TaskUpdate` to mark each task `in_progress` when you begin it and `completed` when done. Task 2 and 3 are blocked by task 1.
+
 ## Final Goal
 
 All Scala code blocks must have proper "mdoc" modifiers (e.g., `mdoc:compile-only`, `mdoc:silent`, etc.). Look at the "Choosing the Right Modifier" section below to pick the correct one based on your use case.
