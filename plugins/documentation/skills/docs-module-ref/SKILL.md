@@ -205,7 +205,7 @@ How types relate architecturally and integrate with other modules in the same li
 
 #### 9. Running the Examples (Optional)
 
-Use the Skill({ name : "docs-examples"}) for writing example project and documenting them on the documentation.
+Invoke the `docs-examples` skill to find or create example project and document it here if the module has real-world usage patterns that benefit from runnable examples. 
 
 ---
 
