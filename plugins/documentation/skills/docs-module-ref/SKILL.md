@@ -17,28 +17,20 @@ $ARGUMENTS
 
 This skill produces comprehensive reference documentation for modules with multiple related types. Unlike `docs-data-type-ref` (single type), `docs-module-ref` emphasizes:
 - **Module narrative:** How types work together, common patterns, architectural relationships
-- **Type-level comprehensiveness:** Each type gets full docs-data-type-ref coverage, contextualized within the module
+- **Type-level comprehensiveness:** Each type gets full `docs-data-type-ref` coverage, contextualized within the module
 - **Multi-type examples:** Show composition and cross-type usage, not just single-type API
 
 ---
 
 ## Step 1: Research & Map the Module
 
-Run the `docs-research` skill:
+Run `Skill({ name: "docs-research" })` to:
+- Find all core and supporting types in the module
+- Identify type relationships and dependencies
+- Find tests, examples, and real-world usage patterns
+- Review any existing partial documentation
 
-skill({ name: "docs-research" })
-
-Key Goals:
-1. Find all core and supporting types in the module
-2. Identify type relationships and dependencies (which types use which types)
-3. Find tests, examples, and real-world usage patterns
-5. Review any existing partial documentation
-
-**Additional mapping:** Create a mental model of data types:
-- **Core types** (primary exports, main abstractions)
-- **Supporting types** (helpers, variants)
-- **Relationships**
-- **Data flow**
+Build a mental model of core types (primary exports), supporting types (helpers), their relationships, and data flow.
 
 ---
 
