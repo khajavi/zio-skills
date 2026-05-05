@@ -82,6 +82,20 @@ You are helping a developer write documentation for already-written code. Follow
 2. Let the skill handle the complete workflow (structure, mdoc compilation, example creation, sidebars integration)
 3. When the skill completes, capture the file path of the generated documentation
 
+
+### Decision Tree: docs-module-ref vs docs-data-type-ref
+
+```
+Does the documentation focus on a single type?
+├─ YES → Is exhaustive, encyclopedic API coverage needed?
+│        └─ YES → Use docs-data-type-ref
+│        └─ NO  → Consider docs-data-type-ref if API is large, or inline in a broader guide
+│
+└─ NO (multiple types) → Do types work together and require understanding their relationships?
+├─ YES → Use docs-module-ref (show narrative, composition, patterns)
+└─ NO  → Document separately; each type gets its own docs-data-type-ref page
+```
+
 ---
 
 ## Phase 3: Documentation Review
