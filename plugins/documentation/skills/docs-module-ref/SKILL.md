@@ -23,9 +23,13 @@ Complete Steps 1–3 (research, structure decision, loading writing skills). Bef
 
 Execute Steps 4–7 in order. Mark each task `completed` as you finish it.
 
-**Phase 3 — Verify and Integrate (Steps 8–9)**
+**Phase 3 — Verify (Step 8)**
 
-Complete Steps 8–9. All `sbt` commands must exit with zero errors before claiming done.
+Run mdoc verification. All code blocks must compile with zero errors.
+
+**Phase 4 — Integrate (Step 9)**
+
+Complete Step 9. All integration tasks must be done before claiming work complete.
 
 ## Overview
 
@@ -307,7 +311,25 @@ Choose one approach per module for consistency.
 
 ---
 
-## Step 8: Integration
+## Step 8: Verify Documentation
+
+Run mdoc to verify all code blocks compile and render correctly:
+
+**Single flat file:**
+```bash
+sbt "docs/mdoc --watch --in docs/reference/<module-name>.md"
+```
+
+**Hierarchical directory:**
+```bash
+sbt "docs/mdoc --watch --in docs/reference/<module-name>/"
+```
+
+Success criterion: All code blocks compile with zero `[error]` lines.
+
+---
+
+## Step 9: Integration & Format
 
 Use the **`docs-integrate`** skill for the full checklist:
 1. Update `sidebars.js` with category entry (hierarchical) or single entry (flat)
@@ -349,10 +371,6 @@ Add line under "Reference Documentation" section:
 - [HTTP Model](./reference/<module-name>.md) — Pure, zero-dependency HTTP data model for requests, responses, and primitives.
 ```
 
----
-
-## Step 9: Format & Verify
-
 ### Scala Code Formatting
 ```bash
 sbt scalafmtAll
@@ -362,19 +380,5 @@ sbt scalafmtAll
 ```bash
 sbt check
 ```
-
-### mdoc Verification
-
-**Single flat file:**
-```bash
-sbt "docs/mdoc --in docs/reference/<module-name>.md"
-```
-
-**Hierarchical directory:**
-```bash
-sbt "docs/mdoc --in docs/reference/<module-name>/"
-```
-
-**Success criterion:** Zero `[error]` lines in output.
 
 ---
