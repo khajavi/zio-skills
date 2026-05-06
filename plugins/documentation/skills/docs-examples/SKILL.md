@@ -4,6 +4,24 @@ description: Shared procedure for creating and documenting companion examples. C
 allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scalafmt), Bash(git)
 ---
 
+## Setup Example Sub-module
+
+Add to root `build.sbt`, for example if the you are creating examples for a webauthn guide:
+
+```scala
+lazy val `zio-http-example-webauthn` =
+  RootProject(file("zio-http-example-webauthn"))
+
+lazy val root = (project in file("."))
+  .aggregate(
+    // other sub-modules
+    `zio-http-example-webauthn`
+  )
+```
+
+Inside the example project directory, create a standard Scala project structure, including a `build.sbt` with necessary dependencies.
+
+
 ## Creating Example Files
 
 ### Step 1: Directory and Package Structure
