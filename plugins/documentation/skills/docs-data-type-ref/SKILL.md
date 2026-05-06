@@ -27,9 +27,13 @@ Complete Step 1 (deep source code research). Study Step 2's document structure. 
 
 Execute Step 2 in order (opening definition → motivation → quick showcase → installation → construction → core operations → subtypes/comparisons/advanced → integration). Mark each task `completed` as you finish it.
 
-**Phase 3 — Verify and Finalize (Steps 3–7)**
+**Phase 3 — Verify (Steps 3–5)**
 
-Execute Steps 3–7 in order: verify compliance, check method coverage, write examples, format/verify compilation, and integrate. All `sbt` commands and checklist items must be complete before claiming done.
+Execute Steps 3–5 in order: verify compliance, check method coverage, then verify mdoc compilation. All code blocks must compile with zero errors.
+
+**Phase 4 — Write Examples and Integrate (Steps 6–7)**
+
+Write examples (Step 6), format & integrate (Step 7). Complete all integration tasks before claiming done.
 
 ## Step 1: Deep Source Code Research
 
@@ -250,7 +254,7 @@ Add cross-references to related docs (e.g., `[Schema](./schema.md)`, `[Reflect](
 
 Run `/docs-verify-compliance` skill.
 
-## Step 3.5: Verify Method Coverage
+## Step 4: Verify Method Coverage
 
 Use **`docs-data-type-list-members`** to extract members, then **`docs-report-method-coverage`** to verify coverage:
 
@@ -265,15 +269,29 @@ Or save members to file first, then report:
 
 Coverage report shows completeness by category: Companion Object, Public API, Inherited Methods.
 
-## Step 4: Write Examples
+## Step 5: Verify Documentation
 
-Use the **`docs-examples`** skill to create and document runnable examples. Invoke it after completing Step 3.5 (method coverage verification), so you know which use cases need illustration.
+Run mdoc to verify all code blocks compile correctly:
+
+```bash
+sbt "docs/mdoc --watch --in docs/reference/<type-name-kebab-case>.md"
+```
+
+**Success criterion:** zero `[error]` lines in mdoc output.
+
+---
+
+## Step 6: Write Examples
+
+Use the **`docs-examples`** skill to create and document runnable examples. Invoke it after completing Step 5 (mdoc verification), so you know which use cases need illustration.
 
 Pass as context: the examples module name, the package name derived from the type name (lowercase, hyphens removed), and that this is a **data type reference** page. The skill covers directory setup, file templates, compilation, formatting, and the "Running the Examples" section.
 
 **Data-type-ref specific:** When printing expression results in examples, prefer `util.ShowExpr.show(expr)` to display both the expression and its evaluated value — this is more informative than `println` for reference documentation.
 
-## Step 5: Format and Verify
+---
+
+## Step 6: Format and Finalize
 
 Format all Scala files:
 
@@ -287,23 +305,8 @@ Verify lint checks pass:
 sbt check
 ```
 
-Verify mdoc compilation:
+---
 
-```bash
-# Single file:
-sbt "docs/mdoc --in docs/reference/<type-name-kebab-case>.md"
-
-# Multiple files — repeat --in/--out pairs:
-sbt "docs/mdoc --in docs/reference/file1.md --out out/file1.md --in docs/reference/file2.md --out out/file2.md"
-
-# Or use a directory to cover all files in it:
-sbt "docs/mdoc --in docs/reference/<subdirectory>/"
-```
-
-> **Never use bare `sbt docs/mdoc`** without `--in` — it recompiles all documentation (~90 seconds).
-
-**Success criterion:** zero `[error]` lines in mdoc output.
-
-## Step 6: Integrate
+## Step 7: Integrate
 
 Use the **`docs-integrate`** skill for integration checklist (sidebars.js, index.md, cross-references).
