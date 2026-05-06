@@ -274,7 +274,14 @@ Coverage report shows completeness by category: Companion Object, Public API, In
 Run mdoc to verify all code blocks compile correctly:
 
 ```bash
-sbt "docs/mdoc --watch --in docs/reference/<type-name-kebab-case>.md"
+# Single file:
+sbt "docs/mdoc --in <file_path>.md"
+
+# Multiple files
+sbt "docs/mdoc --in <file1_path>.md --in <file2_path>.md"
+
+# Or use a directory to cover all files in it:
+sbt "docs/mdoc --in <directory_path>/"
 ```
 
 **Success criterion:** zero `[error]` lines in mdoc output.
