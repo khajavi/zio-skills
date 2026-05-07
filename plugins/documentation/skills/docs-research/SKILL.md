@@ -17,6 +17,20 @@ Provide documentation authors with comprehensive understanding of:
 - Dependencies, integrations, and supported use cases
 - Gaps, edge cases, and performance characteristics
 
+## Agent Workflow
+
+**Phase 1 — Plan (Steps 1a–d)**
+
+Create tasks for each research phase: source files, tests, patterns, documentation landscape, and GitHub history. Mark each task `completed` as you finish it. This ensures systematic coverage.
+
+**Phase 2 — Execute Research (Steps 1a–2)**
+
+Execute research steps in order: read core source → read tests → find supporting types → find patterns → GitHub history. Update task status as you progress.
+
+**Phase 3 — Synthesize Findings**
+
+Build internal research notes (core types, public API, usage patterns, dependencies, gaps). Do not emit a formal report—these notes prepare the parent skill's author for writing.
+
 ## Analysis Approach
 
 ### 1. Discovery Phase
