@@ -164,53 +164,23 @@ Brief introduction to each core type (2-3 sentences each):
 
 **THIS SECTION IS THE CENTERPIECE — don't skip it.**
 
-This section explains both the **workflow** (usage sequence) and **architecture** (type relationships). Include BOTH:
+Explain the typical workflow or data flow:
+- Numbered steps showing usage sequence (e.g., "1. Create URL → 2. Create Request → 3. Send → 4. Receive Response")
+- ASCII diagram showing type relationships and interactions
+- Example: How does Type1 use Type2? How does Type3 depend on them?
+- Show composition patterns (if Type1 contains Type2, Type3 is a variant of Type2, etc.)
 
-**A) Workflow/Usage Sequence:**
-Numbered steps showing the typical order types are used together:
-- Example: "1. Create URL → 2. Create Request → 3. Send → 4. Receive Response"
-- Each step should mention which type(s) are involved
-- Show the progression from setup through execution to result
-
-**B) Architecture Diagram:**
-ASCII diagram showing how types depend on and compose with each other:
-- Use `──>` to show "contains" or "uses"
-- Use `├─>` and `└─>` to show alternatives or sub-relationships
-- Show all four core types and their relationships
-- Example: "Request contains Method, URL, Headers, Body; Response contains Status, Headers, Body"
-
-**What NOT to do:**
-- Don't just list patterns here (that goes in Section 7: Common Patterns)
-- Don't make the diagram so large that it overwhelms; keep it to 15-20 lines max
-- Don't explain individual methods (that goes in type-level pages)
-
-**Example for Resource Management (Workflow + Architecture):**
+**Example for Resource Management:**
 ```
-Workflow:
 1. Define dependencies using Wire.shared[T] (macro inspects constructors)
 2. Compose wires with Resource.from[App](wire1, wire2, ...)
 3. Allocate within a scope: scope.allocate(resource)
 4. Use scoped values via $ accessor
 5. Cleanup automatic when scope exits
-
-Architecture:
-Wire ──> Resource ──> Scope
-         (defines what)  (manages how)  (manages when)
-- Wire describes constructor dependencies
-- Resource wraps them into a managed lifecycle
-- Scope controls allocation and cleanup
 ```
 
-**Example for HTTP Model (Workflow + Architecture):**
+**Example for HTTP Model:**
 ```
-Workflow:
-1. Build URL with scheme, host, path, query parameters
-2. Create Request with method, URL, headers, body
-3. Send Request via Client
-4. Receive Response with status, headers, body
-5. Extract data from Response
-
-Architecture:
 Request ──> Method (HTTP verb: GET, POST, etc.)
          ├─> URL ──> Scheme (HTTP, HTTPS, WS, WSS)
          │       ├─> Path (URL path segments)
@@ -221,29 +191,6 @@ Request ──> Method (HTTP verb: GET, POST, etc.)
 Response ──> Status (HTTP code: 200, 404, etc.)
           ├─> Headers (same as Request)
           └─> Body (response content)
-```
-
-**Example for HTTP Testkit (Workflow + Architecture):**
-```
-Workflow:
-1. Choose testing pattern: Direct routes, mocking external APIs, or integration testing
-2. Provide the appropriate test type (TestServer for routes, TestClient for API mocks, TestChannel for WebSockets)
-3. Configure routes/responses via addRoute, addRequestResponse, installSocketApp
-4. Make HTTP requests via standard Client interface
-5. Assert on responses
-
-Architecture:
-TestServer ──> Routes (what to test)
-            └─> Handler (executes route logic)
-            
-TestClient ──> Request/Response pairs (API mocks)
-            └─> Handler (computes responses)
-
-TestChannel ──> WebSocketApp (what to test)
-              └─> WebSocketFrame (bidirectional messages)
-
-HttpTestAspect ──> TestServer/TestClient (configures behavior by mode)
-                └─> Mode.Dev/Prod/Preprod (mode configuration)
 ```
 
 #### 7. Common Patterns
@@ -261,51 +208,17 @@ Named architectural patterns specific to the module:
 
 #### 8. Integration Points
 
-Explain how types in this module relate to each other and integrate with other modules.
+How types relate architecturally and integrate with other modules in the same library:
+- Which types use which other types internally
+- How the module integrates with other modules (e.g., Resource ↔ Schema)
+- Cross-references to related docs
 
-**Structure:**
-
-**A) Within-Module Integration:**
-Show which core types depend on or use each other:
-- Use this format: "Type1 uses Type2 to [achieve X]"
-- Show data flows: "Type1 contains Type2, which contains Type3"
-- If types are alternatives (choose one), explain when to pick each
-- Keep this section 5-10 bullet points
-
-**B) External Module Integration:**
-Show how this module integrates with other modules in the same library:
-- What types from other modules does this module use?
-- What types from other modules use this module?
-- Format: "[This Module] ↔ [Other Module]: [what they exchange]"
-- Keep this section 3-5 bullet points; defer details to per-type pages
-
-**Example for Resource Management (Within Module):**
+**Example:**
 ```
-- Wire describes component dependencies; it's used to bootstrap Resource
-- Resource wraps Wire into a managed lifecycle with automatic cleanup
-- Scope manages the allocation and finalization of all Resources
-- Wire and Resource are typically used together: Wire defines structure, Resource manages it
-```
-
-**Example for Resource Management (External Integration):**
-```
-- Resource Management ↔ ZIO Core: Resource builds on ZIO's effect system for allocation and cleanup
-- Resource Management ↔ Dependency Injection: Wire macro integrates with ZIO's reflection-based dependency resolution
-- Resource Management ↔ Schema: Resource instances can use Schema for configuration deserialization
-```
-
-**Example for HTTP Testkit (Within Module):**
-```
-- TestServer and TestClient are independent: choose one based on what you're testing
-- TestChannel is used specifically for WebSocket testing, not HTTP
-- HttpTestAspect can wrap any of the three (TestServer, TestClient, TestChannel) to test mode-dependent behavior
-- Typically you'll use one primary type per test file, with HttpTestAspect as a wrapper
-```
-
-**Example for HTTP Testkit (External Integration):**
-```
-- HTTP Testkit ↔ HTTP Core: Uses Routes, Handler, Request, Response, Client from the main library
-- HTTP Testkit ↔ ZIO Core: Uses ZIO environment and effects for dependency injection and test execution
+- Wire uses Resource to manage lifecycles
+- Resource uses Scope for finalization
+- Headers are used by Request and Response
+- URL parsing uses Path and QueryParams
 ```
 
 ---
@@ -368,75 +281,16 @@ title: "<TypeName>"
 ---
 ```
 
-**Structure:** Follow `docs-data-type-ref` COMPLETELY. "Completely" means:
+**Structure:** Follow `docs-data-type-ref` COMPLETELY, with one adjustment:
 
-- ✅ Opening definition: What is this type, what does it do?
-- ✅ Motivation: Why use this type? When is it needed?
-- ✅ Creating/Construction: How to create instances (constructors, factory methods, builders)
-- ✅ Core Operations: Group methods by functionality, document each group with 1-2 examples
-- ✅ Common Patterns: Realistic usage scenarios specific to this type
-- ✅ API Reference (if applicable): Table of all public methods with signatures and brief descriptions
-- ✅ Integration Points: How this type relates to other types in the module and external modules
-- ✅ Examples: 2-3 runnable code examples showing key workflows
-
-**Coverage rule:** Every public method/function related to this type must appear somewhere in the page (either in Core Operations with examples, or in an API Reference section with brief descriptions).
-
-**Recontextualization for Module Context:**
-
-Add a **"Role in Module"** subsection at the start (after opening definition, before Motivation):
-```markdown
-### Role in Module
-
-[2-3 sentences describing how this type fits within the larger module.]
-
-**Typically used with:** [List other types this composes with, e.g., "TestServer uses Routes, which use Handler"]
-
-**Complementary types:**
-- Type1 — [brief relationship]
-- Type2 — [brief relationship]
-```
-
-**In each major section, add recontextualization notes:**
-- **Motivation:** "This is a [core/supporting] type in the module. Use it when..."
-- **Core Operations:** When showing composition, note: "This method composes with [OtherType] to [achieve X]"
-- **Integration Points:** Split into two subsections:
-  - **Within Module:** How does this type interact with other types in the same module?
-  - **External Modules:** How does it integrate with types from other modules?
-
-**Example recontextualization for TestServer type page:**
-
-```markdown
-### Role in Module
-
-`TestServer` is the **primary type for integration testing** in zio-http-testkit. 
-It provides a simulated HTTP server that accepts configured routes and responds to requests.
-
-**Typically used with:** Routes (what to test), Handler (route logic), Client (to make requests), HttpTestAspect (mode configuration)
-
-**Complementary types:**
-- TestClient — For mocking external API dependencies
-- TestChannel — For testing WebSocket handlers
-- HttpTestAspect — For testing mode-dependent behavior
-
-...
-
-## Integration Points
-
-### Within Module
-
-- **Routes & Handler:** TestServer executes routes and their handlers. Each route you add becomes a matcher for incoming requests.
-- **HttpTestAspect:** Can wrap TestServer to test behavior under different modes (Dev, Prod, Preprod).
-- **Client:** Works with the standard `Client` interface to make requests to the simulated server.
-
-### External Modules
-
-- **zio-http:** TestServer uses core HTTP types (Request, Response, Status) from the main HTTP library.
-- **zio:** Uses ZIO environment for dependency injection and effect management.
-```
+**Recontextualization rule:** In each section, note how the type relates to other types in the module:
+- In Motivation, mention if this type is core or supporting
+- In Construction, note if using with other module types
+- In Core Operations, show composition with other types if relevant
+- In Integration, highlight module-level relationships (not just external modules)
 
 **Special handling:**
-- **Comparison sections:** If comparing types within the module (e.g., "TestServer vs TestClient"), write this in the module index (Step 4, Section 7: Common Patterns) rather than per-type pages
-- **Avoid duplication:** Don't repeat the module-level workflow (that's in Step 4, Section 6). Reference it instead: "See [How They Work Together](./index.md#how-they-work-together) for the overall workflow."
+- **Comparison sections:** Can stay per-type (vs other languages, vs related types) or move to module index if comparing types within the module
 
 ---
 
