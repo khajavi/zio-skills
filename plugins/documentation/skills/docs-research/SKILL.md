@@ -94,14 +94,24 @@ Build internal research notes (core types, public API, usage patterns, dependenc
 
 ## Research Workflow
 
+**Task Setup:** Before starting research, create one task per step: "Read core source files", "Read test files", "Find supporting types", "Search for real-world patterns", and "Research GitHub history". Proceed through tasks in order, updating status to `in_progress` when starting, then `completed` when done.
+
 ### Step 1a: Read Core Source Files
+
+**Task:** Create and start task for "Read core source files".
+
 For each core type, read the full source file to understand:
 - All public methods and their signatures
 - Type parameters, variance, constraints
 - Companion object and factory methods
 - Javadoc/scaladoc comments (design intent)
 
+**After completing:** Mark task `completed`.
+
 ### Step 1b: Read Test Files
+
+**Task:** Create and start task for "Read test files".
+
 Search and read test suites to understand:
 - Construction patterns and common usages
 - Method chaining and composition examples
@@ -109,19 +119,34 @@ Search and read test suites to understand:
 - Error handling and exception cases
 - Integration with other types
 
+**After completing:** Mark task `completed`.
+
 ### Step 1c: Find Supporting Types
+
+**Task:** Create and start task for "Find supporting types".
+
 Identify every type that core methods depend on:
 1. Grep imports in test files for the full dependency graph
 2. For each supporting type, read enough source and documentation to explain it in context
 3. Trace return types through multiple layers if needed
 
+**After completing:** Mark task `completed`.
+
 ### Step 1d: Search for Real-World Patterns
+
+**Task:** Create and start task for "Search for real-world patterns".
+
 1. **Examples directory**: `Glob` for `**/examples/**/*.scala`
 2. **Integration tests**: Look for tests combining multiple types from this module
 3. **Cross-module usage**: `Grep` across other modules to find how core types integrate
 4. **Documentation patterns**: Check if similar types have documented examples you can mirror
 
+**After completing:** Mark task `completed`.
+
 ### Step 2: GitHub History Research
+
+**Task:** Create and start task for "Research GitHub history".
+
 Use GitHub CLI to surface design rationale and context:
 
 ```bash
@@ -133,6 +158,8 @@ gh search prs     --repo <owner>/<repo> "<topic>" --limit 30
 For high-value issues, read full discussion: `gh issue view <n> --comments`
 For high-value PRs, read full review discussion: `gh pr view <n> --comments`
 For high-value commits, review the commit message and changed files: `gh api repos/<owner>/<repo>/commits/<sha>`
+
+**After completing:** Mark task `completed`. All research is now complete—proceed to synthesize findings into internal notes.
 
 ## Internal Research Notes for Documentation Agents
 
