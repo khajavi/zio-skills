@@ -63,6 +63,9 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for 
    **Bad vs. Good:**
    - ❌ "Call `map` to transform elements" → ✅ "Call `Chunk#map` to transform elements"
    - ❌ "Use `apply` to construct a binding" → ✅ "Use `BindingResolver.apply` to construct a binding"
+   - ❌ "Use `.query` to add a parameter" → ✅ "Use `Endpoint#query` to add a parameter"
+
+   Dot-prefixed references (`` `.method` `` or `` `.method(args)` ``) are always a violation — they imply a receiver without naming it.
 
 9. **Type name alone rule**: When referring to a type (not a method), use only its name in backticks with no qualifier: "`As` derives automatically", "`List` is a sequence type", "convert to `Option`".
 
@@ -109,6 +112,12 @@ Between consecutive code blocks, add bridging prose that explains what the next 
 16. **Always include imports**: Every code block must start with the necessary import statements.
 17. **One concept per code block**: Each code block demonstrates one cohesive idea.
 18. **Prefer `val` over `var`**: Use immutable patterns everywhere if possible.
+19. **Show method signatures within their containing type**: Document methods within their containing trait/class, not as bare signatures. Provides context about ownership and API surface.
+
+   **Bad vs. Good:**
+   - ❌ `def map[B](f: A => B): ZIO[R, E, B] = ???`
+   - ✅ `trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }`
+
 20. **Write contextualized descriptions for code blocks**: When showing example code snippets, explain what they do and why they are relevant. Provide context before every code block with a sentence that introduces it, explains its purpose, and ends with a colon (`:`). The introduction must be contextualized — relate it to what the code demonstrates or why it matters in context (avoid generic phrases like "here's an example" or "we can see this in action").
    
    **Bad vs. Good:**
