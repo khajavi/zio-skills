@@ -28,7 +28,7 @@ Rules checked:
   Rule 3   No padding/filler phrases
   Rule 4   Bullet capitalization (full-sentence bullets start with capital)
   Rule 7   Link to related docs (relative paths for doc links)
-  Rule 8   Always qualify method/constructor names
+  Rule 8   Always qualify method/constructor names (bare `map`, dot-prefixed `.map`, or unqualified `apply`)
   Rule 10  No duplicate markdown heading
   Rule 11  Heading hierarchy (no skipped levels)
   Rule 12  No bare subheaders (### or #### immediately after ## or ###)
@@ -300,6 +300,33 @@ except Exception as e:
 PYTHON_EOF
 )"
 fi
+
+# Rule 8 (dot-method): Backtick-quoted dot-prefixed method calls in prose, e.g. `.query`, `.map(f)`
+# These are always unqualified — correct form is Type#method or Type.method.
+count_violations "$(awk '
+  /^```/ { in_code = !in_code; next }
+  in_code { next }
+  {
+    line = $0
+    # Match ` .methodName` or `.methodName(...)` inside backticks (not file extensions like .md)
+    while (match(line, /`\.[a-zA-Z][a-zA-Z0-9_]*((\([^`]*\))?)`/)) {
+      fragment = substr(line, RSTART, RLENGTH)
+      # Extract just the method name (strip leading backtick and dot)
+      name_start = 3  # skip "`."
+      name_end = index(substr(fragment, name_start), "`") + name_start - 2
+      if (name_end < name_start) name_end = length(fragment) - 1
+      method_name = substr(fragment, name_start, name_end - name_start + 1)
+      # Remove trailing paren if present
+      paren_pos = index(method_name, "(")
+      if (paren_pos > 0) method_name = substr(method_name, 1, paren_pos - 1)
+      # Skip very short names that are likely file extensions (e.g. .md, .js, .ts)
+      if (length(method_name) > 2) {
+        print FILENAME ":" NR ": [Rule 8] unqualified dot-method `." method_name "` (use Type#" method_name " or Type." method_name ")"
+      }
+      line = substr(line, RSTART + RLENGTH)
+    }
+  }
+' "$FILE")"
 
 # Rule 23: Scala 3 glob imports in Scala code blocks (forbidden; use Scala 2.13 import x._ instead)
 count_violations "$(awk '
