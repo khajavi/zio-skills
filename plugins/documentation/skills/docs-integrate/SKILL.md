@@ -96,3 +96,19 @@ If mdoc reports errors, do **not** commit. Return to the offending page, fix the
 | `Reference '...' not found`          | Anchor doesn't match a heading                          | Use lowercase-kebab-case of the heading text                |
 | `not found: value Foo`               | Code block is missing an `import` or a previous block   | Add the import or chain via `mdoc` (not `mdoc:reset`)       |
 | `value foo is not a member of …`     | API drift since the page was written                    | Re-derive the example against current source                |
+
+### Verify Full Site Build
+
+After mdoc passes, run a full Docusaurus build to catch broken doc IDs, missing sidebar entries, and broken page links:
+
+```bash
+cd website && yarn build
+```
+
+If `yarn build` reports errors (e.g., `Doc id not found`, broken links, sidebar entry missing), fix the reported issues and re-run until the build is clean. Do **not** commit until this step passes.
+
+| Error                              | Likely cause                              | Fix                                          |
+|------------------------------------|-------------------------------------------|----------------------------------------------|
+| `Doc id not found: foo/bar`        | ID in `sidebars.js` doesn't match the md filename | Check the `id:` frontmatter in the .md file and align `sidebars.js` |
+| `Broken link on page …`            | A relative link targets a page that doesn't exist | Fix the path or the target filename         |
+| `sidebars.js` not found            | `website/` directory is missing or wrong path | Verify the repo's `website/` layout        |
