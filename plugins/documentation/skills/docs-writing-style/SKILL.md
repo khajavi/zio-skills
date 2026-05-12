@@ -54,7 +54,9 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for 
 4. **Bullet capitalization**: When a bullet point is a full sentence, start it with a capital letter.
 5. **No manual line breaks in prose**: Do not hard-wrap paragraph text at a fixed column. Write each paragraph as one continuous line.
 6. **ASCII art usage**: Use it for diagrams showing data flow, type relationships, or architecture. Readers find these very helpful for understanding how pieces fit together.
-7. **Link to related docs**: Use relative paths, e.g., `[TypeName](./type-name.md)`.
+7. **Link to related docs**: Use relative paths with the full filename including `.md`
+   extension. Never use a bare directory name: ✅ `[Endpoint](./reference/endpoint/index.md)`,
+   ❌ `[Endpoint](./reference/endpoint)`.
 
 ## Referencing Types, Operations, and Constructors
 
