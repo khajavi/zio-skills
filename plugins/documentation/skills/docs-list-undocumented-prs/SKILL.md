@@ -3,7 +3,7 @@ name: docs-list-undocumented-prs
 description: >
   Scans merged GitHub PRs (from latest commit back to an upstream base ref)
   and produces a documentation-coverage audit report. Processes 20 PRs per
-  round and asks before continuing to the next batch. Skips PRs already
+  batch and asks before continuing to the next batch. Skips PRs already
   checked in previous runs using a persistent state file. For each new PR,
   determines whether documentation is required based on labels, changed files,
   and content signals, then checks whether docs exist and grades coverage using
@@ -48,22 +48,20 @@ Read `.docs-audit-state.json` from the repo root. Create the file if it does not
   "checked_prs": {
     "42": { "status": "Not Documented", "checked_at": "2026-05-18T10:00:00Z" },
     "41": { "status": "Well Documented", "checked_at": "2026-05-18T10:00:00Z" }
-  },
-  "last_batch_cursor": null
+  }
 }
 ```
 
 - `checked_prs`: map of PR number (string) → `{ status, checked_at }`
-- `last_batch_cursor`: the oldest PR number from the last batch (for pagination reference)
 
 **Initialization rules:**
 
 - If the file does not exist, initialize it with:
   ```json
-  { "repo": "<current-repo>", "checked_prs": {}, "last_batch_cursor": null }
+  { "repo": "<current-repo>", "checked_prs": {} }
   ```
 - If the file exists but the `repo` field does not match the current repo, warn the user and ask whether to reset or abort.
-- If `--reset` was passed as the argument, confirm with the user before clearing `checked_prs` and `last_batch_cursor`.
+- If `--reset` was passed as the argument, confirm with the user before clearing `checked_prs`.
 
 **Gitignore reminder:** Remind the user to add `.docs-audit-state.json` to `.gitignore` if it is not already listed there.
 
@@ -85,7 +83,7 @@ Fetch 40 merged PRs to have room to filter already-checked ones:
 
 ```bash
 gh pr list --state merged --limit 40 \
-  --json number,title,labels,mergedAt,files,body \
+  --json number,title,labels,mergedAt \
   --repo <owner/repo>
 ```
 
@@ -104,7 +102,7 @@ Extract PR numbers from merge commit messages and restrict the `gh` results to t
 3. Handle edge cases:
    - **0 unchecked remain:** Print "All recent PRs have been checked. Here's a cumulative summary:" followed by aggregated stats from `checked_prs`. Stop.
    - **1–19 unchecked remain:** Proceed with the available count and note it in the output.
-   - **All 40 fetched are already checked:** Paginate — fetch another 40 (using `--skip` or increasing `--limit`) and repeat until 20 unchecked are found or the list is exhausted.
+   - **All 40 fetched are already checked:** Paginate — increase `--limit` (e.g., `--limit 80`, `--limit 120`, etc.) and repeat until 20 unchecked are found or the list is exhausted.
 
 ---
 
@@ -122,6 +120,8 @@ Fetch full PR details in a single call:
 gh pr view <N> --repo <owner/repo> \
   --json number,title,body,labels,mergedAt,files,commits,author
 ```
+
+Capture the output in a variable: `PR_DATA=$(gh pr view ...)`. This is used in Phase 4 to extract files and search for symbols.
 
 Run Phase 3 (classification) and Phase 4 (grading) for this PR before advancing to the next.
 
@@ -161,7 +161,7 @@ Skip this phase entirely if `REQUIRES_DOCS = no`.
 ### Step 4a — Check for docs files in the PR
 
 ```bash
-echo '<files_json>' | jq -r '.files[].path | select(startswith("docs/"))'
+echo "$PR_DATA" | jq -r '.files[].path | select(startswith("docs/"))'
 ```
 
 List any `docs/` paths that were modified or added in this PR.
@@ -175,9 +175,7 @@ Extract 3–5 key symbols from the PR title, body, and commit messages:
 
 For each symbol, search the docs tree:
 
-```bash
-grep -rl "<symbol>" docs/ 2>/dev/null
-```
+Use the **Grep** tool to search for each symbol across the `docs/` directory (query: symbol name, path: `docs/`).
 
 If `docs/` does not exist in the repo, skip this step and mark all docs-required PRs as "Not Documented". Note the absence at the start of the report.
 
@@ -199,7 +197,6 @@ Apply the rubric below. Assign the highest level whose criteria are fully met.
 After processing all PRs in the batch, write the updated state to `.docs-audit-state.json` **before** generating the report.
 
 1. Add every processed PR to `checked_prs` with its documentation status and the current ISO 8601 timestamp.
-2. Set `last_batch_cursor` to the oldest PR number in this batch.
 
 Use the Write tool to update the file atomically.
 
@@ -243,6 +240,13 @@ Total checked to date: <T> PRs across all runs
 - **Docs found:** <path to stub file>
 - **Suggested action:** `/docs-enrich-section <path>`
 
+### ⚠️ Uncertain (Requires Review)
+#### #NNN — <title>
+- **Merged:** <date>
+- **Labels:** <labels>
+- **Ambiguity:** <explanation of mixed signals>
+- **Suggested action:** Review manually, then run `/docs-document-pr <NNN>` if needed
+
 ### 🟡 Partially Documented
 #### #NNN — <title>
 - **Merged:** <date>
@@ -268,7 +272,7 @@ Total checked to date: <T> PRs across all runs
 
 **After displaying the report**, if more unchecked PRs may exist, ask:
 
-> "Processed N PRs in this batch. There may be more unchecked PRs. Continue with the next batch of 20?"
+> "Processed N PRs in this batch. There may be more unchecked PRs. Continue with the next batch of up to 20?"
 
 If the user confirms, loop back to Phase 1. If not, stop.
 
@@ -290,7 +294,7 @@ When you invoke this skill:
 - [ ] **Phase 3:** Classify `REQUIRES_DOCS = yes | no | uncertain` using the YES/NO/UNCERTAIN signal tables
 - [ ] **Phase 4:** Skip entirely if `REQUIRES_DOCS = no`
 - [ ] **Phase 4:** Check `docs/` files changed in the PR via `jq`
-- [ ] **Phase 4:** Extract key symbols; `grep -rl` for each in `docs/`
+- [ ] **Phase 4:** Extract key symbols; use the Grep tool to search for key symbols in `docs/`
 - [ ] **Phase 4:** Assign rubric grade (Well Documented / Partially Documented / Stub / Not Documented)
 - [ ] **Phase 5:** Write updated state to `.docs-audit-state.json` before generating the report
 - [ ] **Phase 5:** Never remove existing entries from `checked_prs`
