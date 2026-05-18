@@ -1,11 +1,11 @@
 ---
 name: docs-critique
 description: >
-  Critique and fix an existing documentation file using an automatic maker-critic
-  review loop. Spawns a critic to review the doc, then a maker to fix issues.
-  Iterates until approved or max 3 rounds. Pure coordinator — never edits files itself.
-argument-hint: "<doc-file-path>"
-allowed-tools: Agent, Glob, Grep, Read, SendMessage
+  Critique and fix existing documentation files using an automatic review loop.
+  Spawns critics to review docs and makers to fix issues. Iterates until approved
+  or max 3 rounds. Handles single files or directories. Works with available tools.
+argument-hint: "<doc-file-path-or-directory>"
+allowed-tools: Agent, Bash, Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate
 ---
 
 # Documentation Critique Loop
@@ -28,27 +28,21 @@ You are a **pure coordinator**. You NEVER read, write, or edit documentation fil
 3. Parse critic reports to decide next action
 4. Report final status to the user
 
-## Phase 1: Resolve Doc Path and Spawn Fixer Agent
+## Phase 1: Resolve Doc Path(s)
 
-1. Use `$ARGUMENTS` directly as the doc file path.
+1. Use `$ARGUMENTS` directly as the doc path (file or directory).
 2. If `$ARGUMENTS` is empty, ask the user to provide the documentation file path before proceeding.
-3. Verify the file exists using `Glob`. If not found, inform the user and stop.
-4. Spawn a general-purpose agent as the **maker** (used in Phase 5 to apply fixes):
+3. Verify the path exists using `Bash/Glob`:
+   - If it's a **file**: Process single file (go to Phase 2)
+   - If it's a **directory**: Glob all `.md` files in the directory, ask user which file(s) to critique
+   - If not found: Inform user and stop
 
-   ```
-   Agent(
-     description: "Doc fixer agent",
-     prompt: "You are a documentation fixer for ZIO project documentation.
-              Your doc file is <doc-path>.
-              Wait for instructions on what to fix. For each fix:
-              - Make a separate git commit
-              - Commit format: docs(<file-stem>): fix <SEVERITY>/<dimension> — <description>
-              - If multiple findings target the same paragraph, combine into one commit
-                using the highest severity level"
-   )
-   ```
+**Example**: If user provides `docs/reference/codegen`, find all `.md` files in that directory:
+```bash
+find docs/reference/codegen -name "*.md" -type f | sort
+```
 
-5. Save the maker's `agentId` for later `SendMessage` calls. You will use it as the `to` field in `SendMessage` to route critique back to the maker.
+Then ask: "Found 10 files. Critique all, or specific ones?"
 
 ## Phase 2: Gather Critic Context
 
@@ -77,114 +71,145 @@ Using the doc file path from Phase 1, gather context for the critic. You MAY use
 
 ## Phase 3: Spawn Critic Agent
 
-Spawn the `docs-critic` agent:
+Spawn a `general-purpose` agent as the critic to review the documentation:
 
 ```
 Agent(
-  description: "Review documentation",
-  subagent_type: "docs-critic",
-  prompt: "Review the following documentation file for content quality,
+  description: "Critique documentation — Round N",
+  subagent_type: "general-purpose",
+  prompt: "You are a technical documentation reviewer for the ZIO project.
+           Review the following documentation file for content quality,
            technical accuracy, completeness, and consistency.
 
-           Documentation file: <doc-path>
+           **Documentation file to review:**
+           <doc-path>
 
-           Source files to check accuracy against:
+           **Source files to verify accuracy against:**
            <list of source_files, one per line>
 
-           Related documentation to check consistency against:
+           **Related documentation to check consistency against:**
            <list of related_docs, one per line>
 
-           Read each file yourself using the Read tool. Return your
-           structured report."
+           **Your task:**
+           Read each file using the Read tool. Analyze the documentation for:
+           - Technical accuracy against source code
+           - Consistency with related documentation
+           - Completeness of explanations and examples
+           - Clarity and organization
+
+           **Required output format:**
+
+           ### Findings
+
+           (For each finding, use this format:
+           **<SEVERITY>/<dimension>** — <title>
+           - Location: <file>:<line-range>
+           - Problem: <description>
+           - Impact: <why this matters>
+           - Suggestion: <how to fix>)
+
+           ### Verdict
+           One of: **APPROVED** or **ITERATE**
+
+           (If ITERATE, list findings above. If APPROVED, explain why.)"
 )
 ```
 
-**Error handling:** If the critic's response does not contain a `### Findings` section or a `### Verdict` line, treat it as an agent failure. Retry by spawning a fresh critic with the same prompt. If the second attempt also fails, report the raw response to the user and stop.
+**Error handling:** If response lacks `### Findings` and `### Verdict` sections, retry once with fresh critic. If second attempt fails, report to user and stop.
 
-## Phase 4: Triage
+## Phase 4: Triage & Decide Action
 
 Parse the critic's `### Verdict` line:
 
 - **`APPROVED`** → Report success to user. Done.
-- **`ITERATE`** with HIGH or MEDIUM findings → Enter Phase 5.
-- Only LOW findings → Send LOWs to maker for a single-pass fix:
-  ```
-  SendMessage(
-    to: <maker-agent-id>,
-    message: "The documentation critic found minor issues. Fix them if easy,
-              skip if not. One commit per fix.
-              Commit format: docs(<file-stem>): fix LOW/<dimension> — <description>
+- **`ITERATE` with HIGH or MEDIUM findings** → Enter Phase 5 (Fixer Loop).
+- **`ITERATE` with only LOW findings** → Spawn a general-purpose Fixer agent to fix LOW issues (single pass, no re-critique). Done after fixer responds.
 
-              <paste LOW findings here>"
-  )
-  ```
-  Done after maker responds.
+Extract findings by severity and collect them for Phase 5 or for LOW-only pass.
 
-## Phase 5: Fix Loop
+## Phase 5: Fixer Loop
 
-**Maximum 3 rounds.** Track the current round number.
+**Maximum 3 critique-fix cycles.** Track round number.
 
 **Severity-based iteration rules:**
 - **HIGH** findings: iterate until fixed (up to round 3)
-- **MEDIUM** findings: iterate at most once — if a MEDIUM finding persists after round 1, do not iterate further for it
-- After round 1, only HIGH findings drive further iteration
+- **MEDIUM** findings: iterate at most once — after round 1, only HIGH findings drive further cycles
+- After round 1, only HIGH findings are sent to the fixer
 
-### Each Round:
+### Each Round (1-3):
 
-**Step A — Send critique to maker:**
+**Step A — Spawn Fixer Agent:**
 
-For round 1, send all HIGH and MEDIUM findings:
-```
-SendMessage(
-  to: <maker-agent-id>,
-  message: "The documentation critic found issues that need fixing.
-            Fix ALL HIGH and MEDIUM findings below. For each fix:
-            - Make a separate git commit
-            - Commit format: docs(<file-stem>): fix <SEVERITY>/<dimension> — <description>
-            - If multiple findings target the same paragraph, combine into one commit
-              using the highest severity level
-
-            <paste HIGH and MEDIUM findings here>"
-)
-```
-
-For rounds 2+, send only HIGH findings (MEDIUM issues have had their one iteration).
-
-Wait for the maker to respond confirming fixes are done.
-
-If the maker responds that it could not fix one or more findings, note those as unresolvable and exclude them from subsequent critic reviews. If SendMessage fails, report the error to the user and stop.
-
-**Step B — Spawn fresh critic:**
-
-Spawn a NEW `docs-critic` agent (do NOT reuse the previous one — fresh eyes each round):
+Spawn a `general-purpose` Fixer agent with HIGH and MEDIUM findings (or just HIGH for round 2+):
 
 ```
 Agent(
-  description: "Re-review documentation round N",
-  subagent_type: "docs-critic",
-  prompt: <same prompt as Phase 3, but if there are unresolvable findings,
-           append to the prompt:
-           "The following findings have been declared unresolvable by the maker.
-            Do NOT re-flag these in your report:
-            <list of unresolvable findings>">
+  description: "Fix documentation — Round N",
+  subagent_type: "general-purpose",
+  prompt: "You are a documentation fixer for the ZIO project.
+           Documentation file: <doc-path>
+
+           The documentation critic found the following issues that need fixing.
+           [For round 1: Fix ALL HIGH and MEDIUM findings below]
+           [For round 2+: Fix ALL HIGH findings below (MEDIUM had their one chance)]
+
+           <paste HIGH/MEDIUM findings here>
+
+           For each finding:
+           1. Read the documentation file using the Read tool
+           2. Make the fix in the file using the Edit tool
+           3. Create a git commit for the fix using this format:
+              docs(<file-stem>): fix <SEVERITY>/<dimension> — <description>
+           4. If multiple findings affect the same paragraph, combine into one commit using highest severity
+
+           After all fixes are done, respond: 'Fixes complete: <list fixes made>'
+
+           If you cannot fix one or more findings, respond: 'Could not fix: <list unresolvable findings>'"
 )
 ```
 
-**Step C — Check verdict:**
+Wait for fixer to respond with completion status or unresolvable findings. If unresolvable, note them for exclusion from next critic cycle.
 
-When parsing the verdict, filter out any findings that match unresolvable items before deciding whether to iterate.
+**Step B — Spawn Fresh Critic:**
+
+Spawn a new `general-purpose` Critic agent (use same prompt as Phase 3, but append to it):
+
+```
+"The following findings were previously flagged but marked as unresolvable by the maker.
+ Do NOT re-flag these in your report (we know they exist):
+ <list unresolvable findings>"
+```
+
+**Step C — Parse Verdict:**
+
+When the new critic responds, filter out unresolvable findings from the verdict before deciding next action:
 
 - `APPROVED` → Report success to user. Done.
-- `ITERATE` with only MEDIUM findings remaining (no HIGH) → Done. MEDIUM had its one iteration.
-- `ITERATE` with HIGH findings and round < 3 → Go to next round.
-- `ITERATE` and round = 3 → Report remaining issues to user:
-  "The documentation was reviewed 3 times. These issues remain unresolved:
-   <paste remaining findings>
-   Please review manually."
+- `ITERATE` with only MEDIUM findings remaining → Done (MEDIUM had its one iteration).
+- `ITERATE` with HIGH findings and round < 3 → Go to next round (Step A).
+- `ITERATE` and round = 3 → Report remaining issues to user with instructions to review manually.
+
+## Phase 6: Multiple Files (if applicable)
+
+If the user provided a directory in Phase 1 and selected multiple files:
+
+For each file in the list:
+1. Go through Phases 2–5 (critique and fix loop)
+2. Track results per file in a summary table
+3. After all files are processed, report aggregate results
 
 ## Output
 
 When done, report to the user:
-- Whether the doc was APPROVED or has remaining issues
-- How many rounds were needed
-- Summary of findings fixed (count by severity)
+
+**For single file:**
+- File name
+- Status: APPROVED or remaining issues
+- Rounds needed (if any)
+- Summary of findings fixed (e.g., "2 HIGH fixed, 1 MEDIUM fixed, 3 LOW fixed")
+- Any unresolvable issues (if applicable)
+
+**For multiple files:**
+- Table of results by file (Status, Rounds, Findings Fixed)
+- Total counts across all files
+- List of files with unresolved issues
