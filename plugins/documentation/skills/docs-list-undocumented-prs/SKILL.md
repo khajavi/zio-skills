@@ -121,8 +121,6 @@ gh pr view <N> --repo <owner/repo> \
   --json number,title,body,labels,mergedAt,files,commits,author
 ```
 
-Capture the output in a variable: `PR_DATA=$(gh pr view ...)`. This is used in Phase 4 to extract files and search for symbols.
-
 Run Phase 3 (classification) and Phase 4 (grading) for this PR before advancing to the next.
 
 ---
@@ -161,7 +159,8 @@ Skip this phase entirely if `REQUIRES_DOCS = no`.
 ### Step 4a — Check for docs files in the PR
 
 ```bash
-echo "$PR_DATA" | jq -r '.files[].path | select(startswith("docs/"))'
+gh pr view <N> --repo <owner/repo> --json files \
+  | jq -r '.files[].path | select(startswith("docs/"))'
 ```
 
 List any `docs/` paths that were modified or added in this PR.
