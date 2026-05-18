@@ -199,10 +199,48 @@ add(2, 3)
 4. **New Topic** → `mdoc:silent:reset` + `mdoc:silent` (fresh context)
 5. **Final Copy-Paste** → `mdoc:compile-only` (standalone)
 
+### Pattern 6: Multi-Example Documentation Suite
+
+When a document contains many independent, self-contained examples (e.g., each type in a library having 4–6 usage examples), **every** example's first code block must use `mdoc:silent:reset` to prevent variable name collisions across examples.
+
+Without reset, variables like `val file`, `val config`, or `val user` defined in Example 1 conflict with identically-named vars in Example 2—producing "Conflicting definitions" errors even when the examples are conceptually separate.
+
+```scala mdoc:silent:reset
+import zio.blocks.codegen.ir._
+import zio.blocks.codegen.emit._
+
+val user = CaseClass("User", List(Field("id", TypeRef.Long)))
+val file = ScalaFile(
+  packageDecl = PackageDecl("com.example"),
+  types = List(user)
+)
+```
+
+```scala mdoc
+ScalaEmitter.emit(file, EmitterConfig())
+```
+
+The next example resets again:
+
+```scala mdoc:silent:reset
+val order = CaseClass("Order", List(Field("id", TypeRef.Long)))
+val file = ScalaFile(
+  packageDecl = PackageDecl("com.example"),
+  types = List(order)
+)
+```
+
+```scala mdoc
+ScalaEmitter.emit(file, EmitterConfig())
+```
+
+**Rule:** In multi-example documents, `:reset` is not "sparingly used"—it is used **once per independent example**. The "use sparingly" advice in the Tips section applies to *within* a single example (where `:nest` is usually better).
+
 ## When to Use `:reset`
 
 - Switching to a **completely different domain** (Product → JSON → User)
 - Starting a **new tutorial section** with independent examples
+- **Isolating independent examples in a multi-example document** — when each `###` section is a fresh, self-contained example that reuses common variable names like `file`, `config`, or `user`
 - Avoid if: just defining a new helper function (doesn't need reset)
 
 ## Tips
@@ -210,7 +248,7 @@ add(2, 3)
 - **Never manually write `// result` comments** — use `mdoc` to show real output
 - **Test locally with `sbt docs`** before committing mdoc blocks
 - **Group related setup blocks** — define all prerequisites in one `silent` block if possible
-- **Use `:reset` sparingly** — prefer `:nest` for minor redefinitions
+- **Use `:reset` at the right scope** — once per independent example in multi-example documents; prefer `:nest` for minor redefinitions *within* a single example
 
 ## Mechanical Validation
 
