@@ -46,13 +46,13 @@ Read `.docs-audit-state.json` from the repo root. Create the file if it does not
 {
   "repo": "owner/repo",
   "checked_prs": {
-    "42": { "status": "Not Documented", "checked_at": "2026-05-18T10:00:00Z" },
-    "41": { "status": "Well Documented", "checked_at": "2026-05-18T10:00:00Z" }
+    "42": { "title": "Add ZStream.throttle operator", "status": "Not Documented", "checked_at": "2026-05-19T10:00:00Z" },
+    "41": { "title": "Fix HttpClient connection leak", "status": "Well Documented", "checked_at": "2026-05-19T10:00:00Z" }
   }
 }
 ```
 
-- `checked_prs`: map of PR number (string) → `{ status, checked_at }`
+- `checked_prs`: map of PR number (string) → `{ title, status, checked_at }`
 
 **Initialization rules:**
 
@@ -195,7 +195,7 @@ Apply the rubric below. Assign the highest level whose criteria are fully met.
 
 After processing all PRs in the batch, write the updated state to `.docs-audit-state.json` **before** generating the report.
 
-1. Add every processed PR to `checked_prs` with its documentation status and the current ISO 8601 timestamp.
+1. Add every processed PR to `checked_prs` with its title, documentation status, and the current ISO 8601 timestamp.
 
 Use the Write tool to update the file atomically.
 
