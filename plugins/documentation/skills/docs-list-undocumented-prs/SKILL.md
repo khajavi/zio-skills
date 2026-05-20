@@ -46,13 +46,31 @@ Read `.docs-audit-state.json` from the repo root. Create the file if it does not
 {
   "repo": "owner/repo",
   "checked_prs": {
-    "42": { "title": "Add ZStream.throttle operator", "status": "Not Documented", "checked_at": "2026-05-19T10:00:00Z" },
-    "41": { "title": "Fix HttpClient connection leak", "status": "Well Documented", "checked_at": "2026-05-19T10:00:00Z" }
+    "42": {
+      "title": "Add ZStream.throttle operator",
+      "docs_required": "yes",
+      "classification_gate": "YES-2",
+      "classification_reason": "New public Scala file added: src/main/scala/zio/stream/ZStream.scala",
+      "status": "Not Documented",
+      "checked_at": "2026-05-19T10:00:00Z"
+    },
+    "41": {
+      "title": "Fix HttpClient connection leak",
+      "docs_required": "no",
+      "classification_gate": "NO-7",
+      "classification_reason": "Bug fix label with no new public files added",
+      "status": null,
+      "checked_at": "2026-05-19T10:00:00Z"
+    }
   }
 }
 ```
 
-- `checked_prs`: map of PR number (string) → `{ title, status, checked_at }`
+- `checked_prs`: map of PR number (string) → `{ title, docs_required, classification_gate, classification_reason, status, checked_at }`
+  - `docs_required`: `"yes"` | `"no"` | `"uncertain"`
+  - `classification_gate`: ID of the gate that fired (e.g., `"YES-2"`, `"NO-7"`, `"OVERRIDE-BREAKING"`, `"UNCERTAIN"`)
+  - `classification_reason`: Human-readable one-line explanation of why the gate fired
+  - `status`: Documentation rubric grade from Phase 4 (or `null` when `docs_required = "no"`)
 
 **Initialization rules:**
 
@@ -114,12 +132,21 @@ For each PR in the batch, print a progress line before processing:
 > [N/20] Processing PR #<number>: <title>
 ```
 
-Fetch full PR details in a single call:
+Fetch full PR details in a single call (metadata):
 
 ```bash
 gh pr view <N> --repo <owner/repo> \
-  --json number,title,body,labels,mergedAt,files,commits,author
+  --json number,title,body,labels,mergedAt,commits,author
 ```
+
+Then fetch file details with statuses (added/modified/deleted/renamed):
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{N}/files --paginate \
+  --jq '[.[] | {path: .filename, status: .status, additions: .additions, deletions: .deletions}]'
+```
+
+Combining both calls gives complete PR context with file-level status information.
 
 Run Phase 3 (classification) and Phase 4 (grading) for this PR before advancing to the next.
 
@@ -127,28 +154,81 @@ Run Phase 3 (classification) and Phase 4 (grading) for this PR before advancing 
 
 ## Phase 3 — Does This PR Require Documentation?
 
-Evaluate signals to assign `REQUIRES_DOCS = yes | no | uncertain`.
+Classify the PR using a **hierarchical, priority-ordered gate system**. Extract preliminary variables, check overrides, evaluate NO gates (first match wins), then YES gates (first match wins), then default to UNCERTAIN.
 
-### YES signals — any one is sufficient
+### Preliminary Variable Extraction
 
-| Signal | Description |
-|--------|-------------|
-| Label match | Labels contain any of: `feature`, `enhancement`, `new-feature`, `breaking-change`, `api-change`, `documentation-needed` |
-| Title/body keywords | PR title or body contains (case-insensitive): "add", "introduce", "new", "API", "breaking", "deprecate" |
-| Source files changed | Files changed include any `src/main/` path that is NOT under `test/`, `it/`, or `bench/` |
-| Non-test Scala files | Files changed include any `.scala` file not matching `*Test.scala` or `*Spec.scala` |
+Before evaluating any gate, compute these derived facts from the PR data:
 
-### NO signals — skip only when ALL of these match
+**File categories:**
+- `files_test`: Paths matching `*Test.scala`, `*Spec.scala`, `*Suite.scala`, or under `src/test/`
+- `files_main_scala`: `.scala` files under `src/main/`, excluding `files_test`
+- `files_internal`: `files_main_scala` whose path contains `/internal/`, `/impl/`, or `/private/`
+- `files_public_main`: `files_main_scala` minus `files_internal`
+- `files_new_public_main`: `files_public_main` with file `status = added`
+- `files_infra`: Paths matching `*.yml`, `*.yaml`, `.github/**`, `Dockerfile*`
+- `files_build`: Paths matching `build.sbt`, `project/**`, `*.sbt`
 
-| Signal | Description |
-|--------|-------------|
-| Label match | Labels contain any of: `chore`, `ci`, `test`, `refactor`, `internal`, `dependencies` |
-| Files match | Changed files consist only of: `*.yml`, `.github/**`, `*Test.scala`, `*Spec.scala`, `build.sbt`, `project/**` |
-| Title prefix | Title starts with: `chore:`, `ci:`, `test:`, `bump`, `upgrade`, `update dependency` |
+**Title and label facts:**
+- `cc_prefix`: Conventional commit type from title (e.g., `feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `build`, `docs`, `perf`, `style`, `revert`) — extract if title matches `^(feat|fix|chore|refactor|test|ci|build|docs|perf|style|revert)(\(.+\))?!?:`
+- `cc_breaking`: True if title contains `!:` (breaking change marker)
+- `is_bump`: True if title matches (case-insensitive): `^(bump|upgrade|update).*\b(to v?\d|version|dep)` OR starts with `build(deps)`
+- `is_revert`: True if title starts with `Revert "`
 
-### UNCERTAIN
+### Evaluation Algorithm
 
-Any case not covered by YES or NO (mixed signals). Include these in the report with a ⚠️ note explaining the ambiguity.
+```
+1. Overrides (bypass all gates):
+   - If cc_breaking = true → REQUIRES_DOCS = yes, GATE = "OVERRIDE-BREAKING"
+   - If labels include "documentation-needed" → REQUIRES_DOCS = yes, GATE = "OVERRIDE-DOCS-NEEDED"
+
+2. NO gates (first match wins → REQUIRES_DOCS = no):
+   - Evaluate gates NO-1 through NO-9 in order
+
+3. YES gates (first match wins → REQUIRES_DOCS = yes):
+   - Evaluate gates YES-1 through YES-5 in order
+
+4. Fallback (all gates failed):
+   - REQUIRES_DOCS = uncertain, provide explanation
+```
+
+### Override Conditions (checked first)
+
+| Override | Condition | Gate ID |
+|----------|-----------|---------|
+| Breaking change | `cc_breaking = true` | OVERRIDE-BREAKING |
+| Docs explicitly needed | Labels include `documentation-needed` | OVERRIDE-DOCS-NEEDED |
+
+### NO Gates (any single gate is sufficient to return NO; evaluated in order)
+
+| Gate ID | Name | Condition | Rationale |
+|---------|------|-----------|-----------|
+| NO-1 | Dependency update | `is_bump = true` OR labels include `renovate` or `dependabot` OR (`cc_prefix = "build"` AND `files_main_scala` is empty) | Dependency version bumps never introduce user-facing API changes. Renovate and dependabot labels are definitive. |
+| NO-2 | CI/infrastructure only | `files_public_main` is empty AND `files_infra ∪ files_build` is non-empty AND (labels include `ci`/`infrastructure` OR `cc_prefix = "ci"` OR `cc_prefix = "build"`) | Changes that touch only workflow files, Docker configs, build system metadata cannot affect public API. Requires corroboration from label or commit prefix. |
+| NO-3 | Test-only changes | All changed files ⊆ (`files_test ∪ files_infra ∪ files_build`) AND `files_public_main` is empty | Changes that do not touch public source code require no documentation updates. |
+| NO-4 | Conventional `fix:` without new public files | `cc_prefix = "fix"` AND `files_new_public_main` is empty | A `fix:` prefix signals a bug correction to existing behavior. If no new public files are added, existing documentation remains valid. |
+| NO-5 | Conventional chore/refactor/test/ci/docs/style/perf/revert | `cc_prefix ∈ {chore, refactor, test, ci, docs, style, perf, revert}` AND `files_new_public_main` is empty | These conventional commit types signal maintenance, not API evolution. No new public files added means no new public surface. |
+| NO-6 | Internal-only refactor | `files_public_main` is empty AND `files_internal` is non-empty AND (labels include `refactor` or `internal`) | Changes touching only internal packages (`*/internal/*`, `*/impl/*`, `*/private/*`) are implementation details not visible in public API documentation. Requires `refactor` or `internal` label for corroboration. |
+| NO-7 | Bug fix label without new public files | Labels include `bug`, `fix`, or `bugfix` AND `files_new_public_main` is empty AND labels do NOT include any YES-gate labels (`feature`, `enhancement`, `api-change`, `breaking-change`) | Bug fix label combined with no new public files means existing behavior is corrected, not extended. |
+| NO-8 | Chore label with no source changes | Labels include `chore` or `internal` AND `files_public_main` is empty | Chore label + no public source changes = metadata/config update requiring no documentation. |
+| NO-9 | Revert commit | `is_revert = true` | Reverting a commit undoes changes already in the codebase. The original PR's documentation is no longer needed. |
+
+### YES Gates (any single gate is sufficient to return YES; evaluated in order after NO gates fail)
+
+| Gate ID | Name | Condition | Rationale |
+|---------|------|-----------|-----------|
+| YES-1 | Explicit feature commit | `cc_prefix = "feat"` | The conventional commit `feat:` type is the authoritative signal that new functionality was introduced. |
+| YES-2 | New public source file added | `files_new_public_main` is non-empty | A `.scala` file added to `src/main/` outside of internal packages is an extension of the public API surface. |
+| YES-3 | Breaking change label | Labels include `breaking-change` or `api-change` | Explicit breaking-change or api-change labels indicate API contract changes requiring documentation updates. |
+| YES-4 | Feature/enhancement label with source changes | Labels include `feature`, `enhancement`, or `new-feature` AND `files_main_scala` is non-empty | Feature or enhancement labels combined with actual source changes indicate new or extended functionality. Requiring source changes prevents false positives from mislabeled chore PRs. |
+| YES-5 | Public file modified with interface-change keywords | `files_public_main` is non-empty AND title contains (whole-word, case-insensitive match): `introduce`, `deprecate`, `breaking`, or `API` | Modification to public files combined with interface-change language suggests an API evolution requiring documentation. Whole-word matching prevents false positives like "add" in "added test" or "add CI". |
+
+### UNCERTAIN — No Gate Matched
+
+If no gate fires (neither NO nor YES), classify as UNCERTAIN and include a brief explanation of what signals were observed. Examples:
+- "Refactor label with public files modified — unclear if this is a breaking change or implementation detail"
+- "No labels, both test and src/main files changed — requires manual review"
+- "`fix:` prefix but new public file added — may be a silent feature addition"
 
 ---
 
@@ -195,7 +275,13 @@ Apply the rubric below. Assign the highest level whose criteria are fully met.
 
 After processing all PRs in the batch, write the updated state to `.docs-audit-state.json` **before** generating the report.
 
-1. Add every processed PR to `checked_prs` with its title, documentation status, and the current ISO 8601 timestamp.
+1. For each processed PR, add an entry to `checked_prs` with:
+   - `title`: PR title
+   - `docs_required`: `"yes"` | `"no"` | `"uncertain"` (from Phase 3 classification)
+   - `classification_gate`: Gate ID that fired (e.g., `"YES-2"`, `"NO-7"`, `"OVERRIDE-BREAKING"`, `"UNCERTAIN"`)
+   - `classification_reason`: Human-readable reason (e.g., "New public Scala file added: src/main/scala/zio/Foo.scala")
+   - `status`: Documentation rubric grade from Phase 4, or `null` if `docs_required = "no"` (Phase 4 skipped)
+   - `checked_at`: Current ISO 8601 timestamp
 
 Use the Write tool to update the file atomically.
 
@@ -228,14 +314,14 @@ Total checked to date: <T> PRs across all runs
 #### #NNN — <title>
 - **Merged:** <date>
 - **Labels:** <labels or "none">
-- **Why docs needed:** <signal that triggered yes/uncertain>
+- **Why docs needed:** <classification_reason from state>
 - **Suggested action:** `/docs-document-pr <NNN>`
 
 ### 🟠 Stub
 #### #NNN — <title>
 - **Merged:** <date>
 - **Labels:** <labels>
-- **Why docs needed:** <reason>
+- **Why docs needed:** <classification_reason from state>
 - **Docs found:** <path to stub file>
 - **Suggested action:** `/docs-enrich-section <path>`
 
@@ -243,14 +329,15 @@ Total checked to date: <T> PRs across all runs
 #### #NNN — <title>
 - **Merged:** <date>
 - **Labels:** <labels>
-- **Ambiguity:** <explanation of mixed signals>
+- **Classification:** Gate ID <classification_gate>
+- **Ambiguity:** <classification_reason from state>
 - **Suggested action:** Review manually, then run `/docs-document-pr <NNN>` if needed
 
 ### 🟡 Partially Documented
 #### #NNN — <title>
 - **Merged:** <date>
 - **Labels:** <labels>
-- **Why docs needed:** <reason>
+- **Why docs needed:** <classification_reason from state>
 - **Docs found:** <path(s) to existing doc files>
 - **Suggested action:** `/docs-enrich-section <path>`
 
@@ -289,23 +376,34 @@ When you invoke this skill:
 - [ ] **Phase 1:** Fetch 40 merged PRs via `gh pr list`, filter already-checked, take first 20
 - [ ] **Phase 1:** Handle edge cases: 0 remaining (show cumulative summary), 1–19 remaining (proceed with count), all 40 checked (paginate)
 - [ ] **Phase 2:** Print `[N/20] Processing PR #<number>: <title>` before each PR
-- [ ] **Phase 2:** Fetch full PR details with a single `gh pr view` call (all needed fields at once)
-- [ ] **Phase 3:** Classify `REQUIRES_DOCS = yes | no | uncertain` using the YES/NO/UNCERTAIN signal tables
-- [ ] **Phase 4:** Skip entirely if `REQUIRES_DOCS = no`
+- [ ] **Phase 2:** Fetch metadata via `gh pr view <N> --json number,title,body,labels,mergedAt,commits,author`
+- [ ] **Phase 2:** Fetch file statuses via `gh api repos/{owner}/{repo}/pulls/{N}/files` to get `{path, status, additions, deletions}`
+- [ ] **Phase 3:** Extract preliminary variables (`files_test`, `files_main_scala`, `files_internal`, `files_public_main`, `files_new_public_main`, `cc_prefix`, `cc_breaking`, `is_bump`, `is_revert`)
+- [ ] **Phase 3:** Check overrides first (cc_breaking or documentation-needed label → always YES)
+- [ ] **Phase 3:** Evaluate NO gates in order (NO-1 through NO-9), first match wins
+- [ ] **Phase 3:** Evaluate YES gates in order (YES-1 through YES-5), first match wins
+- [ ] **Phase 3:** Classify as UNCERTAIN if no gate fires; include explanation of observed signals
+- [ ] **Phase 3:** Store gate ID and reason alongside `docs_required` classification
+- [ ] **Phase 4:** Skip entirely if `docs_required = "no"`
 - [ ] **Phase 4:** Check `docs/` files changed in the PR via `jq`
 - [ ] **Phase 4:** Extract key symbols; use the Grep tool to search for key symbols in `docs/`
 - [ ] **Phase 4:** Assign rubric grade (Well Documented / Partially Documented / Stub / Not Documented)
-- [ ] **Phase 5:** Write updated state to `.docs-audit-state.json` before generating the report
+- [ ] **Phase 5:** Write updated state to `.docs-audit-state.json` with `docs_required`, `classification_gate`, `classification_reason`, and `status`
+- [ ] **Phase 5:** Set `status = null` for PRs where `docs_required = "no"`
 - [ ] **Phase 5:** Never remove existing entries from `checked_prs`
 - [ ] **Phase 6:** Output formatted markdown report sorted by status severity then merge date
-- [ ] **Phase 6:** Include uncertain PRs with a ⚠️ ambiguity note
+- [ ] **Phase 6:** Include uncertain PRs with gate ID and classification reason
 - [ ] **Phase 6:** Ask user whether to continue with the next batch of 20
 
 ---
 
 ## Notes
 
-- **Minimal API calls:** one `gh pr view` per PR — fetch all required fields (`number`, `title`, `body`, `labels`, `mergedAt`, `files`, `commits`, `author`) in a single call.
+- **Two API calls per PR:** `gh pr view` for metadata + `gh api repos/{owner}/{repo}/pulls/{N}/files` for file statuses with added/modified/deleted distinction. The second call is necessary to distinguish newly added files (YES-2 gate) from modified files.
+- **Hierarchical gate evaluation:** NO gates are evaluated first (any single match wins) before YES gates. This ensures dependency bumps and bug fixes are classified as NO quickly, avoiding expensive downstream checks.
+- **Conventional commits:** The skill now recognizes commit type prefixes (`feat:`, `fix:`, `chore:`, etc.) as primary signals, with label matching as secondary corroboration. This aligns with common Git workflow conventions.
+- **File path patterns for internal detection:** Paths containing `/internal/`, `/impl/`, or `/private/` are considered non-public. This is idiomatic in Scala/ZIO libraries to mark internal APIs.
+- **State file enhancements:** Each `checked_prs` entry now includes `docs_required`, `classification_gate`, and `classification_reason` for full traceability. The `status` field is `null` for PRs classified as `docs_required = "no"` to signal Phase 4 was intentionally skipped.
 - **No `docs/` directory:** if the repo has no `docs/` tree, note this prominently at the start of the report and mark every docs-required PR as "Not Documented".
 - **`--reset` flag:** clears all audit history so every PR is treated as new on the next run. Always confirm with the user before clearing.
 - **State is local-only:** `.docs-audit-state.json` should not be committed. Remind the user to add it to `.gitignore`.
