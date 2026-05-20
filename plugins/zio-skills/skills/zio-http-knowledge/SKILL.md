@@ -39,7 +39,7 @@ This file contains the concatenated content of every documentation page — usef
 2. **Fetch the sitemap** at `https://ziohttp.com/llms.txt` and scan for the relevant section(s).
 3. **Navigate to the specific page(s)** listed in the sitemap — do not answer from memory.
 4. **Provide the answer** with the source URL so the user can read more.
-5. **If uncertain** — direct the user to the official docs: "For the most current information, see https://zio.dev/zio-http"
+5. **If uncertain** — direct the user to the official docs: "For the most current information, see https://ziohttp.com"
 
 ---
 
