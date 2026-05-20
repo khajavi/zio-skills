@@ -58,7 +58,7 @@ This file contains the concatenated content of every documentation page — usef
 - https://central.sonatype.com/artifact/dev.zio/zio_3
 
 **Examples Directory (GitHub):**
-- https://github.com/zio/zio/tree/main/examples/src/main/scala/zio/examples
+- https://github.com/zio/zio/tree/series/2.x/examples
 
 ---
 
