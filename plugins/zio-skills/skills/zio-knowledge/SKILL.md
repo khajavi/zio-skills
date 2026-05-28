@@ -20,17 +20,17 @@ tags: [zio, scala, knowledge, reference, documentation, ecosystem]
 
 ### Any ZIO question?
 
-→ **Fetch the LLM sitemap first**, then navigate to the relevant page:
+→ Start at the LLM sitemap, then navigate to the relevant page:
 
 - **ZIO LLM Sitemap:** https://zio.dev/llms.txt
 
-The sitemap follows the [llmstxt.org](https://llmstxt.org) standard and lists every documentation page with its URL and a one-line description. Read it, identify the most relevant page(s) for your question, and fetch those pages for the current API details, types, and method signatures. The URLs end with .md, which means they are Markdown files, and you can read their raw content.
+The sitemap follows the [llmstxt.org](https://llmstxt.org) standard and lists every documentation page with its URL and a one-line description. Read it to identify the most relevant page(s) for your question, then fetch those pages for API details, types, and method signatures. The URLs end with .md, which means they are Markdown files, and you can read their raw content.
 
 If you need to reduce API calls or want to index the full documentation locally for the session, download the complete content in one request:
 
 - **Full Documentation (single file):** https://zio.dev/llms-full.txt
 
-This file contains the concatenated content of every documentation page — useful when you need to answer multiple questions across different sections without making repeated fetches, or when you want to build a local index for the session.
+This file contains the concatenated content of every documentation page — useful for answering multiple questions across sections or indexing the full documentation locally.
 
 ---
 
