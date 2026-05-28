@@ -23,7 +23,7 @@ tags: [zio, zio-http, scala, knowledge, reference, documentation]
 
 - **ZIO HTTP LLM Sitemap:** https://ziohttp.com/llms.txt
 
-The sitemap follows the [llmstxt.org](https://llmstxt.org) standard and lists every documentation page with its URL and a one-line description. Read it, identify the most relevant page(s) for your question, and fetch those pages for current API details, types, and method signatures.
+The sitemap follows the [llmstxt.org](https://llmstxt.org) standard and lists every documentation page with its URL and a one-line description. Read it, identify the most relevant page(s) for your question, and fetch those pages for the current API details, types, and method signatures. The URLs end with .md, which means they are Markdown files, and you can read their raw content.
 
 If you need to reduce API calls or want to index the full documentation locally for the session, download the complete content in one request:
 
