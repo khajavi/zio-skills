@@ -76,7 +76,7 @@ feat: add OpenAPI validation
 ```
 feat: add OpenAPI validation
 
-Skills-Used: zio-http-scaffold@0.1.0-abc1234,docs-write@0.1.0-abc1234
+Skills-Used: zio-knowledge@0.1.0-abc1234,docs-write@0.1.0-abc1234
 ```
 
 ## Uninstalling

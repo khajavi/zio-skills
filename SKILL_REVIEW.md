@@ -3,7 +3,7 @@
 **Date**: 2026-05-01
 **Repo**: github.com/zio/zio-skills (marketplace `ziogenetics`)
 **Reviewer**: Skill Reviewer rubric (10 dimensions × 1–5)
-**Skills reviewed**: 28 across 2 plugins
+**Skills reviewed**: 2 knowledge skills across zio-skills plugin
 **Methodology**: Each `SKILL.md` (and any sibling `references/`, `scripts/`, `CHECKLIST.md`) was scored against the [Skill Reviewer rubric](https://github.com/agentskill-sh/learn) by domain-focused subagents. Per-dimension scores are 1–5 (3 is acceptable, not failure). Totals are out of 50 when scripts are bundled, out of 45 when not (D9 = N/A).
 
 ---
@@ -29,7 +29,7 @@ All 10 recommendations from the original review have been addressed. The branch 
 
 ### Resolved #1 — Common Failures tables (`1560e68`)
 
-Nine skills with the weakest D7 (Error Handling) scores received a `Common Failures` table covering realistic top-of-mind failure modes (symptom → likely cause → fix). Affected: `zio-http-scaffold`, `zio-http-knowledge`, `zio-http-template2`, `zio-http-test`, `zio-http-endpoint-to-openapi`, `zio-http-imperative-to-declarative`, `zio-http-openapi-to-endpoint` (replaced existing prose-style troubleshooting with a structured table), `zio-http-datastar`, `docs-organize-types`. Several documentation skills already gained equivalent failure guidance through earlier commits — `docs-integrate` (mdoc-failure table), `docs-mdoc-conventions` (`references/troubleshooting.md`), `docs-data-type-ref` (`references/embedding-examples.md` Common Failures), and the helper-script SKILL.md exit-code tables.
+The `zio-http-knowledge` skill received a `Common Failures` table covering realistic top-of-mind failure modes (symptom → likely cause → fix).
 
 ### Resolved #2 — CHECKLIST.md siblings (multi-commit)
 
@@ -47,15 +47,7 @@ The corresponding `SKILL.md` files publish the exit-code table inline.
 
 ### Resolved #4 — Embedded examples extracted (multi-commit)
 
-Five skills had large blocks of example content embedded in their main `SKILL.md`. Each block is now in a sibling reference file with a one-line load trigger:
-
-- `zio-http-openapi-to-endpoint/references/examples/petstore.json` (was 55-line inline JSON)
-- `zio-http-imperative-to-declarative/references/examples/BookEndpointsApp.scala` (full runnable companion)
-- `docs-document-pr/references/example-invocations.md` (5 worked examples)
-- `docs-data-type-ref/references/embedding-examples.md` (`SourceFile.print` deep dive)
-- `docs-add-missing-section/references/section-patterns.md` (5 section-type templates)
-
-Net result: −167 lines across the five SKILL.md files, with the detailed material discoverable via load triggers when needed.
+Example content is organized in reference files with load triggers for detailed material.
 
 ### Resolved #5 — docs-module-ref structure decision (`06f4ce4`)
 
@@ -85,13 +77,7 @@ Step 1d previously instructed agents to run `sbt "gh-query --verbose <topic>"`, 
 
 ## Executive Summary
 
-- **Mean score across all 28 skills**: **85.8 %**  (≈ 39.6 / 46.4 expected max).
-- **Top performers** (≥ 93 %): `docs-enrich-section` (44/45), `docs-tutorial` (43/45), `docs-mdoc-conventions` (47/50), `docs-report-method-coverage` (47/50), `docs-skill-retrospection` (42/45), `docs-verify-compliance` (42/45), `zio-http-datastar` (42/45).
-- **Needing the most work** (< 78 %): `zio-http-openapi-to-endpoint` (34/45), `docs-document-pr` (34/45), `docs-how-to-guide` (34/45), `docs-organize-types` (34/45), `docs-module-ref` (35/45).
-- **Pervasive weakness**: **D7 Error Handling** (median 3/5). 21 of 28 skills lack explicit error tables, validation loops, or recovery paths.
-- **Pervasive strength**: **D1 Frontmatter** is uniformly excellent (5/5 on every skill — names, descriptions, allowed-tools all spec-compliant).
-
-The ecosystem is healthy. There are no broken or fundamentally misshapen skills; the gap between best and worst is style and rigor, not correctness.
+The ZIO skills repository now focuses on knowledge skills that provide comprehensive guidance for ZIO and ZIO HTTP development. The knowledge skills (`zio-knowledge` and `zio-http-knowledge`) provide foundational and API-specific documentation to support developers building with ZIO.
 
 ---
 

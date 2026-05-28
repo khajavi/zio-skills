@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ziohttp.com)",
+      "Bash(cp *)",
+      "Bash(xargs ls *)",
+      "WebSearch",
+      "Bash(xargs cat *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'docs: add zio-http-template2 implementation summary *)",
+      "Bash(git push *)",
+      "Bash(git *)",
+      "Skill(superpowers:using-git-worktrees)",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Skill(superpowers:writing-skills)",
+      "Bash(curl *)",
+      "Read(//home/milad/sources/zio-skills/skills/**)",
+      "Read(//home/milad/sources/zio-skills/**)"
+    ]
+  },
+  "enabledPlugins": {}
+}
