@@ -1,4 +1,2 @@
-@./skills/zio-http-scaffold/SKILL.md
-@./skills/zio-http-openapi-to-endpoint/SKILL.md
-@./skills/zio-http-endpoint-to-openapi/SKILL.md
-@./skills/zio-http-imperative-to-declarative/SKILL.md
+@./plugins/zio-skills/skills/zio-knowledge/SKILL.md
+@./plugins/zio-skills/skills/zio-http-knowledge/SKILL.md

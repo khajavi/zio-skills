@@ -5,7 +5,7 @@ set HOOK_NAME=%1
 
 REM Handle different hook types
 if "%HOOK_NAME%"=="session-start" (
-    for /f "delims=" %%A in ('type "%SCRIPT_DIR%\..\skills\zio-http-scaffold\SKILL.md"') do (
+    for /f "delims=" %%A in ('type "%SCRIPT_DIR%\..\skills\zio-knowledge\SKILL.md"') do (
         echo %%A
     )
 )

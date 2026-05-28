@@ -6,7 +6,7 @@ This repo contains high-quality developer skills for teaching coding agents (Cla
 
 Before modifying any SKILL.md file or adding a new skill:
 
-1. **Understand the pattern** — Read an existing skill like `skills/zio-http-scaffold/SKILL.md` to understand the structure and tone.
+1. **Understand the pattern** — Read an existing skill like `skills/zio-knowledge/SKILL.md` to understand the structure and tone.
 2. **Test your skill** — If you're modifying or creating a skill, verify:
    - The YAML frontmatter is valid (name, description, tags)
    - Code examples compile against the stated dependencies

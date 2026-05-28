@@ -9,7 +9,7 @@ This repo is a Claude Code marketplace (`ziogenetics`) containing two plugins:
 
 Before modifying any SKILL.md file or adding a new skill:
 
-1. **Understand the pattern** — Read an existing skill like `plugins/zio-skills/skills/zio-http-scaffold/SKILL.md` to understand the structure and tone.
+1. **Understand the pattern** — Read an existing skill like `plugins/zio-skills/skills/zio-knowledge/SKILL.md` to understand the structure and tone.
 2. **Test your skill** — If you're modifying or creating a skill, verify:
    - The YAML frontmatter is valid (name, description, tags)
    - Code examples compile against the stated dependencies
