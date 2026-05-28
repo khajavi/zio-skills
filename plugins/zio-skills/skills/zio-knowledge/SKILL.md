@@ -12,6 +12,7 @@ tags: [zio, scala, knowledge, reference, documentation, ecosystem]
 2. **LLM sitemap first** — Start at `https://zio.dev/llms.txt` to discover the current documentation structure and pick the right page for your specific question.
 3. **Source everything** — Include the documentation URL in your response so the user can verify and learn more.
 4. **Right resource first** — Navigate from the sitemap to the specific reference page rather than answering from the generic overview.
+5. **Prefer Markdown pages** — Always fetch the `.md` version of a documentation URL first. Fall back to the regular HTML website page only if the `.md` fetch fails or returns an error.
 
 ---
 
@@ -37,7 +38,7 @@ This file contains the concatenated content of every documentation page — usef
 
 1. **Identify the topic** — effects? fibers? concurrency? streams? testing? dependency injection? error handling? one of the ecosystem libraries?
 2. **Fetch the sitemap** at `https://zio.dev/llms.txt` and scan for the relevant section(s).
-3. **Navigate to the specific page(s)** listed in the sitemap — do not answer from memory.
+3. **Navigate to the specific page(s)** listed in the sitemap — do not answer from memory. Fetch the `.md` URL directly; fall back to the HTML page only if the `.md` fetch fails.
 4. **Provide the answer** with the source URL so the user can read more.
 5. **If uncertain** — direct the user to the official docs: "For the most current information, see https://zio.dev"
 
