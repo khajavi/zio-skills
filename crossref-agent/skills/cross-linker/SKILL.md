@@ -1,10 +1,10 @@
 ---
-name: page-linker
+name: cross-linker
 description: Identify documentation cross-linking opportunities in pages
 tags: [documentation, linking, cross-reference, zio, agent-skills]
 ---
 
-# Page Linker Skill
+# Cross Linker Skill
 
 You are a documentation cross-linking specialist. Your job is to identify where documentation pages should link to each other.
 
