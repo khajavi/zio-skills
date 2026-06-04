@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.crossref-state/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,544 @@
+# Crossref Agent
+
+A Flue-based TypeScript agent that automatically discovers and creates cross-references between pages in Markdown documentation, improving SEO and discoverability.
+
+## Overview
+
+Crossref Agent analyzes your documentation and identifies where pages should link to each other. It:
+
+- **Discovers opportunities** — Scans all Markdown files to find cross-linking opportunities
+- **Suggests intelligently** — Uses Claude to identify inline links and "See Also" sections based on content relevance
+- **Applies safely** — Protects code blocks and frontmatter while inserting links
+- **Tracks confidence** — Applies high-confidence links automatically, queues others for review
+- **Provides insights** — Reports on link density, orphan pages, and coverage metrics
+
+Perfect for improving internal SEO, helping readers discover related documentation, and reducing orphaned pages.
+
+## Features
+
+✨ **Safe Link Insertion**
+- Protects code fences (`` ``` ``, `~~~`) and inline code (`` ` `` `)
+- Preserves YAML frontmatter untouched
+- Case-insensitive phrase matching with exact casing preservation
+
+🔒 **Security Hardened**
+- Path traversal protection (symlinks checked via `realpathSync`)
+- TOCTOU-safe filesystem operations
+- LLM output validated before state persistence
+- Comprehensive error handling with graceful fallbacks
+
+📊 **Intelligent Analysis**
+- LLM-based section type classification (reference, guide, tutorial, overview)
+- Confidence-based suggestion filtering (high/medium/low)
+- Automatic deduplication of suggestions
+- Token usage tracking and cost estimation
+
+⚙️ **Flexible Operation**
+- Four execution modes: reindex, step, autopilot, report
+- Incremental processing with persistent state
+- Configurable thresholds and exclusion patterns
+- Batch processing for efficient LLM usage
+
+## Workflow Overview
+
+The crossref-agent processes documentation through four key stages:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 1. INDEXING (reindex mode)                          │
+├─────────────────────────────────────────────────────┤
+│ - Scan docs directory                               │
+│ - Extract: title, summary, keywords, sectionType   │
+│ - Build page index                                   │
+│ - Load sidebars.js → extract adjacent pages         │
+│ → Output: state.index (all pages metadata)          │
+└─────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────┐
+│ 2. SUGGESTION GENERATION (step/autopilot mode)      │
+├─────────────────────────────────────────────────────┤
+│ For each page in batch:                             │
+│   a. Load page content from disk                    │
+│   b. Create prompt with:                            │
+│      - Page index (all pages metadata)              │
+│      - Adjacent pages list (from sidebar)           │
+│      - Full page content                            │
+│   c. Send to page-linker agent (Claude)             │
+│   d. Agent analyzes & generates suggestions JSON:   │
+│      { suggestions: [                               │
+│        { targetId, anchorText, type, confidence }   │
+│      ]}                                              │
+│   → Output: raw suggestions from LLM                │
+└─────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────┐
+│ 3. SUGGESTION ENRICHMENT & DEDUPLICATION            │
+├─────────────────────────────────────────────────────┤
+│ For each suggestion from agent:                     │
+│   - Find target page entry in index                 │
+│   - Compute relative path to target                 │
+│   - Check if already exists in state.suggestions    │
+│   → If already exists: skip (don't re-add)          │
+│   → If new: add to state.suggestions array          │
+│ → Output: state.suggestions (accumulated)           │
+└─────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────┐
+│ 4. SUGGESTION VALIDATION & APPLICATION              │
+├─────────────────────────────────────────────────────┤
+│ For each high-confidence suggestion:                │
+│   - Validate: path resolves, not already linked     │
+│   - Try to insert link into page content            │
+│   - If successful: mark as "applied" + write to disk│
+│   - If failed: mark as "skipped"                    │
+│ → Output: Updated page files on disk                │
+└─────────────────────────────────────────────────────┘
+```
+
+### Key Design Points
+
+- **Persistent State**: Suggestions accumulate in state; deduplication prevents re-adding the same suggestion
+- **Incremental Processing**: Process pages one batch at a time, saving state after each batch
+- **Adjacent Pages**: Sidebar structure extracted to provide context about related documentation
+- **Confidence-Based**: High-confidence suggestions applied immediately; medium/low queued for review
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- Flue CLI (`npm install -g @flue/cli`)
+- Anthropic API key
+
+### Installation
+
+```bash
+cd crossref-agent
+npm install
+```
+
+### Setup
+
+Create a `.env` file with your Anthropic API key:
+
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+```
+
+Optionally create `.crossref-config.json` in the parent of your docs directory:
+
+```json
+{
+  "excludePatterns": ["node_modules", ".github"],
+  "maxLinksPerPage": 5,
+  "confidenceThreshold": "high"
+}
+```
+
+### Run It
+
+```bash
+# Build fresh index
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"reindex"}'
+
+# Process pages one at a time
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","batchSize":1}'
+
+# Process a specific target file
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","targetFile":"reference/fiber/fiber.md"}'
+
+# Process all files in a directory recursively
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","targetDir":"reference/fiber/","batchSize":5}'
+
+# Process all remaining pages
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+
+# View coverage report
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"report"}'
+```
+
+## Usage Modes
+
+### 1. `reindex` — Build Fresh Index
+
+Discovers all documentation files and classifies them by section type.
+
+```bash
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"reindex"}'
+```
+
+**Output:**
+- Walks entire docs directory (respecting `excludePatterns`)
+- Extracts title, summary, keywords from each page
+- Uses LLM to classify section type (reference/guide/tutorial/overview/other)
+- Resets `processed` array so all pages get analyzed
+- Persists state to `.crossref-state/state.json`
+
+### 2. `step` — Process Pages Incrementally
+
+Analyzes unprocessed pages and applies high-confidence links.
+
+```bash
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","batchSize":1}'
+```
+
+**Process next unprocessed page:**
+```bash
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step"}'
+```
+
+**Process a specific target file:**
+```bash
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","targetFile":"reference/fiber/fiber.md"}'
+```
+
+**Process all files in a directory (recursively):**
+```bash
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"step","targetDir":"reference/fiber/","batchSize":5}'
+```
+
+**Output per page:**
+- ✓ Processed: [title] (N/total) | Applied: X links | Queued: Y
+- Token counts (this run + cumulative)
+- Cost estimate
+
+**Behavior:**
+- If `targetFile` is provided, finds and processes only that file (regardless of prior processing state)
+- If `targetDir` is provided, processes up to `batchSize` files from that directory and all subdirectories
+- Otherwise, processes next unprocessed page in discovery order
+- Spawns child task per page with page-linker agent
+- Parses LLM suggestions with schema validation
+- Applies suggestions meeting `confidenceThreshold` immediately
+- Queues medium/low-confidence for human review
+- Saves state after each page
+
+**targetDir Usage:**
+- Accepts relative paths (e.g., `"reference/fiber/"`) or absolute paths
+- Recursively finds all `.md` and `.mdx` files in the directory
+- Processes up to `batchSize` files per invocation (default `1`)
+- Useful for batch-processing documentation sections
+- Can be combined with `batchSize` for multi-file processing in one run
+
+### 3. `autopilot` — Process All Pages
+
+Loops `step` mode until complete.
+
+```bash
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+```
+
+**Output:**
+- Per-page iteration summaries (same as `step`)
+- Final completion message with total processed and token spend
+
+### 4. `report` — Coverage Analysis
+
+Shows link density, orphan detection, and suggestion breakdown.
+
+```bash
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"report"}'
+```
+
+**Output includes:**
+- **Coverage**: total pages, processed %, pending count
+- **Suggestions**: applied/skipped/pending (with confidence distribution)
+- **Link Density**: average outgoing links per page by section type
+- **Orphans**: pages with no incoming links (first 10 listed)
+- **Token Spend**: cumulative cost to date
+
+## Configuration
+
+### `.crossref-config.json`
+
+Place in the parent directory of your docs to customize behavior:
+
+```json
+{
+  "excludePatterns": ["node_modules", ".github", "archived"],
+  "maxLinksPerPage": 5,
+  "confidenceThreshold": "high"
+}
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `excludePatterns` | string[] | `[]` | Path segments to skip (e.g., "archived", "node_modules") |
+| `maxLinksPerPage` | number | `5` | Max suggestions returned per page |
+| `confidenceThreshold` | "low" \| "medium" \| "high" | `"high"` | Minimum confidence to auto-apply links |
+
+### Confidence Levels
+
+- **`high`** — Page title/variant appears directly in prose, or tightly coupled concepts
+- **`medium`** — Strong conceptual overlap without direct text match
+- **`low`** — Loosely related, tangentially useful
+
+Only suggestions meeting the threshold are auto-applied. Others stay in state for manual review.
+
+## State Management
+
+State persists in `.crossref-state/state.json`:
+
+```json
+{
+  "indexBuiltAt": "2026-05-31T...",
+  "docsDir": "./docs",
+  "index": [
+    {
+      "id": "getting-started",
+      "title": "Getting Started",
+      "path": "guides/getting-started.md",
+      "absPath": "/full/path/to/getting-started.md",
+      "summary": "How to set up...",
+      "keywords": ["setup", "install"],
+      "sectionType": "guide",
+      "existingLinkCount": 2
+    }
+  ],
+  "processed": ["getting-started", "concepts-fiber"],
+  "suggestions": [
+    {
+      "sourceId": "getting-started",
+      "targetId": "concepts-fiber",
+      "targetTitle": "Fiber Basics",
+      "targetRelativePath": "../concepts/fiber.md",
+      "anchorText": "Fiber",
+      "type": "inline",
+      "confidence": "high",
+      "reasoning": "Title match in prose",
+      "status": "applied"
+    }
+  ],
+  "tokens": {
+    "inputTotal": 150000,
+    "outputTotal": 50000,
+    "runningCost": 0.60
+  }
+}
+```
+
+**States:**
+- `pending` — Suggested but not yet applied (awaiting review or threshold)
+- `applied` — Successfully inserted into document
+- `skipped` — Validation failed (already linked, path unresolvable, etc.)
+
+## Architecture
+
+### Core Modules
+
+**Pure Utilities** (fully tested, no side effects):
+- `tools/markdown-parser.ts` — Frontmatter, headings, links, safe zones
+- `tools/link-inserter.ts` — Inline links, See Also sections with code-fence safety
+- `tools/link-validator.ts` — Path validation, symlink safety, duplicate detection
+
+**Infrastructure**:
+- `tools/docs-fs.ts` — Async I/O Flue tools with path-traversal protection
+- `tools/config-loader.ts` — Configuration loading with sensible defaults
+- `tools/state-store.ts` — Persistent state with error recovery
+- `tools/schemas.ts` — Valibot schemas for runtime validation
+
+**Orchestration**:
+- `agents/page-linker.ts` — Claude Haiku 4.5 agent for analysis
+- `skills/cross-linking/SKILL.md` — LLM instructions
+- `workflows/crossref.ts` — Workflow with 4 modes
+
+### Data Flow
+
+```
+docs directory
+    ↓
+walkDocs() → find all .md/.mdx files
+    ↓
+reindex mode → extract metadata, LLM classify sectionType
+    ↓
+state: { index, processed: [] }
+    ↓
+step/autopilot → for each unprocessed page:
+    ├─ read content
+    ├─ call page-linker LLM agent
+    ├─ parse suggestions
+    ├─ compute targetRelativePath
+    ├─ deduplicate
+    ├─ validate (path safety, existence, no duplicates)
+    ├─ apply high-confidence to disk
+    └─ save state
+    ↓
+report mode → analyze state, show statistics
+```
+
+## Development
+
+### Running Tests
+
+```bash
+# All tests
+npm test
+
+# Specific test file
+npm test -- tests/markdown-parser.test.ts
+
+# Watch mode
+npm test:watch
+```
+
+**Test Coverage:**
+- 19 tests for markdown parsing (frontmatter, headings, links, safe zones)
+- 11 tests for link insertion (inline, See Also, code-fence safety)
+- 4 tests for validation (paths, symlinks, duplicates)
+- 9 end-to-end smoke tests (full workflow with fixture docs)
+
+### Project Structure
+
+```
+crossref-agent/
+├── tools/
+│   ├── schemas.ts              # Valibot schema definitions
+│   ├── markdown-parser.ts      # Pure parsing functions
+│   ├── link-inserter.ts        # Pure insertion functions
+│   ├── link-validator.ts       # Path & safety validation
+│   ├── docs-fs.ts             # Async I/O tools
+│   ├── config-loader.ts       # Config management
+│   └── state-store.ts         # State persistence
+├── agents/
+│   └── page-linker.ts         # Claude agent profile
+├── skills/
+│   └── cross-linking/
+│       └── SKILL.md           # LLM instructions
+├── workflows/
+│   └── crossref.ts            # Main orchestration
+├── tests/
+│   ├── markdown-parser.test.ts
+│   ├── link-inserter.test.ts
+│   ├── link-validator.test.ts
+│   └── workflow-smoke.test.ts
+├── package.json
+├── tsconfig.json
+├── vitest.config.ts
+└── .env                       # API key (not in git)
+```
+
+## Security Considerations
+
+- **Path Traversal**: All paths resolved with `realpathSync` and checked against docs directory
+- **Symlinks**: Followed to real target, then validated within boundary
+- **TOCTOU**: Filesystem operations use try-catch on read, not existence checks
+- **LLM Safety**: `targetRelativePath` never from LLM (computed deterministically)
+- **Error Recovery**: Unreadable files skipped with warnings, state only updated if complete
+
+## Limitations & Future Work
+
+### Current Limitations
+- Single batch of pages classified at a time (reindex is atomic)
+- Suggestions from LLM cannot be directly overridden (must be accepted/rejected as-is)
+- No conflict detection for overlapping link text
+
+### Potential Enhancements
+- Incremental reindex (update only changed files)
+- Manual suggestion override/editing interface
+- Analytics dashboard (link growth over time)
+- Integration with documentation platforms (Docusaurus, MkDocs)
+- Batch suggestion review UI
+
+## Testing the Agent
+
+Quick validation with fixture docs:
+
+```bash
+# Create test directory
+mkdir -p /tmp/test-docs/{reference,guides}
+
+# Add sample files
+cat > /tmp/test-docs/reference/fiber.md << 'EOF'
+---
+title: Fiber
+---
+A Fiber is a lightweight virtual thread managed by the ZIO runtime.
+EOF
+
+cat > /tmp/test-docs/guides/getting-started.md << 'EOF'
+---
+title: Getting Started
+---
+This guide helps you build concurrent programs.
+You will use Fiber to fork lightweight threads.
+EOF
+
+# Run workflow
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"/tmp/test-docs","mode":"reindex"}'
+
+# Process pages
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"/tmp/test-docs","mode":"autopilot"}'
+
+# View results
+cat /tmp/test-docs/guides/getting-started.md
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"/tmp/test-docs","mode":"report"}'
+```
+
+## Performance Notes
+
+- **Reindex**: O(n) walk + single LLM batch classification
+- **Step mode**: One page per invocation, ~500ms per page (includes LLM call)
+- **Autopilot**: ~30 pages/minute (depends on doc size and network)
+- **Token costs**: ~3000 tokens per page (~$0.015 with Claude Haiku 4.5)
+
+## Troubleshooting
+
+**"No index found. Run reindex first."**
+- Run `reindex` mode to build initial state
+
+**Links not applying**
+- Check `confidenceThreshold` in config (default: "high")
+- Use `report` mode to see confidence distribution
+- Lower threshold to `"medium"` in `.crossref-config.json`
+
+**Unreadable files warning**
+- Normal behavior for files with permission issues
+- Check file permissions: `ls -la docs/`
+
+**API key not found**
+- Ensure `.env` file exists with `ANTHROPIC_API_KEY=...`
+- Check it's not in `.gitignore` globally
+
+## Contributing
+
+This is a production-ready implementation. For improvements:
+1. Run tests: `npm test`
+2. Check types: `npx tsc --noEmit`
+3. Create pull request with spec compliance + quality review
+
+## License
+
+This project is part of the ZIO Skills collection. See LICENSE in the parent directory.
+
+## Support
+
+For issues or questions:
+- Check the [Flue documentation](https://flueframework.com/)
+- Review the [ZIO Skills project](https://github.com/zio/skills/)
+- Open an issue with reproduction steps
+
+---
+
+**Ready to improve your documentation?**
+
+```bash
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+```
