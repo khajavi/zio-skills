@@ -251,15 +251,10 @@ ${pageContent}`;
         continue;
       }
 
-      // Fallback: if agent provided empty anchorText, use the target's title
-      const anchorText = raw.anchorText?.trim() || (targetEntry.contextualTitle ?? targetEntry.title);
-      if (!anchorText) {
-        console.log(`[DEBUG] Skipping suggestion (no valid anchor text): ${raw.targetId}`);
+      if (!raw.anchorText || raw.anchorText.trim() === '') {
+        console.log(`[DEBUG] Skipping suggestion (empty anchorText): ${raw.targetId}`);
         continue;
       }
-
-      // Update the raw suggestion with the fallback anchor text
-      raw.anchorText = anchorText;
 
       let targetRelativePath = path.relative(
         path.dirname(pageEntry.absPath),
