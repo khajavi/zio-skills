@@ -9,3 +9,4 @@ pnpm-lock.yaml
 Thumbs.db
 .idea/
 .vscode/
+.worktrees/
