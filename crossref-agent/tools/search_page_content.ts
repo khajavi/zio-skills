@@ -22,8 +22,11 @@ export function createSearchPageContent(state: CrossrefState) {
       const searchTerm = args.searchTerm as string;
       const contextLines = (args.contextLines as number | undefined) ?? 2;
 
+      console.log(`[search_page_content] Searching for "${searchTerm}" in page "${pageId}" (context: ${contextLines} lines)`);
+
       const entry = state.index.find(e => e.id === pageId);
       if (!entry) {
+        console.log(`[search_page_content] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
           error: `Page ${pageId} not found in index`,
         });
@@ -51,6 +54,8 @@ export function createSearchPageContent(state: CrossrefState) {
           }
         }
 
+        console.log(`[search_page_content] Found ${occurrences.length} occurrences of "${searchTerm}" in "${pageId}"`);
+
         return JSON.stringify({
           pageId,
           searchTerm,
@@ -59,6 +64,7 @@ export function createSearchPageContent(state: CrossrefState) {
           occurrences: occurrences.slice(0, 5), // Limit to 5 snippets
         });
       } catch (e) {
+        console.log(`[search_page_content] ERROR reading page: ${e}`);
         return JSON.stringify({
           error: `Failed to read page: ${e}`,
         });

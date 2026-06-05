@@ -13,14 +13,19 @@ export function createGetAdjacentPages(state: CrossrefState) {
     execute: async (args: Record<string, any>) => {
       const pageId = args.pageId as string;
 
+      console.log(`[get_adjacent_pages] Getting adjacent pages for "${pageId}"`);
+
       const entry = state.index.find(e => e.id === pageId);
       if (!entry) {
+        console.log(`[get_adjacent_pages] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
           error: `Page ${pageId} not found in index`,
         });
       }
 
       const adjacentPages = entry.adjacentPages || [];
+      console.log(`[get_adjacent_pages] Found ${adjacentPages.length} adjacent page IDs: ${adjacentPages.join(', ')}`);
+
       const adjacentEntries = adjacentPages
         .map(id => state.index.find(e => e.id === id))
         .filter((e): e is typeof state.index[0] => !!e)
@@ -30,6 +35,8 @@ export function createGetAdjacentPages(state: CrossrefState) {
           path: e.path,
           description: e.description || null,
         }));
+
+      console.log(`[get_adjacent_pages] Resolved ${adjacentEntries.length} adjacent pages: ${adjacentEntries.map(e => e.title).join(', ')}`);
 
       return JSON.stringify({
         pageId,

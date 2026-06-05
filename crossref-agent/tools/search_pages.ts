@@ -17,6 +17,8 @@ export function createSearchPages(state: CrossrefState) {
       const query = (args.query as string).toLowerCase();
       const limit = (args.limit as number | undefined) ?? 5;
 
+      console.log(`[search_pages] Searching for "${query}" (limit: ${limit})`);
+
       // Score each page based on title and keywords match
       const scored = state.index.map(page => {
         let score = 0;
@@ -63,6 +65,8 @@ export function createSearchPages(state: CrossrefState) {
           keywords: s.page.keywords || [],
           score: s.score,
         }));
+
+      console.log(`[search_pages] Found ${results.length} results: ${results.map(r => `${r.title} (score: ${r.score})`).join(', ')}`);
 
       return JSON.stringify({
         query,

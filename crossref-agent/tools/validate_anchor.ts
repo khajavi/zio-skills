@@ -19,8 +19,11 @@ export function createValidateAnchor(state: CrossrefState) {
       const pageId = args.pageId as string;
       const anchorText = args.anchorText as string;
 
+      console.log(`[validate_anchor] Checking anchor "${anchorText}" in page "${pageId}"`);
+
       const entry = state.index.find(e => e.id === pageId);
       if (!entry) {
+        console.log(`[validate_anchor] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
           error: `Page ${pageId} not found in index`,
         });
@@ -29,11 +32,14 @@ export function createValidateAnchor(state: CrossrefState) {
       try {
         const content = fs.readFileSync(entry.absPath, 'utf-8');
         const headings = extractHeadings(content);
+        console.log(`[validate_anchor] Found ${headings.length} headings in "${pageId}"`);
 
         // Normalize anchor for matching
         const normalizedAnchor = anchorText.toLowerCase()
           .replace(/[^\w\s-]/g, '')
           .replace(/\s+/g, '-');
+
+        console.log(`[validate_anchor] Normalized anchor: "${normalizedAnchor}"`);
 
         // Check if anchor exists (exact or partial match)
         const found = headings.some(h =>
@@ -41,6 +47,8 @@ export function createValidateAnchor(state: CrossrefState) {
           h.slug.includes(normalizedAnchor) ||
           normalizedAnchor.includes(h.slug)
         );
+
+        console.log(`[validate_anchor] Anchor exists: ${found}`);
 
         return JSON.stringify({
           pageId,
@@ -52,6 +60,7 @@ export function createValidateAnchor(state: CrossrefState) {
           })),
         });
       } catch (e) {
+        console.log(`[validate_anchor] ERROR reading page: ${e}`);
         return JSON.stringify({
           error: `Failed to read page: ${e}`,
         });

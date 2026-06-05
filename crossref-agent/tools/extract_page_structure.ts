@@ -15,8 +15,11 @@ export function createExtractPageStructure(state: CrossrefState) {
     execute: async (args: Record<string, any>) => {
       const pageId = args.pageId as string;
 
+      console.log(`[extract_page_structure] Extracting structure for page "${pageId}"`);
+
       const entry = state.index.find(e => e.id === pageId);
       if (!entry) {
+        console.log(`[extract_page_structure] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
           error: `Page ${pageId} not found in index`,
         });
@@ -25,6 +28,9 @@ export function createExtractPageStructure(state: CrossrefState) {
       try {
         const content = fs.readFileSync(entry.absPath, 'utf-8');
         const headings = extractHeadings(content);
+
+        console.log(`[extract_page_structure] Extracted ${headings.length} headings from "${pageId}"`);
+        console.log(`[extract_page_structure] Headings: ${headings.map(h => h.text).join(', ')}`);
 
         return JSON.stringify({
           pageId,
@@ -35,6 +41,7 @@ export function createExtractPageStructure(state: CrossrefState) {
           })),
         });
       } catch (e) {
+        console.log(`[extract_page_structure] ERROR reading page: ${e}`);
         return JSON.stringify({
           error: `Failed to read page: ${e}`,
         });
