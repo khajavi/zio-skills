@@ -88,3 +88,43 @@ export async function extractMetadata(
 
   return { metadata, updatedContent };
 }
+
+/**
+ * Generate a contextual title for generic documentation page titles.
+ *
+ * Pages with titles like "Overview", "Introduction", "Index" lose meaning
+ * in See Also lists. This function uses the LLM to read the page description
+ * and generate a descriptive prefix, e.g., "STM Overview" instead of just "Overview".
+ *
+ * Note: Uses direct session.prompt() call like extractMetadata (Issue #3).
+ * Called during reindex only for pages with generic titles.
+ */
+export async function generateContextualTitle(
+  title: string,
+  description: string,
+  session: FlueSession
+): Promise<string> {
+  console.log(`[crossref] Generating contextual title for generic title "${title}"...`);
+
+  const prompt = `Given a documentation page with the generic title "${title}" and this description:
+
+"${description}"
+
+Generate a short, specific title (2–4 words) that clearly identifies the topic.
+
+Examples:
+  title="Introduction", description="STM enables composable atomic transactions..."  → "STM Introduction"
+  title="Overview", description="Fiber is a lightweight green thread in ZIO..."    → "Fiber Overview"
+  title="Guide", description="Complete guide to using Layers in ZIO..."             → "ZIO Layer Guide"
+
+Return ONLY the new title, nothing else.`;
+
+  const result = await session.prompt(prompt, {
+    result: v.string(),
+  });
+
+  const contextualTitle = result.data.trim();
+  console.log(`[crossref] Generated contextual title: "${contextualTitle}"`);
+
+  return contextualTitle;
+}

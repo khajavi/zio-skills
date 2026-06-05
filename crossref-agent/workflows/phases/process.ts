@@ -157,13 +157,13 @@ export async function processBatch(
 
     const minimalIndex = state.index.map(e => ({
       id: e.id,
-      title: e.title,
+      title: e.contextualTitle ?? e.title,
       path: e.path,
     }));
     const indexJson = JSON.stringify(minimalIndex);
 
     const pageList = state.index
-      .map(e => `${e.id} — ${e.title}`)
+      .map(e => `${e.id} — ${e.contextualTitle ?? e.title}`)
       .join('\n');
 
     const adjacentPagesInfo = pageEntry.adjacentPages.length > 0

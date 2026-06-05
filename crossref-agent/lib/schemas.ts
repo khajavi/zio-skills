@@ -10,6 +10,7 @@ export const PageIndexEntry = v.object({
   absPath: v.string(),
   description: v.optional(v.string()),
   keywords: v.optional(v.array(v.string())),
+  contextualTitle: v.optional(v.string()),
   existingLinkCount: v.number(),
   adjacentPages: v.optional(v.array(v.string()), []),
 });
@@ -22,6 +23,7 @@ export const PageIndexEntryMechanical = v.object({
   absPath: v.string(),
   description: v.optional(v.string()),
   keywords: v.optional(v.array(v.string())),
+  contextualTitle: v.optional(v.string()),
   existingLinkCount: v.number(),
   // Issue #1 fix: Include adjacentPages in persisted index
   adjacentPages: v.optional(v.array(v.string()), []),

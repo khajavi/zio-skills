@@ -9,6 +9,8 @@ import {
   extractExistingLinks,
   parseFrontmatter,
 } from '../../lib/markdown-parser.js';
+import { isGenericTitle } from '../../lib/title-utils.js';
+import { generateContextualTitle } from '../utils/metadata-utilities.js';
 import type { CrossrefState } from '../../lib/schemas.js';
 
 function walkDocs(docsDir: string, excludePatterns: string[]): string[] {
@@ -55,7 +57,7 @@ export async function reindex(
     : {};
   console.log(`[reindex] Loaded ${Object.keys(adjacentMap).length} pages from sidebars`);
 
-  const index = files.map(absPath => {
+  const index = await Promise.all(files.map(async absPath => {
     let content: string;
     try {
       content = fs.readFileSync(absPath, 'utf-8');
@@ -65,18 +67,29 @@ export async function reindex(
     }
     const rel = path.relative(docsDir, absPath);
     const fm = parseFrontmatter(content);
+    const title = extractTitle(content, path.basename(absPath, path.extname(absPath)));
+
+    let contextualTitle: string | undefined;
+    if (fm.description && isGenericTitle(title)) {
+      try {
+        contextualTitle = await generateContextualTitle(title, fm.description, session);
+      } catch (e) {
+        console.warn(`[reindex] Failed to generate contextual title for ${absPath}: ${e}`);
+      }
+    }
 
     return {
       id: pageIdFromPath(absPath, docsDir),
-      title: extractTitle(content, path.basename(absPath, path.extname(absPath))),
+      title,
       path: rel,
       absPath,
       description: fm.description || null,
       keywords: Array.isArray(fm.keywords) && fm.keywords.length > 0 ? fm.keywords : null,
+      contextualTitle: contextualTitle !== title ? contextualTitle : undefined,
       existingLinkCount: extractExistingLinks(content).length,
       adjacentPages: adjacentMap[pageIdFromPath(absPath, docsDir)] || [],
     };
-  }).filter(e => e !== null);
+  })).then(results => results.filter(e => e !== null));
 
   const currentPageIds = new Set(index.map(e => e.id));
   const orphanedCount = state.processed.length;
