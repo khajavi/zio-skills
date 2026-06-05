@@ -1,369 +1,489 @@
 # Architecture Overview
+
 This document serves as a critical, living template designed to equip agents with a rapid and comprehensive understanding of the codebase's architecture, enabling efficient navigation and effective contribution from day one. Update this document as the codebase evolves.
 
 ## 1. Project Structure
 
+Crossref Agent is a TypeScript-based documentation cross-reference assistant built on the Flue framework. It analyzes Markdown documentation to discover and insert cross-linking opportunities while maintaining code safety and confidence-based validation.
+
 ```
 crossref-agent/
 ├── agents/
-│   └── page-linker.ts              # Claude Haiku 4.5 agent (Flue-based)
-├── lib/
-│   ├── config-loader.ts            # Configuration management
-│   ├── markdown-parser.ts           # YAML frontmatter, headings, links extraction
-│   ├── migrate-state.ts            # State migration logic
-│   ├── schemas.ts                  # Valibot schema definitions
-│   ├── state-store.ts              # Persistent state (index.json, suggestions.json)
-│   └── title-utils.ts              # Title classification utilities
+│   └── page-linker.ts              # Flue agent profile (Claude Haiku 4.5)
+│
 ├── tools/
-│   ├── extract_page_structure.ts   # Extract page structure (Flue tool)
-│   ├── get_adjacent_pages.ts       # Get pages from sidebar (Flue tool)
-│   ├── read_doc.ts                 # Read documentation file (Flue tool)
-│   ├── search_page_content.ts      # Search content with context (Flue tool)
-│   ├── search_pages.ts             # Search page index (Flue tool)
-│   ├── validate_anchor.ts          # Validate anchor text (Flue tool)
-│   └── write_doc.ts                # Write documentation file (Flue tool)
+│   ├── search_pages.ts             # Query index by title/keywords/topic
+│   ├── search_page_content.ts       # Find terms and anchors in page prose
+│   ├── validate_anchor.ts           # Check if heading/anchor exists
+│   ├── extract_page_structure.ts    # Get full TOC and heading structure
+│   ├── get_adjacent_pages.ts        # Fetch pages in same directory
+│   ├── read_doc.ts                  # Async read markdown file
+│   └── write_doc.ts                 # Async write markdown file (with state persistence)
+│
+├── lib/
+│   ├── schemas.ts                   # Valibot data structures (SectionType, PageIndexEntry, LinkSuggestion, etc.)
+│   ├── state-store.ts               # Load/save index and suggestions JSON
+│   ├── config-loader.ts             # Parse .crossref-config.json
+│   ├── markdown-parser.ts           # Frontmatter, headings, safe zones (code blocks, inline code)
+│   ├── title-utils.ts               # Title normalization
+│   ├── migrate-state.ts             # State format migration for backwards compatibility
+│   └── migrate-state.test.ts        # Migration tests
+│
 ├── workflows/
-│   ├── crossref.ts                 # Main orchestration workflow
+│   ├── crossref.ts                  # Main entry point (4 modes: reindex, step, autopilot, report)
+│   │
 │   ├── phases/
-│   │   ├── reindex.ts              # Phase 1: Build/rebuild page index
-│   │   ├── process.ts              # Phase 2-4: Suggest, enrich, apply links
-│   │   └── report.ts               # Report generation
+│   │   ├── reindex.ts               # Mode: Build fresh index + LLM classification
+│   │   ├── process.ts               # Mode: Process pages, generate suggestions, apply links
+│   │   └── report.ts                # Mode: Coverage analysis, statistics
+│   │
 │   └── utils/
-│       ├── sidebar-parser.ts       # Parse sidebars.js for adjacency
-│       └── metadata-utilities.ts   # Contextual title generation
+│       ├── link-inserter.ts         # Insert inline links or See Also sections
+│       ├── link-validator.ts        # Validate path safety, no duplicates, anchor existence
+│       ├── confidence.ts            # Check if suggestion meets threshold
+│       ├── cost.ts                  # Estimate token cost (Claude pricing)
+│       ├── metadata-utilities.ts    # Extract title, summary, keywords, section type
+│       ├── sidebar-parser.ts        # Parse Docusaurus sidebars.js
+│       └── yaml.ts                  # Frontmatter manipulation
+│
 ├── skills/
 │   └── cross-linker/
-│       └── SKILL.md                # LLM instructions for page-linker agent
+│       └── SKILL.md                 # LLM instructions for agent (cross-linking strategy)
+│
 ├── tests/
-│   ├── link-inserter.test.ts       # Link insertion logic tests
-│   ├── link-validator.test.ts      # Path/symlink validation tests
-│   ├── markdown-parser.test.ts     # Markdown parsing tests
-│   ├── migration.test.ts           # State migration tests
-│   └── workflow-smoke.test.ts      # End-to-end workflow tests
-├── dist/                           # Compiled TypeScript (not in git)
-├── .env                            # Anthropic API key (not in git)
-├── .crossref-state/                # Runtime state directory (not in git)
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-├── README.md
-├── AGENTS.md                       # Agent configuration
-├── AGENT_RUNNING_GUIDE.md
-└── ARCHITECTURE.md                 # This file
+│   ├── markdown-parser.test.ts      # 19 tests: frontmatter, headings, links, safe zones
+│   ├── link-inserter.test.ts        # 11 tests: inline links, See Also, code-fence safety
+│   ├── link-validator.test.ts       # 4 tests: paths, symlinks, duplicates
+│   ├── migration.test.ts            # State format migration
+│   └── workflow-smoke.test.ts       # 9 end-to-end tests with fixture docs
+│
+├── package.json                     # Deps: @flue/runtime, valibot, dotenv
+├── tsconfig.json                    # TypeScript ES2022, NodeNext modules
+├── vitest.config.ts                 # Test runner configuration
+│
+├── README.md                        # User-facing documentation
+├── AGENTS.md                        # Agent configuration and payload guide
+├── AGENT_RUNNING_GUIDE.md           # Detailed execution troubleshooting
+└── ARCHITECTURE.md                  # This file
 ```
 
 ## 2. High-Level System Diagram
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                  CROSSREF AGENT SYSTEM FLOW                      │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Input: /docs (Markdown/MDX files)                              │
-│    ↓                                                             │
-│  ┌────────────────────────────────────────────────────────┐     │
-│  │ PHASE 1: REINDEX (mode: "reindex")                    │     │
-│  │ - Walk docs tree, extract metadata                    │     │
-│  │ - Parse sidebars.js for adjacent pages                │     │
-│  │ - Build searchable index of all pages                 │     │
-│  │ → Output: .crossref-state/index.json                  │     │
-│  └────────────────────────────────────────────────────────┘     │
-│    ↓                                                             │
-│  ┌────────────────────────────────────────────────────────┐     │
-│  │ PHASE 2: SUGGESTION GENERATION (mode: "step"/autopilot) │    │
-│  │ For each unprocessed page:                            │     │
-│  │   - Load page content from disk                       │     │
-│  │   - Invoke page-linker Claude agent with:            │     │
-│  │     * Full page index                                 │     │
-│  │     * Adjacent pages (from sidebar)                   │     │
-│  │     * Full page content                               │     │
-│  │   - Agent analyzes and returns JSON suggestions       │     │
-│  │ → Output: Raw suggestions from LLM                    │     │
-│  └────────────────────────────────────────────────────────┘     │
-│    ↓                                                             │
-│  ┌────────────────────────────────────────────────────────┐     │
-│  │ PHASE 3: ENRICHMENT & VALIDATION                      │     │
-│  │ - Find target pages in index                          │     │
-│  │ - Compute relative paths                             │     │
-│  │ - Check for duplicates in state.suggestions          │     │
-│  │ - Validate paths for safety (symlinks, traversal)    │     │
-│  │ → Output: state.suggestions (accumulated)            │     │
-│  └────────────────────────────────────────────────────────┘     │
-│    ↓                                                             │
-│  ┌────────────────────────────────────────────────────────┐     │
-│  │ PHASE 4: APPLICATION & STATE PERSISTENCE              │     │
-│  │ For high-confidence suggestions:                      │     │
-│  │   - Insert link into page (inline or See Also)        │     │
-│  │   - Write page to disk                                │     │
-│  │   - Mark suggestion as "applied" in state             │     │
-│  │ → Output: Updated .md/.mdx files on disk              │     │
-│  │ → Save: .crossref-state/suggestions.json              │     │
-│  └────────────────────────────────────────────────────────┘     │
-│    ↓                                                             │
-│  PHASE 5: REPORTING (mode: "report")                            │
-│  - Show coverage, link density, orphan detection                │
-│  - Token usage and cost tracking                                │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│ Documentation Directory                                               │
+│ ├── reference/fiber.md                                                │
+│ ├── guides/getting-started.md                                         │
+│ └── concepts/scope.md                                                 │
+└──────────────────────┬────────────────────────────────────────────────┘
+                       │
+                       ↓
+      ┌────────────────────────────────────┐
+      │  WORKFLOW: crossref.ts             │
+      │  Modes: reindex | step | autopilot │
+      │         | report                   │
+      └────────────────────────────────────┘
+                       │
+                ┌──────┴──────────┬─────────────┬──────────────┐
+                │                 │             │              │
+                ↓                 ↓             ↓              ↓
+        ┌──────────────┐  ┌─────────────┐ ┌──────────┐ ┌──────────────┐
+        │ REINDEX      │  │ STEP/AUTO   │ │ REPORT   │ │ STATE STORE  │
+        │              │  │             │ │          │ │              │
+        │ - Walk docs  │  │ - For each  │ │ - Show   │ │ - index.json │
+        │ - Extract    │  │   page:     │ │   link   │ │ - suggestions│
+        │   metadata   │  │   a. Load   │ │   density│ │   .json      │
+        │ - LLM        │  │   b. Call   │ │ - Orphan │ │ - Persistent │
+        │   classify   │  │      agent  │ │   pages  │ │              │
+        │   sections   │  │   c. Parse  │ │          │ │              │
+        │              │  │   d. Apply  │ │          │ │              │
+        │              │  │   e. Save   │ │          │ │              │
+        └──────────────┘  └─────────────┘ └──────────┘ └──────────────┘
+                                 │
+                                 ↓
+                    ┌────────────────────────┐
+                    │ AGENT: page-linker.ts  │
+                    │ Model: Claude Haiku 4.5│
+                    │                        │
+                    │ Skill: cross-linker    │
+                    │ (SKILL.md)             │
+                    └──────────┬─────────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    │                     │
+                    ↓                     ↓
+           ┌──────────────────┐ ┌──────────────────┐
+           │ TOOLS (Agent)    │ │ TOOLS (Workflow) │
+           │                  │ │                  │
+           │ - search_pages   │ │ - read_doc       │
+           │ - search_content │ │ - write_doc      │
+           │ - validate_anchor│ │                  │
+           │ - extract_struct │ │                  │
+           │ - adjacent_pages │ │                  │
+           │ - extract_meta   │ │                  │
+           └──────────────────┘ └──────────────────┘
+                    │                     │
+                    └─────────┬───────────┘
+                              │
+                              ↓
+                  ┌─────────────────────────┐
+                  │ Suggestion JSON from    │
+                  │ Agent (validated)       │
+                  │                         │
+                  │ { suggestions: [        │
+                  │   { targetId,           │
+                  │     anchorText,         │
+                  │     type,               │
+                  │     confidence }        │
+                  │ ]}                      │
+                  └─────────────────────────┘
+                              │
+                              ↓
+                  ┌─────────────────────────┐
+                  │ Validation + Insertion  │
+                  │ (process.ts)            │
+                  │                         │
+                  │ - Check path safety     │
+                  │ - Check duplicates      │
+                  │ - Filter by confidence  │
+                  │ - Insert links in file  │
+                  └─────────────────────────┘
+                              │
+                              ↓
+                  ┌─────────────────────────┐
+                  │ Updated Markdown Files  │
+                  │ + State Persistence     │
+                  │                         │
+                  │ .crossref-state/        │
+                  │ ├── index.json          │
+                  │ └── suggestions.json    │
+                  └─────────────────────────┘
 ```
 
 ## 3. Core Components
 
-### 3.1. Orchestration Layer
+### 3.1. Main Workflow Orchestrator
 
-**workflows/crossref.ts**
-- Main entry point that routes between execution modes
-- Modes: `reindex` (build index), `step` (process incrementally), `autopilot` (process all), `report` (analyze coverage)
-- Initializes the Flue harness with page-linker agent
-- Loads/saves state, coordinates phases
-- Payload params: `docsDir`, `mode`, `batchSize`, `targetFile`, `targetDir`
+**Name:** Crossref Workflow (`workflows/crossref.ts`)
 
-### 3.2. Workflow Phases
+**Description:** Entry point for the agent system. Dispatches execution to four distinct modes based on `payload.mode`, managing state lifecycle and LLM session coordination.
 
-**workflows/phases/reindex.ts** (Phase 1)
-- Walks docs directory respecting `excludePatterns`
-- Extracts metadata: title, description, keywords from YAML frontmatter
-- Classifies section type (reference/guide/tutorial/overview/other) via LLM
-- Parses sidebars.js for adjacent page relationships
-- Builds searchable index with `id`, `title`, `path`, `absPath`, `description`, `keywords`, `sectionType`
-- Resets processed array so all pages analyzed fresh
-- Persists state to `.crossref-state/`
+**Technologies:** Flue Framework, TypeScript
 
-**workflows/phases/process.ts** (Phases 2-4)
-- Batch processor for unprocessed or targeted pages
-- For each page:
-  - Loads full content from disk
-  - Invokes page-linker Claude agent (Flue task)
-  - Receives suggestions JSON: `[{ targetId, anchorText, type, confidence, reasoning }]`
-  - Enriches with computed `targetRelativePath` (never from LLM)
-  - Deduplicates against existing state.suggestions
-  - Validates paths for safety and correctness
-  - Applies high-confidence (≥threshold) links directly to disk
-  - Queues medium/low-confidence for human review
-  - Saves state after each page
+**Key Responsibilities:**
+- Load/initialize state from disk
+- Route to correct phase (reindex, step, autopilot, report)
+- Maintain LLM session across page batches
+- Persist state after each operation
 
-**workflows/phases/report.ts** (Phase 5)
-- Analyzes state for coverage metrics
-- Shows: total pages, processed %, pending suggestions, link density by section type
-- Lists orphan pages (no incoming links)
-- Summarizes token usage and cost
-- Outputs human-readable report
+**Interface:**
+```typescript
+payload: {
+  docsDir: string,           // Required: path to docs directory
+  mode: 'reindex' | 'step' | 'autopilot' | 'report',
+  batchSize?: number,        // Optional: pages per batch (default 1)
+  targetFile?: string,       // Optional: specific file to process
+  targetDir?: string         // Optional: process directory recursively
+}
+```
 
-### 3.3. Agent Layer
+---
 
-**agents/page-linker.ts**
-- Flue-based Claude Haiku 4.5 agent
-- Single responsibility: analyze a page and identify cross-linking opportunities
-- Uses `cross-linker` skill for LLM instructions
-- Invoked once per page during Phase 2
-- Returns structured suggestions meeting the output schema
+### 3.2. Agent
 
-**skills/cross-linker/SKILL.md**
-- LLM instructions for page-linker agent
-- Teaches agent to identify inline and See Also linking opportunities
-- Covers anchor text selection, confidence levels, and validation
-- Defines helper tools available to the agent
+**Name:** Page Linker (`agents/page-linker.ts`)
 
-### 3.4. Tool Layer (Flue Tools)
+**Description:** Flue-based agent powered by Claude Haiku 4.5. Receives a page's full content and documentation index, then reasons about cross-linking opportunities using the cross-linker skill.
 
-Tools are available to Claude during page-linker execution:
+**Technologies:** Anthropic API (Claude), Flue framework
 
-- **search_pages.ts** — Query index by title/keywords, return top 5 matches
-- **extract_page_structure.ts** — Get page headings, sections, metadata
-- **get_adjacent_pages.ts** — Retrieve pages from sidebar for current page
-- **search_page_content.ts** — Find text snippets with context (for anchor validation)
-- **read_doc.ts** — Read full document content from disk
-- **write_doc.ts** — Write document to disk (not used during suggestion phase)
-- **validate_anchor.ts** — Verify anchor text exists in prose (not code/frontmatter)
+**Capabilities:**
+- Analyzes page content for cross-linking opportunities
+- Uses tools to search index, validate anchors, extract metadata
+- Returns structured JSON suggestions (inline links + See Also)
+- Supports confidence levels (high/medium/low)
 
-### 3.5. Infrastructure Layer
+**Skill:** `skills/cross-linker/SKILL.md` — Detailed instructions on how to identify cross-references, select anchor text, and format suggestions.
 
-**lib/schemas.ts**
-- Valibot schema definitions for all data structures
-- Key types: `PageIndexEntry`, `LinkSuggestion`, `CrossrefState`, `CrossrefConfig`
-- Section types: reference, guide, tutorial, overview, other
-- Confidence levels: low, medium, high
-- Link types: inline, see_also
-- Suggestion statuses: pending, applied, skipped
+---
 
-**lib/state-store.ts**
-- Persistent state management using two JSON files:
-  - `.crossref-state/index.json` — Page index (built in Phase 1)
-  - `.crossref-state/suggestions.json` — Processed pages, suggestions, token tracking
-- Functions: `loadState()`, `saveState()`, `loadIndex()`, `loadSuggestions()`
-- Handles backward compatibility and state migration
-- Validates critical fields (absPath, id) with error recovery
+### 3.3. Workflow Phases
 
-**lib/config-loader.ts**
-- Loads `.crossref-config.json` from docs parent directory
-- Options: `excludePatterns`, `maxLinksPerPage`, `maxSeeAlsoSuggestion`, `confidenceThreshold`
-- Provides sensible defaults
+#### 3.3.1. Reindex Phase (`workflows/phases/reindex.ts`)
 
-**lib/markdown-parser.ts**
-- Pure parsing utilities (no side effects)
-- Functions: `parseFrontmatter()`, `extractTitle()`, `extractExistingLinks()`, `parseHeadings()`
-- Identifies safe zones (code fences, inline code) to protect from link insertion
+**Purpose:** Build a fresh documentation index and classify all pages by section type.
 
-**lib/title-utils.ts**
-- Classifies if a title is generic (e.g., "Fiber", "Resource")
-- Used to determine if contextual title generation is needed
+**Process:**
+1. Walk docs directory (respecting `excludePatterns`)
+2. Extract metadata: title, summary, keywords from frontmatter
+3. Count existing internal links in each page
+4. Batch-classify all pages via LLM (section type: reference/guide/tutorial/overview/other)
+5. Compute adjacency (pages in same directory)
+6. Persist to `.crossref-state/index.json`
+7. Reset `processed` array so all pages become candidates
 
-## 4. Data Stores
+**Output:** Complete page index with metadata and section types.
 
-### State Files (.crossref-state/)
+#### 3.3.2. Process Phase (`workflows/phases/process.ts`)
 
-**.crossref-state/index.json**
-- Page index persisted from Phase 1
-- Schema: `{ indexBuiltAt, docsDir, index: PageIndexEntry[] }`
-- Each entry: `{ id, title, path, absPath, description?, keywords?, contextualTitle?, existingLinkCount, adjacentPages }`
-- Built once per reindex; immutable between step runs
+**Purpose:** Analyze unprocessed pages, generate suggestions, and apply high-confidence links.
 
-**.crossref-state/suggestions.json**
-- Suggestions, processed pages, token tracking
-- Schema: `{ processed: string[], suggestions: LinkSuggestion[], sectionType: {}, tokens }`
-- Accumulated across step runs
-- Grows as suggestions are generated and applied
+**Process per page:**
+1. Find next unprocessed page (or use `targetFile`/`targetDir`)
+2. Load page content from disk
+3. Prepare context: page index, adjacent pages, full content
+4. Call page-linker agent to analyze
+5. Parse and validate suggestions (schema validation)
+6. For each suggestion:
+   - Validate path safety (no traversal, symlink-safe)
+   - Check if already linked (deduplication)
+   - Check if anchor exists in target
+   - Apply if high-confidence, queue if medium/low
+7. Update source page with inserted links
+8. Mark page as processed
+9. Save state
 
-### Configuration
+**Output:** Updated markdown files + accumulated suggestions in state.
 
-**.crossref-config.json** (optional, in docs parent directory)
+#### 3.3.3. Report Phase (`workflows/phases/report.ts`)
+
+**Purpose:** Analyze coverage and generate statistics.
+
+**Metrics:**
+- **Coverage:** Total pages, % processed, pending count
+- **Suggestions:** Applied/skipped/pending counts, confidence distribution
+- **Link Density:** Average outgoing links per page by section type
+- **Orphans:** Pages with zero incoming links
+- **Token Spend:** Cumulative cost to date
+
+**Output:** Human-readable coverage report (no file modifications).
+
+---
+
+### 3.4. Tools (Agent-Accessible)
+
+**Name:** Agent Tools
+
+**Description:** Flue tools exposed to the LLM agent for information retrieval and validation during reasoning.
+
+**Tools:**
+
+| Tool                     | Purpose                              | Parameters                                                |
+|--------------------------|--------------------------------------|-----------------------------------------------------------|
+| `search_pages`           | Find pages by title/keywords/topic   | `query` (string), `limit` (number, default 5)             |
+| `search_page_content`    | Find phrases/anchors in page prose   | `targetId` (string), `terms` (string[]), `limit` (number) |
+| `validate_anchor`        | Check if heading exists              | `targetId` (string), `anchorText` (string)                |
+| `extract_page_structure` | Get full TOC                         | `targetId` (string)                                       |
+| `get_adjacent_pages`     | Find pages in same section           | `targetId` (string)                                       |
+| `extract_page_metadata`  | Extract missing description/keywords | `targetId` (string)                                       |
+
+---
+
+### 3.5. Tools (Workflow-Accessible)
+
+**Name:** Workflow Tools
+
+**Description:** Flue tools for document I/O, called by workflow phases (not exposed to LLM).
+
+**Tools:**
+
+| Tool        | Purpose                                  |
+|-------------|------------------------------------------|
+| `read_doc`  | Read markdown file (with error handling) |
+| `write_doc` | Write markdown file (persists to disk)   |
+
+---
+
+### 3.6. Data Structures & Schemas
+
+**Location:** `lib/schemas.ts`
+
+**Key Types:**
+
+```typescript
+// Page metadata
+PageIndexEntry {
+  id: string,                    // Unique ID (file path slug)
+  title: string,                 // Page title
+  path: string,                  // Relative path from docs
+  absPath: string,               // Absolute file path
+  description?: string,          // From frontmatter or extracted
+  keywords?: string[],           // From frontmatter or extracted
+  contextualTitle?: string,      // Alternative title
+  existingLinkCount: number,     // Links already in page
+  adjacentPages?: string[]       // IDs of same-section pages
+}
+
+// Suggestion from agent
+LinkSuggestion {
+  sourceId: string,              // Page being analyzed
+  targetId: string,              // Target page (from index)
+  targetTitle: string,           // Target page title
+  targetRelativePath: string,    // Computed relative path (not from LLM)
+  anchorText: string,            // 1-5 word phrase to link
+  description?: string,          // Why it's related (See Also)
+  type: 'inline' | 'see_also',   // Link placement
+  confidence: 'high' | 'medium' | 'low',
+  reasoning: string,             // Why this link was suggested
+  status: 'pending' | 'applied' | 'skipped'
+}
+
+// Full state
+CrossrefState {
+  indexBuiltAt: string,          // ISO timestamp
+  docsDir: string,               // Docs path
+  index: PageIndexEntry[],       // All pages
+  processed: string[],           // IDs of processed pages
+  suggestions: LinkSuggestion[], // Accumulated suggestions
+  tokens: {                      // Token tracking
+    inputTotal: number,
+    outputTotal: number,
+    runningCost: number
+  }
+}
+```
+
+---
+
+### 3.7. State Management
+
+**Location:** `lib/state-store.ts`
+
+**Persistence:**
+- State split into `.crossref-state/index.json` (pages) and `.crossref-state/suggestions.json` (suggestions)
+- Backward-compatible migration for old `state.json` format
+- Atomic writes with error recovery (silently skips corrupt files)
+
+**Loading:**
+- Lazy initialization: empty state if no files exist
+- Parse with Valibot for type safety
+- Fall back to empty on parse error (prevents crashes)
+
+**Saving:**
+- Create `.crossref-state/` directory if missing
+- Write index and suggestions as separate JSON files
+- Suggestions accumulate (never truncated)
+
+---
+
+### 3.8. Markdown Parsing & Safety
+
+**Location:** `lib/markdown-parser.ts`
+
+**Capabilities:**
+- Extract YAML frontmatter (preserve untouched)
+- Parse headings and outline
+- Identify safe zones: code fences (`` ``` ``, `~~~`), inline code (`` ` ``)
+- Find existing links
+- Safe phrase matching (case-insensitive find, exact-case replacement)
+
+**Safety Guarantees:**
+- Links inserted only in prose (not headings, code, frontmatter)
+- Code blocks fully protected (never modified)
+- Inline code protected (never modified)
+- Phrase matching validates complete words (not substrings)
+
+---
+
+### 3.9. Link Insertion & Validation
+
+**Location:** `workflows/utils/link-inserter.ts`, `workflows/utils/link-validator.ts`
+
+**Link Inserter:**
+- Insert inline links: `` `[Fiber](./path.md)` `` in prose
+- Insert See Also sections at end of page with format:
+  ```markdown
+  ## See Also
+  - [Related Topic](./path.md) — Description
+  ```
+- Fallback: find partial phrase matches if exact doesn't exist
+
+**Link Validator:**
+- Path safety: resolve symlinks, check within docs boundary
+- Duplicate detection: verify anchor not already linked in page
+- Anchor validation: confirm heading/section exists in target
+- TOCTOU safety: read files, don't check then act
+
+---
+
+### 3.10. Configuration
+
+**Location:** `lib/config-loader.ts`
+
+**File:** `.crossref-config.json` (in parent of docs)
+
+**Options:**
 ```json
 {
-  "excludePatterns": ["node_modules", ".github", "archived"],
+  "excludePatterns": ["node_modules", ".github"],
   "maxLinksPerPage": 5,
-  "maxSeeAlsoSuggestion": 3,
   "confidenceThreshold": "high"
 }
 ```
 
-## 5. External Integrations / APIs
+**Defaults:** `[]`, `5`, `"high"`
 
-### Anthropic Claude API
-- **Model**: Claude Haiku 4.5 (`anthropic/claude-haiku-4-5`)
-- **Usage**: Page-linker agent calls Claude once per page to analyze linking opportunities
-- **Tokens tracked**: Input tokens (prompt), output tokens (response), cumulative cost
-- **Authentication**: Via `ANTHROPIC_API_KEY` environment variable in `.env`
+---
 
-### Flue Framework
-- **Purpose**: Agent runtime and orchestration
-- **Version**: ^0.8.1
-- **Core concepts**:
-  - Agent: page-linker (Claude-based)
-  - Skills: cross-linker (LLM instructions)
-  - Tools: Helper functions invoked during agent execution
-  - Session: Maintains context across multiple agent invocations
-  - Harness: Coordinates initialization and execution
 
-## 6. Deployment & Infrastructure
+---
 
-### Runtime Environment
-- **Platform**: Node.js 18+ (ES2022 target)
-- **Language**: TypeScript 5.4+
-- **Build**: TypeScript compiler (`tsc`), output to `dist/`
-- **Execution**: `flue run workflows/crossref.ts --target node`
+## 4. Data Stores
 
-### Invocation Methods
-1. **CLI** (Flue CLI): `flue run crossref --target node --payload '{...}'`
-2. **Programmatic** (via Flue runtime): Import and invoke `run({ init, payload })`
+### 4.1. Index Store
 
-### State Persistence
-- Stored locally in `.crossref-state/` (directory created on first run)
-- No remote storage required; state is tied to single docs directory
-- State migration handles version upgrades automatically
+**Name:** Documentation Index (`.crossref-state/index.json`)
 
-### Environment
-- **API Key**: Anthropic key in `.env` (not committed)
-- **Docs Directory**: Specified per invocation in payload
-- **Config**: Optional `.crossref-config.json` in parent of docs directory
+**Type:** JSON
 
-## 7. Security Considerations
+**Purpose:** Metadata for all discovered pages, enabling fast search and adjacency lookup.
 
-### Path Safety
-- **Symlink handling**: All paths resolved with `realpathSync()` to real target
-- **Boundary checking**: Resolved paths validated to exist within docs directory
-- **Traversal protection**: Relative paths computed and validated (no `../../../` escapes)
+**Key Collections:**
+- `index[]` — Array of `PageIndexEntry` objects
+- Each entry contains: id, title, path, description, keywords, sectionType, adjacentPages
 
-### LLM Output Validation
-- **Schema validation**: All LLM outputs validated against Valibot schemas before persistence
-- **Path safety**: `targetRelativePath` computed deterministically in code, never accepted from LLM
-- **Anchor text**: Verified to exist in document prose (not code blocks or frontmatter)
+### 4.2. Suggestions Store
 
-### Filesystem Safety
-- **TOCTOU protection**: Operations use try-catch on actual file reads, not existence checks
-- **Error recovery**: Unreadable files skipped with warnings; state only updated if complete
-- **Permissions**: File I/O respects OS-level permissions; graceful failures if unreadable
+**Name:** Link Suggestions (`.crossref-state/suggestions.json`)
 
-## 8. Development & Testing Environment
+**Type:** JSON
 
-### Testing Framework
-- **Runner**: Vitest 3.0+
-- **Test files**: `tests/**/*.test.ts`
-- **Commands**: `npm test` (run once), `npm test:watch` (continuous)
+**Purpose:** Accumulates all suggestions (applied, pending, skipped) for review and analytics.
 
-### Test Coverage
-- **markdown-parser.test.ts** (19 tests) — Frontmatter, headings, links, safe zones
-- **link-inserter.test.ts** (11 tests) — Inline and See Also insertion, code-fence safety
-- **link-validator.test.ts** (4 tests) — Path validation, symlinks, duplicates
-- **workflow-smoke.test.ts** (9 tests) — End-to-end workflow with fixture docs
-- **migration.test.ts** (16 tests) — State migration logic
+**Key Collections:**
+- `suggestions[]` — Array of `LinkSuggestion` objects
+- Each entry contains: sourceId, targetId, anchorText, type, confidence, status
 
-### Type Checking
-- Command: `npx tsc --noEmit`
-- Strict mode enabled in `tsconfig.json`
+## 5. Deployment & Infrastructure
 
-### Development Commands
-- `npm run build` — Compile TypeScript to `dist/`
-- `npm test` — Run all tests once
-- `npm test:watch` — Run tests in watch mode
-- `flue run crossref --target node` — Execute workflow locally
+**Architecture:** Headless workflow executor
 
-## 9. Future Considerations / Roadmap
+**Typical Usage:**
+- Developer runs: `npx flue run crossref --target node --payload '{...}'`
+- CI/CD can invoke with payload parameters
 
-### Known Limitations
-- Reindex is atomic (processes all pages at once; no incremental reindex)
-- LLM suggestions cannot be manually overridden mid-workflow
-- No conflict detection for overlapping anchor text in same page
-- No analytics dashboard for link growth over time
+## 6. Development & Testing Environment
 
-### Potential Enhancements
-- **Incremental reindex**: Update only changed files (hash-based)
-- **Suggestion override UI**: Manual editing/acceptance interface
-- **Analytics**: Track link density changes, coverage trends
-- **Platform integration**: Native plugins for Docusaurus, MkDocs, Markdown sites
-- **Batch review UI**: Visual interface for reviewing medium/low-confidence suggestions
-- **Link conflict resolution**: Detect and resolve overlapping anchor text
+**Local Setup:**
+```bash
+# Install dependencies
+npm install
 
-### Scalability Notes
-- Current performance: ~30 pages/minute with Haiku 4.5
-- Cost: ~$0.015 per page (~3000 tokens per analysis)
-- Token batching: Single LLM call per page (not batched across pages)
-- Future: Consider batch classification of metadata for reindex phase
+# Build TypeScript
+npm run build
 
-## 10. Project Identification
+# Create .env with API key
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 
-| Attribute | Value |
-|-----------|-------|
-| **Project Name** | Crossref Agent |
-| **Description** | Flue-based TypeScript agent that automatically discovers and creates cross-references between pages in Markdown documentation |
-| **Repository** | https://github.com/zio/skills/tree/main/crossref-agent |
-| **Version** | 0.1.0 |
-| **Contact** | Milad Khajavi (milad.khajavi@ziverge.com) |
-| **Last Updated** | 2026-06-05 |
-| **License** | Part of ZIO Skills (see parent LICENSE) |
+# Run tests
+npm test
+```
 
-## 11. Glossary / Acronyms
+**Testing Frameworks:**
+- **Vitest** — Test runner and assertion library
+- **Fixtures** — Test docs in-memory or temporary directories
 
-| Term | Definition |
-|------|-----------|
-| **Anchor Text** | The visible text of a hyperlink (e.g., "Fiber" in `[Fiber](./path.md)`) |
-| **Adjacent Pages** | Pages in the same section/directory; relationship derived from sidebar structure |
-| **Confidence Level** | Assessment of link quality: high (title match/central), medium (conceptual overlap), low (tangential) |
-| **Contextual Title** | AI-generated improved title for generic page titles (e.g., "Service" → "Service Lifecycle Patterns") |
-| **Frontmatter** | YAML metadata block at top of Markdown file (between `---` delimiters) |
-| **Inline Link** | Hyperlink embedded in prose (e.g., `[Fiber](path.md)` within a sentence) |
-| **See Also** | Section at end of page with related links (e.g., "- [Fiber](path.md) — Lightweight virtual thread") |
-| **Section Type** | Classification of page (reference, guide, tutorial, overview, other) |
-| **TOCTOU** | Time-of-check to time-of-use; filesystem race condition pattern |
-| **Valibot** | TypeScript schema validation library used for runtime type checking |
-| **Flue** | Agent orchestration framework for building Claude-based agents with skills and tools |
-| **Haiku 4.5** | Fast, low-cost Claude model used for page-linker agent |
+**Code Quality:**
+- **TypeScript strict mode** — All source files
+- **Valibot schemas** — Runtime validation
+- **No linter** — Relies on type checking
