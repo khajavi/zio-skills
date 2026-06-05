@@ -186,14 +186,16 @@ ${indexJson}
 ${adjacentPagesInfo}
 ${codeBlockContext}
 
-When making links:
-- INLINE links: Find name in page. Link it.
-  - Link bare thing: "Ref", "map", "Option". Good.
-  - Link thing with stuff in ( ): "Ref.make(0)", "foo(x)". BAD. No link.
-  - Link thing without stuff: "Ref.make", "map", "atomically". Good.
-- SEE ALSO links: Use page name from list. Must have name. Never empty.
-- Find code word. Find matching page. Link them.
-- Code say "ZIO.acquire"? Link to acquire page. Simple.
+When generating suggestions:
+- For INLINE links: anchorText is the text to search for within this page (e.g., "ZIO", "TRef", "STM.atomically")
+  - ONLY link bare names, methods, types, or operators WITHOUT arguments/parentheses
+  - NEVER suggest inline links for function calls with arguments (e.g., "Ref.make(0)", "foo(x, y)")
+  - Bare names/methods are fine: "Ref.make", "List.map", "Option", "assertEqual"
+- For SEE ALSO links: anchorText must be the page title from the index above (use the title shown in the page list)
+- Always provide a non-empty anchorText for See Also suggestions
+- Use code block technical terms to identify related pages
+- Example: If code shows ZIO.acquireRelease, suggest resource management/acquire-release pages
+- Prefer pages that document these code concepts
 
 Page being analyzed (id: ${pageEntry.id}):
 ${pageContent}`;
