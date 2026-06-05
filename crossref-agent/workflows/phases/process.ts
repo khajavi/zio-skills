@@ -19,7 +19,7 @@ import {
   createValidateAnchorTool,
   createExtractPageStructureTool,
   createGetAdjacentPagesTool,
-} from '../../tools/metadata-extractor.js';
+} from '../../tools/metadata-utilities.js';
 import { createSearchPagesTool } from '../../tools/page-search.js';
 import { createContentSearchTool } from '../../tools/content-search.js';
 import {
