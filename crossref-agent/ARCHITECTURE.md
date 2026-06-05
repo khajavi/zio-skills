@@ -16,9 +16,7 @@ crossref-agent/
 │   ├── search_page_content.ts       # Find terms and anchors in page prose
 │   ├── validate_anchor.ts           # Check if heading/anchor exists
 │   ├── extract_page_structure.ts    # Get full TOC and heading structure
-│   ├── get_adjacent_pages.ts        # Fetch pages in same directory
-│   ├── read_doc.ts                  # Async read markdown file
-│   └── write_doc.ts                 # Async write markdown file (with state persistence)
+│   └── get_adjacent_pages.ts        # Fetch pages in same directory
 │
 ├── lib/
 │   ├── schemas.ts                   # Valibot data structures (SectionType, PageIndexEntry, LinkSuggestion, etc.)
@@ -109,22 +107,18 @@ crossref-agent/
                     │ (SKILL.md)             │
                     └──────────┬─────────────┘
                                │
-                    ┌──────────┴──────────┐
-                    │                     │
-                    ↓                     ↓
-           ┌──────────────────┐ ┌──────────────────┐
-           │ TOOLS (Agent)    │ │ TOOLS (Workflow) │
-           │                  │ │                  │
-           │ - search_pages   │ │ - read_doc       │
-           │ - search_content │ │ - write_doc      │
-           │ - validate_anchor│ │                  │
-           │ - extract_struct │ │                  │
-           │ - adjacent_pages │ │                  │
-           │ - extract_meta   │ │                  │
-           └──────────────────┘ └──────────────────┘
-                    │                     │
-                    └─────────┬───────────┘
-                              │
+                               ↓
+                    ┌──────────────────────┐
+                    │ TOOLS (Agent)        │
+                    │                      │
+                    │ - search_pages       │
+                    │ - search_content     │
+                    │ - validate_anchor    │
+                    │ - extract_struct     │
+                    │ - adjacent_pages     │
+                    │ - extract_meta       │
+                    └──────────────────────┘
+                               │
                               ↓
                   ┌─────────────────────────┐
                   │ Suggestion JSON from    │
@@ -277,24 +271,11 @@ payload: {
 | `get_adjacent_pages`     | Find pages in same section           | `targetId` (string)                                       |
 | `extract_page_metadata`  | Extract missing description/keywords | `targetId` (string)                                       |
 
----
-
-### 3.5. Tools (Workflow-Accessible)
-
-**Name:** Workflow Tools
-
-**Description:** Flue tools for document I/O, called by workflow phases (not exposed to LLM).
-
-**Tools:**
-
-| Tool        | Purpose                                  |
-|-------------|------------------------------------------|
-| `read_doc`  | Read markdown file (with error handling) |
-| `write_doc` | Write markdown file (persists to disk)   |
+**Note on File I/O:** Document reading and writing is performed directly in workflow phases (`workflows/phases/process.ts`) using Node.js `fs.readFileSync` and `fs.writeFileSync`. These operations include path safety validation (realpath checks, boundary enforcement) identical to what dedicated Flue tools would provide, so separate tool definitions are unnecessary.
 
 ---
 
-### 3.6. Data Structures & Schemas
+### 3.5. Data Structures & Schemas
 
 **Location:** `lib/schemas.ts`
 
@@ -345,7 +326,7 @@ CrossrefState {
 
 ---
 
-### 3.7. State Management
+### 3.6. State Management
 
 **Location:** `lib/state-store.ts`
 
@@ -366,7 +347,7 @@ CrossrefState {
 
 ---
 
-### 3.8. Markdown Parsing & Safety
+### 3.7. Markdown Parsing & Safety
 
 **Location:** `lib/markdown-parser.ts`
 
@@ -385,7 +366,7 @@ CrossrefState {
 
 ---
 
-### 3.9. Link Insertion & Validation
+### 3.8. Link Insertion & Validation
 
 **Location:** `workflows/utils/link-inserter.ts`, `workflows/utils/link-validator.ts`
 
@@ -406,7 +387,7 @@ CrossrefState {
 
 ---
 
-### 3.10. Configuration
+### 3.9. Configuration
 
 **Location:** `lib/config-loader.ts`
 
