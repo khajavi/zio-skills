@@ -18,8 +18,8 @@ import {
 import { createValidateAnchorTool } from '../../tools/validate_anchor.js';
 import { createExtractPageStructureTool } from '../../tools/extract_page_structure.js';
 import { createGetAdjacentPagesTool } from '../../tools/get_adjacent_pages.js';
-import { createSearchPagesTool } from '../../tools/page-search.js';
-import { createContentSearchTool } from '../../tools/content-search.js';
+import { createSearchPagesTool } from '../../tools/search_pages.js';
+import { createContentSearchTool } from '../../tools/search_page_content.js';
 import {
   PageAnalysisOutput,
   type CrossrefState,
