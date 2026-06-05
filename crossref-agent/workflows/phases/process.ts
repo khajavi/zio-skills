@@ -186,7 +186,10 @@ ${indexJson}
 ${adjacentPagesInfo}
 ${codeBlockContext}
 
-When generating See Also suggestions:
+When generating suggestions:
+- For INLINE links: anchorText is the text to search for within this page (e.g., "ZIO", "TRef", "STM.atomically")
+- For SEE ALSO links: anchorText must be the page title from the index above (use the title shown in the page list)
+- Always provide a non-empty anchorText for See Also suggestions
 - Use code block technical terms to identify related pages
 - Example: If code shows ZIO.acquireRelease, suggest resource management/acquire-release pages
 - Prefer pages that document these code concepts
