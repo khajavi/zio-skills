@@ -28,6 +28,7 @@ import {
   type LinkSuggestion,
 } from '../../tools/schemas.js';
 import { updateFrontmatter } from '../utils/yaml.js';
+import { extractMetadata } from '../utils/metadata-utilities.js';
 import { estimateCost } from '../utils/cost.js';
 import { meetsThreshold } from '../utils/confidence.js';
 import { printIterationSummary } from './report.js';
@@ -146,44 +147,11 @@ export async function processBatch(
       Array.isArray(pageFrontmatter.keywords) &&
       pageFrontmatter.keywords.length > 0;
     if (!hasBothFields) {
-      console.log(`[crossref] Extracting missing metadata for ${pageEntry.id}...`);
       try {
-        const metadataResult = await session.prompt(
-          `Extract metadata from this documentation page.
-
-Page title: ${pageEntry.title}
-Page path: ${pageEntry.path}
-
-Content:
-${pageContent}
-
-Return ONLY valid JSON:
-{
-  "description": "one-sentence, concisely at most 150-160 characters",
-  "keywords": ["3-7 meaningful keyword phrases (1-3 words each, not single fragments)"]
-}
-
-Keyword guidelines:
-- Use compound phrases: "Console Service" not "Console"
-- Use domain terminology: "Environment Variable" not "environment"
-- Make keywords meaningful on their own: "System Properties" not "properties"
-- Avoid generic single words: use "built-in services" not "services" or "built-in"
-- Focus on what users would search for`,
-          {
-            result: v.object({
-              description: v.string(),
-              keywords: v.array(v.string()),
-            })
-          }
-        );
-
-        const metadata = metadataResult.data;
-        const updatedContent = updateFrontmatter(pageContent, metadata);
-        fs.writeFileSync(pageEntry.absPath, updatedContent, 'utf-8');
-        pageContent = updatedContent;
-        pageEntry.description = metadata.description;
-        pageEntry.keywords = metadata.keywords;
-        console.log(`[crossref] Metadata extracted and written for ${pageEntry.id}`);
+        const result = await extractMetadata(pageEntry, pageContent, session);
+        pageContent = result.updatedContent;
+        pageEntry.description = result.metadata.description;
+        pageEntry.keywords = result.metadata.keywords;
       } catch (e) {
         console.warn(`[crossref] Failed to extract metadata for ${pageEntry.id}:`, e);
       }
@@ -259,61 +227,15 @@ ${pageContent}`;
     }
 
     for (const target of seeAlsoTargets) {
-      console.log(`[crossref] Extracting metadata for See Also target: ${target.id}`);
       try {
         const targetContent = fs.readFileSync(target.absPath, 'utf-8');
-
-        const fm = parseFrontmatter(targetContent);
-        const hasMetadata =
-          fm.description !== null &&
-          fm.description !== undefined &&
-          typeof fm.description === 'string' &&
-          Array.isArray(fm.keywords) &&
-          fm.keywords.length > 0;
-        if (hasMetadata) {
-          target.description = fm.description;
-          target.keywords = fm.keywords;
-          console.log(`[crossref] Skipping extraction for ${target.id} (metadata already present)`);
-          continue;
-        }
-
-        const metadataResult = await session.prompt(
-          `Extract metadata from this documentation page.
-
-Page title: ${target.title}
-Page path: ${target.path}
-
-Content:
-${targetContent}
-
-Return ONLY valid JSON:
-{
-  "description": "one-sentence, concisely at most 150-160 characters",
-  "keywords": ["3-7 meaningful keyword phrases (1-3 words each, not single fragments)"]
-}
-
-Keyword guidelines:
-- Use compound phrases: "Console Service" not "Console"
-- Use domain terminology: "Environment Variable" not "environment"
-- Make keywords meaningful on their own: "System Properties" not "properties"
-- Avoid generic single words: use "built-in services" not "services" or "built-in"
-- Focus on what users would search for`,
-          {
-            result: v.object({
-              description: v.string(),
-              keywords: v.array(v.string()),
-            })
-          }
-        );
-        const metadata = metadataResult.data;
-        const updatedContent = updateFrontmatter(targetContent, metadata);
-        fs.writeFileSync(target.absPath, updatedContent, 'utf-8');
-        target.description = metadata.description;
-        target.keywords = metadata.keywords;
+        const result = await extractMetadata(target, targetContent, session);
+        target.description = result.metadata.description;
+        target.keywords = result.metadata.keywords;
 
         output.suggestions
           .filter(s => s.type === 'see_also' && s.targetId === target.id)
-          .forEach(s => s.description = metadata.description);
+          .forEach(s => s.description = result.metadata.description);
       } catch (e) {
         console.warn(`[crossref] Failed to extract metadata for ${target.id}:`, e);
       }
