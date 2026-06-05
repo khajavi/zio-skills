@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import { extractHeadings } from './markdown-parser.js';
 import type { CrossrefState } from './schemas.js';
 
-export function createExtractPageStructureTool(state: CrossrefState) {
+export function createExtractPageStructure(state: CrossrefState) {
   return defineTool({
     name: 'extract_page_structure',
     description: 'Extract the heading structure (table of contents) from a page. Shows all available anchors that can be linked to.',

@@ -1,7 +1,7 @@
 import { defineTool, Type } from '@flue/runtime';
 import type { CrossrefState } from './schemas.js';
 
-export function createGetAdjacentPagesTool(state: CrossrefState) {
+export function createGetAdjacentPages(state: CrossrefState) {
   return defineTool({
     name: 'get_adjacent_pages',
     description: 'Get all pages in the same documentation section. Adjacent pages are strong candidates for See Also links.',

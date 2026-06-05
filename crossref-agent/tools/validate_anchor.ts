@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import { extractHeadings } from './markdown-parser.js';
 import type { CrossrefState } from './schemas.js';
 
-export function createValidateAnchorTool(state: CrossrefState) {
+export function createValidateAnchor(state: CrossrefState) {
   return defineTool({
     name: 'validate_anchor',
     description: 'Check if an anchor/heading exists in a target page. Returns whether the anchor is available and lists all available headings.',

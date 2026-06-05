@@ -15,11 +15,11 @@ import {
   insertSeeAlsoEntry,
   findAnchorWithFallback,
 } from '../../tools/link-inserter.js';
-import { createValidateAnchorTool } from '../../tools/validate_anchor.js';
-import { createExtractPageStructureTool } from '../../tools/extract_page_structure.js';
-import { createGetAdjacentPagesTool } from '../../tools/get_adjacent_pages.js';
-import { createSearchPagesTool } from '../../tools/search_pages.js';
-import { createContentSearchTool } from '../../tools/search_page_content.js';
+import { createValidateAnchor } from '../../tools/validate_anchor.js';
+import { createExtractPageStructure } from '../../tools/extract_page_structure.js';
+import { createGetAdjacentPages } from '../../tools/get_adjacent_pages.js';
+import { createSearchPages } from '../../tools/search_pages.js';
+import { createSearchPageContent } from '../../tools/search_page_content.js';
 import {
   PageAnalysisOutput,
   type CrossrefState,
@@ -195,11 +195,11 @@ Page being analyzed (id: ${pageEntry.id}):
 ${pageContent}`;
 
     const tools = [
-      createValidateAnchorTool(state),
-      createExtractPageStructureTool(state),
-      createGetAdjacentPagesTool(state),
-      createSearchPagesTool(state),
-      createContentSearchTool(state),
+      createValidateAnchor(state),
+      createExtractPageStructure(state),
+      createGetAdjacentPages(state),
+      createSearchPages(state),
+      createSearchPageContent(state),
     ];
     const taskResult = await session.prompt(prompt, {
       result: PageAnalysisOutput,

@@ -1,7 +1,7 @@
 import { defineTool, Type } from '@flue/runtime';
 import type { CrossrefState } from './schemas.js';
 
-export function createSearchPagesTool(state: CrossrefState) {
+export function createSearchPages(state: CrossrefState) {
   return defineTool({
     name: 'search_pages',
     description: 'Search the documentation index for pages by title, keywords, or topic. Returns matching pages ranked by relevance.',

@@ -2,7 +2,7 @@ import { defineTool, Type } from '@flue/runtime';
 import * as fs from 'node:fs';
 import type { CrossrefState } from './schemas.js';
 
-export function createContentSearchTool(state: CrossrefState) {
+export function createSearchPageContent(state: CrossrefState) {
   return defineTool({
     name: 'search_page_content',
     description: 'Search within a specific page for occurrences of a term. Returns context snippets showing where the term appears.',
