@@ -1,15 +1,15 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FlueSession } from '@flue/runtime';
-import { loadConfig } from '../../tools/config-loader.js';
-import { loadState, saveState } from '../../tools/state-store.js';
-import { parseSidebars } from '../../tools/sidebar-parser.js';
+import { loadConfig } from '../../lib/config-loader.js';
+import { loadState, saveState } from '../../lib/state-store.js';
+import { parseSidebars } from '../utils/sidebar-parser.js';
 import {
   extractTitle,
   extractExistingLinks,
   parseFrontmatter,
-} from '../../tools/markdown-parser.js';
-import type { CrossrefState } from '../../tools/schemas.js';
+} from '../../lib/markdown-parser.js';
+import type { CrossrefState } from '../../lib/schemas.js';
 
 function walkDocs(docsDir: string, excludePatterns: string[]): string[] {
   const results: string[] = [];

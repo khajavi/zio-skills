@@ -1,4 +1,4 @@
-import { parseFrontmatter } from '../../tools/markdown-parser.js';
+import { parseFrontmatter } from '../../lib/markdown-parser.js';
 
 function quoteYamlString(value: string): string {
   if (!value) return '""';

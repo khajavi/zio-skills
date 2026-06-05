@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { insertInlineLink, insertSeeAlsoEntry } from '../tools/link-inserter.js';
-import { computeSafeZones } from '../tools/markdown-parser.js';
+import { insertInlineLink, insertSeeAlsoEntry } from '../workflows/utils/link-inserter.js';
+import { computeSafeZones } from '../lib/markdown-parser.js';
 
 const PLAIN_DOC = `---
 title: Configuration

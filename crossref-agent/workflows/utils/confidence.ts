@@ -1,4 +1,4 @@
-import type { Confidence } from '../../tools/schemas.js';
+import type { Confidence } from '../../lib/schemas.js';
 
 const CONFIDENCE_ORDER: Record<Confidence, number> = { low: 0, medium: 1, high: 2 };
 

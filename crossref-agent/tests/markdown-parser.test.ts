@@ -6,7 +6,7 @@ import {
   extractKeywords,
   extractExistingLinks,
   computeSafeZones,
-} from '../tools/markdown-parser.js';
+} from '../lib/markdown-parser.js';
 
 const FM_DOC = `---
 title: Getting Started

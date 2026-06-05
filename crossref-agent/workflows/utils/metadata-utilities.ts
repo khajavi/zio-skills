@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as v from 'valibot';
 import type { FlueSession } from '@flue/runtime';
-import { parseFrontmatter } from '../../tools/markdown-parser.js';
+import { parseFrontmatter } from '../../lib/markdown-parser.js';
 import { updateFrontmatter } from './yaml.js';
 
 /**

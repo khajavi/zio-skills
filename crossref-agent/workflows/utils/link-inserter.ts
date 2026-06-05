@@ -1,4 +1,4 @@
-import { computeSafeZones } from './markdown-parser.js';
+import { computeSafeZones } from '../../lib/markdown-parser.js';
 
 type SafeZone = { start: number; end: number };
 

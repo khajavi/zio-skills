@@ -2,19 +2,19 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as v from 'valibot';
 import type { FlueSession } from '@flue/runtime';
-import { loadConfig } from '../../tools/config-loader.js';
-import { saveState } from '../../tools/state-store.js';
+import { loadConfig } from '../../lib/config-loader.js';
+import { saveState } from '../../lib/state-store.js';
 import {
   extractCodeBlockIdentifiers,
   parseFrontmatter,
   computeSafeZones,
-} from '../../tools/markdown-parser.js';
-import { validateSuggestion, hasAnchorInTarget } from '../../tools/link-validator.js';
+} from '../../lib/markdown-parser.js';
+import { validateSuggestion, hasAnchorInTarget } from '../utils/link-validator.js';
 import {
   insertInlineLink,
   insertSeeAlsoEntry,
   findAnchorWithFallback,
-} from '../../tools/link-inserter.js';
+} from '../utils/link-inserter.js';
 import { createValidateAnchor } from '../../tools/validate_anchor.js';
 import { createExtractPageStructure } from '../../tools/extract_page_structure.js';
 import { createGetAdjacentPages } from '../../tools/get_adjacent_pages.js';
@@ -24,7 +24,7 @@ import {
   PageAnalysisOutput,
   type CrossrefState,
   type LinkSuggestion,
-} from '../../tools/schemas.js';
+} from '../../lib/schemas.js';
 import { updateFrontmatter } from '../utils/yaml.js';
 import { extractMetadata } from '../utils/metadata-utilities.js';
 import { estimateCost } from '../utils/cost.js';

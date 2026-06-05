@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { migrateState } from '../tools/migrate-state.js';
-import { loadIndex, loadSuggestions, saveIndex, saveSuggestions } from '../tools/state-store.js';
-import type { PageIndex, SuggestionsState } from '../tools/schemas.js';
+import { migrateState } from '../lib/migrate-state.js';
+import { loadIndex, loadSuggestions, saveIndex, saveSuggestions } from '../lib/state-store.js';
+import type { PageIndex, SuggestionsState } from '../lib/schemas.js';
 
 const TEST_DIR = path.join(import.meta.dirname!, '..', '.test-state');
 const STATE_DIR = path.join(TEST_DIR, '.crossref-state');
@@ -198,7 +198,7 @@ describe('State Store - Dual Files', () => {
 
 describe('State persistence round-trip (Issue #2: metadata preservation)', () => {
   it('preserves description and keywords through save/load cycle', async () => {
-    const { saveState, loadState } = await import('../tools/state-store.js');
+    const { saveState, loadState } = await import('../lib/state-store.js');
 
     const originalState = {
       indexBuiltAt: '2024-01-01T00:00:00Z',
@@ -260,7 +260,7 @@ describe('State persistence round-trip (Issue #2: metadata preservation)', () =>
   });
 
   it('handles missing description and keywords gracefully', async () => {
-    const { saveState, loadState } = await import('../tools/state-store.js');
+    const { saveState, loadState } = await import('../lib/state-store.js');
 
     const stateWithoutMetadata = {
       indexBuiltAt: '2024-01-01T00:00:00Z',
@@ -369,7 +369,7 @@ describe('Issue #6: Type-Aware YAML Serialization', () => {
 
 describe('Issue #4: Preserve Progress Across Reindex', () => {
   it('reindex preserves processed pages list (prevents autopilot restart)', async () => {
-    const { loadState, saveState } = await import('../tools/state-store.js');
+    const { loadState, saveState } = await import('../lib/state-store.js');
 
     // Create state with some processed pages
     const originalState = {
@@ -430,7 +430,7 @@ describe('Issue #4: Preserve Progress Across Reindex', () => {
   });
 
   it('reindex during autopilot does not restart progress', async () => {
-    const { loadState, saveState } = await import('../tools/state-store.js');
+    const { loadState, saveState } = await import('../lib/state-store.js');
 
     // Simulate: Batch 1 processed 3 pages
     const state1 = {

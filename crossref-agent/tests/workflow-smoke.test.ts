@@ -2,15 +2,15 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { loadConfig } from '../tools/config-loader';
-import { loadState, saveState, emptyState } from '../tools/state-store';
+import { loadConfig } from '../lib/config-loader';
+import { loadState, saveState, emptyState } from '../lib/state-store';
 import {
   extractTitle, extractSummary, extractKeywords,
   extractExistingLinks, computeSafeZones,
-} from '../tools/markdown-parser';
-import { insertInlineLink, insertSeeAlsoEntry } from '../tools/link-inserter';
-import { validateSuggestion } from '../tools/link-validator';
-import type { CrossrefState, LinkSuggestion, Confidence } from '../tools/schemas';
+} from '../lib/markdown-parser';
+import { insertInlineLink, insertSeeAlsoEntry } from '../workflows/utils/link-inserter';
+import { validateSuggestion } from '../workflows/utils/link-validator';
+import type { CrossrefState, LinkSuggestion, Confidence } from '../lib/schemas';
 
 describe('Workflow Smoke Test', () => {
   let testDir: string;

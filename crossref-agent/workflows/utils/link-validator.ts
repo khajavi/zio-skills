@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { extractExistingLinks, extractHeadings, computeSafeZones } from './markdown-parser.js';
+import { extractExistingLinks, extractHeadings, computeSafeZones } from '../../lib/markdown-parser.js';
 import { findAnchorWithFallback } from './link-inserter.js';
-import type { LinkSuggestion } from './schemas.js';
+import type { LinkSuggestion } from '../../lib/schemas.js';
 
 export type ValidationResult =
   | { ok: true }

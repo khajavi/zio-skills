@@ -1,5 +1,5 @@
 import { defineTool, Type } from '@flue/runtime';
-import type { CrossrefState } from './schemas.js';
+import type { CrossrefState } from '../lib/schemas.js';
 
 export function createSearchPages(state: CrossrefState) {
   return defineTool({

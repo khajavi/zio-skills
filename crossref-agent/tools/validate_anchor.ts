@@ -1,7 +1,7 @@
 import { defineTool, Type } from '@flue/runtime';
 import * as fs from 'node:fs';
-import { extractHeadings } from './markdown-parser.js';
-import type { CrossrefState } from './schemas.js';
+import { extractHeadings } from '../lib/markdown-parser.js';
+import type { CrossrefState } from '../lib/schemas.js';
 
 export function createValidateAnchor(state: CrossrefState) {
   return defineTool({

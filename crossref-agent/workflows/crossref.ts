@@ -1,8 +1,8 @@
 import 'dotenv/config.js';
 import type { FlueContext } from '@flue/runtime';
 import pageLinkerAgent from '../agents/page-linker.js';
-import { loadConfig } from '../tools/config-loader.js';
-import { loadState, emptyState } from '../tools/state-store.js';
+import { loadConfig } from '../lib/config-loader.js';
+import { loadState, emptyState } from '../lib/state-store.js';
 import { reindex } from './phases/reindex.js';
 import { processBatch } from './phases/process.js';
 import { report } from './phases/report.js';

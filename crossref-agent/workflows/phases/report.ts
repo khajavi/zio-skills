@@ -1,4 +1,4 @@
-import type { CrossrefState } from '../../tools/schemas.js';
+import type { CrossrefState } from '../../lib/schemas.js';
 import { meetsThreshold } from '../utils/confidence.js';
 
 export function printIterationSummary(

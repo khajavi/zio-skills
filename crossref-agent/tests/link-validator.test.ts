@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { validateSuggestion } from '../tools/link-validator.js';
-import type { LinkSuggestion } from '../tools/schemas.js';
+import { validateSuggestion } from '../workflows/utils/link-validator.js';
+import type { LinkSuggestion } from '../lib/schemas.js';
 
 let tmpDir: string;
 
