@@ -188,6 +188,9 @@ ${codeBlockContext}
 
 When generating suggestions:
 - For INLINE links: anchorText is the text to search for within this page (e.g., "ZIO", "TRef", "STM.atomically")
+  - ONLY link bare names, methods, types, or operators WITHOUT arguments/parentheses
+  - NEVER suggest inline links for function calls with arguments (e.g., "Ref.make(0)", "foo(x, y)")
+  - Bare names/methods are fine: "Ref.make", "List.map", "Option", "assertEqual"
 - For SEE ALSO links: anchorText must be the page title from the index above (use the title shown in the page list)
 - Always provide a non-empty anchorText for See Also suggestions
 - Use code block technical terms to identify related pages
@@ -253,6 +256,12 @@ ${pageContent}`;
 
       if (!raw.anchorText || raw.anchorText.trim() === '') {
         console.log(`[DEBUG] Skipping suggestion (empty anchorText): ${raw.targetId}`);
+        continue;
+      }
+
+      // Don't suggest inline links for function calls with arguments (e.g., "Ref.make(0)", "foo(x, y)")
+      if (raw.type === 'inline' && /\(.*\)/.test(raw.anchorText)) {
+        console.log(`[DEBUG] Skipping suggestion (function call with arguments): ${raw.anchorText}`);
         continue;
       }
 
