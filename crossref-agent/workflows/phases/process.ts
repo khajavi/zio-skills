@@ -15,11 +15,9 @@ import {
   insertSeeAlsoEntry,
   findAnchorWithFallback,
 } from '../../tools/link-inserter.js';
-import {
-  createValidateAnchorTool,
-  createExtractPageStructureTool,
-  createGetAdjacentPagesTool,
-} from '../../tools/metadata-utilities.js';
+import { createValidateAnchorTool } from '../../tools/validate_anchor.js';
+import { createExtractPageStructureTool } from '../../tools/extract_page_structure.js';
+import { createGetAdjacentPagesTool } from '../../tools/get_adjacent_pages.js';
 import { createSearchPagesTool } from '../../tools/page-search.js';
 import { createContentSearchTool } from '../../tools/content-search.js';
 import {
