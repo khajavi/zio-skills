@@ -105,6 +105,7 @@ export async function loadState(docsDir: string): Promise<CrossrefStateType | nu
       description?: string | null;
       summary?: string;
       keywords?: unknown;
+      contextualTitle?: string;
       existingLinkCount?: number;
       adjacentPages?: string[];
     };
@@ -160,6 +161,7 @@ export function saveState(docsDir: string, state: CrossrefStateType): void {
       description: entry.description || undefined,
       // Issue #7 fix: Only convert null to undefined, preserve explicit empty arrays
       keywords: entry.keywords === null ? undefined : entry.keywords,
+      contextualTitle: entry.contextualTitle,
       existingLinkCount: entry.existingLinkCount,
       // Issue #1 fix: Persist adjacentPages to disk
       adjacentPages: entry.adjacentPages || [],

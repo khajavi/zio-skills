@@ -78,6 +78,11 @@ export async function reindex(
       }
     }
 
+    const finalContextualTitle = contextualTitle !== title ? contextualTitle : undefined;
+    if (finalContextualTitle) {
+      console.log(`[reindex] Saving contextual title "${finalContextualTitle}" for "${title}"`);
+    }
+
     return {
       id: pageIdFromPath(absPath, docsDir),
       title,
@@ -85,7 +90,7 @@ export async function reindex(
       absPath,
       description: fm.description || null,
       keywords: Array.isArray(fm.keywords) && fm.keywords.length > 0 ? fm.keywords : null,
-      contextualTitle: contextualTitle !== title ? contextualTitle : undefined,
+      contextualTitle: finalContextualTitle,
       existingLinkCount: extractExistingLinks(content).length,
       adjacentPages: adjacentMap[pageIdFromPath(absPath, docsDir)] || [],
     };
