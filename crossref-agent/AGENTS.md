@@ -42,6 +42,20 @@ npx flue run crossref --target node \
   --payload '{"docsDir":"/path/to/docs","mode":"reindex"}'
 ```
 
+### Verify Documentation Builds
+
+To validate that the documentation builds successfully after cross-reference additions:
+
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"verify"}'
+```
+
+**Parameters:**
+- `docsDir`: Absolute path to the docs directory
+
+The verify mode automatically detects the build system (Docusaurus, MkDocs, or Sphinx) and runs the build command. Use this after running `autopilot` mode to ensure no broken links were introduced.
+
 ## What the Crossref Agent Does
 
 1. **Analyzes** documentation pages to identify cross-linking opportunities

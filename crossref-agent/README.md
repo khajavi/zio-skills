@@ -259,6 +259,42 @@ flue run workflows/crossref.ts --target node \
 - **Orphans**: pages with no incoming links (first 10 listed)
 - **Token Spend**: cumulative cost to date
 
+### 5. `verify` — Validate Documentation Build
+
+Verifies that the documentation builds successfully after cross-reference additions.
+
+```bash
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"verify"}'
+```
+
+**Purpose:**
+- Ensures cross-referenced links don't break the documentation build
+- Detects build errors and reports them clearly
+- Validates that the project can be built after modifications
+
+**Auto-detection:** Automatically detects the documentation build system:
+- **Docusaurus** (via `../website/package.json` or `../package.json`)
+- **MkDocs** (via `../mkdocs.yml`)
+- **Sphinx** (via `docs/conf.py`)
+
+**Output:**
+- **Success**: `✓ docusaurus build passed in 15234ms`
+- **Failure**: `✗ docusaurus build failed (exit code 1)` with full build output
+
+**Example CI Usage:**
+```bash
+# Step 1: Add cross-references
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+
+# Step 2: Verify docs still build
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"verify"}'
+```
+
+The verify mode is particularly useful in CI/CD pipelines to catch broken links and other build issues before merging documentation changes.
+
 ## Configuration
 
 ### Metadata Extraction
