@@ -330,12 +330,21 @@ This fallback approach:
 | `all` | Extract for all pages | Initial setup, complete refresh |
 | `missing` | Extract for pages without metadata | Incremental updates, fallback mode |
 | `file` | Extract for single file | Testing, specific page updates |
+| `dir` | Extract for all pages in a directory recursively | Batch updates, section enrichment |
 
 **Example: Extract single file**
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"file","targetFile":"guides/getting-started.md"}'
 ```
+
+**Example: Extract entire directory recursively**
+```bash
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","targetDir":"guides/","mode":"all"}'
+```
+
+This extracts metadata for all `.md` and `.mdx` files in the `guides/` directory and all subdirectories, without touching other documentation sections.
 
 #### Token Impact
 
