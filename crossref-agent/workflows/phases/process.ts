@@ -30,6 +30,8 @@ import { extractMetadata } from '../utils/metadata-utilities.js';
 import { estimateCost } from '../utils/cost.js';
 import { meetsThreshold } from '../utils/confidence.js';
 import { printIterationSummary } from './report.js';
+import { hasCompleteMetadata } from '../../lib/metadata-extractor-utils.js';
+import type { MetadataExtractorInput } from '../../lib/schemas.js';
 
 export async function processBatch(
   state: CrossrefState,
@@ -137,22 +139,29 @@ export async function processBatch(
   for (const pageEntry of batch) {
     let pageContent = fs.readFileSync(pageEntry.absPath, 'utf-8');
 
+    // Metadata completeness check with fallback extraction
     const pageFrontmatter = parseFrontmatter(pageContent);
-    const hasBothFields =
-      pageFrontmatter.description !== null &&
-      pageFrontmatter.description !== undefined &&
-      typeof pageFrontmatter.description === 'string' &&
-      Array.isArray(pageFrontmatter.keywords) &&
-      pageFrontmatter.keywords.length > 0;
-    if (!hasBothFields) {
+    let pageMetadata = {
+      description: pageFrontmatter.description,
+      keywords: pageFrontmatter.keywords,
+    };
+
+    // Fast path: use existing metadata if complete
+    if (!hasCompleteMetadata(pageMetadata)) {
+      // Fallback: extract metadata if incomplete
       try {
+        console.log(`[crossref] Extracting metadata for ${pageEntry.id} (incomplete)`);
         const result = await extractMetadata(pageEntry, pageContent, session);
         pageContent = result.updatedContent;
+        pageMetadata = result.metadata;
         pageEntry.description = result.metadata.description;
         pageEntry.keywords = result.metadata.keywords;
       } catch (e) {
         console.warn(`[crossref] Failed to extract metadata for ${pageEntry.id}:`, e);
       }
+    } else {
+      // Fast path: metadata is complete, use from frontmatter
+      console.log(`[crossref] Using existing metadata for ${pageEntry.id} (complete)`);
     }
 
     const minimalIndex = state.index.map(e => ({
