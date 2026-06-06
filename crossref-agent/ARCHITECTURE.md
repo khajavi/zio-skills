@@ -396,13 +396,23 @@ CrossrefState {
 **Options:**
 ```json
 {
-  "excludePatterns": ["node_modules", ".github"],
-  "maxLinksPerPage": 5,
-  "confidenceThreshold": "high"
+  "excludePatterns": ["node_modules", ".github", "archived"],
+  "maxLinksPerPage": 10,
+  "maxSeeAlsoSuggestion": 5,
+  "confidenceThreshold": "high",
+  "clearSuggestionsBeforeRun": false
 }
 ```
 
-**Defaults:** `[]`, `5`, `"high"`
+**Option Details:**
+
+| Option | Type | Default | Purpose |
+|--------|------|---------|---------|
+| `excludePatterns` | string[] | `[]` | Path segments to skip during indexing |
+| `maxLinksPerPage` | number | `10` | Maximum suggestions per page |
+| `maxSeeAlsoSuggestion` | number | `5` | Maximum "See Also" links per page |
+| `confidenceThreshold` | "low" \| "medium" \| "high" | `"high"` | Minimum confidence for auto-application |
+| `clearSuggestionsBeforeRun` | boolean | `false` | Clear stale suggestions for re-processed pages |
 
 ---
 

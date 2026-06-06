@@ -268,8 +268,10 @@ Place in the parent directory of your docs to customize behavior:
 ```json
 {
   "excludePatterns": ["node_modules", ".github", "archived"],
-  "maxLinksPerPage": 5,
-  "confidenceThreshold": "high"
+  "maxLinksPerPage": 10,
+  "maxSeeAlsoSuggestion": 5,
+  "confidenceThreshold": "high",
+  "clearSuggestionsBeforeRun": false
 }
 ```
 
@@ -278,8 +280,10 @@ Place in the parent directory of your docs to customize behavior:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `excludePatterns` | string[] | `[]` | Path segments to skip (e.g., "archived", "node_modules") |
-| `maxLinksPerPage` | number | `5` | Max suggestions returned per page |
+| `maxLinksPerPage` | number | `10` | Max suggestions returned per page |
+| `maxSeeAlsoSuggestion` | number | `5` | Max "See Also" links per page |
 | `confidenceThreshold` | "low" \| "medium" \| "high" | `"high"` | Minimum confidence to auto-apply links |
+| `clearSuggestionsBeforeRun` | boolean | `false` | Clear old suggestions for re-processed pages |
 
 ### Confidence Levels
 
@@ -288,6 +292,24 @@ Place in the parent directory of your docs to customize behavior:
 - **`low`** — Loosely related, tangentially useful
 
 Only suggestions meeting the threshold are auto-applied. Others stay in state for manual review.
+
+### Clearing Suggestions on Re-run
+
+When `clearSuggestionsBeforeRun` is enabled:
+
+```json
+{
+  "clearSuggestionsBeforeRun": true
+}
+```
+
+**Behavior:**
+- Old suggestions are removed before re-processing pages
+- Useful when re-analyzing pages that previously generated incorrect suggestions
+- When processing a specific file with `targetFile`, only suggestions **from** that file are cleared
+- When enabled globally (via config), suggestions **from or to** re-processed files are cleared
+
+**Use case:** You re-run on a specific page and want fresh suggestions without stale entries from a prior run.
 
 ## State Management
 
