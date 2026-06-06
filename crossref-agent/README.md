@@ -261,6 +261,96 @@ flue run workflows/crossref.ts --target node \
 
 ## Configuration
 
+### Metadata Extraction
+
+The crossref-agent can be extended with metadata extraction capabilities to enrich your documentation before running cross-reference analysis. This improves link quality by ensuring each page has proper metadata (title, description, keywords).
+
+#### Pre-enrichment (Recommended)
+
+For best results, run metadata extraction once before starting cross-reference processing:
+
+```bash
+# Extract metadata for all pages (comprehensive)
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"all"}'
+```
+
+This pre-enrichment approach:
+- Extracts and generates metadata for all pages in one batch
+- Populates page frontmatter with title, description, and keywords
+- Provides complete context for the crossref-agent to work with
+- **Most efficient** for initial documentation setup
+
+**When to use pre-enrichment:**
+- Setting up crossref for a new documentation site
+- You want all pages to have consistent metadata before linking
+- Your docs are missing or have incomplete frontmatter
+
+#### Integration with Crossref
+
+Once metadata is extracted, run the crossref workflow normally:
+
+```bash
+# Build index (will use extracted metadata)
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"reindex"}'
+
+# Process pages with rich metadata context
+flue run workflows/crossref.ts --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+```
+
+The crossref-agent automatically uses extracted metadata (descriptions, keywords) to make smarter linking decisions.
+
+#### Fallback (On-Demand)
+
+If you skip pre-enrichment, the crossref-agent will extract metadata on-demand for pages as needed:
+
+```bash
+# Run without pre-enrichment (metadata extracted per-page)
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"missing"}'
+```
+
+This fallback approach:
+- Extracts metadata only for pages that lack it
+- Happens automatically during page processing
+- Less efficient but works without additional setup
+- Good for incremental documentation updates
+
+**When to use on-demand:**
+- Adding crossref to existing documentation
+- Only certain pages need metadata
+- You want to minimize upfront extraction cost
+
+#### Metadata Mode Reference
+
+| Mode | Purpose | Use Case |
+|------|---------|----------|
+| `all` | Extract for all pages | Initial setup, complete refresh |
+| `missing` | Extract for pages without metadata | Incremental updates, fallback mode |
+| `file` | Extract for single file | Testing, specific page updates |
+
+**Example: Extract single file**
+```bash
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"file","targetFile":"guides/getting-started.md"}'
+```
+
+#### Token Impact
+
+**Pre-enrichment (Recommended):** ~500-1000 tokens per batch
+- Single batch classifies all pages
+- More efficient than per-page extraction
+- Lower overall cost for large documentation
+
+**On-Demand Fallback:** ~100-300 tokens per page (as needed)
+- Only pages missing metadata are processed
+- Higher cost if many pages need extraction
+- Spreads cost across multiple runs
+
+**Recommendation:** Use pre-enrichment for best performance and lowest cost.
+
 ### `.crossref-config.json`
 
 Place in the parent directory of your docs to customize behavior:
