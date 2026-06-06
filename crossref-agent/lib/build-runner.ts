@@ -82,16 +82,13 @@ function detectBuildSystem(docsDir: string): BuildConfig | null {
 }
 
 /**
- * Execute a build command and capture output
+ * Execute a single command and capture output
  */
-async function executeBuild(config: BuildConfig): Promise<BuildResult> {
+function executeCommand(command: string, args: string[], cwd: string): Promise<{ exitCode: number; output: string }> {
   return new Promise((resolve) => {
-    const startTime = Date.now();
-    const [command, ...args] = config.buildCommand.split(' ');
-
     let output = '';
     const proc = spawn(command, args, {
-      cwd: config.buildCwd,
+      cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: process.platform === 'win32',
     });
@@ -108,6 +105,121 @@ async function executeBuild(config: BuildConfig): Promise<BuildResult> {
       process.stderr.write(`[build-error] ${text}`);
     });
 
+    proc.on('close', (exitCode) => {
+      resolve({ exitCode: exitCode ?? 0, output });
+    });
+
+    proc.on('error', (error) => {
+      resolve({ exitCode: 1, output: output + '\n' + error.message });
+    });
+  });
+}
+
+/**
+ * Check if this is a Scala/ZIO project that requires sbt mdoc preprocessing
+ */
+function isScalaProject(parentDir: string): boolean {
+  const buildSbt = path.join(parentDir, 'build.sbt');
+  const sbtLock = path.join(parentDir, '.sbtopts');
+  return fs.existsSync(buildSbt) || fs.existsSync(sbtLock);
+}
+
+/**
+ * Execute the ZIO build pipeline: sbt mdoc → yarn install → yarn build
+ */
+async function executeZioBuildPipeline(docsDir: string, buildCwd: string): Promise<BuildResult> {
+  const startTime = Date.now();
+  const parentDir = path.dirname(docsDir);
+  let output = '';
+
+  // Step 1: Run sbt docs/mdoc
+  console.log('[build-runner] Running prerequisite: sbt docs/mdoc\n');
+  let result = await executeCommand('sbt', ['-v', 'docs/mdoc'], parentDir);
+  output += result.output;
+  if (result.exitCode !== 0) {
+    const durationMs = Date.now() - startTime;
+    return {
+      success: false,
+      exitCode: result.exitCode,
+      output,
+      durationMs,
+      buildSystem: 'docusaurus',
+      buildCwd,
+    };
+  }
+
+  // Step 2: Run yarn install in website directory
+  console.log('\n[build-runner] Running prerequisite: yarn install\n');
+  result = await executeCommand('yarn', ['install'], buildCwd);
+  output += result.output;
+  if (result.exitCode !== 0) {
+    const durationMs = Date.now() - startTime;
+    return {
+      success: false,
+      exitCode: result.exitCode,
+      output,
+      durationMs,
+      buildSystem: 'docusaurus',
+      buildCwd,
+    };
+  }
+
+  // Step 3: Run yarn build
+  console.log('\n[build-runner] Running main build: yarn build\n');
+  result = await executeCommand('yarn', ['build'], buildCwd);
+  output += result.output;
+
+  const durationMs = Date.now() - startTime;
+  return {
+    success: result.exitCode === 0,
+    exitCode: result.exitCode,
+    output,
+    durationMs,
+    buildSystem: 'docusaurus',
+    buildCwd,
+  };
+}
+
+/**
+ * Execute a build command and capture output
+ */
+async function executeBuild(config: BuildConfig, docsDir: string): Promise<BuildResult> {
+  const startTime = Date.now();
+  const parentDir = path.dirname(docsDir);
+
+  // Check if this is a ZIO-style project (Scala project with website subdirectory)
+  if (
+    isScalaProject(parentDir) &&
+    config.buildCwd.includes('website') &&
+    fs.existsSync(path.join(docsDir, '..', 'build.sbt'))
+  ) {
+    console.log('[build-runner] Detected Scala project with website subdirectory (ZIO pattern)');
+    console.log('[build-runner] Using full build pipeline: sbt mdoc → yarn install → yarn build\n');
+    return executeZioBuildPipeline(docsDir, config.buildCwd);
+  }
+
+  // Standard single-command build
+  const [command, ...args] = config.buildCommand.split(' ');
+  let output = '';
+  const proc = spawn(command, args, {
+    cwd: config.buildCwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: process.platform === 'win32',
+  });
+
+  proc.stdout?.on('data', (data) => {
+    const text = data.toString();
+    output += text;
+    process.stdout.write(`[build] ${text}`);
+  });
+
+  proc.stderr?.on('data', (data) => {
+    const text = data.toString();
+    output += text;
+    process.stderr.write(`[build-error] ${text}`);
+  });
+
+  return new Promise((resolve) => {
     proc.on('close', (exitCode) => {
       const durationMs = Date.now() - startTime;
       resolve({
@@ -155,8 +267,7 @@ export async function runBuild(docsDir: string): Promise<BuildResult> {
   }
 
   console.log(`[build-runner] Detected ${config.buildSystem} build system`);
-  console.log(`[build-runner] Running: ${config.buildCommand}`);
   console.log(`[build-runner] Working directory: ${config.buildCwd}\n`);
 
-  return executeBuild(config);
+  return executeBuild(config, docsDir);
 }
