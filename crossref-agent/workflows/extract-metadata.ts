@@ -2,6 +2,7 @@ import 'dotenv/config.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FlueContext } from '@flue/runtime';
+import metadataExtractorAgent from '../agents/metadata-extractor.js';
 import { loadConfig } from '../lib/config-loader.js';
 import { parseFrontmatter } from '../lib/markdown-parser.js';
 import { hasCompleteMetadata } from '../lib/metadata-extractor-utils.js';
@@ -76,12 +77,8 @@ export async function run({ init, payload }: FlueContext) {
 
   if (!docsDir) throw new Error('payload.docsDir is required');
 
-  // We need a session to call extractMetadata utility
-  // Initialize with a dummy agent just to get a session
-  const dummyAgent = {
-    model: 'anthropic/claude-haiku-4-5',
-  };
-  const harness = await init(dummyAgent as any, { name: 'extract-metadata' });
+  // Initialize with metadata-extractor agent to get a session
+  const harness = await init(metadataExtractorAgent, { name: 'extract-metadata' });
   const session = await harness.session();
 
   const config = loadConfig(docsDir);
