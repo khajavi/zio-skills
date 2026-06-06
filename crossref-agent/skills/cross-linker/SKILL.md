@@ -20,10 +20,10 @@ Receive:
 
 ## Task Flow
 
-**Phase 1: Extract Metadata (MANDATORY)**
-- Check target page YAML frontmatter
-- Missing `description` OR `keywords`? Call `extract_page_metadata` alone (sequential, not parallel)
-- This must complete before proceeding to Phase 2
+**Phase 1: Verify Metadata (PRE-ENRICHED)**
+- Metadata is guaranteed complete before analysis starts
+- All pages have `description`, `keywords`, and `sectionType` in YAML frontmatter
+- No extraction tool needed; proceed directly to link identification
 
 **Phase 2: Identify Refs**
 - **Inline links** – Sentence mentions concept that another page covers
@@ -86,11 +86,6 @@ Optional. Use to verify or find related pages. Most decisions from content + ind
 - When: Find topic pages without manual browse
 - Ex: "config pages" → 5 most relevant
 
-**extract_page_metadata** - Extract missing description & keywords. [See Phase 1 of Task Flow above]
-- Call if: `description` OR `keywords` MISSING
-- Skip if: BOTH exist
-- Returns `source: "extracted_and_written"` (extracted) or `"state_cache"` (already present)
-
 **search_page_content** - Find terms in page. Context snippets with line numbers. FOR ANCHOR VALIDATION.
 - When: BEFORE finalizing anchor—verify phrase exists in prose
 - Critical: "Ref" complete word (not in "careful")?
@@ -113,7 +108,6 @@ Optional. Use to verify or find related pages. Most decisions from content + ind
 ## Error Handling
 
 When tools fail or return no results:
-- **extract_page_metadata** – Continue without extraction; flag in reasoning
 - **search_pages** – Skip that search; use index alone
 - **search_page_content** – Don't suggest link; find different phrase or skip
 - **Page unreadable** – Skip links to it; report in reasoning if critical
@@ -121,7 +115,6 @@ When tools fail or return no results:
 ## Requirements & Priorities
 
 **Hard rules:**
-- MANDATORY: Call `extract_page_metadata` if missing `description` or `keywords`
 - No self-links, no existing links
 - Max 10 total suggestions (maxLinksPerPage) – don't pad to hit limit
 
