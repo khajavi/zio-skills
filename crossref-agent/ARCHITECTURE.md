@@ -68,85 +68,64 @@ crossref-agent/
 ## 2. High-Level System Diagram
 
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│ Documentation Directory                                               │
-│ ├── reference/fiber.md                                                │
-│ ├── guides/getting-started.md                                         │
-│ └── concepts/scope.md                                                 │
-└──────────────────────┬────────────────────────────────────────────────┘
-                       │
-                       ↓
-      ┌────────────────────────────────────┐
-      │  WORKFLOW: crossref.ts             │
-      │  Modes: reindex | step | autopilot │
-      │         | report                   │
-      └────────────────────────────────────┘
-                       │
-                ┌──────┴──────────┬─────────────┬──────────────┐
-                │                 │             │              │
-                ↓                 ↓             ↓              ↓
-        ┌──────────────┐  ┌─────────────┐ ┌──────────┐ ┌──────────────┐
-        │ REINDEX      │  │ STEP/AUTO   │ │ REPORT   │ │ STATE STORE  │
-        │              │  │             │ │          │ │              │
-        │ - Walk docs  │  │ - For each  │ │ - Show   │ │ - index.json │
-        │ - Extract    │  │   page:     │ │   link   │ │ - suggestions│
-        │   metadata   │  │   a. Load   │ │   density│ │   .json      │
-        │ - LLM        │  │   b. Call   │ │ - Orphan │ │ - Persistent │
-        │   classify   │  │      agent  │ │   pages  │ │              │
-        │   sections   │  │   c. Parse  │ │          │ │              │
-        │              │  │   d. Apply  │ │          │ │              │
-        │              │  │   e. Save   │ │          │ │              │
-        └──────────────┘  └─────────────┘ └──────────┘ └──────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ Documentation Directory                                              │
+│ ├── reference/fiber.md                                               │
+│ ├── guides/getting-started.md                                        │
+│ └── concepts/scope.md                                                │
+└──────────┬────────────────────────────────────────────────┬──────────┘
+           │                                                │
+           ↓                                                ↓
+  ┌──────────────────────┐                    ┌──────────────────────┐
+  │ METADATA EXTRACTION  │                    │ CROSSREF WORKFLOW    │
+  │ (extract-metadata)   │                    │ (crossref.ts)        │
+  │                      │                    │                      │
+  │ Modes:               │                    │ Modes:               │
+  │ - all                │                    │ - reindex            │
+  │ - missing            │                    │ - step               │
+  │ - file               │                    │ - autopilot          │
+  └──────────┬───────────┘                    │ - report             │
+             │                                └──────────┬───────────┘
+             │                                           │
+             └───────────────────┬───────────────────────┘
                                  │
                                  ↓
                     ┌────────────────────────┐
-                    │ AGENT: page-linker.ts  │
+                    │ metadata-agent         │
                     │ Model: Claude Haiku 4.5│
-                    │                        │
-                    │ Skill: cross-linker    │
-                    │ (SKILL.md)             │
                     └──────────┬─────────────┘
                                │
                                ↓
-                    ┌──────────────────────┐
-                    │ TOOLS (Agent)        │
-                    │                      │
-                    │ - search_pages       │
-                    │ - search_content     │
-                    │ - validate_anchor    │
-                    │ - extract_struct     │
-                    │ - adjacent_pages     │
-                    │ - extract_meta       │
-                    └──────────────────────┘
+                    ┌────────────────────────┐
+                    │ page-linker-agent      │
+                    │ Model: Claude Haiku 4.5│
+                    └──────────┬─────────────┘
                                │
                               ↓
                   ┌─────────────────────────┐
-                  │ Suggestion JSON from    │
-                  │ Agent (validated)       │
+                  │ Enriched Page Metadata  │
+                  │ + Link Suggestions      │
                   │                         │
-                  │ { suggestions: [        │
-                  │   { targetId,           │
-                  │     anchorText,         │
-                  │     type,               │
-                  │     confidence }        │
-                  │ ]}                      │
+                  │ { title,                │
+                  │   description,          │
+                  │   keywords,             │
+                  │   suggestions: [] }     │
                   └─────────────────────────┘
                               │
                               ↓
                   ┌─────────────────────────┐
                   │ Validation + Insertion  │
-                  │ (process.ts)            │
                   │                         │
-                  │ - Check path safety     │
-                  │ - Check duplicates      │
-                  │ - Filter by confidence  │
-                  │ - Insert links in file  │
+                  │ - Path safety checks    │
+                  │ - Anchor validation     │
+                  │ - Deduplication         │
+                  │ - Apply high-conf links │
                   └─────────────────────────┘
                               │
                               ↓
                   ┌─────────────────────────┐
-                  │ Updated Markdown Files  │
-                  │ + State Persistence     │
+                  │ Updated Docs +          │
+                  │ Cross-references        │
                   │                         │
                   │ .crossref-state/        │
                   │ ├── index.json          │
@@ -275,7 +254,62 @@ payload: {
 
 ---
 
-### 3.5. Data Structures & Schemas
+### 3.5. Metadata Extractor
+
+**Name:** Metadata Extraction Agent (`agents/metadata-agent.ts`)
+
+**Description:** Stateless agent powered by Claude Haiku 4.5. Analyzes Markdown documentation to extract and generate metadata (title, description, keywords) for pages that lack it. Operates independently from cross-reference workflow and can be used as a standalone tool or as a fallback enrichment step.
+
+**Technologies:** Anthropic API (Claude), Flue framework
+
+**Capabilities:**
+- Extracts title from frontmatter or page heading
+- Generates natural language descriptions from page content
+- Identifies and extracts relevant keywords
+- Populates missing metadata in page frontmatter
+- Works with incomplete or unstructured documentation
+
+**Modes:**
+- **`all`** — Extract metadata for all pages (comprehensive batch)
+- **`missing`** — Extract only for pages without complete metadata (fallback mode)
+- **`file`** — Extract for a single specific page (testing/validation)
+
+**Input/Output:**
+- **Input:** Page content (raw markdown), existing frontmatter (if any), page path
+- **Output:** Metadata object with title, description, keywords
+- Metadata is persisted to page frontmatter automatically
+
+**Usage:**
+
+*Standalone pre-enrichment (recommended):*
+```bash
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"all"}'
+```
+
+*Fallback on-demand mode:*
+```bash
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"missing"}'
+```
+
+*Single file extraction:*
+```bash
+flue run extract-metadata --target node \
+  --payload '{"docsDir":"./docs","mode":"file","targetFile":"guides/getting-started.md"}'
+```
+
+**Stateless Design:** The agent maintains no persistent state. Each invocation:
+- Reads current page content
+- Generates fresh metadata based on content analysis
+- Writes results to page frontmatter
+- Exits without accumulated state
+
+This design enables safe, idempotent execution and reusability across multiple documentation workflows.
+
+---
+
+### 3.6. Data Structures & Schemas
 
 **Location:** `lib/schemas.ts`
 
@@ -326,7 +360,7 @@ CrossrefState {
 
 ---
 
-### 3.6. State Management
+### 3.7. State Management
 
 **Location:** `lib/state-store.ts`
 
@@ -347,7 +381,7 @@ CrossrefState {
 
 ---
 
-### 3.7. Markdown Parsing & Safety
+### 3.8. Markdown Parsing & Safety
 
 **Location:** `lib/markdown-parser.ts`
 
@@ -366,7 +400,7 @@ CrossrefState {
 
 ---
 
-### 3.8. Link Insertion & Validation
+### 3.9. Link Insertion & Validation
 
 **Location:** `workflows/utils/link-inserter.ts`, `workflows/utils/link-validator.ts`
 
@@ -387,7 +421,7 @@ CrossrefState {
 
 ---
 
-### 3.9. Configuration
+### 3.10. Configuration
 
 **Location:** `lib/config-loader.ts`
 
@@ -433,7 +467,37 @@ CrossrefState {
 - `index[]` — Array of `PageIndexEntry` objects
 - Each entry contains: id, title, path, description, keywords, sectionType, adjacentPages
 
-### 4.2. Suggestions Store
+### 4.2. Metadata in Pages
+
+**Location:** Page frontmatter (YAML header)
+
+**Purpose:** Store extracted/generated metadata in each Markdown page for use by indexing and linking agents.
+
+**Structure:**
+```yaml
+---
+title: "Getting Started with ZIO"
+description: "A comprehensive guide to setting up and using ZIO for concurrent programming"
+keywords: ["setup", "installation", "concurrency", "fiber"]
+---
+```
+
+**Fields:**
+- `title` (string) — Page heading or frontmatter title
+- `description` (string) — Natural language summary of page content (1-3 sentences)
+- `keywords` (string[]) — Relevant topic terms for search and correlation
+
+**Population:**
+- Extracted by metadata-agent during pre-enrichment or on-demand phases
+- Can also be manually authored in frontmatter
+- Once populated, reused by crossref-agent for better link suggestions
+
+**Usage:**
+- **Indexing:** Extracted during reindex phase for building page index
+- **Search:** Used by page-linker agent tools to find relevant target pages
+- **Link Quality:** Richer metadata enables more confident link suggestions
+
+### 4.3. Suggestions Store
 
 **Name:** Link Suggestions (`.crossref-state/suggestions.json`)
 
