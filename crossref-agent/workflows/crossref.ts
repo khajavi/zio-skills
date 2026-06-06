@@ -6,11 +6,12 @@ import { loadState, emptyState } from '../lib/state-store.js';
 import { reindex } from './phases/reindex.js';
 import { processBatch } from './phases/process.js';
 import { report } from './phases/report.js';
+import { verifyBuild } from './phases/verify.js';
 
 export async function run({ init, payload }: FlueContext) {
   const { docsDir, mode, batchSize = 1, targetFile, targetDir } = payload as {
     docsDir: string;
-    mode: 'reindex' | 'step' | 'autopilot' | 'report';
+    mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify';
     batchSize?: number;
     targetFile?: string;
     targetDir?: string;
@@ -61,6 +62,12 @@ export async function run({ init, payload }: FlueContext) {
     const config = loadConfig(docsDir);
     const threshold = config.confidenceThreshold;
     return report(state, threshold);
+  }
+
+  if (mode === 'verify') {
+    const result = await verifyBuild(docsDir);
+    console.log(`[crossref] ${result.success ? '✓' : '✗'} ${result.buildSystem} build ${result.success ? 'passed' : 'failed'} in ${result.durationMs}ms`);
+    return result;
   }
 
   throw new Error(`Unknown mode: "${mode}"`);
