@@ -108,3 +108,20 @@ export const SuggestionsState = v.object({
   }),
 });
 export type SuggestionsState = v.InferOutput<typeof SuggestionsState>;
+
+// Metadata Extractor Input/Output
+export const MetadataExtractorInput = v.object({
+  pageId: v.string(),
+  pageTitle: v.string(),
+  pageContent: v.string(),
+  existingDescription: v.optional(v.string()),
+  existingKeywords: v.optional(v.array(v.string())),
+});
+export type MetadataExtractorInput = v.InferOutput<typeof MetadataExtractorInput>;
+
+export const MetadataExtractorOutput = v.object({
+  description: v.string(),
+  keywords: v.array(v.string()),
+  sectionType: SectionType,
+});
+export type MetadataExtractorOutput = v.InferOutput<typeof MetadataExtractorOutput>;
