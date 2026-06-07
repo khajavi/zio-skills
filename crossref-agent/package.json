@@ -8,8 +8,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@flue/runtime": "^0.8.1",
-    "@flue/cli": "^0.8.1",
     "valibot": "^1.0.0",
     "dotenv": "^16.0.0"
   },

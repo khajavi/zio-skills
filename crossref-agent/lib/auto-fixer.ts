@@ -5,7 +5,8 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import type { BuildError } from './build-error-extractor.js';
 
 export interface DocFixerPayload {
-  docsDir: string;
+  projectRoot: string;
+  targetPath: string;
   buildErrors: BuildError[];
   buildOutput: string;
   buildSystem: 'docusaurus' | 'mkdocs' | 'sphinx' | 'hugo';
@@ -23,7 +24,7 @@ export interface FixResult {
 }
 
 export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> {
-  const { docsDir, buildErrors, buildOutput, buildSystem, attempt } = payload;
+  const { projectRoot, targetPath, buildErrors, buildOutput, buildSystem, attempt } = payload;
 
   const client = new Anthropic();
   const changes: Array<{ file: string; change: string }> = [];
@@ -31,7 +32,7 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   console.log(`[auto-fixer] Analyzing ${buildErrors.length} build errors (attempt ${attempt})`);
 
   // Holistic analysis: ask Claude to identify fixable issues
-  const analysisPrompt = buildAnalysisPrompt(buildErrors, buildOutput, buildSystem, docsDir);
+  const analysisPrompt = buildAnalysisPrompt(buildErrors, buildOutput, buildSystem, projectRoot, targetPath);
 
   const analysis = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
@@ -44,13 +45,13 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   console.log(`[auto-fixer] Analysis:\n${analysisText.substring(0, 500)}`);
 
   // Extract fixable issues from the analysis
-  const fixablePaths = extractFixablePaths(analysisText, docsDir);
+  const fixablePaths = extractFixablePaths(analysisText, projectRoot, targetPath);
 
   console.log(`[auto-fixer] Identified ${fixablePaths.length} fixable issue(s)`);
 
   // Apply fixes
   for (const filePath of fixablePaths) {
-    const fixResult = await applyFix(client, docsDir, filePath, buildOutput, buildSystem);
+    const fixResult = await applyFix(client, projectRoot, filePath, buildOutput, buildSystem);
     if (fixResult) {
       changes.push(fixResult);
     }
@@ -71,8 +72,7 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   };
 }
 
-function extractFixablePaths(analysisText: string, docsDir: string): string[] {
-  const projectRoot = path.dirname(docsDir);
+function extractFixablePaths(analysisText: string, projectRoot: string, targetPath: string): string[] {
   const paths: string[] = [];
 
   // Look for FIX: patterns in the response
@@ -84,7 +84,7 @@ function extractFixablePaths(analysisText: string, docsDir: string): string[] {
       const filePath = match[1].trim();
       const possiblePaths = [
         path.join(projectRoot, filePath),
-        path.join(docsDir, filePath),
+        path.join(targetPath, filePath),
         path.resolve(filePath),
       ];
 
@@ -97,11 +97,13 @@ function extractFixablePaths(analysisText: string, docsDir: string): string[] {
     }
   }
 
-  // Also include common fixable files
+  // Also include common fixable files at project root
   const commonFixableFiles = [
     path.join(projectRoot, 'package.json'),
     path.join(projectRoot, 'website', 'package.json'),
     path.join(projectRoot, 'website', 'docusaurus.config.js'),
+    path.join(projectRoot, 'docusaurus.config.js'),
+    path.join(projectRoot, 'build.sbt'),
   ];
 
   for (const file of commonFixableFiles) {
@@ -115,7 +117,7 @@ function extractFixablePaths(analysisText: string, docsDir: string): string[] {
 
 async function applyFix(
   client: Anthropic,
-  docsDir: string,
+  projectRoot: string,
   filePath: string,
   buildOutput: string,
   buildSystem: string
@@ -126,7 +128,7 @@ async function applyFix(
 
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
-    const prompt = buildFixPrompt(filePath, content, buildOutput, buildSystem, docsDir);
+    const prompt = buildFixPrompt(filePath, content, buildOutput, buildSystem, projectRoot);
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -143,7 +145,7 @@ async function applyFix(
       fs.writeFileSync(filePath, trimmedContent, 'utf-8');
       const changeDesc = extractChangeDescription(responseText);
 
-      const relativePath = path.relative(docsDir, filePath);
+      const relativePath = path.relative(projectRoot, filePath);
       console.log(`[auto-fixer] Fixed ${relativePath}: ${changeDesc}`);
 
       return {
@@ -166,9 +168,9 @@ function buildAnalysisPrompt(
   buildErrors: BuildError[],
   buildOutput: string,
   buildSystem: string,
-  docsDir: string
+  projectRoot: string,
+  targetPath: string
 ): string {
-  const projectRoot = path.dirname(docsDir);
   const errorSummary = buildErrors
     .slice(0, 30)
     .map((e) => `- [${e.type}] ${e.file}${e.line ? `:${e.line}` : ''}: ${e.message}`)
@@ -177,6 +179,7 @@ function buildAnalysisPrompt(
   return `You are a senior software engineer analyzing build failures. Your job is to identify and fix the root causes.
 
 PROJECT ROOT: ${projectRoot}
+TARGET PATH: ${targetPath}
 BUILD SYSTEM: ${buildSystem}
 
 BUILD ERRORS (${buildErrors.length} total):
@@ -214,7 +217,7 @@ function buildFixPrompt(
   content: string,
   buildOutput: string,
   buildSystem: string,
-  docsDir: string
+  projectRoot: string
 ): string {
   const fileName = path.basename(filePath);
   const isJson = fileName.endsWith('.json');

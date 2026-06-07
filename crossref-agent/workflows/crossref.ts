@@ -1,4 +1,5 @@
 import 'dotenv/config.js';
+import * as path from 'node:path';
 import type { FlueContext } from '@flue/runtime';
 import pageLinkerAgent from '../agents/page-linker.js';
 import { runDocFixer } from '../lib/auto-fixer.js';
@@ -11,8 +12,9 @@ import { report } from './phases/report.js';
 import { verifyBuild } from './phases/verify.js';
 
 export async function run({ init, payload }: FlueContext) {
-  const { docsDir, mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
+  const { docsDir, projectRoot, mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
     docsDir: string;
+    projectRoot?: string;
     mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify' | 'verify-and-fix';
     batchSize?: number;
     targetFile?: string;
@@ -21,6 +23,9 @@ export async function run({ init, payload }: FlueContext) {
   };
 
   if (!docsDir) throw new Error('payload.docsDir is required');
+
+  // For verify-and-fix mode, projectRoot is required; fallback to parent of docsDir
+  const resolvedProjectRoot = projectRoot || path.dirname(docsDir);
 
   const harness = await init(pageLinkerAgent, { name: 'crossref' });
   const session = await harness.session();
@@ -95,7 +100,8 @@ export async function run({ init, payload }: FlueContext) {
 
       // Phase 3: Fix errors
       const fixResult = await runDocFixer({
-        docsDir,
+        projectRoot: resolvedProjectRoot,
+        targetPath: docsDir,
         buildErrors,
         buildOutput: verifyResult.output,
         buildSystem: verifyResult.buildSystem as 'docusaurus' | 'mkdocs' | 'sphinx' | 'hugo',
