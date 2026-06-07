@@ -297,55 +297,78 @@ The verify mode is particularly useful in CI/CD pipelines to catch broken links 
 
 ### 6. `verify-and-fix` — Auto-Fix Build Failures
 
-Automatically fixes documentation build failures and re-validates until success.
+Automatically fixes documentation build failures and re-validates until success. The fixer can modify any project file to resolve build issues.
 
 ```bash
 flue run crossref --target node \
   --payload '{
     "docsDir":"./docs",
+    "projectRoot":".",
     "mode":"verify-and-fix",
     "maxRetries":3
   }'
 ```
 
 **Purpose:**
-- Detects build failures (broken links, syntax errors, missing files, etc.)
-- Automatically fixes errors using Claude analysis
+- Detects build failures (broken links, syntax errors, missing files, configuration issues, etc.)
+- Automatically fixes errors using Claude analysis across the entire project
 - Re-runs verification until build passes or max retries reached
 - Reduces manual iteration on documentation issues
 
 **How it works:**
-1. **Verify** → runs documentation build
+1. **Verify** → runs documentation build pipeline (sbt mdoc → yarn install → yarn build)
 2. **If failed** → extract structured errors (broken link, missing file, syntax error, etc.)
-3. **Fix** → Claude subagent analyzes error and fixes the documentation file
-4. **Loop** → re-verify with fixed docs
-5. **Repeat** → until success or max retries (default: 3)
+3. **Analyze** → Claude analyzes all errors together to identify root causes across the project
+4. **Fix** → Claude fixes issues in documentation files, config files, dependencies, or any fixable location
+5. **Loop** → re-verify with fixed files
+6. **Repeat** → until success or max retries (default: 3)
 
-**Error types automatically fixed:**
+**Fixable Issues:**
 - **Broken links** — Add missing `.md` extension, correct relative paths, fix anchors
-- **Syntax errors** — Close unclosed code fences, fix YAML frontmatter
-- **Missing files** — Remove broken references, suggest alternatives
+- **Syntax errors** — Close unclosed code fences, fix YAML frontmatter, fix markdown syntax
+- **Missing files** — Remove broken references, suggest alternatives, update cross-links
+- **Dependencies** — Add missing packages to `package.json`
+- **Configuration** — Fix `docusaurus.config.js`, `mkdocs.yml`, or build configuration files
 - **Linting errors** — Fix formatting, spacing, line length issues
+
+**Project-Scope Fixing:**
+The fixer can now modify files anywhere in the project:
+- Documentation files in the target path (docs, website/docs, etc.)
+- Configuration files at project root (docusaurus.config.js, package.json, build.sbt)
+- Any file relevant to resolving the build error
 
 **Example workflow:**
 ```bash
 # Step 1: Add cross-references
 flue run crossref --target node \
-  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+  --payload '{"docsDir":"./docs","projectRoot":".","mode":"autopilot"}'
 
-# Step 2: Verify and auto-fix any failures
+# Step 2: Verify and auto-fix any failures (including config and dependencies)
 flue run crossref --target node \
   --payload '{
     "docsDir":"./docs",
+    "projectRoot":".",
     "mode":"verify-and-fix",
     "maxRetries":3
   }'
 ```
 
 **Parameters:**
-- `docsDir` (required): Path to documentation directory
+- `docsDir` (required): Path to documentation directory (e.g., `./docs`, `./website/docs`)
+- `projectRoot` (optional): Root directory of the project (defaults to parent of `docsDir`). Provide explicitly for clearer project context.
 - `mode` (required): `"verify-and-fix"`
-- `maxRetries` (optional): Maximum retry attempts (default: 3). Set higher for complex docs, lower to fail fast
+- `maxRetries` (optional): Maximum retry attempts (default: 3). Set higher for complex projects, lower to fail fast
+
+**For ZIO-pattern projects:**
+```bash
+flue run crossref --target node \
+  --payload '{
+    "projectRoot":"/home/milad/sources/scala/zio-2.x-new",
+    "docsDir":"/home/milad/sources/scala/zio-2.x-new/docs",
+    "mode":"verify-and-fix",
+    "maxRetries":2
+  }'
+```
 
 **Output:**
 ```
