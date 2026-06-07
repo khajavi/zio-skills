@@ -295,6 +295,67 @@ flue run crossref --target node \
 
 The verify mode is particularly useful in CI/CD pipelines to catch broken links and other build issues before merging documentation changes.
 
+### 6. `verify-and-fix` — Auto-Fix Build Failures
+
+Automatically fixes documentation build failures and re-validates until success.
+
+```bash
+flue run crossref --target node \
+  --payload '{
+    "docsDir":"./docs",
+    "mode":"verify-and-fix",
+    "maxRetries":3
+  }'
+```
+
+**Purpose:**
+- Detects build failures (broken links, syntax errors, missing files, etc.)
+- Automatically fixes errors using Claude analysis
+- Re-runs verification until build passes or max retries reached
+- Reduces manual iteration on documentation issues
+
+**How it works:**
+1. **Verify** → runs documentation build
+2. **If failed** → extract structured errors (broken link, missing file, syntax error, etc.)
+3. **Fix** → Claude subagent analyzes error and fixes the documentation file
+4. **Loop** → re-verify with fixed docs
+5. **Repeat** → until success or max retries (default: 3)
+
+**Error types automatically fixed:**
+- **Broken links** — Add missing `.md` extension, correct relative paths, fix anchors
+- **Syntax errors** — Close unclosed code fences, fix YAML frontmatter
+- **Missing files** — Remove broken references, suggest alternatives
+- **Linting errors** — Fix formatting, spacing, line length issues
+
+**Example workflow:**
+```bash
+# Step 1: Add cross-references
+flue run crossref --target node \
+  --payload '{"docsDir":"./docs","mode":"autopilot"}'
+
+# Step 2: Verify and auto-fix any failures
+flue run crossref --target node \
+  --payload '{
+    "docsDir":"./docs",
+    "mode":"verify-and-fix",
+    "maxRetries":3
+  }'
+```
+
+**Parameters:**
+- `docsDir` (required): Path to documentation directory
+- `mode` (required): `"verify-and-fix"`
+- `maxRetries` (optional): Maximum retry attempts (default: 3). Set higher for complex docs, lower to fail fast
+
+**Output:**
+```
+[crossref] Verify-and-fix attempt 1/3
+[crossref] ✗ docusaurus build failed (exit code 1)
+[crossref] Found 3 errors. Dispatching doc-fixer...
+[doc-fixer] Fixed 3 errors: Added .md extension to link, Fixed unclosed code fence, Removed broken reference
+[crossref] ✓ Build passed! Documentation is ready.
+```
+
 ## Configuration
 
 ### Metadata Extraction

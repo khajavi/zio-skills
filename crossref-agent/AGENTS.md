@@ -56,6 +56,39 @@ npx flue run crossref --target node \
 
 The verify mode automatically detects the build system (Docusaurus, MkDocs, or Sphinx) and runs the build command. Use this after running `autopilot` mode to ensure no broken links were introduced.
 
+### Auto-Fix Documentation Build Failures
+
+To automatically fix build failures and re-validate:
+
+```bash
+npx flue run crossref --target node \
+  --payload '{
+    "docsDir":"/path/to/docs",
+    "mode":"verify-and-fix",
+    "maxRetries":3
+  }'
+```
+
+**Parameters:**
+- `docsDir`: Absolute path to the docs directory
+- `mode`: "verify-and-fix" to enable auto-fixing
+- `maxRetries`: Maximum number of fix attempts (default: 3, optional)
+
+**How it works:**
+1. Verifies documentation builds
+2. If build fails: extracts errors (broken links, syntax errors, missing files)
+3. Fixes documentation using Claude analysis
+4. Re-verifies build
+5. Repeats until success or max retries exceeded
+
+**Automatic fixes include:**
+- Adding missing `.md` extensions to links
+- Correcting relative paths
+- Closing unclosed code fences
+- Removing broken file references
+
+Use this mode to automatically resolve common documentation build issues without manual intervention.
+
 ## What the Crossref Agent Does
 
 1. **Analyzes** documentation pages to identify cross-linking opportunities
