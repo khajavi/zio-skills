@@ -1,20 +1,23 @@
 import 'dotenv/config.js';
 import type { FlueContext } from '@flue/runtime';
 import pageLinkerAgent from '../agents/page-linker.js';
+import { runDocFixer } from '../agents/doc-fixer.js';
 import { loadConfig } from '../lib/config-loader.js';
 import { loadState, emptyState } from '../lib/state-store.js';
+import { extractBuildErrors } from '../lib/build-error-extractor.js';
 import { reindex } from './phases/reindex.js';
 import { processBatch } from './phases/process.js';
 import { report } from './phases/report.js';
 import { verifyBuild } from './phases/verify.js';
 
 export async function run({ init, payload }: FlueContext) {
-  const { docsDir, mode, batchSize = 1, targetFile, targetDir } = payload as {
+  const { docsDir, mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
     docsDir: string;
-    mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify';
+    mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify' | 'verify-and-fix';
     batchSize?: number;
     targetFile?: string;
     targetDir?: string;
+    maxRetries?: number;
   };
 
   if (!docsDir) throw new Error('payload.docsDir is required');
@@ -68,6 +71,56 @@ export async function run({ init, payload }: FlueContext) {
     const result = await verifyBuild(docsDir);
     console.log(`[crossref] ${result.success ? '✓' : '✗'} ${result.buildSystem} build ${result.success ? 'passed' : 'failed'} in ${result.durationMs}ms`);
     return result;
+  }
+
+  if (mode === 'verify-and-fix') {
+    console.log(`[crossref] Starting verify-and-fix loop (max ${maxRetries} retries)`);
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+      console.log(`\n[crossref] Verify-and-fix attempt ${attempt}/${maxRetries}`);
+
+      // Phase 1: Verify
+      const verifyResult = await verifyBuild(docsDir);
+
+      if (verifyResult.success) {
+        console.log('[crossref] ✓ Build passed! Documentation is ready.');
+        return { success: true, attempts: attempt };
+      }
+
+      // Phase 2: Extract errors
+      const buildErrors = extractBuildErrors(verifyResult.output, verifyResult.buildSystem);
+      console.log(`[crossref] Found ${buildErrors.length} errors. Dispatching doc-fixer...`);
+
+      // Phase 3: Fix errors
+      const fixResult = await runDocFixer({
+        docsDir,
+        buildErrors,
+        buildOutput: verifyResult.output,
+        buildSystem: verifyResult.buildSystem as 'docusaurus' | 'mkdocs' | 'sphinx' | 'hugo',
+        attempt,
+      });
+
+      if (!fixResult.fixed) {
+        console.log('[crossref] ✗ doc-fixer could not fix errors.');
+        return {
+          success: false,
+          attempts: attempt,
+          errors: buildErrors,
+          message: 'Unable to auto-fix',
+        };
+      }
+
+      console.log(`[crossref] ${fixResult.summary}`);
+      // Loop continues, verify again
+    }
+
+    return {
+      success: false,
+      attempts: maxRetries,
+      message: 'Max retries exceeded',
+    };
   }
 
   throw new Error(`Unknown mode: "${mode}"`);
