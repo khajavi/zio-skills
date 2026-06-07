@@ -6,7 +6,6 @@ import type { BuildError } from './build-error-extractor.js';
 
 export interface DocFixerPayload {
   projectRoot: string;
-  targetPath: string;
   buildErrors: BuildError[];
   buildOutput: string;
   buildSystem: 'docusaurus' | 'mkdocs' | 'sphinx' | 'hugo';
@@ -24,7 +23,7 @@ export interface FixResult {
 }
 
 export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> {
-  const { projectRoot, targetPath, buildErrors, buildOutput, buildSystem, attempt } = payload;
+  const { projectRoot, buildErrors, buildOutput, buildSystem, attempt } = payload;
 
   const client = new Anthropic();
   const changes: Array<{ file: string; change: string }> = [];
@@ -32,7 +31,7 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   console.log(`[auto-fixer] Analyzing ${buildErrors.length} build errors (attempt ${attempt})`);
 
   // Holistic analysis: ask Claude to identify fixable issues
-  const analysisPrompt = buildAnalysisPrompt(buildErrors, buildOutput, buildSystem, projectRoot, targetPath);
+  const analysisPrompt = buildAnalysisPrompt(buildErrors, buildOutput, buildSystem, projectRoot);
 
   const analysis = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
@@ -45,7 +44,7 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   console.log(`[auto-fixer] Analysis:\n${analysisText.substring(0, 500)}`);
 
   // Extract fixable issues from the analysis
-  const fixablePaths = extractFixablePaths(analysisText, projectRoot, targetPath);
+  const fixablePaths = extractFixablePaths(analysisText, projectRoot);
 
   console.log(`[auto-fixer] Identified ${fixablePaths.length} fixable issue(s)`);
 
@@ -72,7 +71,7 @@ export async function runDocFixer(payload: DocFixerPayload): Promise<FixResult> 
   };
 }
 
-function extractFixablePaths(analysisText: string, projectRoot: string, targetPath: string): string[] {
+function extractFixablePaths(analysisText: string, projectRoot: string): string[] {
   const paths: string[] = [];
 
   // Look for FIX: patterns in the response
@@ -84,7 +83,6 @@ function extractFixablePaths(analysisText: string, projectRoot: string, targetPa
       const filePath = match[1].trim();
       const possiblePaths = [
         path.join(projectRoot, filePath),
-        path.join(targetPath, filePath),
         path.resolve(filePath),
       ];
 
@@ -97,13 +95,11 @@ function extractFixablePaths(analysisText: string, projectRoot: string, targetPa
     }
   }
 
-  // Also include common fixable files at project root
+  // Also include common fixable files
   const commonFixableFiles = [
     path.join(projectRoot, 'package.json'),
     path.join(projectRoot, 'website', 'package.json'),
     path.join(projectRoot, 'website', 'docusaurus.config.js'),
-    path.join(projectRoot, 'docusaurus.config.js'),
-    path.join(projectRoot, 'build.sbt'),
   ];
 
   for (const file of commonFixableFiles) {
@@ -168,8 +164,7 @@ function buildAnalysisPrompt(
   buildErrors: BuildError[],
   buildOutput: string,
   buildSystem: string,
-  projectRoot: string,
-  targetPath: string
+  projectRoot: string
 ): string {
   const errorSummary = buildErrors
     .slice(0, 30)
@@ -179,7 +174,6 @@ function buildAnalysisPrompt(
   return `You are a senior software engineer analyzing build failures. Your job is to identify and fix the root causes.
 
 PROJECT ROOT: ${projectRoot}
-TARGET PATH: ${targetPath}
 BUILD SYSTEM: ${buildSystem}
 
 BUILD ERRORS (${buildErrors.length} total):

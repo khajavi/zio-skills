@@ -297,56 +297,49 @@ The verify mode is particularly useful in CI/CD pipelines to catch broken links 
 
 ### 6. `verify-and-fix` — Auto-Fix Build Failures
 
-Automatically fixes documentation build failures and re-validates until success. The fixer can modify any project file to resolve build issues.
+Automatically fixes documentation build failures and re-validates until success. The auto-fixer is a general software engineer that can modify any project file to resolve build issues.
 
 ```bash
-flue run crossref --target node \
+npm exec -- flue run crossref --target node \
   --payload '{
-    "docsDir":"./docs",
-    "projectRoot":".",
+    "projectRoot":"/path/to/project",
     "mode":"verify-and-fix",
     "maxRetries":3
   }'
 ```
 
 **Purpose:**
-- Detects build failures (broken links, syntax errors, missing files, configuration issues, etc.)
-- Automatically fixes errors using Claude analysis across the entire project
+- Detects build failures (broken links, syntax errors, missing files, compilation errors, etc.)
+- Automatically analyzes and fixes errors across the entire project
 - Re-runs verification until build passes or max retries reached
-- Reduces manual iteration on documentation issues
+- Reduces manual iteration on documentation and build issues
 
 **How it works:**
 1. **Verify** → runs documentation build pipeline (sbt mdoc → yarn install → yarn build)
 2. **If failed** → extract structured errors (broken link, missing file, syntax error, etc.)
-3. **Analyze** → Claude analyzes all errors together to identify root causes across the project
-4. **Fix** → Claude fixes issues in documentation files, config files, dependencies, or any fixable location
-5. **Loop** → re-verify with fixed files
+3. **Analyze** → auto-fixer analyzes all errors holistically to find root causes
+4. **Fix** → auto-fixer modifies any project files needed: docs, config, dependencies, build scripts
+5. **Loop** → re-verify with fixed project state
 6. **Repeat** → until success or max retries (default: 3)
 
-**Fixable Issues:**
+**Fixable issues across the project:**
 - **Broken links** — Add missing `.md` extension, correct relative paths, fix anchors
 - **Syntax errors** — Close unclosed code fences, fix YAML frontmatter, fix markdown syntax
 - **Missing files** — Remove broken references, suggest alternatives, update cross-links
 - **Dependencies** — Add missing packages to `package.json`
-- **Configuration** — Fix `docusaurus.config.js`, `mkdocs.yml`, or build configuration files
-- **Linting errors** — Fix formatting, spacing, line length issues
-
-**Project-Scope Fixing:**
-The fixer can now modify files anywhere in the project:
-- Documentation files in the target path (docs, website/docs, etc.)
-- Configuration files at project root (docusaurus.config.js, package.json, build.sbt)
-- Any file relevant to resolving the build error
+- **Configuration** — Fix `docusaurus.config.js`, build configs, any configuration file
+- **Build system** — Fix sbt commands, yarn setup, compilation issues
+- **Source code** — Fix imports or compilation issues if needed
 
 **Example workflow:**
 ```bash
 # Step 1: Add cross-references
-flue run crossref --target node \
-  --payload '{"docsDir":"./docs","projectRoot":".","mode":"autopilot"}'
+npm exec -- flue run crossref --target node \
+  --payload '{"projectRoot":".","mode":"autopilot"}'
 
-# Step 2: Verify and auto-fix any failures (including config and dependencies)
-flue run crossref --target node \
+# Step 2: Verify and auto-fix any failures
+npm exec -- flue run crossref --target node \
   --payload '{
-    "docsDir":"./docs",
     "projectRoot":".",
     "mode":"verify-and-fix",
     "maxRetries":3
@@ -354,28 +347,18 @@ flue run crossref --target node \
 ```
 
 **Parameters:**
-- `docsDir` (required): Path to documentation directory (e.g., `./docs`, `./website/docs`)
-- `projectRoot` (optional): Root directory of the project (defaults to parent of `docsDir`). Provide explicitly for clearer project context.
+- `projectRoot` (required): Path to project root directory (e.g., `/home/milad/sources/scala/zio-2.x-new`, `.`)
 - `mode` (required): `"verify-and-fix"`
 - `maxRetries` (optional): Maximum retry attempts (default: 3). Set higher for complex projects, lower to fail fast
-
-**For ZIO-pattern projects:**
-```bash
-flue run crossref --target node \
-  --payload '{
-    "projectRoot":"/home/milad/sources/scala/zio-2.x-new",
-    "docsDir":"/home/milad/sources/scala/zio-2.x-new/docs",
-    "mode":"verify-and-fix",
-    "maxRetries":2
-  }'
-```
 
 **Output:**
 ```
 [crossref] Verify-and-fix attempt 1/3
 [crossref] ✗ docusaurus build failed (exit code 1)
-[crossref] Found 3 errors. Dispatching doc-fixer...
-[doc-fixer] Fixed 3 errors: Added .md extension to link, Fixed unclosed code fence, Removed broken reference
+[crossref] Found 9 errors. Dispatching auto-fixer...
+[auto-fixer] Analyzing 9 build errors
+[auto-fixer] Identified 3 fixable issues
+[auto-fixer] Fixed 3 errors: Added .md extension to links, Updated package.json with missing plugin
 [crossref] ✓ Build passed! Documentation is ready.
 ```
 

@@ -12,9 +12,13 @@ import { report } from './phases/report.js';
 import { verifyBuild } from './phases/verify.js';
 
 export async function run({ init, payload }: FlueContext) {
-  const { docsDir, projectRoot, mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
-    docsDir: string;
+  // Support both projectRoot (new) and docsDir (legacy)
+  const projectRoot = (payload as any).projectRoot || path.dirname((payload as any).docsDir);
+  const docsDir = (payload as any).docsDir || path.join(projectRoot, 'docs');
+
+  const { mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
     projectRoot?: string;
+    docsDir?: string;
     mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify' | 'verify-and-fix';
     batchSize?: number;
     targetFile?: string;
@@ -22,10 +26,7 @@ export async function run({ init, payload }: FlueContext) {
     maxRetries?: number;
   };
 
-  if (!docsDir) throw new Error('payload.docsDir is required');
-
-  // For verify-and-fix mode, projectRoot is required; fallback to parent of docsDir
-  const resolvedProjectRoot = projectRoot || path.dirname(docsDir);
+  if (!projectRoot) throw new Error('payload.projectRoot is required (or legacy docsDir)');
 
   const harness = await init(pageLinkerAgent, { name: 'crossref' });
   const session = await harness.session();
@@ -100,8 +101,7 @@ export async function run({ init, payload }: FlueContext) {
 
       // Phase 3: Fix errors
       const fixResult = await runDocFixer({
-        projectRoot: resolvedProjectRoot,
-        targetPath: docsDir,
+        projectRoot,
         buildErrors,
         buildOutput: verifyResult.output,
         buildSystem: verifyResult.buildSystem as 'docusaurus' | 'mkdocs' | 'sphinx' | 'hugo',
