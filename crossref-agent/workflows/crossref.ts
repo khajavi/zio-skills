@@ -1,7 +1,7 @@
 import 'dotenv/config.js';
 import type { FlueContext } from '@flue/runtime';
 import pageLinkerAgent from '../agents/page-linker.js';
-import { runDocFixer } from '../agents/doc-fixer.js';
+import { runDocFixer } from '../lib/auto-fixer.js';
 import { loadConfig } from '../lib/config-loader.js';
 import { loadState, emptyState } from '../lib/state-store.js';
 import { extractBuildErrors } from '../lib/build-error-extractor.js';
