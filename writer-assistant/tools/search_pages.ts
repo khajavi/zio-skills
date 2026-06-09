@@ -4,14 +4,17 @@ import type { CrossrefState } from '../lib/schemas.js';
 export function createSearchPages(state: CrossrefState) {
   return defineTool({
     name: 'search_pages',
-    description: 'Search the documentation index for pages by title, keywords, or topic. Returns matching pages ranked by relevance.',
+    description:
+      'Search the documentation index for pages by title, keywords, or topic. Returns matching pages ranked by relevance.',
     parameters: Type.Object({
       query: Type.String({
-        description: 'Search term or topic (e.g., "ZStream operations", "configuration", "Fiber")'
+        description: 'Search term or topic (e.g., "ZStream operations", "configuration", "Fiber")',
       }),
-      limit: Type.Optional(Type.Number({
-        description: 'Maximum results to return (default: 5)'
-      })),
+      limit: Type.Optional(
+        Type.Number({
+          description: 'Maximum results to return (default: 5)',
+        })
+      ),
     }),
     execute: async (args: Record<string, any>) => {
       const query = (args.query as string).toLowerCase();
@@ -20,7 +23,7 @@ export function createSearchPages(state: CrossrefState) {
       console.log(`[search_pages] Searching for "${query}" (limit: ${limit})`);
 
       // Score each page based on title and keywords match
-      const scored = state.index.map(page => {
+      const scored = state.index.map((page) => {
         let score = 0;
 
         // Title match is highest priority (exact or substring)
@@ -36,8 +39,8 @@ export function createSearchPages(state: CrossrefState) {
 
         // Keywords match
         if (page.keywords && Array.isArray(page.keywords)) {
-          const matchCount = page.keywords.filter(kw =>
-            kw.toLowerCase().includes(query) || query.includes(kw.toLowerCase())
+          const matchCount = page.keywords.filter(
+            (kw) => kw.toLowerCase().includes(query) || query.includes(kw.toLowerCase())
           ).length;
           score += matchCount * 20;
         }
@@ -46,7 +49,7 @@ export function createSearchPages(state: CrossrefState) {
         const words = query.split(/\s+/);
         for (const word of words) {
           if (titleLower.includes(word)) score += 10;
-          if (page.keywords?.some(kw => kw.toLowerCase().includes(word))) score += 5;
+          if (page.keywords?.some((kw) => kw.toLowerCase().includes(word))) score += 5;
         }
 
         return { page, score };
@@ -54,10 +57,10 @@ export function createSearchPages(state: CrossrefState) {
 
       // Filter to pages with any match, sort by score, limit results
       const results = scored
-        .filter(s => s.score > 0)
+        .filter((s) => s.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, limit)
-        .map(s => ({
+        .map((s) => ({
           id: s.page.id,
           title: s.page.title,
           path: s.page.path,
@@ -66,13 +69,15 @@ export function createSearchPages(state: CrossrefState) {
           score: s.score,
         }));
 
-      console.log(`[search_pages] Found ${results.length} results: ${results.map(r => `${r.title} (score: ${r.score})`).join(', ')}`);
+      console.log(
+        `[search_pages] Found ${results.length} results: ${results.map((r) => `${r.title} (score: ${r.score})`).join(', ')}`
+      );
 
       return JSON.stringify({
         query,
         resultsCount: results.length,
         results,
       });
-    }
+    },
   });
 }

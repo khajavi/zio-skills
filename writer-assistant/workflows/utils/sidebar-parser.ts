@@ -13,7 +13,10 @@ interface AdjacentPagesMap {
   [docId: string]: string[];
 }
 
-function flattenItems(items: SidebarItem[], parentPath: string[] = []): { docId: string; adjacentPath: string[] }[] {
+function flattenItems(
+  items: SidebarItem[],
+  parentPath: string[] = []
+): { docId: string; adjacentPath: string[] }[] {
   const results: { docId: string; adjacentPath: string[] }[] = [];
 
   for (const item of items) {
@@ -57,7 +60,9 @@ export function parseSidebars(sidebarPath: string): AdjacentPagesMap {
     let endIdx = -1;
 
     // Find the start of the object literal
-    const exportKeywordMatch = sidebarContent.match(/(?:module\.exports\s*=\s*|export\s+default\s+)/);
+    const exportKeywordMatch = sidebarContent.match(
+      /(?:module\.exports\s*=\s*|export\s+default\s+)/
+    );
     if (!exportKeywordMatch) {
       throw new Error('Could not find module.exports or export default in sidebar file');
     }
@@ -96,8 +101,7 @@ export function parseSidebars(sidebarPath: string): AdjacentPagesMap {
       // 2. Handling unquoted keys (convert to quoted)
       // Issue #9 fix: Use more robust regex that handles nested structures
       // Match unquoted keys in various positions: after {, comma, or colon
-      let jsonified = exportMatch[1]
-        .replace(/,(\s*[}\]])/g, '$1');  // Remove trailing commas
+      let jsonified = exportMatch[1].replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
 
       // Quote unquoted keys - match: (whitespace or {), key, colon
       // Use a global loop to handle multiple passes for deeply nested structures
@@ -117,7 +121,10 @@ export function parseSidebars(sidebarPath: string): AdjacentPagesMap {
 
         while (i < jsonified.length) {
           // Track if we're inside a quoted string
-          if ((jsonified[i] === '"' || jsonified[i] === "'") && (i === 0 || jsonified[i - 1] !== '\\')) {
+          if (
+            (jsonified[i] === '"' || jsonified[i] === "'") &&
+            (i === 0 || jsonified[i - 1] !== '\\')
+          ) {
             if (!inString) {
               inString = true;
               stringChar = jsonified[i];
@@ -147,7 +154,9 @@ export function parseSidebars(sidebarPath: string): AdjacentPagesMap {
       }
       // Issue #4 fix: Throw clear error if regex loop exceeds max iterations
       if (iterations >= maxIterations) {
-        throw new Error('Sidebar parsing JSON normalization loop exceeded maximum iterations (100) - sidebar structure is too deeply nested or malformed. This may indicate circular references or deeply nested structures that cannot be safely parsed.');
+        throw new Error(
+          'Sidebar parsing JSON normalization loop exceeded maximum iterations (100) - sidebar structure is too deeply nested or malformed. This may indicate circular references or deeply nested structures that cannot be safely parsed.'
+        );
       }
 
       sidebarData = JSON.parse(jsonified);
@@ -178,14 +187,17 @@ export function parseSidebars(sidebarPath: string): AdjacentPagesMap {
         ? path.dirname(normalizedDocId).replace(/\\/g, '/')
         : '__root__';
       const adjacentDocs = allDocs
-        .filter(other => {
+        .filter((other) => {
           const normalizedOtherId = other.docId.replace(/\\/g, '/');
           const otherLastSlashIndex = normalizedOtherId.lastIndexOf('/');
-          const otherDirectory = otherLastSlashIndex === -1 ? '__root__' : normalizedOtherId.substring(0, otherLastSlashIndex);
+          const otherDirectory =
+            otherLastSlashIndex === -1
+              ? '__root__'
+              : normalizedOtherId.substring(0, otherLastSlashIndex);
           // Same directory and not the same doc
           return otherDirectory === docDirectory && other.docId !== doc.docId;
         })
-        .map(other => other.docId);
+        .map((other) => other.docId);
 
       adjacentMap[doc.docId] = adjacentDocs;
     }

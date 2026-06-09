@@ -13,6 +13,7 @@
 ## File Structure
 
 ### New Files
+
 - `lib/build-detector.ts` — Detect documentation build system (Docusaurus, MkDocs, etc.)
 - `lib/build-executor.ts` — Execute build commands and capture output
 - `lib/build-error-parser.ts` — Parse build errors and extract line numbers/file paths
@@ -21,6 +22,7 @@
 - `tests/build-error-parser.test.ts` — Tests for error parsing
 
 ### Modified Files
+
 - `workflows/crossref.ts` — Add `verify` mode, integrate verification phase
 - `README.md` — Document the new `verify` mode
 - `ARCHITECTURE.md` — Add verification component documentation
@@ -30,6 +32,7 @@
 ## Task 1: Create Build System Detector
 
 **Files:**
+
 - Create: `lib/build-detector.ts`
 - Create: `tests/build-detector.test.ts`
 
@@ -152,7 +155,7 @@ export async function detectBuildSystemOrThrow(docsDir: string): Promise<BuildSy
   if (!system) {
     throw new Error(
       `No supported documentation build system detected in ${docsDir}. ` +
-      `Supported: Docusaurus, MkDocs, Hugo, Sphinx`
+        `Supported: Docusaurus, MkDocs, Hugo, Sphinx`
     );
   }
   return system;
@@ -189,6 +192,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 2: Create Build Error Parser
 
 **Files:**
+
 - Create: `lib/build-error-parser.ts`
 - Create: `tests/build-error-parser.test.ts`
 
@@ -379,6 +383,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 3: Create Build Executor
 
 **Files:**
+
 - Create: `lib/build-executor.ts`
 
 - [ ] **Step 1: Write implementation**
@@ -483,6 +488,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 4: Create Verification Workflow Phase
 
 **Files:**
+
 - Create: `workflows/phases/verify.ts`
 
 - [ ] **Step 1: Write implementation**
@@ -596,6 +602,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 5: Integrate Verification into Main Workflow
 
 **Files:**
+
 - Modify: `workflows/crossref.ts`
 
 - [ ] **Step 1: Add verify mode to workflow**
@@ -606,7 +613,13 @@ Update `workflows/crossref.ts` to add import and mode support:
 import { verify } from './phases/verify.js';
 
 // Update the payload type to include 'verify' mode
-const { docsDir, mode, batchSize = 1, targetFile, targetDir } = payload as {
+const {
+  docsDir,
+  mode,
+  batchSize = 1,
+  targetFile,
+  targetDir,
+} = payload as {
   docsDir: string;
   mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify';
   batchSize?: number;
@@ -683,6 +696,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 6: Update Documentation
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `ARCHITECTURE.md`
 
@@ -690,7 +704,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 
 Add to README.md after the "Usage Modes" section:
 
-```markdown
+````markdown
 ### 5. `verify` — Validate Documentation Build
 
 Verifies that the documentation builds successfully after cross-reference additions.
@@ -699,23 +713,28 @@ Verifies that the documentation builds successfully after cross-reference additi
 flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"verify"}'
 ```
+````
 
 **Purpose:**
+
 - Ensures cross-referenced links don't break the documentation build
 - Detects broken references and syntax errors
 - Reports all build errors with file paths and messages
 
 **Output:**
+
 - **Success**: Reports build time and confirms no errors
 - **Failure**: Lists all build errors found, exit code 1
 
 **Supported Build Systems:**
+
 - Docusaurus (package.json with @docusaurus/core)
 - MkDocs (mkdocs.yml)
 - Hugo (config.toml)
 - Sphinx (conf.py)
 
 **Example CI Usage:**
+
 ```bash
 # After running autopilot
 flue run crossref --target node \
@@ -725,7 +744,8 @@ flue run crossref --target node \
 flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"verify"}'
 ```
-```
+
+````
 
 - [ ] **Step 2: Update ARCHITECTURE.md with verification component**
 
@@ -752,7 +772,7 @@ Add new section to ARCHITECTURE.md:
 3. Parse stdout/stderr for errors
 4. Return structured error list with file paths and messages
 5. Report pass/fail status
-```
+````
 
 - [ ] **Step 3: Commit**
 
@@ -773,6 +793,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 7: Add Comprehensive Tests
 
 **Files:**
+
 - Modify: `tests/build-detector.test.ts` (add integration tests)
 - Modify: `tests/build-error-parser.test.ts` (add system-specific tests)
 
@@ -785,6 +806,7 @@ npm test 2>&1 | grep -E "pass|fail|test"
 ```
 
 Expected: All existing tests pass, new tests added for:
+
 - Docusaurus detection and build
 - Error parsing for each build system
 - Verification phase orchestration
@@ -819,6 +841,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 8: End-to-End Testing
 
 **Files:**
+
 - None (testing only)
 
 - [ ] **Step 1: Create test documentation project**
@@ -892,13 +915,14 @@ Expected: All tests still passing, no breakage to existing modes
 ✅ **Workflow integration** — Task 5 adds `verify` mode to main crossref workflow  
 ✅ **Documentation** — Task 6 updates README and ARCHITECTURE with usage and architecture  
 ✅ **Testing** — Task 7 adds comprehensive test coverage  
-✅ **End-to-end validation** — Task 8 tests full flow with passing and failing builds  
+✅ **End-to-end validation** — Task 8 tests full flow with passing and failing builds
 
 ---
 
 ## Implementation Complete
 
 The plan adds a complete documentation build verification system that:
+
 1. **Detects** the documentation build system in use
 2. **Executes** the build command and captures all output
 3. **Parses** build-system-specific errors

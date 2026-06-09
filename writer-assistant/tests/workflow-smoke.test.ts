@@ -5,8 +5,11 @@ import * as os from 'node:os';
 import { loadConfig } from '../lib/config-loader';
 import { loadState, saveState, emptyState } from '../lib/state-store';
 import {
-  extractTitle, extractSummary, extractKeywords,
-  extractExistingLinks, computeSafeZones,
+  extractTitle,
+  extractSummary,
+  extractKeywords,
+  extractExistingLinks,
+  computeSafeZones,
 } from '../lib/markdown-parser';
 import { insertInlineLink, insertSeeAlsoEntry } from '../workflows/utils/link-inserter';
 import { validateSuggestion } from '../workflows/utils/link-validator';
@@ -72,17 +75,20 @@ The ZIO Runtime executes your program when you call unsafeRun.`;
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         const rel = path.relative(testDir, fullPath);
-        if (config.excludePatterns.some(p => rel.includes(p))) continue;
-        if (entry.isDirectory()) { walk(fullPath); continue; }
+        if (config.excludePatterns.some((p) => rel.includes(p))) continue;
+        if (entry.isDirectory()) {
+          walk(fullPath);
+          continue;
+        }
         if (entry.isFile() && /\.(md|mdx)$/.test(entry.name)) results.push(fullPath);
       }
     }
     walk(testDir);
 
     expect(results.length).toBe(3);
-    expect(results.some(p => p.includes('fiber.md'))).toBe(true);
-    expect(results.some(p => p.includes('zio.md'))).toBe(true);
-    expect(results.some(p => p.includes('getting-started.md'))).toBe(true);
+    expect(results.some((p) => p.includes('fiber.md'))).toBe(true);
+    expect(results.some((p) => p.includes('zio.md'))).toBe(true);
+    expect(results.some((p) => p.includes('getting-started.md'))).toBe(true);
   });
 
   it('Step 2: Metadata extraction works correctly', () => {
@@ -252,7 +258,7 @@ Text mentioning ZIO outside code.`;
       tokens: { inputTotal: 1000, outputTotal: 500, runningCost: 0.05 },
     };
 
-    const applied = state.suggestions.filter(s => s.status === 'applied');
+    const applied = state.suggestions.filter((s) => s.status === 'applied');
     expect(applied.length).toBe(1);
     expect(state.tokens.inputTotal).toBe(1000);
     expect(state.tokens.outputTotal).toBe(500);

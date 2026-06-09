@@ -22,12 +22,13 @@ const response = await flueClient.workflow({
   name: 'coding-agent',
   payload: {
     pwd: '/path/to/project',
-    prompt: 'Run npm test and fix any failures'
-  }
+    prompt: 'Run npm test and fix any failures',
+  },
 });
 ```
 
 **Required Parameters:**
+
 - `pwd` (string) - Working directory where commands should execute
 - `prompt` (string) - Task description for the agent to execute
 
@@ -42,12 +43,13 @@ const response = await flueClient.workflow({
     projectRoot: '/home/milad/docs-project',
     mode: 'verify-and-fix',
     maxRetries: 3,
-    verificationPrompt: 'Run npm test and ensure all tests pass'  // Optional
-  }
+    verificationPrompt: 'Run npm test and ensure all tests pass', // Optional
+  },
 });
 ```
 
 **When `verificationPrompt` is provided:**
+
 1. The workflow runs the normal verify-and-fix cycle
 2. If the build passes, it additionally runs the coding-agent with your custom prompt
 3. The verification result is included in the response
@@ -64,23 +66,27 @@ The coding-agent follows these principles:
 ## Example Use Cases
 
 ### Verification Task
+
 ```javascript
-verificationPrompt: 'Run the test suite and verify all tests pass'
+verificationPrompt: 'Run the test suite and verify all tests pass';
 ```
 
 ### Code Quality Check
+
 ```javascript
-verificationPrompt: 'Run linting checks and fix any auto-fixable issues'
+verificationPrompt: 'Run linting checks and fix any auto-fixable issues';
 ```
 
 ### Dependency Verification
+
 ```javascript
-verificationPrompt: 'Check package.json versions and run npm audit'
+verificationPrompt: 'Check package.json versions and run npm audit';
 ```
 
 ## Event Logging
 
 The coding-agent workflow subscribes to execution events and logs:
+
 - 🔧 Tool calls with arguments
 - ✅ Tool execution results
 - ❌ Tool errors

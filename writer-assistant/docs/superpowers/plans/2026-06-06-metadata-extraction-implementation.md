@@ -13,6 +13,7 @@
 ## File Structure
 
 ### New Files
+
 - `agents/metadata-extractor.ts` — Metadata extraction agent
 - `skills/metadata-extractor/SKILL.md` — LLM instructions for metadata extraction
 - `workflows/extract-metadata.ts` — Standalone metadata extraction workflow
@@ -21,6 +22,7 @@
 - `lib/metadata-extractor-utils.ts` — Utility functions for metadata extraction
 
 ### Modified Files
+
 - `workflows/phases/process.ts` — Add metadata completeness check + fallback
 - `README.md` — Document metadata extraction workflow
 - `ARCHITECTURE.md` — Add metadata extraction diagram
@@ -30,6 +32,7 @@
 ## Task 1: Create Metadata Extractor Schemas
 
 **Files:**
+
 - Modify: `lib/schemas.ts`
 
 **Why:** Define schemas for metadata-extractor agent input/output with runtime validation.
@@ -81,6 +84,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 2: Create Metadata Extractor Skill
 
 **Files:**
+
 - Create: `skills/metadata-extractor/SKILL.md`
 
 **Why:** Define LLM instructions for the metadata extraction task.
@@ -94,7 +98,7 @@ touch /home/milad/sources/zio-skills/writer-assistant/skills/metadata-extractor/
 
 - [ ] **Step 2: Write skill content**
 
-```markdown
+````markdown
 ---
 name: metadata-extractor
 description: >
@@ -117,6 +121,7 @@ Your task: Extract meaningful metadata from a Markdown documentation page.
 ## Task Flow
 
 **Phase 1: Analyze Content**
+
 1. Scan the page title and first 2-3 sentences for core concepts
 2. Identify the page's primary purpose (is it reference docs? a tutorial? a guide?)
 3. Extract key technical terms, concepts, and related ideas
@@ -124,6 +129,7 @@ Your task: Extract meaningful metadata from a Markdown documentation page.
 **Phase 2: Extract Metadata**
 
 ### Description
+
 - Extract a **1-2 sentence summary** of the page
 - Highlight the primary purpose and key value
 - Write for humans scanning documentation (clear, concise, compelling)
@@ -133,6 +139,7 @@ Your task: Extract meaningful metadata from a Markdown documentation page.
   - ✗ "This page describes X" (generic, uninformative)
 
 ### Keywords
+
 - Extract **3-7 relevant terms** (lowercase, one word or hyphenated phrases)
 - Prioritize terms that readers might search for
 - Include synonyms and related concepts
@@ -142,6 +149,7 @@ Your task: Extract meaningful metadata from a Markdown documentation page.
   - ✗ ["the", "a", "this"] (too generic)
 
 ### Section Type
+
 - Classify the page into one of: **reference**, **guide**, **tutorial**, **overview**, **other**
 - Rules:
   - **reference** — API docs, method signatures, type definitions, detailed specs
@@ -153,16 +161,19 @@ Your task: Extract meaningful metadata from a Markdown documentation page.
 ## Rules
 
 **Quality**
+
 - Metadata must be complete and useful (never return empty keywords)
 - If page is sparse, infer from context and structure
 - Enhance existing metadata; don't discard it
 
 **Format**
+
 - Description: Plain text, 1-2 sentences, no markdown
 - Keywords: Lowercase, hyphenated for multi-word (not underscores or spaces)
 - Section type: One of the defined types only
 
 **Handling Edge Cases**
+
 - Non-English content → Extract metadata in English (translate if needed)
 - Short pages → Still extract meaningful keywords (at least 3)
 - Code-heavy pages → Focus on what the code accomplishes, not implementation details
@@ -179,9 +190,11 @@ Return **only valid JSON** with no markdown or explanation:
   "sectionType": "reference|guide|tutorial|overview|other"
 }
 ```
+````
 
 **Success:** Metadata is informative, accurate, and useful for discoverability.
-```
+
+````
 
 - [ ] **Step 3: Commit**
 
@@ -193,13 +206,14 @@ Create comprehensive LLM instructions for metadata extraction.
 Includes task flow, rules, edge cases, and output format.
 
 Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
-```
+````
 
 ---
 
 ## Task 3: Create Metadata Extractor Agent
 
 **Files:**
+
 - Create: `agents/metadata-extractor.ts`
 
 **Why:** Define the Flue agent that performs metadata extraction.
@@ -243,6 +257,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 4: Create Metadata Extractor Utils
 
 **Files:**
+
 - Create: `lib/metadata-extractor-utils.ts`
 
 **Why:** Pure utility functions for metadata extraction (title parsing, validation, merging).
@@ -259,22 +274,28 @@ import type { SectionType } from './schemas.js';
  */
 export function extractPageTitle(content: string, existingTitle?: string): string {
   if (existingTitle) return existingTitle;
-  
+
   // Try to extract from first H1
   const h1Match = content.match(/^#\s+(.+?)$/m);
   if (h1Match) return h1Match[1];
-  
+
   return 'Untitled';
 }
 
 /**
  * Validate metadata output from agent
  */
-export function validateMetadata(
-  output: any
-): { valid: boolean; error?: string; data?: { description: string; keywords: string[]; sectionType: SectionType } } {
+export function validateMetadata(output: any): {
+  valid: boolean;
+  error?: string;
+  data?: { description: string; keywords: string[]; sectionType: SectionType };
+} {
   // Check description
-  if (!output.description || typeof output.description !== 'string' || output.description.trim().length === 0) {
+  if (
+    !output.description ||
+    typeof output.description !== 'string' ||
+    output.description.trim().length === 0
+  ) {
     return { valid: false, error: 'description is required and must be non-empty string' };
   }
 
@@ -347,6 +368,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 5: Create Extract Metadata Workflow
 
 **Files:**
+
 - Create: `workflows/extract-metadata.ts`
 
 **Why:** Standalone workflow that walks docs and enriches all metadata.
@@ -364,7 +386,11 @@ import metadataExtractor from '../agents/metadata-extractor.js';
 import { loadConfig } from '../lib/config-loader.js';
 import { parseFrontmatter, computeHeadings } from '../lib/markdown-parser.js';
 import { updateFrontmatter } from '../workflows/utils/yaml.js';
-import { hasCompleteMetadata, validateMetadata, extractPageTitle } from '../lib/metadata-extractor-utils.js';
+import {
+  hasCompleteMetadata,
+  validateMetadata,
+  extractPageTitle,
+} from '../lib/metadata-extractor-utils.js';
 import type { MetadataExtractorInput, MetadataExtractorOutput } from '../lib/schemas.js';
 
 interface WalkResult {
@@ -383,7 +409,7 @@ function walkDocs(dir: string, excludePatterns: string[] = []): WalkResult[] {
 
     for (const entry of entries) {
       // Skip excluded patterns
-      if (excludePatterns.some(pattern => entry.name.includes(pattern))) {
+      if (excludePatterns.some((pattern) => entry.name.includes(pattern))) {
         continue;
       }
 
@@ -449,14 +475,14 @@ export async function run({ init, payload }: FlueContext) {
   // Filter by mode
   if (mode === 'file') {
     const normalized = path.normalize(targetFile!);
-    pagesToProcess = allPages.filter(p => path.normalize(p.path) === normalized);
+    pagesToProcess = allPages.filter((p) => path.normalize(p.path) === normalized);
     if (pagesToProcess.length === 0) {
       console.warn(`[metadata] Target file not found: ${targetFile}`);
       return { processed: 0, skipped: 0, errors: 0 };
     }
   } else {
     // Filter by metadata completeness
-    pagesToProcess = allPages.filter(page => {
+    pagesToProcess = allPages.filter((page) => {
       try {
         const content = fs.readFileSync(page.absPath, 'utf-8');
         const fm = parseFrontmatter(content);
@@ -515,9 +541,7 @@ export async function run({ init, payload }: FlueContext) {
       // Write back to file
       fs.writeFileSync(page.absPath, updated, 'utf-8');
 
-      console.log(
-        `✓ Processed: ${pageTitle} | Added: description, keywords, sectionType`
-      );
+      console.log(`✓ Processed: ${pageTitle} | Added: description, keywords, sectionType`);
       processed++;
     } catch (e: any) {
       console.warn(`[metadata] Error processing ${page.path}:`, e.message);
@@ -597,6 +621,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 6: Add Metadata Completeness Check to Process.ts
 
 **Files:**
+
 - Modify: `workflows/phases/process.ts`
 
 **Why:** Check if metadata is complete; call metadata-agent as fallback if not.
@@ -632,9 +657,9 @@ for (const pageEntry of batch) {
     typeof pageFrontmatter.description === 'string' &&
     Array.isArray(pageFrontmatter.keywords) &&
     pageFrontmatter.keywords.length > 0;
-  
+
   let pageMetadata;
-  
+
   if (hasBothFields) {
     // Metadata is complete; use it directly
     pageMetadata = {
@@ -653,7 +678,7 @@ for (const pageEntry of batch) {
         existingDescription: pageFrontmatter.description,
         existingKeywords: pageFrontmatter.keywords,
       } as MetadataExtractorInput);
-      
+
       // Validate output
       const validation = validateMetadata(metadataOutput);
       if (!validation.valid) {
@@ -733,6 +758,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 7: Add Metadata Extraction Tests
 
 **Files:**
+
 - Create: `tests/metadata-extraction.test.ts`
 
 **Why:** Unit tests for metadata-extractor agent and utilities.
@@ -743,7 +769,11 @@ Create `tests/metadata-extraction.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { validateMetadata, hasCompleteMetadata, extractPageTitle } from '../lib/metadata-extractor-utils.js';
+import {
+  validateMetadata,
+  hasCompleteMetadata,
+  extractPageTitle,
+} from '../lib/metadata-extractor-utils.js';
 
 describe('Metadata Extraction Utilities', () => {
   describe('validateMetadata', () => {
@@ -884,6 +914,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 8: Add Extract Metadata Integration Tests
 
 **Files:**
+
 - Create: `tests/extract-metadata.test.ts`
 
 **Why:** Integration tests for the extract-metadata workflow.
@@ -972,6 +1003,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 9: Update README.md
 
 **Files:**
+
 - Modify: `README.md`
 
 **Why:** Document the new metadata extraction workflow for users.
@@ -980,7 +1012,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 
 Look for "## Configuration" section. After it, add a new section before "### Confidence Levels":
 
-```markdown
+````markdown
 ### Metadata Extraction
 
 #### Pre-enrichment (Recommended)
@@ -991,14 +1023,17 @@ Extract metadata for all pages once:
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"all"}'
 ```
+````
 
 This workflow:
+
 - Walks your docs directory
 - Calls the metadata-extractor agent for each page
 - Updates YAML frontmatter with description, keywords, section type
 - Reports progress
 
 **Modes:**
+
 - `all` — Process every page (initial enrichment)
 - `missing` — Only pages lacking description or keywords (default)
 - `file` — Process a single file (use `targetFile` parameter)
@@ -1020,6 +1055,7 @@ flue run crossref --target node \
 ```
 
 The crossref workflow will:
+
 - Detect complete metadata (fast path)
 - Skip metadata extraction (save tokens)
 - Use cached metadata for link suggestions
@@ -1034,22 +1070,25 @@ flue run crossref --target node \
 ```
 
 The workflow will:
+
 - Detect incomplete metadata
 - Call metadata-extractor as fallback
 - Extract metadata on-the-fly (slower, more tokens)
 - Continue with link suggestions
 
 **Token Impact**
+
 - Pre-enriched: ~3.5-4.5k tokens per page
 - On-demand: ~5.7-8.5k tokens per page
 - **Recommendation:** Pre-enrich once per project, then run crossref multiple times
-```
+
+````
 
 - [ ] **Step 2: Verify README looks good**
 
 ```bash
 cat README.md | grep -A 50 "Metadata Extraction"
-```
+````
 
 Expected: Section is readable and complete
 
@@ -1074,6 +1113,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 10: Update ARCHITECTURE.md
 
 **Files:**
+
 - Modify: `ARCHITECTURE.md`
 
 **Why:** Update architecture documentation with metadata extraction component.
@@ -1147,15 +1187,18 @@ Find the "### 3.4. Tools (Agent-Accessible)" section. After it, add:
 **Model:** Claude Haiku 4.5
 
 **Input:**
+
 - pageId, pageTitle, pageContent
 - existingDescription, existingKeywords (optional)
 
 **Output:**
+
 - description (1-2 sentences)
 - keywords (3-7 terms)
 - sectionType (reference|guide|tutorial|overview|other)
 
 **Usage:**
+
 - Standalone: `flue run extract-metadata` (pre-enrichment)
 - Fallback: Called by `process.ts` if metadata incomplete
 - Reusable: Can be used in other projects/workflows
@@ -1167,7 +1210,7 @@ Find the "### 3.4. Tools (Agent-Accessible)" section. After it, add:
 
 Find "### 3.2. Data Stores" and ensure metadata storage is documented. Add if missing:
 
-```markdown
+````markdown
 ### Metadata in Pages
 
 Page frontmatter stores enriched metadata:
@@ -1179,15 +1222,17 @@ description: A brief description of the page
 keywords: [keyword1, keyword2, keyword3]
 ---
 ```
+````
 
 The `extract-metadata` workflow populates these fields. The `crossref` workflow reads from them (or extracts on-demand).
-```
+
+````
 
 - [ ] **Step 4: Verify changes**
 
 ```bash
 grep -n "Metadata Extractor\|extract-metadata" ARCHITECTURE.md
-```
+````
 
 Expected: References to metadata extraction appear in the document
 
@@ -1212,6 +1257,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 11: Update page-linker Agent (Optional Cleanup)
 
 **Files:**
+
 - Modify: `agents/page-linker.ts`
 
 **Why:** Remove optional `extract_page_metadata` tool call; metadata is now guaranteed complete.
@@ -1247,6 +1293,7 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ## Task 12: Run Full Test Suite
 
 **Files:**
+
 - Run: `npm test`
 
 **Why:** Ensure all changes work together and no regressions.
@@ -1351,13 +1398,14 @@ Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ✅ **Error Handling** — All error scenarios handled gracefully  
 ✅ **Testing** — Unit tests for utilities, integration tests for workflow  
 ✅ **Documentation** — README and ARCHITECTURE updated  
-✅ **Backward Compatibility** — Fallback extraction ensures crossref still works  
+✅ **Backward Compatibility** — Fallback extraction ensures crossref still works
 
 ---
 
 ## Implementation Complete ✓
 
 All 12 tasks implement the full design. The metadata extraction is:
+
 - **Standalone** — Can run independently via `extract-metadata` workflow
 - **Reusable** — Agent is stateless; can be used in other projects
 - **Integrated** — Works seamlessly with crossref (pre-enriched path)

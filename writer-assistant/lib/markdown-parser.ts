@@ -1,8 +1,45 @@
 const COMMON_WORDS = new Set([
-  'The', 'This', 'That', 'These', 'Those', 'A', 'An', 'And', 'Or', 'But',
-  'For', 'With', 'From', 'To', 'In', 'On', 'At', 'By', 'Is', 'Are', 'Was',
-  'Be', 'Has', 'Have', 'Do', 'Does', 'Did', 'Will', 'Would', 'Could', 'Should',
-  'Not', 'It', 'Its', 'You', 'Your', 'We', 'Our', 'If', 'As', 'Of',
+  'The',
+  'This',
+  'That',
+  'These',
+  'Those',
+  'A',
+  'An',
+  'And',
+  'Or',
+  'But',
+  'For',
+  'With',
+  'From',
+  'To',
+  'In',
+  'On',
+  'At',
+  'By',
+  'Is',
+  'Are',
+  'Was',
+  'Be',
+  'Has',
+  'Have',
+  'Do',
+  'Does',
+  'Did',
+  'Will',
+  'Would',
+  'Could',
+  'Should',
+  'Not',
+  'It',
+  'Its',
+  'You',
+  'Your',
+  'We',
+  'Our',
+  'If',
+  'As',
+  'Of',
 ]);
 
 export function parseFrontmatter(content: string): Record<string, any> {
@@ -61,7 +98,10 @@ export function parseFrontmatter(content: string): Record<string, any> {
         let item = itemMatch[1].trim();
         // Issue #8 fix: Handle YAML values with special characters like colons by preserving them
         // Only remove quotes if they surround the entire value
-        if ((item.startsWith('"') && item.endsWith('"')) || (item.startsWith("'") && item.endsWith("'"))) {
+        if (
+          (item.startsWith('"') && item.endsWith('"')) ||
+          (item.startsWith("'") && item.endsWith("'"))
+        ) {
           item = item.slice(1, -1);
         }
         currentArray.push(item);
@@ -89,7 +129,7 @@ export function extractSummary(content: string): string {
   // Strip frontmatter
   const body = content.replace(/^---\n[\s\S]*?\n---\n?/, '');
   // Strip headings and blank lines, find first sentence
-  const lines = body.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+  const lines = body.split('\n').filter((l) => l.trim() && !l.startsWith('#'));
   const text = lines.join(' ');
   const sentence = text.match(/[^.!?]+[.!?]/);
   return sentence ? sentence[0].trim() : text.slice(0, 200).trim();
@@ -126,7 +166,8 @@ export function extractHeadings(content: string): { text: string; slug: string }
   while ((match = regex.exec(content)) !== null) {
     const text = match[1];
     // Convert to anchor slug (lowercase, replace spaces with dashes, remove special chars)
-    const slug = text.toLowerCase()
+    const slug = text
+      .toLowerCase()
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
@@ -135,7 +176,10 @@ export function extractHeadings(content: string): { text: string; slug: string }
   return headings;
 }
 
-export function computeSafeZones(content: string, options?: { includeInlineCode?: boolean }): { start: number; end: number }[] {
+export function computeSafeZones(
+  content: string,
+  options?: { includeInlineCode?: boolean }
+): { start: number; end: number }[] {
   const zones: { start: number; end: number }[] = [];
 
   // Frontmatter block
@@ -146,7 +190,10 @@ export function computeSafeZones(content: string, options?: { includeInlineCode?
   const codeFenceZones: { start: number; end: number }[] = [];
   let codeFenceMatch: RegExpExecArray | null;
   while ((codeFenceMatch = codeFenceRegex.exec(content)) !== null) {
-    codeFenceZones.push({ start: codeFenceMatch.index, end: codeFenceMatch.index + codeFenceMatch[0].length });
+    codeFenceZones.push({
+      start: codeFenceMatch.index,
+      end: codeFenceMatch.index + codeFenceMatch[0].length,
+    });
   }
 
   // Match frontmatter: --- at start, content, ---, then newline or EOF
@@ -155,8 +202,8 @@ export function computeSafeZones(content: string, options?: { includeInlineCode?
   if (fmMatch && fmMatch.index !== undefined) {
     // Check if the closing --- is inside a code fence
     const closingDashesStart = fmMatch.index + fmMatch[0].lastIndexOf('\n---');
-    const isInCodeFence = codeFenceZones.some(zone =>
-      closingDashesStart >= zone.start && closingDashesStart < zone.end
+    const isInCodeFence = codeFenceZones.some(
+      (zone) => closingDashesStart >= zone.start && closingDashesStart < zone.end
     );
     if (!isInCodeFence) {
       // fmMatch[0] includes the entire match including the closing ---
@@ -207,7 +254,7 @@ export function computeSafeZones(content: string, options?: { includeInlineCode?
 
       // Check if closing backtick is escaped
       let closingBackslashCount = 0;
-      i = backtickEnd - 2;  // Position just before closing backtick
+      i = backtickEnd - 2; // Position just before closing backtick
       while (i >= 0 && content[i] === '\\') {
         closingBackslashCount++;
         i--;
@@ -220,7 +267,7 @@ export function computeSafeZones(content: string, options?: { includeInlineCode?
       const start = backtickStart;
       const end = backtickEnd;
       // Skip if this inline code is inside a code fence
-      const isInsideFence = fenceZones.some(f => start >= f.start && end <= f.end);
+      const isInsideFence = fenceZones.some((f) => start >= f.start && end <= f.end);
       if (!isInsideFence) {
         zones.push({ start, end });
       }
@@ -231,12 +278,50 @@ export function computeSafeZones(content: string, options?: { includeInlineCode?
 }
 
 const COMMON_CODE_WORDS = new Set([
-  'for', 'val', 'def', 'let', 'var', 'if', 'else', 'match', 'case',
-  'new', 'this', 'return', 'yield', 'await', 'async', 'try', 'catch',
-  'import', 'export', 'from', 'as', 'extends', 'implements', 'class',
-  'object', 'trait', 'type', 'sealed', 'abstract', 'final', 'private',
-  'protected', 'public', 'static', 'require', 'module', 'package',
-  'true', 'false', 'null', 'undefined', 'void', 'any', 'never',
+  'for',
+  'val',
+  'def',
+  'let',
+  'var',
+  'if',
+  'else',
+  'match',
+  'case',
+  'new',
+  'this',
+  'return',
+  'yield',
+  'await',
+  'async',
+  'try',
+  'catch',
+  'import',
+  'export',
+  'from',
+  'as',
+  'extends',
+  'implements',
+  'class',
+  'object',
+  'trait',
+  'type',
+  'sealed',
+  'abstract',
+  'final',
+  'private',
+  'protected',
+  'public',
+  'static',
+  'require',
+  'module',
+  'package',
+  'true',
+  'false',
+  'null',
+  'undefined',
+  'void',
+  'any',
+  'never',
 ]);
 
 export function extractCodeBlockIdentifiers(content: string): string[] {

@@ -38,28 +38,30 @@ describe('insertInlineLink', () => {
   it('wraps a matching phrase with a link', () => {
     const zones = computeSafeZones(PLAIN_DOC);
     const { result, inserted } = insertInlineLink(
-      PLAIN_DOC, 'getting started guide', '../overview/getting-started.md', zones
+      PLAIN_DOC,
+      'getting started guide',
+      '../overview/getting-started.md',
+      zones
     );
     expect(inserted).toBe(true);
     expect(result).toContain('[getting started guide](../overview/getting-started.md)');
     // Verify phrase is not left unwrapped elsewhere (only appears in the link)
-    const withoutLink = result.replace('[getting started guide](../overview/getting-started.md)', '');
+    const withoutLink = result.replace(
+      '[getting started guide](../overview/getting-started.md)',
+      ''
+    );
     expect(withoutLink).not.toContain('getting started guide');
   });
 
   it('returns inserted=false when phrase not found in safe zone', () => {
     const zones = computeSafeZones(PLAIN_DOC);
-    const { inserted } = insertInlineLink(
-      PLAIN_DOC, 'nonexistent phrase xyz', '../foo.md', zones
-    );
+    const { inserted } = insertInlineLink(PLAIN_DOC, 'nonexistent phrase xyz', '../foo.md', zones);
     expect(inserted).toBe(false);
   });
 
   it('does not modify content inside a code fence', () => {
     const zones = computeSafeZones(CODE_DOC);
-    const { result } = insertInlineLink(
-      CODE_DOC, 'ZStream.fromIterable', '../streams.md', zones
-    );
+    const { result } = insertInlineLink(CODE_DOC, 'ZStream.fromIterable', '../streams.md', zones);
     // The match is inside the fence, should not be modified
     expect(result).not.toContain('[ZStream.fromIterable](');
   });
@@ -71,7 +73,10 @@ describe('insertInlineLink', () => {
     );
     const zones = computeSafeZones(docWithLink);
     const { inserted } = insertInlineLink(
-      docWithLink, 'getting started guide', '../overview/getting-started.md', zones
+      docWithLink,
+      'getting started guide',
+      '../overview/getting-started.md',
+      zones
     );
     expect(inserted).toBe(false);
   });
@@ -85,7 +90,10 @@ The ZIO runtime manages execution. The RUNTIME is configurable.
 `;
     const zones = computeSafeZones(docWithMixedCase);
     const { result, inserted } = insertInlineLink(
-      docWithMixedCase, 'ZIO runtime', '../core/runtime.md', zones
+      docWithMixedCase,
+      'ZIO runtime',
+      '../core/runtime.md',
+      zones
     );
     expect(inserted).toBe(true);
     // Should wrap the first occurrence (lowercase)
@@ -104,7 +112,10 @@ Streams are powerful for data processing.
 `;
     const zones = computeSafeZones(docWithFenceAndText);
     const { result, inserted } = insertInlineLink(
-      docWithFenceAndText, 'Streams', '../streams.md', zones
+      docWithFenceAndText,
+      'Streams',
+      '../streams.md',
+      zones
     );
     expect(inserted).toBe(true);
     // "Streams" at start of line after fence should be linkable
@@ -120,7 +131,10 @@ Promise is useful, so be careful when using completeWith.
 `;
     const zones = computeSafeZones(docWithEmbeddedWord);
     const { result, inserted } = insertInlineLink(
-      docWithEmbeddedWord, 'Ref', '../concurrency/ref.md', zones
+      docWithEmbeddedWord,
+      'Ref',
+      '../concurrency/ref.md',
+      zones
     );
     // "Ref" is inside "careful", should NOT be linked
     expect(inserted).toBe(false);
@@ -137,7 +151,10 @@ Ref is a concurrency primitive. Use Ref for shared state.
 `;
     const zones = computeSafeZones(docWithCompleteWord);
     const { result, inserted } = insertInlineLink(
-      docWithCompleteWord, 'Ref', '../concurrency/ref.md', zones
+      docWithCompleteWord,
+      'Ref',
+      '../concurrency/ref.md',
+      zones
     );
     // Standalone "Ref" should be linkable
     expect(inserted).toBe(true);
@@ -154,7 +171,10 @@ Store values in \`FiberRef\` for thread-local storage.
 `;
     const zones = computeSafeZones(docWithInlineCode);
     const { result, inserted } = insertInlineLink(
-      docWithInlineCode, 'FiberRef', '../state-management/fiberref.md', zones
+      docWithInlineCode,
+      'FiberRef',
+      '../state-management/fiberref.md',
+      zones
     );
     expect(inserted).toBe(true);
     // Should format as [`FiberRef`](url), not [FiberRef](url)
@@ -172,7 +192,10 @@ The \`ZLayer\` constructor provides type safety.
 `;
     const zones = computeSafeZones(docWithBackticks);
     const { result, inserted } = insertInlineLink(
-      docWithBackticks, 'ZLayer', '../contextual/zlayer.md', zones
+      docWithBackticks,
+      'ZLayer',
+      '../contextual/zlayer.md',
+      zones
     );
     expect(inserted).toBe(true);
     expect(result).toContain('[`ZLayer`](../contextual/zlayer.md)');
@@ -193,7 +216,10 @@ The \`FiberRef\` is powerful.
 `;
     const zones = computeSafeZones(mixedDoc);
     const { result, inserted } = insertInlineLink(
-      mixedDoc, 'FiberRef', '../state-management/fiberref.md', zones
+      mixedDoc,
+      'FiberRef',
+      '../state-management/fiberref.md',
+      zones
     );
     expect(inserted).toBe(true);
     // Should link the first inline code occurrence, not the one inside the code block
@@ -210,7 +236,11 @@ describe('insertSeeAlsoEntry', () => {
   it('appends bullet to existing See Also section', () => {
     const zones = computeSafeZones(DOC_WITH_SEE_ALSO);
     const { result, inserted } = insertSeeAlsoEntry(
-      DOC_WITH_SEE_ALSO, 'fiber reference', '../core/fiber.md', 'A reference for fiber operations', zones
+      DOC_WITH_SEE_ALSO,
+      'fiber reference',
+      '../core/fiber.md',
+      'A reference for fiber operations',
+      zones
     );
     expect(inserted).toBe(true);
     expect(result).toContain('- [fiber reference](../core/fiber.md)');
@@ -220,7 +250,11 @@ describe('insertSeeAlsoEntry', () => {
   it('creates See Also section when absent', () => {
     const zones = computeSafeZones(PLAIN_DOC);
     const { result, inserted } = insertSeeAlsoEntry(
-      PLAIN_DOC, 'fiber basics', '../core/fiber.md', 'Basic concepts for working with fibers', zones
+      PLAIN_DOC,
+      'fiber basics',
+      '../core/fiber.md',
+      'Basic concepts for working with fibers',
+      zones
     );
     expect(inserted).toBe(true);
     expect(result).toContain('## See Also');
@@ -230,7 +264,11 @@ describe('insertSeeAlsoEntry', () => {
   it('does not add duplicate entry', () => {
     const zones = computeSafeZones(DOC_WITH_SEE_ALSO);
     const { inserted } = insertSeeAlsoEntry(
-      DOC_WITH_SEE_ALSO, 'ZIO', '../core/zio.md', 'Core ZIO reference', zones
+      DOC_WITH_SEE_ALSO,
+      'ZIO',
+      '../core/zio.md',
+      'Core ZIO reference',
+      zones
     );
     expect(inserted).toBe(false);
   });
@@ -238,7 +276,11 @@ describe('insertSeeAlsoEntry', () => {
   it('appends bullets in order (new items after existing ones)', () => {
     const zones = computeSafeZones(DOC_WITH_SEE_ALSO);
     const { result: result1 } = insertSeeAlsoEntry(
-      DOC_WITH_SEE_ALSO, 'fiber reference', '../core/fiber.md', 'Reference for fiber operations', zones
+      DOC_WITH_SEE_ALSO,
+      'fiber reference',
+      '../core/fiber.md',
+      'Reference for fiber operations',
+      zones
     );
     // Verify both bullets exist and fiber comes after ZIO
     expect(result1).toContain('- [ZIO](../core/zio.md)');
@@ -250,7 +292,11 @@ describe('insertSeeAlsoEntry', () => {
     // Now add another entry and verify order
     const zones2 = computeSafeZones(result1);
     const { result: result2 } = insertSeeAlsoEntry(
-      result1, 'runtime', '../core/runtime.md', 'ZIO runtime for execution', zones2
+      result1,
+      'runtime',
+      '../core/runtime.md',
+      'ZIO runtime for execution',
+      zones2
     );
     expect(result2).toContain('- [ZIO](../core/zio.md)');
     expect(result2).toContain('- [fiber reference](../core/fiber.md)');
@@ -278,7 +324,11 @@ Other content.
 `;
     const zones = computeSafeZones(docWithTwoSections);
     const { result } = insertSeeAlsoEntry(
-      docWithTwoSections, 'new link', '../new.md', 'A new related link', zones
+      docWithTwoSections,
+      'new link',
+      '../new.md',
+      'A new related link',
+      zones
     );
     // Should append to the first See Also section
     const firstSectionEnd = docWithTwoSections.indexOf('\n\nOther content');

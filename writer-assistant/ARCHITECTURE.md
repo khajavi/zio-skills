@@ -144,12 +144,14 @@ writer-assistant/
 **Technologies:** Flue Framework, TypeScript
 
 **Key Responsibilities:**
+
 - Load/initialize state from disk
 - Route to correct phase (reindex, step, autopilot, report)
 - Maintain LLM session across page batches
 - Persist state after each operation
 
 **Interface:**
+
 ```typescript
 payload: {
   docsDir: string,           // Required: path to docs directory
@@ -171,6 +173,7 @@ payload: {
 **Technologies:** Anthropic API (Claude), Flue framework
 
 **Capabilities:**
+
 - Analyzes page content for cross-linking opportunities
 - Uses tools to search index, validate anchors, extract metadata
 - Returns structured JSON suggestions (inline links + See Also)
@@ -187,6 +190,7 @@ payload: {
 **Purpose:** Build a fresh documentation index and classify all pages by section type.
 
 **Process:**
+
 1. Walk docs directory (respecting `excludePatterns`)
 2. Extract metadata: title, summary, keywords from frontmatter
 3. Count existing internal links in each page
@@ -202,6 +206,7 @@ payload: {
 **Purpose:** Analyze unprocessed pages, generate suggestions, and apply high-confidence links.
 
 **Process per page:**
+
 1. Find next unprocessed page (or use `targetFile`/`targetDir`)
 2. Load page content from disk
 3. Prepare context: page index, adjacent pages, full content
@@ -223,6 +228,7 @@ payload: {
 **Purpose:** Analyze coverage and generate statistics.
 
 **Metrics:**
+
 - **Coverage:** Total pages, % processed, pending count
 - **Suggestions:** Applied/skipped/pending counts, confidence distribution
 - **Link Density:** Average outgoing links per page by section type
@@ -242,7 +248,7 @@ payload: {
 **Tools:**
 
 | Tool                     | Purpose                              | Parameters                                                |
-|--------------------------|--------------------------------------|-----------------------------------------------------------|
+| ------------------------ | ------------------------------------ | --------------------------------------------------------- |
 | `search_pages`           | Find pages by title/keywords/topic   | `query` (string), `limit` (number, default 5)             |
 | `search_page_content`    | Find phrases/anchors in page prose   | `targetId` (string), `terms` (string[]), `limit` (number) |
 | `validate_anchor`        | Check if heading exists              | `targetId` (string), `anchorText` (string)                |
@@ -263,6 +269,7 @@ payload: {
 **Technologies:** Anthropic API (Claude), Flue framework
 
 **Capabilities:**
+
 - Extracts title from frontmatter or page heading
 - Generates natural language descriptions from page content
 - Identifies and extracts relevant keywords
@@ -270,36 +277,42 @@ payload: {
 - Works with incomplete or unstructured documentation
 
 **Modes:**
+
 - **`all`** — Extract metadata for all pages (comprehensive batch)
 - **`missing`** — Extract only for pages without complete metadata (fallback mode)
 - **`file`** — Extract for a single specific page (testing/validation)
 
 **Input/Output:**
+
 - **Input:** Page content (raw markdown), existing frontmatter (if any), page path
 - **Output:** Metadata object with title, description, keywords
 - Metadata is persisted to page frontmatter automatically
 
 **Usage:**
 
-*Standalone pre-enrichment (recommended):*
+_Standalone pre-enrichment (recommended):_
+
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"all"}'
 ```
 
-*Fallback on-demand mode:*
+_Fallback on-demand mode:_
+
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"missing"}'
 ```
 
-*Single file extraction:*
+_Single file extraction:_
+
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"file","targetFile":"guides/getting-started.md"}'
 ```
 
 **Stateless Design:** The agent maintains no persistent state. Each invocation:
+
 - Reads current page content
 - Generates fresh metadata based on content analysis
 - Writes results to page frontmatter
@@ -365,16 +378,19 @@ CrossrefState {
 **Location:** `lib/state-store.ts`
 
 **Persistence:**
+
 - State split into `.crossref-state/index.json` (pages) and `.crossref-state/suggestions.json` (suggestions)
 - Backward-compatible migration for old `state.json` format
 - Atomic writes with error recovery (silently skips corrupt files)
 
 **Loading:**
+
 - Lazy initialization: empty state if no files exist
 - Parse with Valibot for type safety
 - Fall back to empty on parse error (prevents crashes)
 
 **Saving:**
+
 - Create `.crossref-state/` directory if missing
 - Write index and suggestions as separate JSON files
 - Suggestions accumulate (never truncated)
@@ -386,13 +402,15 @@ CrossrefState {
 **Location:** `lib/markdown-parser.ts`
 
 **Capabilities:**
+
 - Extract YAML frontmatter (preserve untouched)
 - Parse headings and outline
-- Identify safe zones: code fences (`` ``` ``, `~~~`), inline code (`` ` ``)
+- Identify safe zones: code fences (` ``` `, `~~~`), inline code (`` ` ``)
 - Find existing links
 - Safe phrase matching (case-insensitive find, exact-case replacement)
 
 **Safety Guarantees:**
+
 - Links inserted only in prose (not headings, code, frontmatter)
 - Code blocks fully protected (never modified)
 - Inline code protected (never modified)
@@ -405,15 +423,20 @@ CrossrefState {
 **Location:** `workflows/utils/link-inserter.ts`, `workflows/utils/link-validator.ts`
 
 **Link Inserter:**
+
 - Insert inline links: `` `[Fiber](./path.md)` `` in prose
 - Insert See Also sections at end of page with format:
+
   ```markdown
   ## See Also
+
   - [Related Topic](./path.md) — Description
   ```
+
 - Fallback: find partial phrase matches if exact doesn't exist
 
 **Link Validator:**
+
 - Path safety: resolve symlinks, check within docs boundary
 - Duplicate detection: verify anchor not already linked in page
 - Anchor validation: confirm heading/section exists in target
@@ -428,6 +451,7 @@ CrossrefState {
 **File:** `.crossref-config.json` (in parent of docs)
 
 **Options:**
+
 ```json
 {
   "excludePatterns": ["node_modules", ".github", "archived"],
@@ -440,16 +464,15 @@ CrossrefState {
 
 **Option Details:**
 
-| Option | Type | Default | Purpose |
-|--------|------|---------|---------|
-| `excludePatterns` | string[] | `[]` | Path segments to skip during indexing |
-| `maxLinksPerPage` | number | `10` | Maximum suggestions per page |
-| `maxSeeAlsoSuggestion` | number | `5` | Maximum "See Also" links per page |
-| `confidenceThreshold` | "low" \| "medium" \| "high" | `"high"` | Minimum confidence for auto-application |
-| `clearSuggestionsBeforeRun` | boolean | `false` | Clear stale suggestions for re-processed pages |
+| Option                      | Type                        | Default  | Purpose                                        |
+| --------------------------- | --------------------------- | -------- | ---------------------------------------------- |
+| `excludePatterns`           | string[]                    | `[]`     | Path segments to skip during indexing          |
+| `maxLinksPerPage`           | number                      | `10`     | Maximum suggestions per page                   |
+| `maxSeeAlsoSuggestion`      | number                      | `5`      | Maximum "See Also" links per page              |
+| `confidenceThreshold`       | "low" \| "medium" \| "high" | `"high"` | Minimum confidence for auto-application        |
+| `clearSuggestionsBeforeRun` | boolean                     | `false`  | Clear stale suggestions for re-processed pages |
 
 ---
-
 
 ---
 
@@ -464,6 +487,7 @@ CrossrefState {
 **Purpose:** Metadata for all discovered pages, enabling fast search and adjacency lookup.
 
 **Key Collections:**
+
 - `index[]` — Array of `PageIndexEntry` objects
 - Each entry contains: id, title, path, description, keywords, sectionType, adjacentPages
 
@@ -474,25 +498,29 @@ CrossrefState {
 **Purpose:** Store extracted/generated metadata in each Markdown page for use by indexing and linking agents.
 
 **Structure:**
+
 ```yaml
 ---
-title: "Getting Started with ZIO"
-description: "A comprehensive guide to setting up and using ZIO for concurrent programming"
-keywords: ["setup", "installation", "concurrency", "fiber"]
+title: 'Getting Started with ZIO'
+description: 'A comprehensive guide to setting up and using ZIO for concurrent programming'
+keywords: ['setup', 'installation', 'concurrency', 'fiber']
 ---
 ```
 
 **Fields:**
+
 - `title` (string) — Page heading or frontmatter title
 - `description` (string) — Natural language summary of page content (1-3 sentences)
 - `keywords` (string[]) — Relevant topic terms for search and correlation
 
 **Population:**
+
 - Extracted by metadata-agent during pre-enrichment or on-demand phases
 - Can also be manually authored in frontmatter
 - Once populated, reused by writer-assistant for better link suggestions
 
 **Usage:**
+
 - **Indexing:** Extracted during reindex phase for building page index
 - **Search:** Used by page-linker agent tools to find relevant target pages
 - **Link Quality:** Richer metadata enables more confident link suggestions
@@ -506,6 +534,7 @@ keywords: ["setup", "installation", "concurrency", "fiber"]
 **Purpose:** Accumulates all suggestions (applied, pending, skipped) for review and analytics.
 
 **Key Collections:**
+
 - `suggestions[]` — Array of `LinkSuggestion` objects
 - Each entry contains: sourceId, targetId, anchorText, type, confidence, status
 
@@ -514,12 +543,14 @@ keywords: ["setup", "installation", "concurrency", "fiber"]
 **Architecture:** Headless workflow executor
 
 **Typical Usage:**
+
 - Developer runs: `npx flue run crossref --target node --payload '{...}'`
 - CI/CD can invoke with payload parameters
 
 ## 6. Development & Testing Environment
 
 **Local Setup:**
+
 ```bash
 # Install dependencies
 npm install
@@ -535,10 +566,12 @@ npm test
 ```
 
 **Testing Frameworks:**
+
 - **Vitest** — Test runner and assertion library
 - **Fixtures** — Test docs in-memory or temporary directories
 
 **Code Quality:**
+
 - **TypeScript strict mode** — All source files
 - **Valibot schemas** — Runtime validation
 - **No linter** — Relies on type checking

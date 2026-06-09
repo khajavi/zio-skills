@@ -2,7 +2,15 @@ import { parseFrontmatter } from '../../lib/markdown-parser.js';
 
 function quoteYamlString(value: string): string {
   if (!value) return '""';
-  if (value.includes('\n') || value.includes('"') || value.includes(':') || value.includes('[') || value.includes(']') || value.includes('#') || /\s/.test(value)) {
+  if (
+    value.includes('\n') ||
+    value.includes('"') ||
+    value.includes(':') ||
+    value.includes('[') ||
+    value.includes(']') ||
+    value.includes('#') ||
+    /\s/.test(value)
+  ) {
     return `"${value.replace(/"/g, '\\"')}"`;
   }
   return value;
@@ -36,13 +44,14 @@ function serializeYamlValue(value: any): string {
   return `"${String(value)}"`;
 }
 
-export function updateFrontmatter(content: string, metadata: { description: string; keywords: string[] }): string {
+export function updateFrontmatter(
+  content: string,
+  metadata: { description: string; keywords: string[] }
+): string {
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
 
   if (!fmMatch) {
-    const keywordsList = metadata.keywords
-      .map(k => `  - ${quoteYamlString(k)}`)
-      .join('\n');
+    const keywordsList = metadata.keywords.map((k) => `  - ${quoteYamlString(k)}`).join('\n');
     const newFm = `description: ${quoteYamlString(metadata.description)}\nkeywords:\n${keywordsList}`;
     return `---\n${newFm}\n---\n${content}`;
   }

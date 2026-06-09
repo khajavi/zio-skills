@@ -17,23 +17,27 @@ Perfect for improving internal SEO, helping readers discover related documentati
 ## Features
 
 ✨ **Safe Link Insertion**
-- Protects code fences (`` ``` ``, `~~~`) and inline code (`` ` `` `)
+
+- Protects code fences (` ``` `, `~~~`) and inline code (`` ` `` `)
 - Preserves YAML frontmatter untouched
 - Case-insensitive phrase matching with exact casing preservation
 
 🔒 **Security Hardened**
+
 - Path traversal protection (symlinks checked via `realpathSync`)
 - TOCTOU-safe filesystem operations
 - LLM output validated before state persistence
 - Comprehensive error handling with graceful fallbacks
 
 📊 **Intelligent Analysis**
+
 - LLM-based section type classification (reference, guide, tutorial, overview)
 - Confidence-based suggestion filtering (high/medium/low)
 - Automatic deduplication of suggestions
 - Token usage tracking and cost estimation
 
 ⚙️ **Flexible Operation**
+
 - Four execution modes: reindex, step, autopilot, report
 - Incremental processing with persistent state
 - Configurable thresholds and exclusion patterns
@@ -175,6 +179,7 @@ flue run workflows/crossref.ts --target node \
 ```
 
 **Output:**
+
 - Walks entire docs directory (respecting `excludePatterns`)
 - Extracts title, summary, keywords from each page
 - Uses LLM to classify section type (reference/guide/tutorial/overview/other)
@@ -191,29 +196,34 @@ flue run crossref --target node \
 ```
 
 **Process next unprocessed page:**
+
 ```bash
 flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"step"}'
 ```
 
 **Process a specific target file:**
+
 ```bash
 flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"step","targetFile":"reference/fiber/fiber.md"}'
 ```
 
 **Process all files in a directory (recursively):**
+
 ```bash
 flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"step","targetDir":"reference/fiber/","batchSize":5}'
 ```
 
 **Output per page:**
+
 - ✓ Processed: [title] (N/total) | Applied: X links | Queued: Y
 - Token counts (this run + cumulative)
 - Cost estimate
 
 **Behavior:**
+
 - If `targetFile` is provided, finds and processes only that file (regardless of prior processing state)
 - If `targetDir` is provided, processes up to `batchSize` files from that directory and all subdirectories
 - Otherwise, processes next unprocessed page in discovery order
@@ -224,6 +234,7 @@ flue run crossref --target node \
 - Saves state after each page
 
 **targetDir Usage:**
+
 - Accepts relative paths (e.g., `"reference/fiber/"`) or absolute paths
 - Recursively finds all `.md` and `.mdx` files in the directory
 - Processes up to `batchSize` files per invocation (default `1`)
@@ -240,6 +251,7 @@ flue run workflows/crossref.ts --target node \
 ```
 
 **Output:**
+
 - Per-page iteration summaries (same as `step`)
 - Final completion message with total processed and token spend
 
@@ -253,6 +265,7 @@ flue run workflows/crossref.ts --target node \
 ```
 
 **Output includes:**
+
 - **Coverage**: total pages, processed %, pending count
 - **Suggestions**: applied/skipped/pending (with confidence distribution)
 - **Link Density**: average outgoing links per page by section type
@@ -269,20 +282,24 @@ flue run workflows/crossref.ts --target node \
 ```
 
 **Purpose:**
+
 - Ensures cross-referenced links don't break the documentation build
 - Detects build errors and reports them clearly
 - Validates that the project can be built after modifications
 
 **Auto-detection:** Automatically detects the documentation build system:
+
 - **Docusaurus** (via `../website/package.json` or `../package.json`)
 - **MkDocs** (via `../mkdocs.yml`)
 - **Sphinx** (via `docs/conf.py`)
 
 **Output:**
+
 - **Success**: `✓ docusaurus build passed in 15234ms`
 - **Failure**: `✗ docusaurus build failed (exit code 1)` with full build output
 
 **Example CI Usage:**
+
 ```bash
 # Step 1: Add cross-references
 flue run crossref --target node \
@@ -309,12 +326,14 @@ npm exec -- flue run crossref --target node \
 ```
 
 **Purpose:**
+
 - Detects build failures (broken links, syntax errors, missing files, compilation errors, etc.)
 - Automatically analyzes and fixes errors across the entire project
 - Re-runs verification until build passes or max retries reached
 - Reduces manual iteration on documentation and build issues
 
 **How it works:**
+
 1. **Verify** → runs documentation build pipeline (sbt mdoc → yarn install → yarn build)
 2. **If failed** → extract structured errors (broken link, missing file, syntax error, etc.)
 3. **Analyze** → auto-fixer analyzes all errors holistically to find root causes
@@ -323,6 +342,7 @@ npm exec -- flue run crossref --target node \
 6. **Repeat** → until success or max retries (default: 3)
 
 **Fixable issues across the project:**
+
 - **Broken links** — Add missing `.md` extension, correct relative paths, fix anchors
 - **Syntax errors** — Close unclosed code fences, fix YAML frontmatter, fix markdown syntax
 - **Missing files** — Remove broken references, suggest alternatives, update cross-links
@@ -332,6 +352,7 @@ npm exec -- flue run crossref --target node \
 - **Source code** — Fix imports or compilation issues if needed
 
 **Example workflow:**
+
 ```bash
 # Step 1: Add cross-references
 npm exec -- flue run crossref --target node \
@@ -347,11 +368,13 @@ npm exec -- flue run crossref --target node \
 ```
 
 **Parameters:**
+
 - `projectRoot` (required): Path to project root directory (e.g., `/home/milad/sources/scala/zio-2.x-new`, `.`)
 - `mode` (required): `"verify-and-fix"`
 - `maxRetries` (optional): Maximum retry attempts (default: 3). Set higher for complex projects, lower to fail fast
 
 **Output:**
+
 ```
 [crossref] Verify-and-fix attempt 1/3
 [crossref] ✗ docusaurus build failed (exit code 1)
@@ -379,12 +402,14 @@ flue run extract-metadata --target node \
 ```
 
 This pre-enrichment approach:
+
 - Extracts and generates metadata for all pages in one batch
 - Populates page frontmatter with title, description, and keywords
 - Provides complete context for the writer-assistant to work with
 - **Most efficient** for initial documentation setup
 
 **When to use pre-enrichment:**
+
 - Setting up crossref for a new documentation site
 - You want all pages to have consistent metadata before linking
 - Your docs are missing or have incomplete frontmatter
@@ -416,32 +441,36 @@ flue run extract-metadata --target node \
 ```
 
 This fallback approach:
+
 - Extracts metadata only for pages that lack it
 - Happens automatically during page processing
 - Less efficient but works without additional setup
 - Good for incremental documentation updates
 
 **When to use on-demand:**
+
 - Adding crossref to existing documentation
 - Only certain pages need metadata
 - You want to minimize upfront extraction cost
 
 #### Metadata Mode Reference
 
-| Mode | Purpose | Use Case |
-|------|---------|----------|
-| `all` | Extract for all pages | Initial setup, complete refresh |
-| `missing` | Extract for pages without metadata | Incremental updates, fallback mode |
-| `file` | Extract for single file | Testing, specific page updates |
-| `dir` | Extract for all pages in a directory recursively | Batch updates, section enrichment |
+| Mode      | Purpose                                          | Use Case                           |
+| --------- | ------------------------------------------------ | ---------------------------------- |
+| `all`     | Extract for all pages                            | Initial setup, complete refresh    |
+| `missing` | Extract for pages without metadata               | Incremental updates, fallback mode |
+| `file`    | Extract for single file                          | Testing, specific page updates     |
+| `dir`     | Extract for all pages in a directory recursively | Batch updates, section enrichment  |
 
 **Example: Extract single file**
+
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","mode":"file","targetFile":"guides/getting-started.md"}'
 ```
 
 **Example: Extract entire directory recursively**
+
 ```bash
 flue run extract-metadata --target node \
   --payload '{"docsDir":"./docs","targetDir":"guides/","mode":"all"}'
@@ -452,11 +481,13 @@ This extracts metadata for all `.md` and `.mdx` files in the `guides/` directory
 #### Token Impact
 
 **Pre-enrichment (Recommended):** ~500-1000 tokens per batch
+
 - Single batch classifies all pages
 - More efficient than per-page extraction
 - Lower overall cost for large documentation
 
 **On-Demand Fallback:** ~100-300 tokens per page (as needed)
+
 - Only pages missing metadata are processed
 - Higher cost if many pages need extraction
 - Spreads cost across multiple runs
@@ -479,13 +510,13 @@ Place in the parent directory of your docs to customize behavior:
 
 **Options:**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `excludePatterns` | string[] | `[]` | Path segments to skip (e.g., "archived", "node_modules") |
-| `maxLinksPerPage` | number | `10` | Max suggestions returned per page |
-| `maxSeeAlsoSuggestion` | number | `5` | Max "See Also" links per page |
-| `confidenceThreshold` | "low" \| "medium" \| "high" | `"high"` | Minimum confidence to auto-apply links |
-| `clearSuggestionsBeforeRun` | boolean | `false` | Clear old suggestions for re-processed pages |
+| Option                      | Type                        | Default  | Description                                              |
+| --------------------------- | --------------------------- | -------- | -------------------------------------------------------- |
+| `excludePatterns`           | string[]                    | `[]`     | Path segments to skip (e.g., "archived", "node_modules") |
+| `maxLinksPerPage`           | number                      | `10`     | Max suggestions returned per page                        |
+| `maxSeeAlsoSuggestion`      | number                      | `5`      | Max "See Also" links per page                            |
+| `confidenceThreshold`       | "low" \| "medium" \| "high" | `"high"` | Minimum confidence to auto-apply links                   |
+| `clearSuggestionsBeforeRun` | boolean                     | `false`  | Clear old suggestions for re-processed pages             |
 
 ### Confidence Levels
 
@@ -506,6 +537,7 @@ When `clearSuggestionsBeforeRun` is enabled:
 ```
 
 **Behavior:**
+
 - Old suggestions are removed before re-processing pages
 - Useful when re-analyzing pages that previously generated incorrect suggestions
 - When processing a specific file with `targetFile`, only suggestions **from** that file are cleared
@@ -550,12 +582,13 @@ State persists in `.crossref-state/state.json`:
   "tokens": {
     "inputTotal": 150000,
     "outputTotal": 50000,
-    "runningCost": 0.60
+    "runningCost": 0.6
   }
 }
 ```
 
 **States:**
+
 - `pending` — Suggested but not yet applied (awaiting review or threshold)
 - `applied` — Successfully inserted into document
 - `skipped` — Validation failed (already linked, path unresolvable, etc.)
@@ -565,17 +598,20 @@ State persists in `.crossref-state/state.json`:
 ### Core Modules
 
 **Pure Utilities** (fully tested, no side effects):
+
 - `tools/markdown-parser.ts` — Frontmatter, headings, links, safe zones
 - `tools/link-inserter.ts` — Inline links, See Also sections with code-fence safety
 - `tools/link-validator.ts` — Path validation, symlink safety, duplicate detection
 
 **Infrastructure**:
+
 - `tools/docs-fs.ts` — Async I/O Flue tools with path-traversal protection
 - `tools/config-loader.ts` — Configuration loading with sensible defaults
 - `tools/state-store.ts` — Persistent state with error recovery
 - `tools/schemas.ts` — Valibot schemas for runtime validation
 
 **Orchestration**:
+
 - `agents/page-linker.ts` — Claude Haiku 4.5 agent for analysis
 - `skills/cross-linking/SKILL.md` — LLM instructions
 - `workflows/crossref.ts` — Workflow with 4 modes
@@ -620,6 +656,7 @@ npm test:watch
 ```
 
 **Test Coverage:**
+
 - 19 tests for markdown parsing (frontmatter, headings, links, safe zones)
 - 11 tests for link insertion (inline, See Also, code-fence safety)
 - 4 tests for validation (paths, symlinks, duplicates)
@@ -666,11 +703,13 @@ writer-assistant/
 ## Limitations & Future Work
 
 ### Current Limitations
+
 - Single batch of pages classified at a time (reindex is atomic)
 - Suggestions from LLM cannot be directly overridden (must be accepted/rejected as-is)
 - No conflict detection for overlapping link text
 
 ### Potential Enhancements
+
 - Incremental reindex (update only changed files)
 - Manual suggestion override/editing interface
 - Analytics dashboard (link growth over time)
@@ -725,24 +764,29 @@ flue run workflows/crossref.ts --target node \
 ## Troubleshooting
 
 **"No index found. Run reindex first."**
+
 - Run `reindex` mode to build initial state
 
 **Links not applying**
+
 - Check `confidenceThreshold` in config (default: "high")
 - Use `report` mode to see confidence distribution
 - Lower threshold to `"medium"` in `.crossref-config.json`
 
 **Unreadable files warning**
+
 - Normal behavior for files with permission issues
 - Check file permissions: `ls -la docs/`
 
 **API key not found**
+
 - Ensure `.env` file exists with `ANTHROPIC_API_KEY=...`
 - Check it's not in `.gitignore` globally
 
 ## Contributing
 
 This is a production-ready implementation. For improvements:
+
 1. Run tests: `npm test`
 2. Check types: `npx tsc --noEmit`
 3. Create pull request with spec compliance + quality review
@@ -754,6 +798,7 @@ This project is part of the ZIO Skills collection. See LICENSE in the parent dir
 ## Support
 
 For issues or questions:
+
 - Check the [Flue documentation](https://flueframework.com/)
 - Review the [ZIO Skills project](https://github.com/zio/skills/)
 - Open an issue with reproduction steps

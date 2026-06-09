@@ -29,7 +29,7 @@ function walkDocs(docsDir: string, excludePatterns: string[]): string[] {
       const rel = path.relative(docsDir, fullPath);
 
       // Skip excluded patterns
-      if (excludePatterns.some(p => rel.includes(p))) continue;
+      if (excludePatterns.some((p) => rel.includes(p))) continue;
 
       if (entry.isDirectory()) {
         walk(fullPath);
@@ -64,7 +64,9 @@ function walkDir(targetDir: string, docsDir: string, excludePatterns: string[]):
     return [];
   }
 
-  const normalizedTarget = path.isAbsolute(targetDir) ? targetDir : path.resolve(docsDir, targetDir);
+  const normalizedTarget = path.isAbsolute(targetDir)
+    ? targetDir
+    : path.resolve(docsDir, targetDir);
 
   try {
     realTargetDir = fs.realpathSync(normalizedTarget);
@@ -94,7 +96,7 @@ function walkDir(targetDir: string, docsDir: string, excludePatterns: string[]):
       const rel = path.relative(docsDir, fullPath);
 
       // Skip excluded patterns
-      if (excludePatterns.some(p => rel.includes(p))) continue;
+      if (excludePatterns.some((p) => rel.includes(p))) continue;
 
       if (entry.isDirectory()) {
         walk(fullPath);
@@ -156,7 +158,9 @@ export async function run({ init, payload }: FlueContext) {
 
   if (targetFile) {
     // Process specific file
-    const normalizedTarget = path.isAbsolute(targetFile) ? targetFile : path.resolve(docsDir, targetFile);
+    const normalizedTarget = path.isAbsolute(targetFile)
+      ? targetFile
+      : path.resolve(docsDir, targetFile);
     let realTarget: string;
     try {
       realTarget = fs.realpathSync(normalizedTarget);
@@ -267,7 +271,9 @@ export async function run({ init, payload }: FlueContext) {
 
   // Summary
   const total = processed + skipped + errors;
-  console.log(`\n[extract-metadata] Complete. Processed: ${processed}/${total}, Skipped: ${skipped}, Errors: ${errors}`);
+  console.log(
+    `\n[extract-metadata] Complete. Processed: ${processed}/${total}, Skipped: ${skipped}, Errors: ${errors}`
+  );
 
   return { processed, skipped, errors };
 }

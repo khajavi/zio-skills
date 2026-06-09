@@ -90,10 +90,14 @@ export async function loadState(docsDir: string): Promise<CrossrefStateType | nu
       throw new Error(`Index entry [${idx}] is not an object: ${JSON.stringify(rawEntry)}`);
     }
     if (typeof rawEntry.absPath !== 'string' || !rawEntry.absPath) {
-      throw new Error(`Index entry [${idx}] missing or invalid absPath field (page: ${rawEntry.id || rawEntry.path || 'unknown'}): ${JSON.stringify(rawEntry)}`);
+      throw new Error(
+        `Index entry [${idx}] missing or invalid absPath field (page: ${rawEntry.id || rawEntry.path || 'unknown'}): ${JSON.stringify(rawEntry)}`
+      );
     }
     if (typeof rawEntry.id !== 'string' || !rawEntry.id) {
-      throw new Error(`Index entry [${idx}] missing or invalid id field: ${JSON.stringify(rawEntry)}`);
+      throw new Error(
+        `Index entry [${idx}] missing or invalid id field: ${JSON.stringify(rawEntry)}`
+      );
     }
 
     // Type-safe entry with explicit field checks
@@ -130,7 +134,9 @@ export async function loadState(docsDir: string): Promise<CrossrefStateType | nu
       entry.keywords = null;
     } else {
       // Invalid type - log warning and convert to null
-      console.warn(`[crossref] Index entry [${idx}] (${entry.id}): keywords has invalid type ${typeof entry.keywords}, converting to null`);
+      console.warn(
+        `[crossref] Index entry [${idx}] (${entry.id}): keywords has invalid type ${typeof entry.keywords}, converting to null`
+      );
       entry.keywords = null;
     }
     return entry;
@@ -153,7 +159,7 @@ export function saveState(docsDir: string, state: CrossrefStateType): void {
   const index: PageIndexType = {
     indexBuiltAt: state.indexBuiltAt,
     docsDir: state.docsDir,
-    index: state.index.map(entry => ({
+    index: state.index.map((entry) => ({
       id: entry.id,
       title: entry.title,
       path: entry.path,

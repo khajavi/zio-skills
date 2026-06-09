@@ -5,26 +5,31 @@ import type { CrossrefState } from '../lib/schemas.js';
 export function createSearchPageContent(state: CrossrefState) {
   return defineTool({
     name: 'search_page_content',
-    description: 'Search within a specific page for occurrences of a term. Returns context snippets showing where the term appears.',
+    description:
+      'Search within a specific page for occurrences of a term. Returns context snippets showing where the term appears.',
     parameters: Type.Object({
       pageId: Type.String({
-        description: 'The page ID to search within (e.g., "reference__stream__zsink__index")'
+        description: 'The page ID to search within (e.g., "reference__stream__zsink__index")',
       }),
       searchTerm: Type.String({
-        description: 'Term or phrase to search for'
+        description: 'Term or phrase to search for',
       }),
-      contextLines: Type.Optional(Type.Number({
-        description: 'Number of surrounding lines to include in snippets (default: 2)'
-      })),
+      contextLines: Type.Optional(
+        Type.Number({
+          description: 'Number of surrounding lines to include in snippets (default: 2)',
+        })
+      ),
     }),
     execute: async (args: Record<string, any>) => {
       const pageId = args.pageId as string;
       const searchTerm = args.searchTerm as string;
       const contextLines = (args.contextLines as number | undefined) ?? 2;
 
-      console.log(`[search_page_content] Searching for "${searchTerm}" in page "${pageId}" (context: ${contextLines} lines)`);
+      console.log(
+        `[search_page_content] Searching for "${searchTerm}" in page "${pageId}" (context: ${contextLines} lines)`
+      );
 
-      const entry = state.index.find(e => e.id === pageId);
+      const entry = state.index.find((e) => e.id === pageId);
       if (!entry) {
         console.log(`[search_page_content] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
@@ -54,7 +59,9 @@ export function createSearchPageContent(state: CrossrefState) {
           }
         }
 
-        console.log(`[search_page_content] Found ${occurrences.length} occurrences of "${searchTerm}" in "${pageId}"`);
+        console.log(
+          `[search_page_content] Found ${occurrences.length} occurrences of "${searchTerm}" in "${pageId}"`
+        );
 
         return JSON.stringify({
           pageId,
@@ -69,6 +76,6 @@ export function createSearchPageContent(state: CrossrefState) {
           error: `Failed to read page: ${e}`,
         });
       }
-    }
+    },
   });
 }

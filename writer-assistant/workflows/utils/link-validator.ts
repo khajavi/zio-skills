@@ -1,12 +1,19 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { extractExistingLinks, extractHeadings, computeSafeZones } from '../../lib/markdown-parser.js';
+import {
+  extractExistingLinks,
+  extractHeadings,
+  computeSafeZones,
+} from '../../lib/markdown-parser.js';
 import { findAnchorWithFallback } from './link-inserter.js';
 import type { LinkSuggestion } from '../../lib/schemas.js';
 
 export type ValidationResult =
   | { ok: true }
-  | { ok: false; reason: 'target_missing' | 'already_linked' | 'path_unresolvable' | 'anchor_not_in_source' };
+  | {
+      ok: false;
+      reason: 'target_missing' | 'already_linked' | 'path_unresolvable' | 'anchor_not_in_source';
+    };
 
 /**
  * Normalize a path for comparison, handling case-insensitive filesystems.
@@ -42,7 +49,9 @@ export function validateSuggestion(
     realTarget = fs.realpathSync(resolvedTarget);
   } catch {
     // File doesn't exist or symlink is broken
-    console.log(`[VALIDATOR] [${suggestion.targetId}] FAILED: target_missing (${suggestion.targetRelativePath})`);
+    console.log(
+      `[VALIDATOR] [${suggestion.targetId}] FAILED: target_missing (${suggestion.targetRelativePath})`
+    );
     return { ok: false, reason: 'target_missing' };
   }
 
@@ -71,7 +80,9 @@ export function validateSuggestion(
     normalizedTargetCmp === normalizedDocsDirForwardSlash;
 
   if (!isWithinDocsDir) {
-    console.log(`[VALIDATOR] [${suggestion.targetId}] FAILED: path_unresolvable (${normalizedTarget})`);
+    console.log(
+      `[VALIDATOR] [${suggestion.targetId}] FAILED: path_unresolvable (${normalizedTarget})`
+    );
     return { ok: false, reason: 'path_unresolvable' };
   }
 
@@ -81,12 +92,12 @@ export function validateSuggestion(
   const normalizedSuggestionPath = normalizeForComparison(
     path.resolve(sourceDir, suggestion.targetRelativePath)
   );
-  if (existing.some(l => {
-    const normalizedExistingPath = normalizeForComparison(
-      path.resolve(sourceDir, l.href)
-    );
-    return normalizedExistingPath === normalizedSuggestionPath;
-  })) {
+  if (
+    existing.some((l) => {
+      const normalizedExistingPath = normalizeForComparison(path.resolve(sourceDir, l.href));
+      return normalizedExistingPath === normalizedSuggestionPath;
+    })
+  ) {
     console.log(`[VALIDATOR] [${suggestion.targetId}] FAILED: already_linked`);
     return { ok: false, reason: 'already_linked' };
   }
@@ -99,7 +110,9 @@ export function validateSuggestion(
     const safeZones = computeSafeZones(sourceContent, { includeInlineCode: false });
     const anchorMatch = findAnchorWithFallback(sourceContent, suggestion.anchorText, 0, safeZones);
     if (!anchorMatch) {
-      console.log(`[VALIDATOR] [${suggestion.targetId}] FAILED: anchor_not_in_source (${suggestion.anchorText})`);
+      console.log(
+        `[VALIDATOR] [${suggestion.targetId}] FAILED: anchor_not_in_source (${suggestion.anchorText})`
+      );
       return { ok: false, reason: 'anchor_not_in_source' };
     }
   }
@@ -108,10 +121,7 @@ export function validateSuggestion(
   return { ok: true };
 }
 
-export function hasAnchorInTarget(
-  targetAbsPath: string,
-  methodOrOperatorName: string
-): boolean {
+export function hasAnchorInTarget(targetAbsPath: string, methodOrOperatorName: string): boolean {
   // For simple type names (e.g., "FiberRef"), always allow
   if (!methodOrOperatorName.includes('.') && !methodOrOperatorName.includes('#')) {
     return true;
@@ -124,13 +134,14 @@ export function hasAnchorInTarget(
 
     // Extract the method/operator name part
     const methodPart = methodOrOperatorName.split(/[.#]/).pop() || '';
-    const methodSlug = methodPart.toLowerCase()
+    const methodSlug = methodPart
+      .toLowerCase()
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
 
     // Check if any heading's slug matches
-    return headings.some(h => h.slug.includes(methodSlug));
+    return headings.some((h) => h.slug.includes(methodSlug));
   } catch (e) {
     return false; // File not found or unreadable
   }

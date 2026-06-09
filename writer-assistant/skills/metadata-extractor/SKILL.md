@@ -13,6 +13,7 @@ Documentation metadata extraction specialist. Generate or enhance page descripti
 ## Input
 
 Receive:
+
 - **pageId** – Unique page identifier
 - **pageTitle** – Current page title
 - **pageContent** – Full page content (markdown)
@@ -58,6 +59,7 @@ Receive:
 ## Rules
 
 **Section Type Classification:**
+
 - Examine structure: headings, code blocks, narrative flow
 - Reference = Heavy API docs, type definitions, method tables
 - Guide = Instructions with "when/how/why" + examples
@@ -66,12 +68,14 @@ Receive:
 - Other = Doesn't fit neatly
 
 **Description Quality:**
+
 - Clear, standalone (readable without title)
 - Specific to content, not metadata role
 - 50-150 characters (short and punchy)
 - Lead with key concept if present
 
 **Keywords Quality:**
+
 - 3-7 terms optimal (at least 3, avoid 10+)
 - Lowercase unless proper name (ZIO, Fiber, ZLayer)
 - Include synonyms and related concepts
@@ -80,11 +84,13 @@ Receive:
 ## Error Handling
 
 **If content appears malformed:**
+
 - Extract what structure is readable
 - Default sectionType to "other"
 - Generate conservative description
 
 **If title is generic ("Overview", "Guide"):**
+
 - Rely on content to inform description
 - Don't just restate title
 
@@ -101,6 +107,7 @@ JSON only. No markdown/explanation.
 ```
 
 **Validation:**
+
 - description must be non-empty string
 - keywords must be array with 3-7 items
 - sectionType must match picklist values

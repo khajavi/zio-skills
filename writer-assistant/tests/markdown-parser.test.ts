@@ -49,7 +49,7 @@ rating: 4.5
 
 Content`;
     const result = parseFrontmatter(docWithNumbers);
-    expect(result.sidebar_position).toBe('2');  // Note: parsed as string by regex parser
+    expect(result.sidebar_position).toBe('2'); // Note: parsed as string by regex parser
     expect(result.order).toBe('10');
     expect(result.rating).toBe('4.5');
   });
@@ -63,7 +63,7 @@ published: true
 
 Content`;
     const result = parseFrontmatter(docWithBooleans);
-    expect(result.draft).toBe(false);  // Issue #4 fix: Parse as actual boolean, not string
+    expect(result.draft).toBe(false); // Issue #4 fix: Parse as actual boolean, not string
     expect(result.published).toBe(true);
   });
   it('extracts YAML array fields (keywords)', () => {
@@ -81,7 +81,11 @@ Content here.`;
     expect(result.title).toBe('Clock Service');
     expect(result.description).toBe('Provides time operations');
     expect(Array.isArray(result.keywords)).toBe(true);
-    expect(result.keywords).toEqual(['Clock Service', 'Non-blocking Sleep', 'Scheduling Operations']);
+    expect(result.keywords).toEqual([
+      'Clock Service',
+      'Non-blocking Sleep',
+      'Scheduling Operations',
+    ]);
   });
   it('preserves other fields while parsing arrays', () => {
     const docWithMixed = `---
@@ -100,8 +104,8 @@ Content.`;
     expect(result.id).toBe('clock');
     expect(result.title).toBe('Clock');
     expect(result.description).toBe('Time operations');
-    expect(result.sidebar_position).toBe('2');  // Numbers without quotes are parsed as strings
-    expect(result.draft).toBe(false);  // Issue #4 fix: Parse as actual boolean
+    expect(result.sidebar_position).toBe('2'); // Numbers without quotes are parsed as strings
+    expect(result.draft).toBe(false); // Issue #4 fix: Parse as actual boolean
     expect(result.keywords).toEqual(['Service', 'Time']);
   });
   it('handles empty keywords array', () => {
@@ -155,7 +159,9 @@ describe('extractSummary', () => {
 
 describe('extractKeywords', () => {
   it('extracts capitalized technical terms', () => {
-    const kws = extractKeywords('Use ZIO and Fiber for concurrency. The Runtime handles execution.');
+    const kws = extractKeywords(
+      'Use ZIO and Fiber for concurrency. The Runtime handles execution.'
+    );
     expect(kws).toContain('ZIO');
     expect(kws).toContain('Fiber');
     expect(kws).toContain('Runtime');
@@ -186,13 +192,13 @@ describe('computeSafeZones', () => {
   it('marks frontmatter block as safe zone', () => {
     const zones = computeSafeZones(FM_DOC);
     const fmEnd = FM_DOC.indexOf('---', 3) + 3;
-    expect(zones.some(z => z.start === 0 && z.end >= fmEnd)).toBe(true);
+    expect(zones.some((z) => z.start === 0 && z.end >= fmEnd)).toBe(true);
   });
   it('marks code fence content as safe zone', () => {
     const zones = computeSafeZones(CODE_DOC);
     const fenceStart = CODE_DOC.indexOf('```scala');
     const fenceEnd = CODE_DOC.indexOf('```', fenceStart + 3) + 3;
-    expect(zones.some(z => z.start <= fenceStart && z.end >= fenceEnd)).toBe(true);
+    expect(zones.some((z) => z.start <= fenceStart && z.end >= fenceEnd)).toBe(true);
   });
   it('returns no zones for plain content', () => {
     expect(computeSafeZones('Just plain text. No fences.')).toEqual([]);
@@ -200,7 +206,7 @@ describe('computeSafeZones', () => {
   it('offset after fence is not in safe zone', () => {
     const zones = computeSafeZones(CODE_DOC);
     const afterFence = CODE_DOC.indexOf('After the fence');
-    expect(zones.every(z => afterFence < z.start || afterFence > z.end)).toBe(true);
+    expect(zones.every((z) => afterFence < z.start || afterFence > z.end)).toBe(true);
   });
   it('marks tilde fence content as safe zone', () => {
     const content = `---
@@ -217,7 +223,7 @@ After fence.`;
     const zones = computeSafeZones(content);
     const fenceStart = content.indexOf('~~~scala');
     const fenceEnd = content.indexOf('~~~', fenceStart + 3) + 3;
-    expect(zones.some(z => z.start <= fenceStart && z.end >= fenceEnd)).toBe(true);
+    expect(zones.some((z) => z.start <= fenceStart && z.end >= fenceEnd)).toBe(true);
   });
   it('does NOT mark inline code as safe zone (allows crossreferencing)', () => {
     const content = 'Use \`ZIO.fork\` to create a fiber.';
@@ -225,7 +231,7 @@ After fence.`;
     const codeStart = content.indexOf('\`ZIO.fork\`');
     const codeEnd = codeStart + '\`ZIO.fork\`'.length;
     // Inline code should NOT be in safe zones, allowing it to be crossreferenced
-    expect(zones.some(z => z.start <= codeStart && z.end >= codeEnd)).toBe(false);
+    expect(zones.some((z) => z.start <= codeStart && z.end >= codeEnd)).toBe(false);
   });
   it('handles malformed links without slowdown', () => {
     const content = 'Check [this](../../very/long/path/that/goes/on/and/on/and/on) out.';
@@ -245,7 +251,7 @@ A queue has a finite buffer.`;
     const headerText = '### From Queue';
     const headerStart = content.indexOf(headerText);
     // Header should be in a safe zone
-    const headerZone = zones.find(z => headerStart >= z.start && headerStart < z.end);
+    const headerZone = zones.find((z) => headerStart >= z.start && headerStart < z.end);
     expect(headerZone).toBeDefined();
   });
   it('does not protect paragraph text after header', () => {
@@ -259,7 +265,7 @@ A queue has a finite buffer.`;
     const zones = computeSafeZones(content);
     const paragraphStart = content.indexOf('A queue');
     // The paragraph text should NOT be in any safe zone
-    const inSafeZone = zones.some(z => paragraphStart >= z.start && paragraphStart < z.end);
+    const inSafeZone = zones.some((z) => paragraphStart >= z.start && paragraphStart < z.end);
     expect(inSafeZone).toBe(false);
   });
   it('protects all header levels', () => {
@@ -270,9 +276,9 @@ More text.
 ### Level 3
 Even more.`;
     const zones = computeSafeZones(content);
-    expect(zones.some(z => content.slice(z.start, z.end).includes('# Level 1'))).toBe(true);
-    expect(zones.some(z => content.slice(z.start, z.end).includes('## Level 2'))).toBe(true);
-    expect(zones.some(z => content.slice(z.start, z.end).includes('### Level 3'))).toBe(true);
+    expect(zones.some((z) => content.slice(z.start, z.end).includes('# Level 1'))).toBe(true);
+    expect(zones.some((z) => content.slice(z.start, z.end).includes('## Level 2'))).toBe(true);
+    expect(zones.some((z) => content.slice(z.start, z.end).includes('### Level 3'))).toBe(true);
   });
 
   it('does NOT mark inline code as safe zone by default (allows see-also crossreferencing)', () => {
@@ -281,7 +287,7 @@ Even more.`;
     const codeStart = content.indexOf('`ZIO.fork`');
     const codeEnd = codeStart + '`ZIO.fork`'.length;
     // Inline code should NOT be in safe zones by default
-    expect(zones.some(z => z.start <= codeStart && z.end >= codeEnd)).toBe(false);
+    expect(zones.some((z) => z.start <= codeStart && z.end >= codeEnd)).toBe(false);
   });
 
   it('marks inline code as safe zone when includeInlineCode option is true (Issue #8 fix)', () => {
@@ -290,14 +296,16 @@ Even more.`;
     const codeStart = content.indexOf('`ZIO.fork`');
     const codeEnd = codeStart + '`ZIO.fork`'.length;
     // With option enabled, inline code SHOULD be protected
-    expect(zones.some(z => z.start <= codeStart && z.end >= codeEnd)).toBe(true);
+    expect(zones.some((z) => z.start <= codeStart && z.end >= codeEnd)).toBe(true);
   });
 
   it('protects multiple inline code blocks when includeInlineCode is enabled', () => {
     const content = 'Use `ZIO.fork` and `ZIO.sleep` for async operations.';
     const zones = computeSafeZones(content, { includeInlineCode: true });
     // Both inline code blocks should be protected
-    expect(zones.filter(z => content.slice(z.start, z.end).startsWith('`')).length).toBeGreaterThanOrEqual(2);
+    expect(
+      zones.filter((z) => content.slice(z.start, z.end).startsWith('`')).length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('prevents anchor matching inside inline code (Issue #8 fix)', () => {
@@ -305,7 +313,7 @@ Even more.`;
     const zones = computeSafeZones(content, { includeInlineCode: true });
     const codePos = content.indexOf('`ZIO`');
     // Anchor "ZIO" at position codePos should be in a safe zone
-    const inSafeZone = zones.some(z => codePos >= z.start && codePos < z.end);
+    const inSafeZone = zones.some((z) => codePos >= z.start && codePos < z.end);
     expect(inSafeZone).toBe(true);
   });
 });
