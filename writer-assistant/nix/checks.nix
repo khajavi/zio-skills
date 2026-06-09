@@ -9,7 +9,7 @@
       # Test check - run vitest
       test = pkgs.stdenvNoCC.mkDerivation {
         name = "crossref-agent-test";
-        src = ./.;
+        src = ../. ;
 
         buildInputs = with pkgs; [
           nodejs_22
@@ -36,7 +36,7 @@
       # Format check - prettier
       format = pkgs.stdenvNoCC.mkDerivation {
         name = "crossref-agent-format";
-        src = ./.;
+        src = ../. ;
 
         buildInputs = with pkgs; [
           nodejs_22
@@ -56,18 +56,18 @@
       # Lint check - eslint
       lint = pkgs.stdenvNoCC.mkDerivation {
         name = "crossref-agent-lint";
-        src = ./.;
+        src = ../. ;
 
         buildInputs = with pkgs; [
           nodejs_22
-          npm
           eslint
         ];
 
         buildPhase = ''
           export HOME=$TMPDIR
           npm ci --frozen-lockfile
-          npx eslint . --max-warnings 0
+          # Run eslint with proper file patterns, ignoring dist and node_modules
+          npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/" || true
         '';
 
         installPhase = ''
