@@ -2,6 +2,7 @@ import 'dotenv/config.js';
 import * as path from 'node:path';
 import type { FlueContext } from '@flue/runtime';
 import pageLinkerAgent from '../agents/page-linker.js';
+import codingAgent from '../agents/coding-agent.js';
 import { runDocFixer } from '../lib/auto-fixer.js';
 import { loadConfig } from '../lib/config-loader.js';
 import { loadState, emptyState } from '../lib/state-store.js';
@@ -16,7 +17,7 @@ export async function run({ init, payload }: FlueContext) {
   const projectRoot = (payload as any).projectRoot || path.dirname((payload as any).docsDir);
   const docsDir = (payload as any).docsDir || path.join(projectRoot, 'docs');
 
-  const { mode, batchSize = 1, targetFile, targetDir, maxRetries = 3 } = payload as {
+  const { mode, batchSize = 1, targetFile, targetDir, maxRetries = 3, verificationPrompt } = payload as {
     projectRoot?: string;
     docsDir?: string;
     mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify' | 'verify-and-fix';
@@ -24,6 +25,7 @@ export async function run({ init, payload }: FlueContext) {
     targetFile?: string;
     targetDir?: string;
     maxRetries?: number;
+    verificationPrompt?: string;
   };
 
   if (!projectRoot) throw new Error('payload.projectRoot is required (or legacy docsDir)');
@@ -92,6 +94,24 @@ export async function run({ init, payload }: FlueContext) {
 
       if (verifyResult.success) {
         console.log('[crossref] ✓ Build passed! Documentation is ready.');
+
+        // Phase 1.5 (Optional): Run custom verification if provided
+        if (verificationPrompt) {
+          console.log(`\n[crossref] Running custom verification check...`);
+          try {
+            const harness = await init(codingAgent, { name: 'verifier' });
+            const session = await harness.session();
+            const verificationResult = await session.prompt(
+              `You are working in the project directory: ${projectRoot}\n\nWhen using bash, execute commands in the project directory: ${projectRoot}\n\nTask: ${verificationPrompt}`
+            );
+            console.log(`[crossref] Verification check completed.`);
+            return { success: true, attempts: attempt, verificationResult };
+          } catch (error) {
+            console.log(`[crossref] Verification check failed:`, error);
+            // Fall through to normal fix process
+          }
+        }
+
         return { success: true, attempts: attempt };
       }
 
