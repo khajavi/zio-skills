@@ -167,6 +167,62 @@ flue run workflows/crossref.ts --target node \
   --payload '{"docsDir":"./docs","mode":"report"}'
 ```
 
+## Development & CI
+
+### Local Setup
+
+Enter the nix development environment:
+
+```bash
+nix develop
+```
+
+This provides:
+
+- Node.js 20.x and npm
+- TypeScript compiler and LSP server
+- Code formatting (Prettier) and linting (ESLint)
+- All required tools pre-configured
+
+### Local Commands
+
+Within `nix develop`:
+
+```bash
+npm install          # Install dependencies (uses package-lock.json)
+npm run build        # Compile TypeScript to dist/
+npm test             # Run tests with Vitest
+npm run test:watch   # Watch mode for development
+npx prettier --check . # Check code formatting
+npx prettier --write .  # Auto-fix formatting
+npx eslint .         # Run linting checks
+```
+
+### CI Checks
+
+Run all CI checks locally (reproduces exactly what GitHub Actions runs):
+
+```bash
+nix flake check
+```
+
+This runs:
+
+- **build**: Compiles TypeScript from a fresh checkout
+- **test**: Runs all Vitest tests
+- **format**: Checks code formatting with Prettier
+- **lint**: Validates code quality with ESLint
+
+### Nix Flake Structure
+
+- `flake.nix` — Entry point for nix build/dev setup
+- `nix/devShell.nix` — Development environment configuration
+- `nix/packages.nix` — Build package definition
+- `nix/checks.nix` — CI checks (build, test, format, lint)
+- `.github/workflows/ci.yml` — GitHub Actions workflow
+
+All CI checks are defined declaratively in nix and work identically locally and in CI.
+
 ## Usage Modes
 
 ### 1. `reindex` — Build Fresh Index
