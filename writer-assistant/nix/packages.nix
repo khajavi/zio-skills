@@ -16,31 +16,27 @@
         # Build phase: install dependencies and compile
         buildPhase = ''
           export HOME=$TMPDIR
-          npm ci --frozen-lockfile || true
-          npm run build || true
+          npm ci --frozen-lockfile
+          npm run build
         '';
 
         # Copy built artifacts and sources to output
         installPhase = ''
-          mkdir -p $out
+          mkdir -p $out/{dist,lib,agents,tools,workflows,skills,tests}
 
-          # Copy source files
-          cp -r lib $out/ 2>/dev/null || true
-          cp -r dist $out/ 2>/dev/null || true
-          cp -r agents $out/ 2>/dev/null || true
-          cp -r tools $out/ 2>/dev/null || true
-          cp -r workflows $out/ 2>/dev/null || true
-          cp -r skills $out/ 2>/dev/null || true
-          cp -r tests $out/ 2>/dev/null || true
+          # Copy built artifacts (required after build)
+          cp -r dist $out/
+          cp -r lib $out/
 
-          # Copy configuration files
-          cp package.json $out/ 2>/dev/null || true
-          cp package-lock.json $out/ 2>/dev/null || true
-          cp tsconfig.json $out/ 2>/dev/null || true
+          # Copy source directories if they exist (optional)
+          [ -d agents ] && cp -r agents $out/
+          [ -d tools ] && cp -r tools $out/
+          [ -d workflows ] && cp -r workflows $out/
+          [ -d skills ] && cp -r skills $out/
+          [ -d tests ] && cp -r tests $out/
 
-          # Ensure output directories exist
-          mkdir -p $out/dist
-          mkdir -p $out/lib
+          # Copy config files (required)
+          cp package.json package-lock.json tsconfig.json $out/
         '';
 
         dontStrip = true;
