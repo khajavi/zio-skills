@@ -126,19 +126,14 @@ export async function loadState(docsDir: string): Promise<CrossrefStateType | nu
     // With explicit warning for invalid types
     if (entry.keywords === undefined) {
       entry.keywords = null;
-    } else if (Array.isArray(entry.keywords)) {
-      // Valid: array of keywords
-      entry.keywords = entry.keywords;
-    } else if (entry.keywords === null) {
-      // Valid: explicitly null
-      entry.keywords = null;
-    } else {
+    } else if (!Array.isArray(entry.keywords) && entry.keywords !== null) {
       // Invalid type - log warning and convert to null
       console.warn(
         `[crossref] Index entry [${idx}] (${entry.id}): keywords has invalid type ${typeof entry.keywords}, converting to null`
       );
       entry.keywords = null;
     }
+    // else: Valid array or null, keep as is
     return entry;
   });
 

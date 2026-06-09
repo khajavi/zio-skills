@@ -73,6 +73,7 @@ export async function run({ init, payload }: FlueContext) {
     }
     const config = loadConfig(docsDir);
     let totalProcessed = 0;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = await processBatch(
         state,

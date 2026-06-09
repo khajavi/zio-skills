@@ -67,7 +67,7 @@
           export HOME=$TMPDIR
           npm ci --frozen-lockfile
           # Run eslint with proper file patterns, ignoring dist and node_modules
-          npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/" || true
+          npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/"
         '';
 
         installPhase = ''

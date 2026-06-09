@@ -226,10 +226,10 @@ After fence.`;
     expect(zones.some((z) => z.start <= fenceStart && z.end >= fenceEnd)).toBe(true);
   });
   it('does NOT mark inline code as safe zone (allows crossreferencing)', () => {
-    const content = 'Use \`ZIO.fork\` to create a fiber.';
+    const content = 'Use `ZIO.fork` to create a fiber.';
     const zones = computeSafeZones(content);
-    const codeStart = content.indexOf('\`ZIO.fork\`');
-    const codeEnd = codeStart + '\`ZIO.fork\`'.length;
+    const codeStart = content.indexOf('`ZIO.fork`');
+    const codeEnd = codeStart + '`ZIO.fork`'.length;
     // Inline code should NOT be in safe zones, allowing it to be crossreferenced
     expect(zones.some((z) => z.start <= codeStart && z.end >= codeEnd)).toBe(false);
   });
