@@ -53,28 +53,26 @@
         '';
       };
 
-      # Lint check - eslint (if using, otherwise skip)
+      # Lint check - eslint
       lint = pkgs.stdenvNoCC.mkDerivation {
         name = "crossref-agent-lint";
         src = ./.;
 
         buildInputs = with pkgs; [
           nodejs_22
+          npm
           eslint
         ];
 
         buildPhase = ''
-          if [ -f package-lock.json ]; then
-            npm ci --frozen-lockfile 2>/dev/null || echo "npm ci failed, trying npx eslint directly"
-            npx eslint . --max-warnings 0 2>/dev/null || echo "No eslint config, skipping"
-          else
-            echo "No package-lock.json found, skipping lint check"
-          fi
+          export HOME=$TMPDIR
+          npm ci --frozen-lockfile
+          npx eslint . --max-warnings 0
         '';
 
         installPhase = ''
           mkdir -p $out
-          echo "Linting passed or skipped" > $out/success
+          echo "Linting passed" > $out/success
         '';
       };
     };
