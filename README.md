@@ -81,6 +81,49 @@ Add to `opencode.json`:
 }
 ```
 
+## Tools
+
+### Crossref Agent
+
+**Crossref Agent** is a Flue-based TypeScript tool that automatically discovers and creates cross-references between pages in Markdown documentation. It helps improve documentation quality, SEO, and user navigation by intelligently identifying related pages and generating link suggestions with confidence-based filtering.
+
+#### Key Features
+
+- **Automated Link Discovery** — Scans documentation to find pages that should be cross-referenced
+- **Intelligent Suggestions** — Uses Claude LLM to generate contextually relevant link suggestions with confidence scoring
+- **Security Hardening** — Built-in validation for path safety, symlink handling, and LLM output verification
+- **Flexible Execution** — Four modes: dry-run analysis, suggestions, application, and full pipeline with reporting
+- **State Management** — Persistent tracking of index state and applied suggestions for incremental updates
+
+#### Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Run in dry-run mode (analyze without making changes)
+npm run crossref -- --mode=dry-run
+
+# Generate suggestions for new cross-references
+npm run crossref -- --mode=suggest
+
+# Apply all suggestions to documentation
+npm run crossref -- --mode=apply
+
+# Run complete pipeline with analytics report
+npm run crossref -- --mode=full
+```
+
+#### Technologies
+
+- **Framework**: Flue (agent orchestration)
+- **Language**: TypeScript with Valibot schema validation
+- **AI Model**: Claude Haiku 4.5 for suggestions and enrichment
+- **Testing**: Vitest with 43+ test cases
+- **State Storage**: JSON-based index and suggestion tracking
+
+For detailed architecture and implementation details, see [crossref-agent/ARCHITECTURE.md](crossref-agent/ARCHITECTURE.md) and [crossref-agent/README.md](crossref-agent/README.md).
+
 ## Skills
 
 ### ZIO HTTP (`zio-skills` plugin)

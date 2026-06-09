@@ -1,0 +1,289 @@
+# Crossref Agent Running Guide
+
+## Quick Start (TL;DR)
+
+To run the agent on a specific file:
+
+```bash
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node --payload '{"docsDir":"/path/to/docs","mode":"step","targetFile":"reference/resource/scopedref.md","batchSize":1}'
+```
+
+## Prerequisites
+
+✅ Before running the agent, ensure:
+- TypeScript is compiled: `npm run build`
+- `.env` file exists with `ANTHROPIC_API_KEY=sk-ant-...`
+- Node.js 18+ is installed
+- Docs directory is accessible at the specified path
+
+## Common Issues & Solutions
+
+### ❌ Error: "flue: command not found"
+**Solution:** Use `npx` to run Flue CLI instead of global installation
+```bash
+npx flue run crossref --target node --payload '{...}'
+```
+
+### ❌ Error: "Unknown workflow: workflows/crossref.ts"
+**Solution:** Workflow name should be just `crossref`, not `workflows/crossref.ts`
+```bash
+# ❌ Wrong
+npx flue run workflows/crossref.ts --target node --payload '{...}'
+
+# ✅ Correct
+npx flue run crossref --target node --payload '{...}'
+```
+
+### ❌ Error: "No API key for provider: anthropic"
+**Solution:** Export `ANTHROPIC_API_KEY` environment variable before running
+```bash
+# ✅ Correct way to read from .env and export
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node --payload '{...}'
+```
+
+**Note:** Simply having `.env` file is not enough—Flue requires the environment variable to be exported.
+
+### ❌ Error: "Session is already running prompt" / Parallel session issues
+**Note:** These can occur if the agent tries to run tools in parallel that conflict. If this happens:
+1. The workflow continues and completes
+2. Some metadata extraction may be deferred
+3. The workflow will complete successfully
+
+## Running the Agent - Full Command
+
+### Step 1: Build the project
+```bash
+npm run build
+```
+
+### Step 2: Set environment variable
+```bash
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+```
+
+### Step 3: Run the agent
+
+**Process a specific file:**
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"step","targetFile":"reference/resource/scopedref.md","batchSize":1}'
+```
+
+**Process the next batch (1 page):**
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"step","batchSize":1}'
+```
+
+**Process all remaining pages (autopilot):**
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}'
+```
+
+**View coverage report:**
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"report"}'
+```
+
+**Rebuild index from scratch:**
+```bash
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"reindex"}'
+```
+
+## Payload Parameters Explained
+
+```json
+{
+  "docsDir": "/path/to/docs",        // Required: Path to documentation directory
+  "mode": "step",                    // Required: reindex | step | autopilot | report
+  "targetFile": "path/to/file.md",   // Optional: Specific file to process
+  "targetDir": "path/to/dir/",       // Optional: Process all files in directory
+  "batchSize": 1                     // Optional: Number of pages per batch (default: 5)
+}
+```
+
+## What Happens During Execution
+
+1. **Build Phase**: Flue compiles TypeScript to JavaScript
+   - Output: `/dist/server.mjs`
+   - Discovers agents and workflows
+
+2. **Execution Phase**: Workflow runs with specified payload
+   - Loads documentation state
+   - For each page:
+     - Agent analyzes using skill instructions
+     - Tools are invoked (search, validate, extract)
+     - Suggestions are generated
+     - Links are inserted if high-confidence
+   - State is saved
+
+3. **Output**: Results printed to console
+
+## Understanding the Output
+
+```
+[flue] Running workflow: crossref
+[flue] Run ID: workflow:crossref:01KT4WHQ1RW7AM6MPB9Q9YYT34
+```
+- Workflow is executing
+- Unique run ID for tracking
+
+```
+[flue] thinking:start
+  Agent is reasoning about the page...
+[flue] tool:start  search_pages
+[flue] tool:done   search_pages  (969 chars)
+```
+- Agent is using available tools
+- Tool outputs are shown with character counts
+
+```
+[DEBUG] Output has 9 suggestions
+[DEBUG] Adding suggestion to newSuggestions: reference__concurrency__ref (inline, high)
+```
+- Agent generated 9 suggestions
+- Each suggestion includes type (inline/see_also) and confidence (high/medium/low)
+
+```
+[DEBUG] Processing suggestion: Ref (inline, high)
+[DEBUG]   → Result: inserted=true, reason=none
+[DEBUG]   → APPLIED (total applied: 1)
+```
+- Link insertion attempt results
+- Reasons: `inserted=true` (success), `inserted=false reason=no_safe_match` (not found), etc.
+
+```
+✓ Processed: ScopedRef: Mutable Reference For Resources (25/293)
+  Applied: 1 links  |  Queued: 2
+  Tokens this run — in: 66  out: 4,147
+  Tokens total    — in: 1,088  out: 256,543  (~$1.03)
+```
+- Page processed (25 of 293 total)
+- Links applied vs queued for review
+- Token usage and cost tracking
+
+## Example: Running on scopedref.md
+
+```bash
+# Set API key
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+
+# Run agent on specific file
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/home/milad/sources/scala/zio-2.x-new/docs","mode":"step","targetFile":"reference/resource/scopedref.md","batchSize":1}'
+```
+
+**What happens:**
+1. Flue builds the project
+2. Agent analyzes scopedref.md
+3. Agent generates 9 suggestions:
+   - 5 inline links (Ref, Scope, ZIO#scoped, forkScoped, uninterruptible)
+   - 4 See Also links (resource index, interruption guide, etc.)
+4. Workflow attempts to insert high-confidence links
+5. 1 link successfully applied ("Using a Scope" anchor)
+6. 2 links queued for manual review (medium confidence)
+7. Results saved to `.crossref-state/`
+
+## Workflow Modes
+
+### `reindex`
+- Walks entire docs directory
+- Extracts metadata from all pages
+- Rebuilds page index from scratch
+- **Use:** After major documentation changes
+
+### `step`
+- Processes next unprocessed page (or specified page)
+- Generates suggestions
+- Applies high-confidence links
+- **Use:** Incremental processing, manual review workflow
+
+### `autopilot`
+- Processes all remaining unprocessed pages
+- Continues until all pages are analyzed
+- **Use:** Complete first-time run after setup
+
+### `report`
+- Generates coverage report
+- Shows orphaned pages, link density, etc.
+- Doesn't modify files
+- **Use:** Analyzing coverage metrics
+
+## Troubleshooting
+
+### "Build failed" - Check TypeScript errors
+```bash
+npm run build
+```
+If build fails, fix TypeScript errors before running agent.
+
+### Agent produces no suggestions
+- Check that docstring is not empty
+- Verify index is built (`.crossref-state/index.json` exists)
+- Check `excludePatterns` config not filtering pages
+
+### Links not being inserted
+- Most common: anchor text not found exactly as written
+- Check safe zones protecting code blocks and frontmatter
+- Verify confidence threshold (default: high)
+
+### Slow execution
+- Reduce `batchSize` to process fewer pages per run
+- Run in `step` mode for single page at a time
+- Monitor token usage (shown in output)
+
+## Files Generated/Modified
+
+### State Files
+- `.crossref-state/index.json` - Page index (created by reindex)
+- `.crossref-state/suggestions.json` - Accumulated suggestions
+- `.crossref-state/state.json.backup` - Backup of old state format
+
+### Documentation Files
+- Modified markdown files get links inserted
+- Original formatting preserved
+- Only high-confidence links applied automatically
+
+### Build Output
+- `dist/server.mjs` - Compiled workflow executable
+
+## Tips & Best Practices
+
+1. **Always rebuild before running**
+   ```bash
+   npm run build
+   ```
+
+2. **Start with a single page**
+   ```bash
+   npx flue run crossref --target node \
+     --payload '{"docsDir":"...","mode":"step","targetFile":"...","batchSize":1}'
+   ```
+
+3. **Review suggestions before applying**
+   - Check `.crossref-state/suggestions.json` for pending suggestions
+   - Manually approve before switching to autopilot mode
+
+4. **Run report to see progress**
+   ```bash
+   npx flue run crossref --target node \
+     --payload '{"docsDir":"...","mode":"report"}'
+   ```
+
+5. **Save API key securely**
+   - Never commit `.env` to version control
+   - Use `.env` locally, or set `ANTHROPIC_API_KEY` from CI/CD secrets
+
+## Performance Expectations
+
+- **First run (reindex):** 2-5 minutes per 100 pages
+- **Suggestion generation (step):** 30-60 seconds per page
+- **Link insertion:** 1-2 seconds per page
+- **Full documentation:** ~4-8 hours for 293 pages with batches of 5
+
+Token costs vary by documentation size (typically $0.50-$2.00 per 100 pages).
