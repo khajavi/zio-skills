@@ -18,12 +18,13 @@
           set -x
           export HOME=$TMPDIR
           echo "=== Configuring npm for reliability ==="
-          npm config set fetch-timeout 120000
-          npm config set fetch-retry-mintimeout 20000
-          npm config set fetch-retry-maxtimeout 120000
-          npm config set fetch-retries 5
-          echo "=== Installing dependencies ==="
-          npm ci --frozen-lockfile 2>&1
+          npm config set fetch-timeout 600000
+          npm config set fetch-retry-mintimeout 30000
+          npm config set fetch-retry-maxtimeout 180000
+          npm config set fetch-retries 10
+          npm config set loglevel verbose
+          echo "=== Installing dependencies (this may take a while) ==="
+          timeout 1800 npm ci --frozen-lockfile 2>&1 || { echo "npm ci timed out or failed"; exit 1; }
           echo "=== Building TypeScript ==="
           npm run build 2>&1
         '';
