@@ -4,10 +4,11 @@ import type { CrossrefState } from '../lib/schemas.js';
 export function createGetAdjacentPages(state: CrossrefState) {
   return defineTool({
     name: 'get_adjacent_pages',
-    description: 'Get all pages in the same documentation section. Adjacent pages are strong candidates for See Also links.',
+    description:
+      'Get all pages in the same documentation section. Adjacent pages are strong candidates for See Also links.',
     parameters: Type.Object({
       pageId: Type.String({
-        description: 'The page ID (e.g., "reference__stream__zsink__index")'
+        description: 'The page ID (e.g., "reference__stream__zsink__index")',
       }),
     }),
     execute: async (args: Record<string, any>) => {
@@ -15,7 +16,7 @@ export function createGetAdjacentPages(state: CrossrefState) {
 
       console.log(`[get_adjacent_pages] Getting adjacent pages for "${pageId}"`);
 
-      const entry = state.index.find(e => e.id === pageId);
+      const entry = state.index.find((e) => e.id === pageId);
       if (!entry) {
         console.log(`[get_adjacent_pages] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
@@ -24,19 +25,23 @@ export function createGetAdjacentPages(state: CrossrefState) {
       }
 
       const adjacentPages = entry.adjacentPages || [];
-      console.log(`[get_adjacent_pages] Found ${adjacentPages.length} adjacent page IDs: ${adjacentPages.join(', ')}`);
+      console.log(
+        `[get_adjacent_pages] Found ${adjacentPages.length} adjacent page IDs: ${adjacentPages.join(', ')}`
+      );
 
       const adjacentEntries = adjacentPages
-        .map(id => state.index.find(e => e.id === id))
-        .filter((e): e is typeof state.index[0] => !!e)
-        .map(e => ({
+        .map((id) => state.index.find((e) => e.id === id))
+        .filter((e): e is (typeof state.index)[0] => !!e)
+        .map((e) => ({
           id: e.id,
           title: e.title,
           path: e.path,
           description: e.description || null,
         }));
 
-      console.log(`[get_adjacent_pages] Resolved ${adjacentEntries.length} adjacent pages: ${adjacentEntries.map(e => e.title).join(', ')}`);
+      console.log(
+        `[get_adjacent_pages] Resolved ${adjacentEntries.length} adjacent pages: ${adjacentEntries.map((e) => e.title).join(', ')}`
+      );
 
       return JSON.stringify({
         pageId,
@@ -44,6 +49,6 @@ export function createGetAdjacentPages(state: CrossrefState) {
         adjacentCount: adjacentEntries.length,
         adjacent: adjacentEntries,
       });
-    }
+    },
   });
 }

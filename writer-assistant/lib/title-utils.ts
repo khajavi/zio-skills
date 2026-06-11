@@ -2,13 +2,25 @@
 // Used during reindex to identify pages where LLM-generated contextual titles are needed.
 
 const GENERIC_BARE = new Set([
-  'overview', 'introduction', 'index', 'guide', 'getting started',
-  'tutorial', 'primer', 'summary', 'motivation', 'examples',
-  'operations', 'operators', 'types',
+  'overview',
+  'introduction',
+  'index',
+  'guide',
+  'getting started',
+  'tutorial',
+  'primer',
+  'summary',
+  'motivation',
+  'examples',
+  'operations',
+  'operators',
+  'types',
 ]);
 
 const GENERIC_PHRASES = new Set([
-  'core data types', 'type aliases', 'non-functional requirements',
+  'core data types',
+  'type aliases',
+  'non-functional requirements',
   'programming paradigms in zio',
 ]);
 

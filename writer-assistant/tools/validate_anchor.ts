@@ -6,13 +6,15 @@ import type { CrossrefState } from '../lib/schemas.js';
 export function createValidateAnchor(state: CrossrefState) {
   return defineTool({
     name: 'validate_anchor',
-    description: 'Check if an anchor/heading exists in a target page. Returns whether the anchor is available and lists all available headings.',
+    description:
+      'Check if an anchor/heading exists in a target page. Returns whether the anchor is available and lists all available headings.',
     parameters: Type.Object({
       pageId: Type.String({
-        description: 'The page ID to check (e.g., "reference__core__runtime")'
+        description: 'The page ID to check (e.g., "reference__core__runtime")',
       }),
       anchorText: Type.String({
-        description: 'The anchor text or heading to validate (e.g., "setConfigProvider", "set_config_provider")'
+        description:
+          'The anchor text or heading to validate (e.g., "setConfigProvider", "set_config_provider")',
       }),
     }),
     execute: async (args: Record<string, any>) => {
@@ -21,7 +23,7 @@ export function createValidateAnchor(state: CrossrefState) {
 
       console.log(`[validate_anchor] Checking anchor "${anchorText}" in page "${pageId}"`);
 
-      const entry = state.index.find(e => e.id === pageId);
+      const entry = state.index.find((e) => e.id === pageId);
       if (!entry) {
         console.log(`[validate_anchor] ERROR: Page "${pageId}" not found in index`);
         return JSON.stringify({
@@ -35,17 +37,19 @@ export function createValidateAnchor(state: CrossrefState) {
         console.log(`[validate_anchor] Found ${headings.length} headings in "${pageId}"`);
 
         // Normalize anchor for matching
-        const normalizedAnchor = anchorText.toLowerCase()
+        const normalizedAnchor = anchorText
+          .toLowerCase()
           .replace(/[^\w\s-]/g, '')
           .replace(/\s+/g, '-');
 
         console.log(`[validate_anchor] Normalized anchor: "${normalizedAnchor}"`);
 
         // Check if anchor exists (exact or partial match)
-        const found = headings.some(h =>
-          h.slug === normalizedAnchor ||
-          h.slug.includes(normalizedAnchor) ||
-          normalizedAnchor.includes(h.slug)
+        const found = headings.some(
+          (h) =>
+            h.slug === normalizedAnchor ||
+            h.slug.includes(normalizedAnchor) ||
+            normalizedAnchor.includes(h.slug)
         );
 
         console.log(`[validate_anchor] Anchor exists: ${found}`);
@@ -54,7 +58,7 @@ export function createValidateAnchor(state: CrossrefState) {
           pageId,
           anchorText,
           exists: found,
-          availableHeadings: headings.map(h => ({
+          availableHeadings: headings.map((h) => ({
             text: h.text,
             slug: h.slug,
           })),
@@ -65,6 +69,6 @@ export function createValidateAnchor(state: CrossrefState) {
           error: `Failed to read page: ${e}`,
         });
       }
-    }
+    },
   });
 }

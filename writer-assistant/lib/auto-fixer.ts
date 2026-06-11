@@ -75,16 +75,15 @@ function extractFixablePaths(analysisText: string, projectRoot: string): string[
   const paths: string[] = [];
 
   // Look for FIX: patterns in the response
-  const fixLines = analysisText.split('\n').filter((line) => line.includes('FIX:') || line.includes('Fixable:'));
+  const fixLines = analysisText
+    .split('\n')
+    .filter((line) => line.includes('FIX:') || line.includes('Fixable:'));
 
   for (const line of fixLines) {
     const match = line.match(/FIX:\s*(.+?)(?:\s|-|$)/);
     if (match) {
       const filePath = match[1].trim();
-      const possiblePaths = [
-        path.join(projectRoot, filePath),
-        path.resolve(filePath),
-      ];
+      const possiblePaths = [path.join(projectRoot, filePath), path.resolve(filePath)];
 
       for (const tryPath of possiblePaths) {
         if (fs.existsSync(tryPath)) {

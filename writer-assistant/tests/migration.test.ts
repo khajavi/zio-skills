@@ -71,10 +71,7 @@ describe('Migration', () => {
       },
     };
 
-    fs.writeFileSync(
-      path.join(STATE_DIR, 'state.json'),
-      JSON.stringify(oldState, null, 2)
-    );
+    fs.writeFileSync(path.join(STATE_DIR, 'state.json'), JSON.stringify(oldState, null, 2));
 
     // Run migration
     const result = await migrateState(TEST_DIR);
@@ -132,10 +129,7 @@ describe('Migration', () => {
   });
 
   it('throws error if old state.json is malformed', async () => {
-    fs.writeFileSync(
-      path.join(STATE_DIR, 'state.json'),
-      'invalid json {['
-    );
+    fs.writeFileSync(path.join(STATE_DIR, 'state.json'), 'invalid json {[');
 
     await expect(migrateState(TEST_DIR)).rejects.toThrow();
   });
@@ -209,8 +203,14 @@ describe('State persistence round-trip (Issue #2: metadata preservation)', () =>
           title: 'Clock Service',
           path: 'reference/services/clock.md',
           absPath: path.join(TEST_DIR, 'reference/services/clock.md'),
-          description: 'Provides time-related operations for retrieving current time in various units, accessing date-time information, and non-blocking sleep functionality.',
-          keywords: ['Clock Service', 'Current Time Operations', 'Non-blocking Sleep', 'Scheduling Operations'],
+          description:
+            'Provides time-related operations for retrieving current time in various units, accessing date-time information, and non-blocking sleep functionality.',
+          keywords: [
+            'Clock Service',
+            'Current Time Operations',
+            'Non-blocking Sleep',
+            'Scheduling Operations',
+          ],
           existingLinkCount: 1,
           adjacentPages: ['console.md', 'random.md'],
         },
@@ -219,7 +219,8 @@ describe('State persistence round-trip (Issue #2: metadata preservation)', () =>
           title: 'Console Service',
           path: 'reference/services/console.md',
           absPath: path.join(TEST_DIR, 'reference/services/console.md'),
-          description: 'Service providing simple I/O operations for reading/writing strings from/to standard input, output, and error console.',
+          description:
+            'Service providing simple I/O operations for reading/writing strings from/to standard input, output, and error console.',
           keywords: ['Console Service', 'Standard Input/Output', 'String I/O'],
           existingLinkCount: 2,
           adjacentPages: ['clock.md'],
@@ -241,16 +242,29 @@ describe('State persistence round-trip (Issue #2: metadata preservation)', () =>
     expect(reloadedState!.index).toHaveLength(2);
 
     // Check first entry
-    const clockEntry = reloadedState!.index.find(e => e.id === 'clock');
+    const clockEntry = reloadedState!.index.find((e) => e.id === 'clock');
     expect(clockEntry).toBeDefined();
-    expect(clockEntry!.description).toBe('Provides time-related operations for retrieving current time in various units, accessing date-time information, and non-blocking sleep functionality.');
-    expect(clockEntry!.keywords).toEqual(['Clock Service', 'Current Time Operations', 'Non-blocking Sleep', 'Scheduling Operations']);
+    expect(clockEntry!.description).toBe(
+      'Provides time-related operations for retrieving current time in various units, accessing date-time information, and non-blocking sleep functionality.'
+    );
+    expect(clockEntry!.keywords).toEqual([
+      'Clock Service',
+      'Current Time Operations',
+      'Non-blocking Sleep',
+      'Scheduling Operations',
+    ]);
 
     // Check second entry
-    const consoleEntry = reloadedState!.index.find(e => e.id === 'console');
+    const consoleEntry = reloadedState!.index.find((e) => e.id === 'console');
     expect(consoleEntry).toBeDefined();
-    expect(consoleEntry!.description).toBe('Service providing simple I/O operations for reading/writing strings from/to standard input, output, and error console.');
-    expect(consoleEntry!.keywords).toEqual(['Console Service', 'Standard Input/Output', 'String I/O']);
+    expect(consoleEntry!.description).toBe(
+      'Service providing simple I/O operations for reading/writing strings from/to standard input, output, and error console.'
+    );
+    expect(consoleEntry!.keywords).toEqual([
+      'Console Service',
+      'Standard Input/Output',
+      'String I/O',
+    ]);
 
     // Verify the cache hit test would work
     const hasBothFieldsClock = clockEntry!.description && clockEntry!.keywords;
@@ -323,10 +337,10 @@ describe('Issue #6: Type-Aware YAML Serialization', () => {
     ];
 
     // All numeric values should be unquoted
-    expect(yamlLines[0]).toBe('sidebar_position: 2');      // NOT "2"
-    expect(yamlLines[1]).toBe('order: 10');                 // NOT "10"
-    expect(yamlLines[2]).toBe('draft: false');              // NOT "false"
-    expect(yamlLines[3]).toBe('published: true');           // NOT "true"
+    expect(yamlLines[0]).toBe('sidebar_position: 2'); // NOT "2"
+    expect(yamlLines[1]).toBe('order: 10'); // NOT "10"
+    expect(yamlLines[2]).toBe('draft: false'); // NOT "false"
+    expect(yamlLines[3]).toBe('published: true'); // NOT "true"
   });
 
   it('preserves boolean types when present in frontmatter', () => {
@@ -349,21 +363,21 @@ describe('Issue #6: Type-Aware YAML Serialization', () => {
     };
 
     // Test boolean values
-    expect(mockSerializeYamlValue(true)).toBe('true');    // Not "true"
-    expect(mockSerializeYamlValue(false)).toBe('false');  // Not "false"
+    expect(mockSerializeYamlValue(true)).toBe('true'); // Not "true"
+    expect(mockSerializeYamlValue(false)).toBe('false'); // Not "false"
 
     // Test numeric values
-    expect(mockSerializeYamlValue(2)).toBe('2');          // Not "2"
-    expect(mockSerializeYamlValue(4.5)).toBe('4.5');      // Not "4.5"
-    expect(mockSerializeYamlValue(-3)).toBe('-3');        // Not "-3"
+    expect(mockSerializeYamlValue(2)).toBe('2'); // Not "2"
+    expect(mockSerializeYamlValue(4.5)).toBe('4.5'); // Not "4.5"
+    expect(mockSerializeYamlValue(-3)).toBe('-3'); // Not "-3"
 
     // Test string values
-    expect(mockSerializeYamlValue('hello')).toBe('hello');         // Not quoted
-    expect(mockSerializeYamlValue('hello world')).toBe('"hello world"');  // Quoted (has space)
-    expect(mockSerializeYamlValue('key: value')).toBe('"key: value"');    // Quoted (has colon)
+    expect(mockSerializeYamlValue('hello')).toBe('hello'); // Not quoted
+    expect(mockSerializeYamlValue('hello world')).toBe('"hello world"'); // Quoted (has space)
+    expect(mockSerializeYamlValue('key: value')).toBe('"key: value"'); // Quoted (has colon)
 
     // Test null
-    expect(mockSerializeYamlValue(null)).toBe('null');    // Not "null"
+    expect(mockSerializeYamlValue(null)).toBe('null'); // Not "null"
   });
 });
 
@@ -437,12 +451,36 @@ describe('Issue #4: Preserve Progress Across Reindex', () => {
       indexBuiltAt: '2024-01-01T00:00:00Z',
       docsDir: TEST_DIR,
       index: [
-        { id: 'p1', title: 'P1', path: 'p1.md', absPath: path.join(TEST_DIR, 'p1.md'),
-          description: null, keywords: null, existingLinkCount: 0, adjacentPages: [] },
-        { id: 'p2', title: 'P2', path: 'p2.md', absPath: path.join(TEST_DIR, 'p2.md'),
-          description: null, keywords: null, existingLinkCount: 0, adjacentPages: [] },
-        { id: 'p3', title: 'P3', path: 'p3.md', absPath: path.join(TEST_DIR, 'p3.md'),
-          description: null, keywords: null, existingLinkCount: 0, adjacentPages: [] },
+        {
+          id: 'p1',
+          title: 'P1',
+          path: 'p1.md',
+          absPath: path.join(TEST_DIR, 'p1.md'),
+          description: null,
+          keywords: null,
+          existingLinkCount: 0,
+          adjacentPages: [],
+        },
+        {
+          id: 'p2',
+          title: 'P2',
+          path: 'p2.md',
+          absPath: path.join(TEST_DIR, 'p2.md'),
+          description: null,
+          keywords: null,
+          existingLinkCount: 0,
+          adjacentPages: [],
+        },
+        {
+          id: 'p3',
+          title: 'P3',
+          path: 'p3.md',
+          absPath: path.join(TEST_DIR, 'p3.md'),
+          description: null,
+          keywords: null,
+          existingLinkCount: 0,
+          adjacentPages: [],
+        },
       ],
       processed: ['p1', 'p2', 'p3'],
       suggestions: [],

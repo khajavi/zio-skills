@@ -20,11 +20,7 @@ import { createExtractPageStructure } from '../../tools/extract_page_structure.j
 import { createGetAdjacentPages } from '../../tools/get_adjacent_pages.js';
 import { createSearchPages } from '../../tools/search_pages.js';
 import { createSearchPageContent } from '../../tools/search_page_content.js';
-import {
-  PageAnalysisOutput,
-  type CrossrefState,
-  type LinkSuggestion,
-} from '../../lib/schemas.js';
+import { PageAnalysisOutput, type CrossrefState, type LinkSuggestion } from '../../lib/schemas.js';
 import { updateFrontmatter } from '../utils/yaml.js';
 import { extractMetadata } from '../utils/metadata-utilities.js';
 import { estimateCost } from '../utils/cost.js';
@@ -45,7 +41,9 @@ export async function processBatch(
   let batch;
 
   if (targetFile) {
-    const normalizedTarget = path.isAbsolute(targetFile) ? targetFile : path.resolve(docsDir, targetFile);
+    const normalizedTarget = path.isAbsolute(targetFile)
+      ? targetFile
+      : path.resolve(docsDir, targetFile);
     let realDocsDir: string;
     try {
       realDocsDir = fs.realpathSync(docsDir);
@@ -65,14 +63,14 @@ export async function processBatch(
       return { done: false, processed: 0, remaining: state.index.length };
     }
     const normalizedTargetForLookup = path.normalize(normalizedTarget);
-    const targetEntry = state.index.find(e => {
+    const targetEntry = state.index.find((e) => {
       const normalizedAbsPath = path.normalize(e.absPath);
       return normalizedAbsPath === normalizedTargetForLookup;
     });
 
     if (!targetEntry) {
       console.warn(`[crossref] Target file not found in index: ${targetFile}`);
-      console.warn(`[crossref] Available files: ${state.index.map(e => e.path).join(', ')}`);
+      console.warn(`[crossref] Available files: ${state.index.map((e) => e.path).join(', ')}`);
       return { done: false, processed: 0, remaining: state.index.length };
     }
 
@@ -98,41 +96,43 @@ export async function processBatch(
       return { done: false, processed: 0, remaining: state.index.length };
     }
     normalizedDir = normalizedDir.replace(/[/\\]$/, '');
-    const filesInDir = state.index.filter(e => {
+    const filesInDir = state.index.filter((e) => {
       return e.absPath.startsWith(normalizedDir + path.sep);
     });
 
     if (filesInDir.length === 0) {
       console.warn(`[crossref] No files found in target directory: ${targetDir}`);
-      console.warn(`[crossref] Indexed directories: ${new Set(state.index.map(e => path.dirname(e.path))).size} found`);
+      console.warn(
+        `[crossref] Indexed directories: ${new Set(state.index.map((e) => path.dirname(e.path))).size} found`
+      );
       return { done: false, processed: 0, remaining: state.index.length };
     }
 
     batch = filesInDir.slice(0, batchSize);
   } else {
-    const unprocessed = state.index.filter(e => !state.processed.includes(e.id));
+    const unprocessed = state.index.filter((e) => !state.processed.includes(e.id));
     if (unprocessed.length === 0) return { done: true, processed: 0, remaining: 0 };
     batch = unprocessed.slice(0, batchSize);
   }
 
   const initialStateSuggestions = [...state.suggestions];
   if (targetFile || config.clearSuggestionsBeforeRun) {
-    const batchIds = new Set(batch.map(e => e.id));
+    const batchIds = new Set(batch.map((e) => e.id));
     const beforeCount = state.suggestions.length;
 
     if (targetFile) {
-      state.suggestions = state.suggestions.filter(
-        s => !batchIds.has(s.sourceId)
-      );
+      state.suggestions = state.suggestions.filter((s) => !batchIds.has(s.sourceId));
     } else {
       state.suggestions = state.suggestions.filter(
-        s => !batchIds.has(s.sourceId) && !batchIds.has(s.targetId)
+        (s) => !batchIds.has(s.sourceId) && !batchIds.has(s.targetId)
       );
     }
 
     const clearedCount = beforeCount - state.suggestions.length;
     if (clearedCount > 0) {
-      console.log(`[DEBUG] Cleared ${clearedCount} suggestions for ${batchIds.size} files being re-processed`);
+      console.log(
+        `[DEBUG] Cleared ${clearedCount} suggestions for ${batchIds.size} files being re-processed`
+      );
     }
   }
 
@@ -164,25 +164,25 @@ export async function processBatch(
       console.log(`[crossref] Using existing metadata for ${pageEntry.id} (complete)`);
     }
 
-    const minimalIndex = state.index.map(e => ({
+    const minimalIndex = state.index.map((e) => ({
       id: e.id,
       title: e.contextualTitle ?? e.title,
       path: e.path,
     }));
     const indexJson = JSON.stringify(minimalIndex);
 
-    const pageList = state.index
-      .map(e => `${e.id} — ${e.contextualTitle ?? e.title}`)
-      .join('\n');
+    const pageList = state.index.map((e) => `${e.id} — ${e.contextualTitle ?? e.title}`).join('\n');
 
-    const adjacentPagesInfo = pageEntry.adjacentPages.length > 0
-      ? `\nAdjacent pages (same documentation section): ${pageEntry.adjacentPages.join(', ')}`
-      : '';
+    const adjacentPagesInfo =
+      pageEntry.adjacentPages.length > 0
+        ? `\nAdjacent pages (same documentation section): ${pageEntry.adjacentPages.join(', ')}`
+        : '';
 
     const codeBlockTerms = extractCodeBlockIdentifiers(pageContent);
-    const codeBlockContext = codeBlockTerms.length > 0
-      ? `\nTechnical terms found in code blocks (use for See Also suggestions): ${codeBlockTerms.join(', ')}`
-      : '';
+    const codeBlockContext =
+      codeBlockTerms.length > 0
+        ? `\nTechnical terms found in code blocks (use for See Also suggestions): ${codeBlockTerms.join(', ')}`
+        : '';
 
     const prompt = `Analyze the page content below for cross-link opportunities.
 Config: maxLinksPerPage=${config.maxLinksPerPage}, maxSeeAlsoSuggestion=${config.maxSeeAlsoSuggestion}
@@ -231,9 +231,9 @@ ${pageContent}`;
     }
 
     const seeAlsoTargets = output.suggestions
-      .filter(s => s.type === 'see_also')
-      .map(s => state.index.find(e => e.id === s.targetId))
-      .filter((e): e is typeof state.index[0] => !!e);
+      .filter((s) => s.type === 'see_also')
+      .map((s) => state.index.find((e) => e.id === s.targetId))
+      .filter((e): e is (typeof state.index)[0] => !!e);
 
     if (seeAlsoTargets.length > 0) {
       console.log(`[crossref] Extracting metadata for ${seeAlsoTargets.length} See Also targets`);
@@ -247,8 +247,8 @@ ${pageContent}`;
         target.keywords = result.metadata.keywords;
 
         output.suggestions
-          .filter(s => s.type === 'see_also' && s.targetId === target.id)
-          .forEach(s => s.description = result.metadata.description);
+          .filter((s) => s.type === 'see_also' && s.targetId === target.id)
+          .forEach((s) => (s.description = result.metadata.description));
       } catch (e) {
         console.warn(`[crossref] Failed to extract metadata for ${target.id}:`, e);
       }
@@ -257,7 +257,7 @@ ${pageContent}`;
     const newSuggestions: LinkSuggestion[] = [];
     console.log(`[DEBUG] Output has ${output.suggestions.length} suggestions`);
     for (const raw of output.suggestions) {
-      const targetEntry = state.index.find(e => e.id === raw.targetId);
+      const targetEntry = state.index.find((e) => e.id === raw.targetId);
       if (!targetEntry) {
         console.log(`[DEBUG] Skipping suggestion (target not in index): ${raw.targetId}`);
         continue;
@@ -270,25 +270,26 @@ ${pageContent}`;
 
       // Don't suggest inline links for function calls with arguments (e.g., "Ref.make(0)", "foo(x, y)")
       if (raw.type === 'inline' && /\(.*\)/.test(raw.anchorText)) {
-        console.log(`[DEBUG] Skipping suggestion (function call with arguments): ${raw.anchorText}`);
+        console.log(
+          `[DEBUG] Skipping suggestion (function call with arguments): ${raw.anchorText}`
+        );
         continue;
       }
 
-      let targetRelativePath = path.relative(
-        path.dirname(pageEntry.absPath),
-        targetEntry.absPath
-      );
+      let targetRelativePath = path.relative(path.dirname(pageEntry.absPath), targetEntry.absPath);
       targetRelativePath = targetRelativePath.replace(/\\/g, '/').replace(/\/+/g, '/');
 
       const alreadyExists = initialStateSuggestions.some(
-        s => s.sourceId === pageEntry.id && s.targetId === raw.targetId
+        (s) => s.sourceId === pageEntry.id && s.targetId === raw.targetId
       );
       if (alreadyExists) {
         console.log(`[DEBUG] Skipping suggestion (already exists in state): ${raw.targetId}`);
         continue;
       }
 
-      console.log(`[DEBUG] Adding suggestion to newSuggestions: ${raw.targetId} (${raw.type}, ${raw.confidence})`);
+      console.log(
+        `[DEBUG] Adding suggestion to newSuggestions: ${raw.targetId} (${raw.type}, ${raw.confidence})`
+      );
       newSuggestions.push({
         sourceId: pageEntry.id,
         targetId: raw.targetId,
@@ -317,26 +318,32 @@ ${pageContent}`;
     const processedTargets = new Set<string>();
 
     const existingHighConfidence = state.suggestions.filter(
-      s => s.sourceId === pageEntry.id &&
-           s.status === 'pending' &&
-           s.confidence === 'high'
+      (s) => s.sourceId === pageEntry.id && s.status === 'pending' && s.confidence === 'high'
     );
     const suggestionsToProcess = [
       ...newSuggestions,
-      ...existingHighConfidence.map(s => ({ ...s }))
+      ...existingHighConfidence.map((s) => ({ ...s })),
     ];
-    console.log(`[DEBUG] suggestionsToProcess has ${suggestionsToProcess.length} total (${newSuggestions.length} new + ${existingHighConfidence.length} existing high-confidence)`);
+    console.log(
+      `[DEBUG] suggestionsToProcess has ${suggestionsToProcess.length} total (${newSuggestions.length} new + ${existingHighConfidence.length} existing high-confidence)`
+    );
 
     for (const processedSuggestion of suggestionsToProcess) {
       if (processedTargets.has(processedSuggestion.targetId)) {
-        console.log(`[DEBUG] Skipping duplicate target: ${processedSuggestion.targetId} (already processed first occurrence)`);
+        console.log(
+          `[DEBUG] Skipping duplicate target: ${processedSuggestion.targetId} (already processed first occurrence)`
+        );
         processedSuggestion.status = 'skipped';
         continue;
       }
-      console.log(`[DEBUG] Processing suggestion: ${processedSuggestion.anchorText} (${processedSuggestion.type}, ${processedSuggestion.confidence})`);
+      console.log(
+        `[DEBUG] Processing suggestion: ${processedSuggestion.anchorText} (${processedSuggestion.type}, ${processedSuggestion.confidence})`
+      );
 
       if (!meetsThreshold(processedSuggestion.confidence, config.confidenceThreshold)) {
-        console.log(`[DEBUG]   → Below confidence threshold (${processedSuggestion.confidence} < ${config.confidenceThreshold})`);
+        console.log(
+          `[DEBUG]   → Below confidence threshold (${processedSuggestion.confidence} < ${config.confidenceThreshold})`
+        );
         thisQueued++;
         continue;
       }
@@ -344,35 +351,61 @@ ${pageContent}`;
 
       processedTargets.add(processedSuggestion.targetId);
 
-      const safeZonesWithInlineCode = computeSafeZones(currentContent, { includeInlineCode: false });
-      console.log(`[DEBUG]   → Safe zones: ${safeZonesWithInlineCode.length} zones (with inline code protection)`);
+      const safeZonesWithInlineCode = computeSafeZones(currentContent, {
+        includeInlineCode: false,
+      });
+      console.log(
+        `[DEBUG]   → Safe zones: ${safeZonesWithInlineCode.length} zones (with inline code protection)`
+      );
 
-      const validation = validateSuggestion(processedSuggestion, currentContent, docsDir, pageEntry.absPath);
-      console.log(`[DEBUG]   → Validation: ${validation.ok ? 'PASS' : 'FAIL'} ${validation.ok ? '' : `(${validation.reason})`}`);
+      const validation = validateSuggestion(
+        processedSuggestion,
+        currentContent,
+        docsDir,
+        pageEntry.absPath
+      );
+      console.log(
+        `[DEBUG]   → Validation: ${validation.ok ? 'PASS' : 'FAIL'} ${validation.ok ? '' : `(${validation.reason})`}`
+      );
 
       if (!validation.ok) {
         processedSuggestion.status = 'skipped';
-        console.warn(`  ⚠ Skipped (${validation.reason}): ${processedSuggestion.sourceId} → ${processedSuggestion.targetId}`);
+        console.warn(
+          `  ⚠ Skipped (${validation.reason}): ${processedSuggestion.sourceId} → ${processedSuggestion.targetId}`
+        );
         continue;
       }
 
       if (processedSuggestion.confidence === 'medium' && processedSuggestion.type === 'inline') {
-        const anchorMatch = findAnchorWithFallback(currentContent, processedSuggestion.anchorText, 0, safeZonesWithInlineCode);
+        const anchorMatch = findAnchorWithFallback(
+          currentContent,
+          processedSuggestion.anchorText,
+          0,
+          safeZonesWithInlineCode
+        );
         if (anchorMatch) {
           processedSuggestion.confidence = 'high';
           console.log(`[DEBUG]   → ↑ Promoted to high-confidence (anchor text found)`);
         }
       }
 
-      if (processedSuggestion.type === 'inline' && (processedSuggestion.anchorText.includes('.') || processedSuggestion.anchorText.includes('#'))) {
-        console.log(`[DEBUG]   → Checking anchor for method/operator: ${processedSuggestion.anchorText}`);
-        const targetEntry = state.index.find(e => e.id === processedSuggestion.targetId);
+      if (
+        processedSuggestion.type === 'inline' &&
+        (processedSuggestion.anchorText.includes('.') ||
+          processedSuggestion.anchorText.includes('#'))
+      ) {
+        console.log(
+          `[DEBUG]   → Checking anchor for method/operator: ${processedSuggestion.anchorText}`
+        );
+        const targetEntry = state.index.find((e) => e.id === processedSuggestion.targetId);
         if (targetEntry) {
           const hasAnchor = hasAnchorInTarget(targetEntry.absPath, processedSuggestion.anchorText);
           console.log(`[DEBUG]     → Has anchor: ${hasAnchor}`);
           if (!hasAnchor) {
             processedSuggestion.status = 'skipped';
-            console.warn(`  ⚠ Skipped (no anchor): ${processedSuggestion.anchorText} in ${targetEntry.title}`);
+            console.warn(
+              `  ⚠ Skipped (no anchor): ${processedSuggestion.anchorText} in ${targetEntry.title}`
+            );
             continue;
           }
         } else {
@@ -382,23 +415,37 @@ ${pageContent}`;
 
       let inserted = false;
       if (processedSuggestion.type === 'inline') {
-        console.log(`[DEBUG]   → Attempting inline link insertion for "${processedSuggestion.anchorText}"`);
-        const r = insertInlineLink(currentContent, processedSuggestion.anchorText, processedSuggestion.targetRelativePath, safeZonesWithInlineCode);
+        console.log(
+          `[DEBUG]   → Attempting inline link insertion for "${processedSuggestion.anchorText}"`
+        );
+        const r = insertInlineLink(
+          currentContent,
+          processedSuggestion.anchorText,
+          processedSuggestion.targetRelativePath,
+          safeZonesWithInlineCode
+        );
         console.log(`[DEBUG]     → Result: inserted=${r.inserted}, reason=${r.reason || 'none'}`);
         if (r.inserted) {
           currentContent = r.result;
           inserted = true;
           console.log(`[DEBUG]     → Content updated, new length=${currentContent.length}`);
-        }
-        else console.warn(`  ⚠ Could not insert inline link: ${r.reason}`);
+        } else console.warn(`  ⚠ Could not insert inline link: ${r.reason}`);
       } else {
         if (!processedSuggestion.description) {
           console.log(`[DEBUG]   → Skipping see-also (missing required description)`);
           processedSuggestion.status = 'skipped';
           continue;
         }
-        console.log(`[DEBUG]   → Attempting see-also insertion for "${processedSuggestion.anchorText}"`);
-        const r = insertSeeAlsoEntry(currentContent, processedSuggestion.anchorText, processedSuggestion.targetRelativePath, processedSuggestion.description, safeZonesWithInlineCode);
+        console.log(
+          `[DEBUG]   → Attempting see-also insertion for "${processedSuggestion.anchorText}"`
+        );
+        const r = insertSeeAlsoEntry(
+          currentContent,
+          processedSuggestion.anchorText,
+          processedSuggestion.targetRelativePath,
+          processedSuggestion.description,
+          safeZonesWithInlineCode
+        );
         console.log(`[DEBUG]     → Result: inserted=${r.inserted}, reason=${r.reason || 'none'}`);
         if (r.inserted) {
           currentContent = r.result;
@@ -417,8 +464,8 @@ ${pageContent}`;
       }
 
       const originalSuggestion = state.suggestions.find(
-        s => s.sourceId === processedSuggestion.sourceId &&
-             s.targetId === processedSuggestion.targetId
+        (s) =>
+          s.sourceId === processedSuggestion.sourceId && s.targetId === processedSuggestion.targetId
       );
       if (originalSuggestion) {
         originalSuggestion.status = processedSuggestion.status;
@@ -430,7 +477,7 @@ ${pageContent}`;
       fs.writeFileSync(pageEntry.absPath, currentContent, 'utf-8');
     }
 
-    const remaining = state.index.filter(e => !state.processed.includes(e.id)).length;
+    const remaining = state.index.filter((e) => !state.processed.includes(e.id)).length;
     printIterationSummary(
       pageEntry.title,
       state.processed.length,
@@ -447,6 +494,6 @@ ${pageContent}`;
     saveState(docsDir, state);
   }
 
-  const remaining = state.index.filter(e => !state.processed.includes(e.id)).length;
+  const remaining = state.index.filter((e) => !state.processed.includes(e.id)).length;
   return { done: remaining === 0, processed: batch.length, remaining };
 }

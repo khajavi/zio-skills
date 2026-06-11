@@ -53,15 +53,17 @@ export const SectionClassificationOutput = v.array(
 export type SectionClassificationOutput = v.InferOutput<typeof SectionClassificationOutput>;
 
 export const PageAnalysisOutput = v.object({
-  suggestions: v.array(v.object({
-    targetId: v.string(),
-    targetTitle: v.string(),
-    anchorText: v.string(),
-    description: v.optional(v.string()),
-    type: v.picklist(['inline', 'see_also']),
-    confidence: Confidence,
-    reasoning: v.string(),
-  })),
+  suggestions: v.array(
+    v.object({
+      targetId: v.string(),
+      targetTitle: v.string(),
+      anchorText: v.string(),
+      description: v.optional(v.string()),
+      type: v.picklist(['inline', 'see_also']),
+      confidence: Confidence,
+      reasoning: v.string(),
+    })
+  ),
 });
 export type PageAnalysisOutput = v.InferOutput<typeof PageAnalysisOutput>;
 

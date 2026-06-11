@@ -10,12 +10,12 @@ interface MatchResult {
 }
 
 function isInSafeZone(offset: number, zones: SafeZone[]): boolean {
-  return zones.some(z => offset >= z.start && offset < z.end);
+  return zones.some((z) => offset >= z.start && offset < z.end);
 }
 
 // Check if a text span overlaps with any safe zone
 function doesSpanOverlapSafeZone(start: number, end: number, zones: SafeZone[]): boolean {
-  return zones.some(z => start < z.end && end > z.start);
+  return zones.some((z) => start < z.end && end > z.start);
 }
 
 function isWordBoundary(char: string | undefined): boolean {
@@ -23,11 +23,7 @@ function isWordBoundary(char: string | undefined): boolean {
   return /\s|[.,;:!?\-()[\]{}`]/.test(char);
 }
 
-function hasWordBoundaries(
-  content: string,
-  start: number,
-  end: number
-): boolean {
+function hasWordBoundaries(content: string, start: number, end: number): boolean {
   const before = content[start - 1];
   const after = content[end];
   return isWordBoundary(before) && isWordBoundary(after);
@@ -85,11 +81,9 @@ export function findAnchorWithFallback(
   }
 
   // Strategy 3: Try keywords only (extract main terms)
-  const keywords = anchorText.split(/\s+/).filter(w => w.length > 2);
+  const keywords = anchorText.split(/\s+/).filter((w) => w.length > 2);
   // Try the last significant word first (usually the main concept), then first
-  const termsToTry = keywords.length > 1
-    ? [keywords[keywords.length - 1], keywords[0]]
-    : keywords;
+  const termsToTry = keywords.length > 1 ? [keywords[keywords.length - 1], keywords[0]] : keywords;
 
   for (const mainKeyword of termsToTry) {
     idx = findAnchorInStrategy(content, mainKeyword, safeZones, startIdx);
@@ -115,7 +109,12 @@ export function findAnchorWithFallback(
     const inlineKeyword = `\`${mainKeyword}\``;
     idx = findAnchorInStrategy(content, inlineKeyword, safeZones, startIdx);
     if (idx !== -1) {
-      return { found: true, position: idx, actualText: inlineKeyword, strategy: 'inline-code-keyword' };
+      return {
+        found: true,
+        position: idx,
+        actualText: inlineKeyword,
+        strategy: 'inline-code-keyword',
+      };
     }
   }
 
@@ -153,7 +152,8 @@ export function insertInlineLink(
   // Issue #2 fix: Only check actualText for backticks if the strategy is NOT inline-code
   // The inline-code strategy explicitly includes backticks, so don't re-wrap them
   // Issue #9 fix: Check both actualText and strategy to ensure we account for transformations
-  const alreadyInBackticks = (match.strategy === 'inline-code' || match.strategy === 'inline-code-keyword');
+  const alreadyInBackticks =
+    match.strategy === 'inline-code' || match.strategy === 'inline-code-keyword';
   // Issue #6 fix: Check surroundedByBackticks more carefully and account for escaped backticks
   // An escaped backtick is preceded by an odd number of backslashes
   function isCharacterEscaped(content: string, pos: number): boolean {
@@ -169,13 +169,14 @@ export function insertInlineLink(
   }
   // This handles the edge case where the keyword strategy finds text surrounded by backticks
   // Don't treat it as surrounded by backticks if those backticks are escaped
-  const surroundedByBackticks = !alreadyInBackticks &&
+  const surroundedByBackticks =
+    !alreadyInBackticks &&
     found > 0 &&
     content[found - 1] === '`' &&
-    !isCharacterEscaped(content, found - 1) &&  // Check if the opening backtick itself is escaped
+    !isCharacterEscaped(content, found - 1) && // Check if the opening backtick itself is escaped
     content[end] === '`' &&
-    !isCharacterEscaped(content, end) &&  // Check if the closing backtick itself is escaped
-    !match.actualText.includes('`');  // Ensure the text itself doesn't contain backticks
+    !isCharacterEscaped(content, end) && // Check if the closing backtick itself is escaped
+    !match.actualText.includes('`'); // Ensure the text itself doesn't contain backticks
 
   let linkMd: string;
   let actualStart: number;
@@ -229,7 +230,9 @@ export function insertSeeAlsoEntry(
   // This prevents duplicates with different descriptions
   // Issue #2 fix: Use flexible heading level (#+ instead of hardcoded ##)
   // Issue #3 fix: Use normalizedContent for all regex operations to avoid CRLF handling issues
-  const seeAlsoCheckMatch = normalizedContent.match(/^(#+)\s+See Also\s*\n([\s\S]*?)(?=^\1 |^#{1,\1.length-1} |$)/m);
+  const seeAlsoCheckMatch = normalizedContent.match(
+    /^(#+)\s+See Also\s*\n([\s\S]*?)(?=^\1 |^#{1,\1.length-1} |$)/m
+  );
   if (seeAlsoCheckMatch) {
     const seeAlsoContent = seeAlsoCheckMatch[2];
     if (seeAlsoContent.includes(`](${targetRelativePath})`)) {
@@ -254,7 +257,7 @@ export function insertSeeAlsoEntry(
       fences.push({ start: fenceMatch.index, end: fenceMatch.index + fenceMatch[0].length });
     }
     // Check if the entire header span overlaps with any code fence, not just the start
-    const isInsideCodeFence = fences.some(f => seeAlsoIndex < f.end && seeAlsoEnd > f.start);
+    const isInsideCodeFence = fences.some((f) => seeAlsoIndex < f.end && seeAlsoEnd > f.start);
     if (isInsideCodeFence) {
       return { result: content, inserted: false, reason: 'section_in_safe_zone' };
     }
@@ -282,7 +285,11 @@ export function insertSeeAlsoEntry(
     } else {
       // Next heading exists - insert section with new bullet, ensuring blank line before next heading
       // Issue #2 fix: Add blank line between section and next heading for proper markdown
-      result = normalizedContent.slice(0, sectionStart) + sectionWithNewBullet + '\n' + normalizedContent.slice(sectionEnd);
+      result =
+        normalizedContent.slice(0, sectionStart) +
+        sectionWithNewBullet +
+        '\n' +
+        normalizedContent.slice(sectionEnd);
     }
     return { result, inserted: true };
   }

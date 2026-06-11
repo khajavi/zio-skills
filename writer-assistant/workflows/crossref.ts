@@ -17,7 +17,14 @@ export async function run({ init, payload }: FlueContext) {
   const projectRoot = (payload as any).projectRoot || path.dirname((payload as any).docsDir);
   const docsDir = (payload as any).docsDir || path.join(projectRoot, 'docs');
 
-  const { mode, batchSize = 1, targetFile, targetDir, maxRetries = 3, verificationPrompt } = payload as {
+  const {
+    mode,
+    batchSize = 1,
+    targetFile,
+    targetDir,
+    maxRetries = 3,
+    verificationPrompt,
+  } = payload as {
     projectRoot?: string;
     docsDir?: string;
     mode: 'reindex' | 'step' | 'autopilot' | 'report' | 'verify' | 'verify-and-fix';
@@ -46,7 +53,15 @@ export async function run({ init, payload }: FlueContext) {
       return { done: false };
     }
     const config = loadConfig(docsDir);
-    const result = await processBatch(state, config, session, batchSize, docsDir, targetFile, targetDir);
+    const result = await processBatch(
+      state,
+      config,
+      session,
+      batchSize,
+      docsDir,
+      targetFile,
+      targetDir
+    );
     if (result.done) console.log('[crossref] All pages processed.');
     return result;
   }
@@ -58,14 +73,27 @@ export async function run({ init, payload }: FlueContext) {
     }
     const config = loadConfig(docsDir);
     let totalProcessed = 0;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
-      const result = await processBatch(state, config, session, batchSize, docsDir, targetFile, targetDir);
+      const result = await processBatch(
+        state,
+        config,
+        session,
+        batchSize,
+        docsDir,
+        targetFile,
+        targetDir
+      );
       totalProcessed += result.processed;
       if (result.done) break;
       state = (await loadState(docsDir)) ?? state;
     }
-    console.log(`\n[crossref] Autopilot complete. Total processed: ${totalProcessed}/${state.index.length}`);
-    console.log(`  Total tokens — in: ${state.tokens.inputTotal.toLocaleString()}  out: ${state.tokens.outputTotal.toLocaleString()}  (~$${state.tokens.runningCost.toFixed(2)})`);
+    console.log(
+      `\n[crossref] Autopilot complete. Total processed: ${totalProcessed}/${state.index.length}`
+    );
+    console.log(
+      `  Total tokens — in: ${state.tokens.inputTotal.toLocaleString()}  out: ${state.tokens.outputTotal.toLocaleString()}  (~$${state.tokens.runningCost.toFixed(2)})`
+    );
     return { done: true, totalProcessed };
   }
 
@@ -77,7 +105,9 @@ export async function run({ init, payload }: FlueContext) {
 
   if (mode === 'verify') {
     const result = await verifyBuild(docsDir);
-    console.log(`[crossref] ${result.success ? '✓' : '✗'} ${result.buildSystem} build ${result.success ? 'passed' : 'failed'} in ${result.durationMs}ms`);
+    console.log(
+      `[crossref] ${result.success ? '✓' : '✗'} ${result.buildSystem} build ${result.success ? 'passed' : 'failed'} in ${result.durationMs}ms`
+    );
     return result;
   }
 

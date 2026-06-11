@@ -413,8 +413,8 @@ Content.`,
 
       expect(results).toHaveLength(3);
       expect(results[0].needsExtraction).toBe(false); // complete.md
-      expect(results[1].needsExtraction).toBe(true);  // incomplete.md
-      expect(results[2].needsExtraction).toBe(true);  // plain.md
+      expect(results[1].needsExtraction).toBe(true); // incomplete.md
+      expect(results[2].needsExtraction).toBe(true); // plain.md
     });
   });
 });

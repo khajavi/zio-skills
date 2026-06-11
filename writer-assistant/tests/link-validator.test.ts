@@ -91,7 +91,7 @@ describe('validateSuggestion', () => {
     // "the ZIO Runtime" should match "ZIO runtime" via fuzzy strategies
     const result = validateSuggestion(
       makeSuggestion({ anchorText: 'the ZIO Runtime' }),
-      SOURCE_CONTENT,  // Contains "ZIO runtime"
+      SOURCE_CONTENT, // Contains "ZIO runtime"
       tmpDir,
       path.join(tmpDir, 'guide.md')
     );
@@ -103,10 +103,10 @@ describe('validateSuggestion', () => {
     // Previously: validation passed, insertion failed (silent failure)
     // Now: validation fails early with clear reason
 
-    const wrongAnchor = 'xyzabc something definitely not there';  // Absolutely not in content!
+    const wrongAnchor = 'xyzabc something definitely not there'; // Absolutely not in content!
     const result = validateSuggestion(
       makeSuggestion({ anchorText: wrongAnchor }),
-      SOURCE_CONTENT,  // Only has "ZIO runtime"
+      SOURCE_CONTENT, // Only has "ZIO runtime"
       tmpDir,
       path.join(tmpDir, 'guide.md')
     );
@@ -123,7 +123,7 @@ describe('validateSuggestion', () => {
     const result = validateSuggestion(
       makeSuggestion({
         type: 'see_also',
-        anchorText: 'nonexistent',  // Won't be checked for see_also
+        anchorText: 'nonexistent', // Won't be checked for see_also
       }),
       SOURCE_CONTENT,
       tmpDir,

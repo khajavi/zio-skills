@@ -84,7 +84,11 @@ function detectBuildSystem(docsDir: string): BuildConfig | null {
 /**
  * Execute a single command and capture output
  */
-function executeCommand(command: string, args: string[], cwd: string): Promise<{ exitCode: number; output: string }> {
+function executeCommand(
+  command: string,
+  args: string[],
+  cwd: string
+): Promise<{ exitCode: number; output: string }> {
   return new Promise((resolve) => {
     let output = '';
     const proc = spawn(command, args, {
@@ -257,12 +261,12 @@ export async function runBuild(docsDir: string): Promise<BuildResult> {
     const parentDir = path.dirname(docsDir);
     throw new Error(
       `No supported documentation build system detected in ${docsDir}.\n` +
-      `Checked:\n` +
-      `  - ${path.join(parentDir, 'website', 'package.json')} (Docusaurus)\n` +
-      `  - ${path.join(parentDir, 'package.json')} (Docusaurus)\n` +
-      `  - ${path.join(parentDir, 'mkdocs.yml')} (MkDocs)\n` +
-      `  - ${path.join(docsDir, 'conf.py')} (Sphinx)\n` +
-      `Supported systems: Docusaurus, MkDocs, Sphinx`
+        `Checked:\n` +
+        `  - ${path.join(parentDir, 'website', 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'mkdocs.yml')} (MkDocs)\n` +
+        `  - ${path.join(docsDir, 'conf.py')} (Sphinx)\n` +
+        `Supported systems: Docusaurus, MkDocs, Sphinx`
     );
   }
 

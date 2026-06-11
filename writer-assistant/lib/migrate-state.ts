@@ -55,7 +55,8 @@ export async function migrateState(docsDir: string): Promise<{
   }
 
   // Issue #2 fix: Extract sectionType from raw data BEFORE schema validation strips it
-  const sectionTypeMap: Record<string, 'reference' | 'guide' | 'tutorial' | 'overview' | 'other'> = {};
+  const sectionTypeMap: Record<string, 'reference' | 'guide' | 'tutorial' | 'overview' | 'other'> =
+    {};
   if (typeof oldStateData === 'object' && oldStateData !== null && 'index' in oldStateData) {
     const indexArray = (oldStateData as any).index;
     if (Array.isArray(indexArray)) {
@@ -78,7 +79,7 @@ export async function migrateState(docsDir: string): Promise<{
   const index: PageIndexType = {
     indexBuiltAt: oldState.indexBuiltAt,
     docsDir: oldState.docsDir,
-    index: oldState.index.map(entry => ({
+    index: oldState.index.map((entry) => ({
       id: entry.id,
       title: entry.title,
       path: entry.path,

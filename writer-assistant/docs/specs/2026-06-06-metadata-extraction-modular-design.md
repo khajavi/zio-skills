@@ -11,10 +11,12 @@
 ### Problem
 
 The `page-linker` agent currently handles two concerns:
+
 1. **Metadata extraction** — Enrich pages with description, keywords, section type
 2. **Link suggestion** — Generate cross-linking suggestions based on content analysis
 
 These concerns are useful independently:
+
 - Metadata extraction is useful for other documentation tools
 - Link suggestion depends on metadata but doesn't need to extract it
 
@@ -23,6 +25,7 @@ These concerns are useful independently:
 ### Solution
 
 Decompose metadata extraction into a **standalone agent** (`metadata-extractor`) that:
+
 - Can run independently to pre-enrich all docs
 - Can be reused in other projects
 - Reduces token usage in crossref workflow (when pre-enriched)
@@ -44,11 +47,13 @@ Two independent workflows:
 **Purpose:** Independently walk docs, enrich all metadata, write back to files.
 
 **Modes:**
+
 - `all` — Process every page
 - `missing` — Only pages without description or keywords (default)
 - `file` — Single specific file
 
 **Usage:**
+
 ```bash
 # Pre-enrich all docs (one-time or periodic)
 flue run extract-metadata --target node \
@@ -64,6 +69,7 @@ flue run extract-metadata --target node \
 ```
 
 **Output:**
+
 - Updates frontmatter in-place for all processed pages
 - Prints progress: `✓ Processed: PageTitle | Added: description, keywords`
 - Summary: `Enriched N pages`
@@ -73,10 +79,12 @@ flue run extract-metadata --target node \
 **No external API change.** Modes (reindex, step, autopilot, report) work as today.
 
 **Internal improvement:** `process.ts` checks if metadata is complete:
+
 - **If complete:** Use frontmatter metadata directly (no metadata-agent call)
 - **If incomplete:** Call metadata-agent as fallback (backward compatible)
 
 **Recommended workflow:**
+
 ```bash
 # Step 1: Pre-enrich metadata (once per project)
 flue run extract-metadata --target node \
@@ -98,6 +106,7 @@ flue run crossref --target node \
 **Model:** Claude Haiku 4.5
 
 **Input:**
+
 ```typescript
 {
   pageId: string,              // Unique page identifier
@@ -109,6 +118,7 @@ flue run crossref --target node \
 ```
 
 **Output:**
+
 ```typescript
 {
   description: string,         // 1-2 sentence summary
@@ -120,6 +130,7 @@ flue run crossref --target node \
 **Skill:** `skills/metadata-extractor/SKILL.md` (new)
 
 **Behavior:**
+
 - Extracts meaningful metadata even from sparse content
 - Respects existing metadata when present
 - Handles edge cases (long descriptions, special characters, non-English content)
@@ -134,6 +145,7 @@ flue run crossref --target node \
 **Change:** Assume metadata is complete; remove optional `extract_page_metadata` tool call.
 
 **Input:**
+
 ```typescript
 {
   pageId: string,
@@ -158,6 +170,7 @@ flue run crossref --target node \
 **File:** `workflows/extract-metadata.ts` (new)
 
 **Responsibilities:**
+
 1. Walk docs directory (respecting `excludePatterns` from config)
 2. For each page, determine if processing is needed (based on mode)
 3. Call metadata-agent to extract metadata
@@ -167,13 +180,14 @@ flue run crossref --target node \
 
 **Modes:**
 
-| Mode | Behavior |
-|------|----------|
-| `all` | Process every page |
+| Mode      | Behavior                                                      |
+| --------- | ------------------------------------------------------------- |
+| `all`     | Process every page                                            |
 | `missing` | Only pages where description is missing OR keywords are empty |
-| `file` | Single specific file (requires `targetFile` payload) |
+| `file`    | Single specific file (requires `targetFile` payload)          |
 
 **Error handling:**
+
 - Page unreadable → Warn, skip, continue
 - metadata-agent fails → Warn, skip, continue
 - Frontmatter update fails → Warn, skip, continue
@@ -191,15 +205,15 @@ flue run crossref --target node \
 for (const pageEntry of batch) {
   const pageContent = fs.readFileSync(pageEntry.absPath, 'utf-8');
   const frontmatter = parseFrontmatter(pageContent);
-  
+
   // Check if metadata is complete
-  const hasCompleteMetadata = 
-    frontmatter.description && 
-    Array.isArray(frontmatter.keywords) && 
+  const hasCompleteMetadata =
+    frontmatter.description &&
+    Array.isArray(frontmatter.keywords) &&
     frontmatter.keywords.length > 0;
-  
+
   let pageMetadata;
-  
+
   if (hasCompleteMetadata) {
     // Use file metadata (fast path)
     pageMetadata = {
@@ -218,7 +232,7 @@ for (const pageEntry of batch) {
       existingKeywords: frontmatter.keywords
     });
   }
-  
+
   // Call page-linker with complete metadata
   const suggestions = await session.run(pageLinkerAgent, {
     pageId: pageEntry.id,
@@ -228,7 +242,7 @@ for (const pageEntry of batch) {
     pageIndex: state.index,
     adjacentPages: getAdjacentPages(pageEntry)
   });
-  
+
   // Existing validation, insertion, state save logic
   ...
 }
@@ -246,19 +260,19 @@ for (const pageEntry of batch) {
 1. ONE-TIME PRE-PROCESSING
    $ flue run extract-metadata --target node \
      --payload '{"docsDir":"./docs","mode":"all"}'
-   
+
    For each page:
      - Load content
      - Call metadata-agent
      - Update frontmatter in file
      - Save
-   
+
    Result: All pages have enriched metadata in frontmatter
 
 2. CROSSREF WORKFLOW (Multiple runs)
    $ flue run crossref --target node \
      --payload '{"docsDir":"./docs","mode":"step","batchSize":5"}'
-   
+
    For each page in batch:
      - Load content
      - Check: metadata complete? YES
@@ -266,7 +280,7 @@ for (const pageEntry of batch) {
      - Call page-linker with enriched data
      - Apply suggestions
      - Save state
-   
+
    Result: Links generated efficiently (~3.5-4.5k tokens per page)
 ```
 
@@ -326,15 +340,15 @@ Other Flue workflows can import and use this.
 
 ## 6. Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| extract-metadata: Page unreadable | Warn, skip page, continue |
-| extract-metadata: metadata-agent fails | Warn, skip page, continue |
-| extract-metadata: Frontmatter update fails | Warn, skip page, continue |
-| extract-metadata: Partial output | Accept partial, write what we have |
+| Scenario                                     | Behavior                                         |
+| -------------------------------------------- | ------------------------------------------------ |
+| extract-metadata: Page unreadable            | Warn, skip page, continue                        |
+| extract-metadata: metadata-agent fails       | Warn, skip page, continue                        |
+| extract-metadata: Frontmatter update fails   | Warn, skip page, continue                        |
+| extract-metadata: Partial output             | Accept partial, write what we have               |
 | crossref (pre-enriched): Metadata incomplete | Should not happen; fallback extraction available |
-| crossref (fallback): metadata-agent fails | Warn, skip link suggestion for page |
-| crossref (fallback): Partial metadata | Use partial; page-linker adapts |
+| crossref (fallback): metadata-agent fails    | Warn, skip link suggestion for page              |
+| crossref (fallback): Partial metadata        | Use partial; page-linker adapts                  |
 
 **Design decision:** Accept partial metadata (e.g., missing keywords). Don't treat as error. Page-linker can work with partial data.
 
@@ -371,21 +385,25 @@ Other Flue workflows can import and use this.
 ## 8. Implementation Phases
 
 ### Phase 1: Metadata Extractor Agent (Minimal)
+
 **Scope:** Create agent, skill, basic tests  
 **Files:** `agents/metadata-extractor.ts`, `skills/metadata-extractor/SKILL.md`, `tests/metadata-extraction.test.ts`  
 **Deliverable:** Agent can extract metadata from a single page
 
 ### Phase 2: Standalone Workflow
+
 **Scope:** Create extract-metadata workflow, implement modes, file updates  
 **Files:** `workflows/extract-metadata.ts`, test fixtures  
 **Deliverable:** Can run `flue run extract-metadata` independently
 
 ### Phase 3: Integrate into Crossref
+
 **Scope:** Modify process.ts, add metadata completeness check, test fallback  
 **Files:** `workflows/phases/process.ts`, integration tests  
 **Deliverable:** Crossref uses pre-enriched metadata when available
 
 ### Phase 4: Polish & Documentation
+
 **Scope:** Update docs, examples, configuration  
 **Files:** `README.md`, `ARCHITECTURE.md`, `AGENTS.md`  
 **Deliverable:** Full documentation, examples, integration story
@@ -435,19 +453,19 @@ These settings apply to both `extract-metadata` and `crossref` workflows.
 
 ## Appendix: File Changes Summary
 
-| File | Status | Change |
-|------|--------|--------|
-| `agents/metadata-extractor.ts` | New | Metadata agent |
-| `skills/metadata-extractor/SKILL.md` | New | Metadata extraction skill |
-| `workflows/extract-metadata.ts` | New | Standalone metadata workflow |
-| `workflows/phases/process.ts` | Modify | Check metadata, fallback extraction |
-| `agents/page-linker.ts` | Modify | Remove optional metadata extraction (optional) |
-| `lib/yaml.ts` | Verify | Ensure frontmatter updates work reliably |
-| `tests/metadata-extraction.test.ts` | New | Metadata agent tests |
-| `tests/extract-metadata.test.ts` | New | Workflow tests |
-| `README.md` | Update | Document metadata workflow |
-| `ARCHITECTURE.md` | Update | Add metadata extraction diagram |
-| `AGENTS.md` | Update | Document new workflow |
+| File                                 | Status | Change                                         |
+| ------------------------------------ | ------ | ---------------------------------------------- |
+| `agents/metadata-extractor.ts`       | New    | Metadata agent                                 |
+| `skills/metadata-extractor/SKILL.md` | New    | Metadata extraction skill                      |
+| `workflows/extract-metadata.ts`      | New    | Standalone metadata workflow                   |
+| `workflows/phases/process.ts`        | Modify | Check metadata, fallback extraction            |
+| `agents/page-linker.ts`              | Modify | Remove optional metadata extraction (optional) |
+| `lib/yaml.ts`                        | Verify | Ensure frontmatter updates work reliably       |
+| `tests/metadata-extraction.test.ts`  | New    | Metadata agent tests                           |
+| `tests/extract-metadata.test.ts`     | New    | Workflow tests                                 |
+| `README.md`                          | Update | Document metadata workflow                     |
+| `ARCHITECTURE.md`                    | Update | Add metadata extraction diagram                |
+| `AGENTS.md`                          | Update | Document new workflow                          |
 
 ---
 
