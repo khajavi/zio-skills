@@ -10,6 +10,7 @@ import {
   inferSourceDirs,
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
+import { runReviewPhase } from './phases/review.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
@@ -238,8 +239,24 @@ Report final status and any updates made.`;
     console.log('[Phase 4] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
+    // Phase 5: Review and Fix
+    console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+    const reviewResult = await runReviewPhase(init, {
+      outputPath: resolvedOutputPath,
+      projectRoot,
+      typeName,
+      session, // reuse writer session for fixes
+      sourceFiles: sourceDirs,
+    });
+    console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
+    if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
+      console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
+      reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+    }
+    phasesCompleted.push('review');
+
     // Build final result
-    const success = phasesCompleted.length === 4;
+    const success = phasesCompleted.length === 5;
     console.log(`\n[docs-write-data-type-ref] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -253,6 +270,12 @@ Report final status and any updates made.`;
       status: success ? 'success' : 'partial',
       phasesCompleted,
       success,
+      review: {
+        approved: reviewResult.approved,
+        rounds: reviewResult.rounds,
+        findingsFixed: reviewResult.findingsFixed,
+        unresolvedIssues: reviewResult.unresolvedIssues,
+      },
     };
   } catch (error) {
     console.error(`[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -265,6 +288,12 @@ Report final status and any updates made.`;
       phasesCompleted,
       error: error instanceof Error ? error.message : String(error),
       success: false,
+      review: {
+        approved: false,
+        rounds: 0,
+        findingsFixed: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+        unresolvedIssues: [],
+      },
     };
   }
 }
