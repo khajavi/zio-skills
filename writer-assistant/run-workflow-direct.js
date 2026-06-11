@@ -5,13 +5,13 @@ import fs from 'fs';
 // Register Anthropic provider
 registerApiProvider({
   name: 'anthropic',
-  apiKey: process.env.ANTHROPIC_API_KEY || 'sk-test'
+  apiKey: process.env.ANTHROPIC_API_KEY || 'sk-test',
 });
 
 const payload = {
-  projectRoot: "/home/milad/sources/scala/zio-2.x-new",
-  outputPath: "docs/reference/resource/cached.md",
-  dataTypePath: "core/shared/src/main/scala/zio/Cached.scala"
+  projectRoot: '/home/milad/sources/scala/zio-2.x-new',
+  outputPath: 'docs/reference/resource/cached.md',
+  dataTypePath: 'core/shared/src/main/scala/zio/Cached.scala',
 };
 
 console.log('[docs-write-data-type-ref] Starting workflow...\n');
@@ -23,7 +23,7 @@ console.log(`  dataTypePath: ${payload.dataTypePath}\n`);
 // Create a mock init function that works with the workflow
 async function mockInit(agent, config) {
   console.log(`[mockInit] Initializing agent: ${config.name}`);
-  
+
   // Create a mock session with send method
   const session = {
     send: async (message) => {
@@ -31,18 +31,18 @@ async function mockInit(agent, config) {
       console.log(`---`);
       // For now, just return a mock result
       return 'Mock response from agent';
-    }
+    },
   };
-  
+
   return { session: () => Promise.resolve(session) };
 }
 
 try {
-  const result = await workflowRun({ 
-    init: mockInit, 
-    payload 
+  const result = await workflowRun({
+    init: mockInit,
+    payload,
   });
-  
+
   console.log('\n=== WORKFLOW COMPLETED ===');
   console.log(JSON.stringify(result, null, 2));
   process.exit(result.success ? 0 : 1);

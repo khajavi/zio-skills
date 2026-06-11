@@ -5,13 +5,13 @@ import { run } from './dist/workflows/write-data-type-ref.js';
 // Register Anthropic API provider
 registerApiProvider({
   name: 'anthropic',
-  apiKey: process.env.ANTHROPIC_API_KEY
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const payload = {
-  projectRoot: "/home/milad/sources/scala/zio-2.x-new",
-  outputPath: "docs/reference/resource/cached.md",
-  dataTypePath: "core/shared/src/main/scala/zio/Cached.scala"
+  projectRoot: '/home/milad/sources/scala/zio-2.x-new',
+  outputPath: 'docs/reference/resource/cached.md',
+  dataTypePath: 'core/shared/src/main/scala/zio/Cached.scala',
 };
 
 console.log('[docs-write-data-type-ref] Starting workflow...\n');
@@ -32,7 +32,7 @@ const init = async (agent, config) => {
           try {
             const result = await dispatch(agent, {
               type: 'message',
-              content: message
+              content: message,
             });
             console.log(`[agent:prompt] Received response`);
             return result;
@@ -40,18 +40,20 @@ const init = async (agent, config) => {
             console.error(`[agent:prompt] Error: ${err.message}`);
             throw err;
           }
-        }
+        },
       };
-    }
+    },
   };
 };
 
-run({ init, payload }).then(result => {
-  console.log('\n=== WORKFLOW RESULT ===');
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.success ? 0 : 1);
-}).catch(err => {
-  console.error('ERROR:', err);
-  console.error(err.stack);
-  process.exit(1);
-});
+run({ init, payload })
+  .then((result) => {
+    console.log('\n=== WORKFLOW RESULT ===');
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.success ? 0 : 1);
+  })
+  .catch((err) => {
+    console.error('ERROR:', err);
+    console.error(err.stack);
+    process.exit(1);
+  });

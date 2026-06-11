@@ -20,6 +20,7 @@ npx flue run crossref --target node \
 ```
 
 **Parameters:**
+
 - `docsDir`: Absolute path to the docs directory
 - `mode`: "step" for incremental processing
 - `targetFile`: Relative path from docsDir to the target file (e.g., "reference/service-pattern/reloadable-services.md")
@@ -52,6 +53,7 @@ npx flue run crossref --target node \
 ```
 
 **Parameters:**
+
 - `docsDir`: Absolute path to the docs directory
 
 The verify mode automatically detects the build system (Docusaurus, MkDocs, or Sphinx) and runs the build command. Use this after running `autopilot` mode to ensure no broken links were introduced.
@@ -70,11 +72,13 @@ npx flue run crossref --target node \
 ```
 
 **Parameters:**
+
 - `docsDir`: Absolute path to the docs directory
 - `mode`: "verify-and-fix" to enable auto-fixing
 - `maxRetries`: Maximum number of fix attempts (default: 3, optional)
 
 **How it works:**
+
 1. Verifies documentation builds
 2. If build fails: extracts errors (broken links, syntax errors, missing files)
 3. Fixes documentation using Claude analysis
@@ -82,6 +86,7 @@ npx flue run crossref --target node \
 5. Repeats until success or max retries exceeded
 
 **Automatic fixes include:**
+
 - Adding missing `.md` extensions to links
 - Correcting relative paths
 - Closing unclosed code fences
@@ -100,6 +105,7 @@ Use this mode to automatically resolve common documentation build issues without
 ## Output
 
 The agent produces:
+
 - **Inline links**: Inserted contextually where relevant terms appear
 - **See Also sections**: Added at the end of pages with related topics
 - **Progress tracking**: Shows processed/remaining pages and token usage
@@ -113,10 +119,10 @@ The agent produces:
 
 This project maintains skills in two locations for different purposes:
 
-| Location | Purpose | Invocation | Use Case |
-|---|---|---|---|
-| `plugins/documentation/skills/` | Canonical, human-oriented skills | `/skill-name` in Claude Code | Human operators authoring docs |
-| `writer-assistant/skills/` | Agent-adapted behavior specs | `import ... with { type: 'skill' }` | Flue agents at runtime |
+| Location                        | Purpose                          | Invocation                          | Use Case                       |
+| ------------------------------- | -------------------------------- | ----------------------------------- | ------------------------------ |
+| `plugins/documentation/skills/` | Canonical, human-oriented skills | `/skill-name` in Claude Code        | Human operators authoring docs |
+| `writer-assistant/skills/`      | Agent-adapted behavior specs     | `import ... with { type: 'skill' }` | Flue agents at runtime         |
 
 **Key principle:** Agent skills are adapted versions of the canonical skills, trimmed of human framing and optimized for autonomous execution.
 
@@ -158,6 +164,7 @@ npx flue run write-data-type-ref --target node \
 ```
 
 **Parameters:**
+
 - `projectRoot`: Absolute path to the project root (e.g., `/path/to/zio` or `/path/to/zio-http`)
 - `outputPath`: Path to the documentation file relative to projectRoot (e.g., `docs/reference/chunk.md`)
   - Can also be absolute if needed
@@ -172,6 +179,7 @@ npx flue run write-data-type-ref --target node \
 The source directories are automatically discovered from the project root. ZIO projects often have multiple source directories for different platforms. All are searched to find the type definition.
 
 **Example:** `projectRoot: /path/to/zio` discovers:
+
 - `/path/to/zio/core/shared/src` (shared code)
 - `/path/to/zio/core/jvm/src` (JVM-specific)
 - `/path/to/zio/core/js/src` (JS-specific)
@@ -180,24 +188,28 @@ The source directories are automatically discovered from the project root. ZIO p
 ### What the Workflow Does
 
 **Phase 1 — Research**
+
 - Locates the type definition and source file
 - Reads tests and identifies usage patterns
 - Extracts all public methods and companion object methods
 - Finds integration points and related types
 
 **Phase 2 — Write Documentation**
+
 - Generates markdown file at `docs/reference/<type-name>.md`
 - Follows ZIO documentation conventions and structure
 - Creates sections: Opening Definition, Motivation, Quick Showcase, Installation, Construction, Core Operations, etc.
 - Documents every public method with examples
 
 **Phase 3 — Verify**
+
 - Checks method coverage against source code
 - Runs mdoc to verify all code examples compile
 - Fixes compilation errors iteratively
 - Reports final coverage and error counts
 
 **Phase 4 — Integrate**
+
 - Formats Scala code with `sbt scalafmtAll`
 - Runs lint checks with `sbt check`
 - Updates `sidebars.js` with new documentation entry
@@ -206,6 +218,7 @@ The source directories are automatically discovered from the project root. ZIO p
 ### Output
 
 On success:
+
 - Generated markdown file at `docs/reference/<kebab-case-type-name>.md`
 - Updated sidebar and index files
 - Fully integrated into documentation site

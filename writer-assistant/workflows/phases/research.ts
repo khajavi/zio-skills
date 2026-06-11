@@ -19,7 +19,10 @@ export interface ResearchConfig {
  * The skill covers: source discovery, code flow analysis, architecture analysis, and documentation landscape
  * The focus parameter customizes what insights to emphasize in the research output
  */
-export async function runResearchPhase(init: FlueContext['init'], config: ResearchConfig): Promise<string> {
+export async function runResearchPhase(
+  init: FlueContext['init'],
+  config: ResearchConfig
+): Promise<string> {
   const { projectRoot, typeName, resolvedOutputPath, sourceDirs, dataTypeInfo, focus } = config;
 
   const sourceDirList = sourceDirs.map((dir, i) => `[${i + 1}] ${dir}`).join('\n  ');
@@ -69,9 +72,9 @@ Output: Structured research notes (not a formal report) that prepare the documen
 function getDocumentationTypeLabel(focus: ResearchFocus): string {
   const labels: Record<ResearchFocus, string> = {
     'data-type-ref': 'Data Type Reference',
-    'tutorial': 'Tutorial',
-    'guide': 'How-To Guide',
-    'explanation': 'Explanation',
+    tutorial: 'Tutorial',
+    guide: 'How-To Guide',
+    explanation: 'Explanation',
   };
   return labels[focus];
 }
@@ -80,11 +83,11 @@ function getFocusInstruction(focus: ResearchFocus, typeName: string): string {
   const instructions: Record<ResearchFocus, string> = {
     'data-type-ref': `**Focus:** Extract all public methods, signatures, companion object methods, type variants, and design decisions. Emphasize: complete API surface, test coverage, platform-specific implementations.`,
 
-    'tutorial': `**Focus:** Identify beginner-friendly patterns and step-by-step workflows. Emphasize: common usage patterns, construction patterns, simple examples, learning prerequisites.`,
+    tutorial: `**Focus:** Identify beginner-friendly patterns and step-by-step workflows. Emphasize: common usage patterns, construction patterns, simple examples, learning prerequisites.`,
 
-    'guide': `**Focus:** Map configuration options, decision points, and integration patterns. Emphasize: setup requirements, tradeoffs, use case selection, integration examples.`,
+    guide: `**Focus:** Map configuration options, decision points, and integration patterns. Emphasize: setup requirements, tradeoffs, use case selection, integration examples.`,
 
-    'explanation': `**Focus:** Trace design motivation, architectural decisions, and rationale. Emphasize: design principles, problem domain, historical context, comparisons with alternatives.`,
+    explanation: `**Focus:** Trace design motivation, architectural decisions, and rationale. Emphasize: design principles, problem domain, historical context, comparisons with alternatives.`,
   };
   return instructions[focus];
 }

@@ -28,8 +28,8 @@ export interface GitHubSearchResult {
 
 export interface GitHubResearchContext {
   repository: string; // e.g., "zio/zio"
-  topic: string;      // e.g., "Cached"
-  limit?: number;     // default: 30
+  topic: string; // e.g., "Cached"
+  limit?: number; // default: 30
 }
 
 export interface ResearchFindings {
@@ -139,7 +139,7 @@ export function searchCommits(context: GitHubResearchContext): GitHubSearchResul
     const output = execSync(`gh ${query}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
     const results: CommitSearchItem[] = JSON.parse(output);
 
-    return results.map(item => ({
+    return results.map((item) => ({
       type: 'commit' as const,
       id: item.sha.substring(0, 7),
       title: item.commit.message.split('\n')[0].substring(0, 100),
@@ -165,7 +165,7 @@ export function searchIssues(context: GitHubResearchContext): GitHubSearchResult
     const output = execSync(`gh ${query}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
     const results: IssueSearchItem[] = JSON.parse(output);
 
-    return results.map(item => ({
+    return results.map((item) => ({
       type: 'issue' as const,
       id: String(item.number),
       title: item.title.substring(0, 100),
@@ -191,7 +191,7 @@ export function searchPullRequests(context: GitHubResearchContext): GitHubSearch
     const output = execSync(`gh ${query}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
     const results: PrSearchItem[] = JSON.parse(output);
 
-    return results.map(item => ({
+    return results.map((item) => ({
       type: 'pr' as const,
       id: String(item.number),
       title: item.title.substring(0, 100),
@@ -249,7 +249,10 @@ export function readCommitDetails(repository: string, commitSha: string): Commit
   const endpoint = `repos/${repository}/commits/${commitSha}`;
 
   try {
-    const output = execSync(`gh api ${endpoint}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const output = execSync(`gh api ${endpoint}`, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     const data = JSON.parse(output);
 
     return {
@@ -285,7 +288,9 @@ export function readCommitDetails(repository: string, commitSha: string): Commit
  * Comprehensive GitHub research workflow
  * Searches commits, issues, PRs and analyzes findings for key insights
  */
-export async function conductGitHubResearch(context: GitHubResearchContext): Promise<ResearchFindings> {
+export async function conductGitHubResearch(
+  context: GitHubResearchContext
+): Promise<ResearchFindings> {
   console.log(`[GitHub Research] Researching "${context.topic}" in ${context.repository}...`);
 
   // Search all three categories
@@ -293,7 +298,9 @@ export async function conductGitHubResearch(context: GitHubResearchContext): Pro
   const issues = searchIssues(context);
   const prs = searchPullRequests(context);
 
-  console.log(`[GitHub Research] Found: ${commits.length} commits, ${issues.length} issues, ${prs.length} PRs`);
+  console.log(
+    `[GitHub Research] Found: ${commits.length} commits, ${issues.length} issues, ${prs.length} PRs`
+  );
 
   // Analyze high-value items
   const keyInsights: string[] = [];
@@ -302,7 +309,7 @@ export async function conductGitHubResearch(context: GitHubResearchContext): Pro
 
   // Extract insights from summaries and titles
   const allResults = [...commits, ...issues, ...prs];
-  allResults.forEach(result => {
+  allResults.forEach((result) => {
     const text = `${result.title} ${result.summary}`.toLowerCase();
 
     if (text.includes('design')) {
@@ -346,19 +353,19 @@ export function formatResearchFindings(findings: ResearchFindings): string {
 
   if (findings.designRationale.length > 0) {
     lines.push('### Design Rationale');
-    findings.designRationale.forEach(item => lines.push(`- ${item}`));
+    findings.designRationale.forEach((item) => lines.push(`- ${item}`));
     lines.push('');
   }
 
   if (findings.architectureDecisions.length > 0) {
     lines.push('### Architecture Decisions');
-    findings.architectureDecisions.forEach(item => lines.push(`- ${item}`));
+    findings.architectureDecisions.forEach((item) => lines.push(`- ${item}`));
     lines.push('');
   }
 
   if (findings.keyInsights.length > 0) {
     lines.push('### Key Insights');
-    findings.keyInsights.forEach(item => lines.push(`- ${item}`));
+    findings.keyInsights.forEach((item) => lines.push(`- ${item}`));
     lines.push('');
   }
 

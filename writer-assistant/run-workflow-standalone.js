@@ -3,13 +3,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { run } from './dist/workflows/write-data-type-ref.js';
 
 const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const payload = {
-  projectRoot: "/home/milad/sources/scala/zio-2.x-new",
-  outputPath: "docs/reference/resource/cached.md",
-  dataTypePath: "core/shared/src/main/scala/zio/Cached.scala"
+  projectRoot: '/home/milad/sources/scala/zio-2.x-new',
+  outputPath: 'docs/reference/resource/cached.md',
+  dataTypePath: 'core/shared/src/main/scala/zio/Cached.scala',
 };
 
 console.log('[docs-write-data-type-ref] Starting workflow...\n');
@@ -33,7 +33,7 @@ const init = async (agent, config) => {
           try {
             conversationHistory.push({
               role: 'user',
-              content: message
+              content: message,
             });
 
             const response = await client.messages.create({
@@ -57,13 +57,14 @@ Workflow:
 
 Focus on accuracy and completeness. All code examples must be verified to compile.
 Use the docs-data-type-ref skill for detailed writing guidance and conventions.`,
-              messages: conversationHistory
+              messages: conversationHistory,
             });
 
-            const assistantMessage = response.content[0].type === 'text' ? response.content[0].text : '';
+            const assistantMessage =
+              response.content[0].type === 'text' ? response.content[0].text : '';
             conversationHistory.push({
               role: 'assistant',
-              content: assistantMessage
+              content: assistantMessage,
             });
 
             console.log(`[agent:prompt] Received response (${assistantMessage.length} chars)`);
@@ -72,18 +73,20 @@ Use the docs-data-type-ref skill for detailed writing guidance and conventions.`
             console.error(`[agent:prompt] Error: ${err.message}`);
             throw err;
           }
-        }
+        },
       };
-    }
+    },
   };
 };
 
-run({ init, payload }).then(result => {
-  console.log('\n=== WORKFLOW RESULT ===');
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.success ? 0 : 1);
-}).catch(err => {
-  console.error('ERROR:', err);
-  console.error(err.stack);
-  process.exit(1);
-});
+run({ init, payload })
+  .then((result) => {
+    console.log('\n=== WORKFLOW RESULT ===');
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.success ? 0 : 1);
+  })
+  .catch((err) => {
+    console.error('ERROR:', err);
+    console.error(err.stack);
+    process.exit(1);
+  });

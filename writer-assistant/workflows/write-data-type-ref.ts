@@ -12,7 +12,11 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
-function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
+function findRecentlyModifiedMarkdownFiles(
+  projectRoot: string,
+  docsDir: string,
+  sinceTime: number
+): string[] {
   if (!fs.existsSync(docsDir)) {
     return [];
   }
@@ -46,14 +50,8 @@ function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string,
   return result;
 }
 
-
-
 export async function run({ init, payload }: FlueContext) {
-  const {
-    projectRoot,
-    outputPath,
-    dataTypePath,
-  } = payload as {
+  const { projectRoot, outputPath, dataTypePath } = payload as {
     projectRoot: string;
     outputPath: string;
     dataTypePath?: string;
@@ -76,7 +74,7 @@ export async function run({ init, payload }: FlueContext) {
   const outputFileName = path.basename(outputPath, '.md');
   const outputTypeNameCandidate = outputFileName
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join('');
 
   // Use dataTypePath type name if provided, otherwise infer from output path
@@ -158,13 +156,14 @@ Write the complete markdown file and save it to the specified output path.`;
     const docsDir = path.join(projectRoot, 'docs');
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
     console.log(`\n[Phase 2→3] Found ${changedFiles.length} changed/new markdown files:`);
-    changedFiles.forEach(file => console.log(`  - ${file}`));
+    changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    const changedFilesStr = changedFiles.length > 0
-      ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map(f => `- ${f}`).join('\n')}`
-      : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
+    const changedFilesStr =
+      changedFiles.length > 0
+        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
+        : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
 
     const verifyPrompt = `**Phase 3: Verify Documentation**
 
@@ -255,7 +254,9 @@ Report final status and any updates made.`;
       success,
     };
   } catch (error) {
-    console.error(`[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`
+    );
     return {
       typeName,
       outputPath,
