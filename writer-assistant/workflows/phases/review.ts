@@ -125,7 +125,11 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
     const findings = parseFindings(findingsSection);
     const verdict = verdictSection.toLowerCase().includes('**approved**') ? 'APPROVED' : 'ITERATE';
 
-    console.log(`  Found: ${findings.HIGH.length} HIGH, ${findings.MEDIUM.length} MEDIUM, ${findings.LOW.length} LOW`);
+    const actionableCount = findings.HIGH.length + findings.MEDIUM.length;
+    console.log(`  Found: ${findings.HIGH.length} HIGH, ${findings.MEDIUM.length} MEDIUM, ${findings.LOW.length} LOW (actionable: ${actionableCount})`);
+    if (unresolvable.size > 0) {
+      console.log(`  Unresolvable issues tracked: ${unresolvable.size}`);
+    }
 
     // Phase C: Parse verdict
     if (verdict === 'APPROVED') {
@@ -165,31 +169,62 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
     // Phase B: Spawn fixer using writer session
     console.log(`  Spawning fixer for ${actionable.length} findings...`);
 
+    // Build fixer prompt with verification steps and previous feedback
+    const previousFeedbackSection = unresolvable.size > 0
+      ? `\n**Issues that persisted in previous rounds** (be extra careful with these):\n${Array.from(unresolvable).map(u => `- ${u}`).join('\n')}\n`
+      : '';
+
     const fixerPrompt = `Fix the following documentation issues in ${outputPath}:
 
-${actionable.map((f, i) => `${i + 1}. **${f.severity}/${f.dimension}** — ${f.title}\n   Location: ${f.location}\n   Problem: ${f.problem}\n   Suggestion: ${f.suggestion}`).join('\n\n')}
+${actionable.map((f, i) => `${i + 1}. **${f.severity}/${f.dimension}** — ${f.title}
+   Location: ${f.location}
+   Problem: ${f.problem}
+   Suggestion: ${f.suggestion}`).join('\n\n')}
+${previousFeedbackSection}
+**Critical verification steps for each fix:**
 
-For each finding:
-1. Read the file
-2. Apply the suggested fix
-3. Re-save the file
+1. **Read the affected section** — Understand context and surrounding text
+2. **Apply the fix carefully** — Make minimal, targeted changes
+3. **Verify no regressions:**
+   - Check adjacent paragraphs/examples aren't broken
+   - Confirm related code examples still work
+   - Verify links and cross-references still point to valid locations
+   - Check the fix aligns with source code facts
+4. **Only save if all checks pass** — Skip the fix if verification fails
+5. **Report comprehensively:**
+   - List each issue: "✓ Fixed: [title]" or "Could not fix: [title] (reason)"
+   - Explain any skipped fixes briefly
 
-Report which findings were fixed and which could not be fixed (if any).`;
+Focus on quality over quantity. Better to skip a fix than introduce new problems.`;
 
     const fixerResult = await session.prompt(fixerPrompt);
     const fixerText = fixerResult.text || String(fixerResult);
 
-    // Track what the fixer couldn't resolve
-    const couldNotFixMatches = fixerText.match(/Could not fix:(.+?)(?=\n\n|$)/gs) || [];
-    couldNotFixMatches.forEach(match => {
+    // Parse fixer report: track which specific issues were fixed vs couldn't be fixed
+    const fixedMatches = fixerText.match(/✓\s*Fixed:\s*(.+?)(?=\n|✓|Could not|$)/gi) || [];
+    const couldNotFixMatches = fixerText.match(/Could not fix:\s*(.+?)(?=\n|✓|Could not|$)/gi) || [];
+
+    console.log(`    Fixed: ${fixedMatches.length}, Could not fix: ${couldNotFixMatches.length}`);
+
+    // Track unresolvable issues for next round
+    couldNotFixMatches.forEach((match: string) => {
       const title = match.replace(/Could not fix:\s*/i, '').trim();
-      unresolvable.add(title);
+      if (title.length > 0) {
+        unresolvable.add(title);
+      }
     });
 
-    // Update findings fixed count
-    result.findingsFixed.HIGH += findings.HIGH.length;
-    result.findingsFixed.MEDIUM += findings.MEDIUM.length;
-    result.findingsFixed.LOW += findings.LOW.length;
+    // Update findings fixed count (count what fixer reported as fixed)
+    const numFixed = fixedMatches.length;
+    const numCouldNotFix = couldNotFixMatches.length;
+
+    // Distribute the fixed count proportionally across severities
+    if (numFixed > 0) {
+      const highProp = findings.HIGH.length / actionable.length;
+      const mediumProp = findings.MEDIUM.length / actionable.length;
+      result.findingsFixed.HIGH += Math.ceil(numFixed * highProp);
+      result.findingsFixed.MEDIUM += Math.ceil(numFixed * mediumProp);
+    }
   }
 
   return result;
@@ -216,7 +251,7 @@ function parseFindings(findingsText: string): ParsedFindings {
   // Match pattern: **SEVERITY/dimension** — title
   const findingPattern = /\*\*(HIGH|MEDIUM|LOW)\/(\w+)\*\*\s*—\s*(.+?)\n\s*-\s*Location:\s*(.+?)\n\s*-\s*Problem:\s*(.+?)\n\s*-\s*(?:Impact:.*?\n\s*)?-\s*Suggestion:\s*(.+?)(?=\n\*\*|$)/gs;
 
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = findingPattern.exec(findingsText)) !== null) {
     const [, severity, dimension, title, location, problem, suggestion] = match;
     const finding: Finding = {
