@@ -19,12 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: cachix/install-nix-action@v27
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Use Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check for writer-assistant
         run: cd writer-assistant && nix flake check
