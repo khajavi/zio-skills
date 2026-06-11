@@ -11,6 +11,7 @@ import {
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
+import { runStylePhase } from './phases/style.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
@@ -255,8 +256,23 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('review');
 
+    // Phase 6: Style Validation
+    console.log('\n[Phase 6] Validating: Checking prose style...');
+    const styleResult = await runStylePhase(init, {
+      outputPath: resolvedOutputPath,
+      projectRoot,
+      typeName,
+      session, // reuse writer session for fixes
+    });
+    console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+    if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
+      console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
+      styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+    }
+    phasesCompleted.push('style');
+
     // Build final result
-    const success = phasesCompleted.length === 5;
+    const success = phasesCompleted.length === 6;
     console.log(`\n[docs-write-data-type-ref] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -276,6 +292,12 @@ Report final status and any updates made.`;
         findingsFixed: reviewResult.findingsFixed,
         unresolvedIssues: reviewResult.unresolvedIssues,
       },
+      style: {
+        passed: styleResult.passed,
+        rounds: styleResult.rounds,
+        violations: styleResult.violations,
+        unresolvedViolations: styleResult.unresolvedViolations,
+      },
     };
   } catch (error) {
     console.error(`[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -293,6 +315,12 @@ Report final status and any updates made.`;
         rounds: 0,
         findingsFixed: { HIGH: 0, MEDIUM: 0, LOW: 0 },
         unresolvedIssues: [],
+      },
+      style: {
+        passed: false,
+        rounds: 0,
+        violations: {},
+        unresolvedViolations: [],
       },
     };
   }
