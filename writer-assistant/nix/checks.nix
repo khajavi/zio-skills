@@ -19,6 +19,11 @@
           set -x
           export HOME=$TMPDIR
           if [ -f package-lock.json ]; then
+            echo "=== Configuring npm for reliability ==="
+            npm config set fetch-timeout 120000
+            npm config set fetch-retry-mintimeout 20000
+            npm config set fetch-retry-maxtimeout 120000
+            npm config set fetch-retries 5
             echo "=== Installing dependencies ==="
             npm ci --frozen-lockfile 2>&1
             echo "=== Running tests ==="
@@ -71,6 +76,11 @@
         buildPhase = ''
           set -x
           export HOME=$TMPDIR
+          echo "=== Configuring npm for reliability ==="
+          npm config set fetch-timeout 120000
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm config set fetch-retries 5
           echo "=== Installing dependencies ==="
           npm ci --frozen-lockfile 2>&1
           echo "=== Running eslint ==="
