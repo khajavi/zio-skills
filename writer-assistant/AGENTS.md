@@ -210,3 +210,73 @@ On success:
 - Updated sidebar and index files
 - Fully integrated into documentation site
 - All code examples verified to compile
+
+---
+
+## Running the Fix Writing Style Workflow
+
+Validate and fix prose style violations in an existing documentation file. The workflow runs two-layer style checking (mechanical + LLM-based) and iteratively fixes all violations until the file passes or reaches max rounds.
+
+### Basic Usage
+
+```bash
+npx flue run fix-writing-style --target node \
+  --payload '{
+    "filePath": "/path/to/docs/reference/chunk.md"
+  }'
+```
+
+**Parameters:**
+- `filePath`: Absolute path to the documentation file to validate and fix
+- `typeName` (optional): Human-readable name for logging; inferred from filename if omitted
+
+### What the Workflow Does
+
+**Two-layer style validation:**
+
+1. **Mechanical check** — `check-docs-style.sh` detects:
+   - Rule 2: Past tense (use present tense)
+   - Rule 3: Filler phrases
+   - Rule 4: Bullet capitalization
+   - Rule 7: Link format
+   - Rule 8: Qualified method names
+   - Rule 10: No duplicate heading
+   - Rule 11: Heading hierarchy
+   - Rule 12: No bare subheaders
+   - Rule 13: No lone subheaders
+   - Rule 15: Code block intro prose
+   - Rule 16: Import statements
+   - Rule 18: Prefer `val` over `var`
+   - Rule 22: Table alignment
+   - Rule 23: Scala 2.13 syntax
+   - Rule 25: Version placeholders
+
+2. **LLM-based judgment check** — `docs-style-checker` agent detects:
+   - Rule 1: Person pronouns ("we" vs "you")
+   - Rule 5: No manual line breaks in prose
+   - Rule 8: Qualification (contextual detection)
+   - Rule 12: No bare subheaders (prose detection)
+   - Rule 14: When to use `####`
+   - Rule 17: One concept per code block
+   - Rule 19: Method signatures within type
+   - Rule 20: Contextualized descriptions
+
+**Iteration loop (max 3 rounds):**
+1. Run mechanical check via `check-docs-style.sh`
+2. Spawn fresh LLM checker agent to detect judgment-based violations
+3. Combine findings from both layers
+4. Pass to writer agent for fixes
+5. Re-run checks until all violations resolved or max rounds reached
+
+### Output
+
+On success:
+- `passed: true` — all prose style violations fixed
+- `rounds`: number of iterations needed
+- `violations`: empty (all fixed)
+- Modified file at original location with all violations corrected
+
+On partial success:
+- `passed: false` — some violations remained after max rounds
+- `unresolvedViolations`: list of rule violations that couldn't be automatically fixed
+- File contains the best-effort fixes applied
