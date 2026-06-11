@@ -48,13 +48,20 @@
 
         buildInputs = with pkgs; [
           nodejs_22
-          prettier
         ];
 
         buildPhase = ''
           set -x
+          export HOME=$TMPDIR
+          echo "=== Configuring npm for reliability ==="
+          npm config set fetch-timeout 120000
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm config set fetch-retries 5
+          echo "=== Installing dependencies ==="
+          npm ci --frozen-lockfile 2>&1
           echo "=== Checking code formatting with Prettier ==="
-          prettier --check . 2>&1
+          npx prettier --check . 2>&1
         '';
 
         installPhase = ''
@@ -82,7 +89,7 @@
           npm config set fetch-retry-maxtimeout 120000
           npm config set fetch-retries 5
           echo "=== Installing dependencies ==="
-          npm ci --frozen-lockfile 2>&1
+          npm ci --frozen-lockfile --verbose 2>&1
           echo "=== Running eslint ==="
           # Run eslint with proper file patterns, ignoring dist and node_modules
           npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/" 2>&1
