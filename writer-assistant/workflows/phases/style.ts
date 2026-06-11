@@ -1,13 +1,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import type { FlueContext } from '@flue/runtime';
+import docsStyleCheckerAgent from '../../agents/docs-style-checker.js';
 
 export interface StyleConfig {
   outputPath: string; // absolute path to the written .md file
   projectRoot: string;
   typeName: string;
   session: any; // AgentSession reused from writer for fixes
+  init?: FlueContext['init']; // optional: for spawning LLM style checker agent
 }
 
 export interface StyleResult {
@@ -18,15 +21,24 @@ export interface StyleResult {
 }
 
 const MAX_ROUNDS = 3;
-const CHECK_STYLE_SCRIPT = path.join(process.env.FLUE_PROJECT_ROOT || process.cwd(), 'plugins/documentation/skills/docs-writing-style/check-docs-style.sh');
+
+// Resolve check-docs-style.sh relative to this compiled file location
+// Compiled path: dist/workflows/phases/style.js
+// Navigate up: dist/ → writer-assistant/ → repo root → plugins/...
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CHECK_STYLE_SCRIPT = path.resolve(
+  __dirname,
+  '../../../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'
+);
 
 /**
- * Run the style validation phase: check style → fix → re-validate until passed or max rounds
- * Uses mechanical check-docs-style.sh validation and the writer session for fixes
+ * Run the style validation phase: mechanical check + LLM review → fix → re-validate until passed or max rounds
+ * Uses both check-docs-style.sh (mechanical rules) and a fresh docs-style-checker agent (judgment rules)
  * Iterates until style violations reach zero or MAX_ROUNDS is reached
  */
 export async function runStylePhase(init: FlueContext['init'], config: StyleConfig): Promise<StyleResult> {
-  const { outputPath, projectRoot, typeName, session } = config;
+  const { outputPath, projectRoot, typeName, session, init: initForAgent } = config;
 
   const result: StyleResult = {
     passed: false,
@@ -59,7 +71,7 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
     result.rounds = round;
     console.log(`\n[Phase 6] Round ${round}/${MAX_ROUNDS}: Checking documentation style...`);
 
-    // Run mechanical style check
+    // Phase A: Mechanical check via check-docs-style.sh
     let checkOutput = '';
     let checkPassed = false;
 
@@ -74,21 +86,69 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
       checkPassed = false;
     }
 
-    // Parse violations from check output
-    const violations = parseViolations(checkOutput);
-    const totalViolations = Object.values(violations).reduce((sum, count) => sum + count, 0);
-
-    console.log(`  Found ${totalViolations} violations:`);
-    Object.entries(violations).forEach(([rule, count]) => {
-      if (count > 0) {
-        console.log(`    - Rule ${rule}: ${count} violation(s)`);
-      }
+    const mechanicalViolations = parseViolations(checkOutput);
+    const mechanicalCount = Object.values(mechanicalViolations).reduce((sum, count) => sum + count, 0);
+    console.log(`  [Mechanical] Found ${mechanicalCount} violation(s)`);
+    Object.entries(mechanicalViolations).forEach(([rule, count]) => {
+      if (count > 0) console.log(`    - Rule ${rule}: ${count}`);
     });
 
-    result.violations = violations;
+    // Phase B: LLM-based judgment check (if init is available)
+    let llmViolations: { [rule: string]: number } = {};
+    let llmCount = 0;
 
-    // Phase A: Check if passed
-    if (checkPassed && totalViolations === 0) {
+    if (initForAgent) {
+      try {
+        const checkerHarness = await initForAgent(docsStyleCheckerAgent, { name: `docs-style-checker-round-${round}` });
+        const checkerSession = await checkerHarness.session();
+
+        const checkerPrompt = `Review the documentation file for prose style rule violations:
+
+File: ${outputPath}
+
+Use the docs-writing-style skill to understand all 25 rules. Focus on these judgment-based rules that require language understanding:
+- Rule 1: Person pronouns ("we" vs "you")
+- Rule 5: No manual line breaks in prose
+- Rule 8: Always qualify method names (e.g., Chunk#map, not map)
+- Rule 12: No bare subheaders (need intro between ## and ###)
+- Rule 14: When to use #### for topic organization
+- Rule 17: One concept per code block
+- Rule 19: Show method signatures within containing type
+- Rule 20: Contextualized descriptions for code blocks
+
+Read the file and report violations in this format:
+[Rule N] <file>:<line>: <description>
+
+Then output:
+### Verdict
+**APPROVED** or **ITERATE**`;
+
+        const checkerResult = await checkerSession.prompt(checkerPrompt);
+        const checkerText = checkerResult.text || String(checkerResult);
+
+        // Parse LLM violations (same format as mechanical: [Rule N])
+        llmViolations = parseViolations(checkerText);
+        llmCount = Object.values(llmViolations).reduce((sum, count) => sum + count, 0);
+        console.log(`  [LLM Review] Found ${llmCount} violation(s)`);
+        Object.entries(llmViolations).forEach(([rule, count]) => {
+          if (count > 0) console.log(`    - Rule ${rule}: ${count}`);
+        });
+      } catch (error) {
+        console.log(`  [LLM Review] Skipped (${error instanceof Error ? error.message : 'error'})`);
+      }
+    }
+
+    // Combine violations from both layers
+    const allViolations: { [rule: string]: number } = { ...mechanicalViolations };
+    Object.entries(llmViolations).forEach(([rule, count]) => {
+      allViolations[rule] = (allViolations[rule] || 0) + count;
+    });
+
+    const totalViolations = Object.values(allViolations).reduce((sum, count) => sum + count, 0);
+    result.violations = allViolations;
+
+    // Check if passed (both layers clean)
+    if (checkPassed && mechanicalCount === 0 && llmCount === 0) {
       console.log(`  ✓ Documentation style validated`);
       return {
         passed: true,
@@ -100,7 +160,7 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
 
     if (round === MAX_ROUNDS) {
       console.log(`  ⚠ Max rounds reached (${MAX_ROUNDS}). Returning unresolved violations.`);
-      const unresolved = Object.entries(violations)
+      const unresolved = Object.entries(allViolations)
         .filter(([_, count]) => count > 0)
         .map(([rule, count]) => `Rule ${rule}: ${count} violation(s)`);
       return {
@@ -111,34 +171,36 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
       };
     }
 
-    // Phase B: Spawn fixer for violations
-    console.log(`  Spawning fixer for ${totalViolations} violations...`);
+    // Phase C: Spawn fixer for combined violations
+    console.log(`  Spawning fixer for ${totalViolations} combined violations...`);
 
-    const violationsList = Object.entries(violations)
+    const ruleDescriptions: { [key: string]: string } = {
+      '1': 'Person pronouns ("we" vs "you" usage)',
+      '2': 'Present tense only (no past tense)',
+      '3': 'No filler phrases (remove "as we can see", "it\'s worth noting")',
+      '4': 'Bullet capitalization (full sentences start with capital)',
+      '5': 'No manual line breaks in prose',
+      '7': 'Link format (use full filename with .md extension)',
+      '8': 'Always qualify method names (e.g., Chunk#map, not just map)',
+      '10': 'No duplicate heading (frontmatter title shouldn\'t be repeated as #)',
+      '11': 'Heading hierarchy (use ##, ###, ####)',
+      '12': 'No bare subheaders (intro sentence between ## and ###)',
+      '13': 'No lone subheaders (single subsection should be collapsed)',
+      '14': 'When to use #### (for organizing multiple topics under ###)',
+      '15': 'Code block intro prose (sentence ending with : before code)',
+      '16': 'Always include imports in code blocks',
+      '17': 'One concept per code block',
+      '18': 'Prefer val over var (use immutable patterns)',
+      '19': 'Method signatures within containing type',
+      '20': 'Contextualized descriptions for code blocks',
+      '22': 'Table column alignment (pad with spaces)',
+      '23': 'Scala 2.13 syntax default (use import x._ not import x.*)',
+      '25': 'Version placeholder (@VERSION@ not hardcoded)',
+    };
+
+    const violationsList = Object.entries(allViolations)
       .filter(([_, count]) => count > 0)
-      .map(
-        ([rule, count]) => {
-          const ruleDescriptions: { [key: string]: string } = {
-            '2': 'Present tense only (no past tense)',
-            '3': 'No filler phrases (remove "as we can see", "it\'s worth noting")',
-            '4': 'Bullet capitalization (full sentences start with capital)',
-            '7': 'Link format (use full filename with .md extension)',
-            '8': 'Always qualify method names (e.g., Chunk#map, not just map)',
-            '10': 'No duplicate heading (frontmatter title shouldn\'t be repeated as #)',
-            '11': 'Heading hierarchy (use ##, ###, ####)',
-            '12': 'No bare subheaders (intro sentence between ## and ###)',
-            '13': 'No lone subheaders (single subsection should be collapsed)',
-            '15': 'Code block intro prose (sentence ending with : before code)',
-            '16': 'Always include imports in code blocks',
-            '18': 'Prefer val over var (use immutable patterns)',
-            '22': 'Table column alignment (pad with spaces)',
-            '23': 'Scala 2.13 syntax default (use import x._ not import x.*)',
-            '25': 'Version placeholder (@VERSION@ not hardcoded)',
-          };
-
-          return `- Rule ${rule}: ${count} violation(s) — ${ruleDescriptions[rule] || 'Style violation'}`;
-        }
-      )
+      .map(([rule, count]) => `- Rule ${rule}: ${count} violation(s) — ${ruleDescriptions[rule] || 'Style violation'}`)
       .join('\n');
 
     const previousFeedbackSection = unresolvable.size > 0
@@ -197,27 +259,16 @@ interface ViolationCounts {
 function parseViolations(checkOutput: string): ViolationCounts {
   const violations: ViolationCounts = {};
 
-  // Match lines like "Rule 8: ... (2 violations)" or similar
-  // Different formats depending on the check-docs-style.sh output
-  const ruleMatches = checkOutput.match(/Rule\s+(\d+)[:\s]+[^\n]*?(?:(\d+)\s+violation)/gi) || [];
+  // Parse violations from check-docs-style.sh output format:
+  // docs/reference/chunk.md:42: [Rule 2] past tense detected
+  // docs/reference/chunk.md:71: [Rule 8] unqualified method `map`
+  // One [Rule N] per violation line
+  const linePattern = /\[Rule (\d+)\]/g;
+  let match: RegExpExecArray | null;
 
-  ruleMatches.forEach((match: string) => {
-    const ruleNum = match.match(/\d+/)?.[0];
-    const countMatch = match.match(/(\d+)\s+violation/i);
-    const count = countMatch ? parseInt(countMatch[1], 10) : 1;
-
-    if (ruleNum) {
-      violations[ruleNum] = (violations[ruleNum] || 0) + count;
-    }
-  });
-
-  // If no structured violations found, try to extract rule numbers mentioned
-  if (Object.keys(violations).length === 0) {
-    const ruleNums = checkOutput.match(/Rule\s+(\d+)/g) || [];
-    ruleNums.forEach((match: string) => {
-      const ruleNum = match.replace('Rule ', '');
-      violations[ruleNum] = (violations[ruleNum] || 0) + 1;
-    });
+  while ((match = linePattern.exec(checkOutput)) !== null) {
+    const rule = match[1];
+    violations[rule] = (violations[rule] || 0) + 1;
   }
 
   return violations;
