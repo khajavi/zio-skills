@@ -15,9 +15,12 @@
 
         # Build phase: install dependencies and compile
         buildPhase = ''
+          set -x
           export HOME=$TMPDIR
-          npm ci --frozen-lockfile
-          npm run build
+          echo "=== Installing dependencies ==="
+          npm ci --frozen-lockfile 2>&1
+          echo "=== Building TypeScript ==="
+          npm run build 2>&1
         '';
 
         # Copy built artifacts and sources to output

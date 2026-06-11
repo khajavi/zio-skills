@@ -24,4 +24,4 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check for writer-assistant
-        run: cd writer-assistant && nix flake check --verbose 2>&1 | head -500
+        run: cd writer-assistant && nix flake check

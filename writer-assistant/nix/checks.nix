@@ -16,10 +16,13 @@
         ];
 
         buildPhase = ''
+          set -x
           export HOME=$TMPDIR
           if [ -f package-lock.json ]; then
-            npm ci --frozen-lockfile
-            npm test
+            echo "=== Installing dependencies ==="
+            npm ci --frozen-lockfile 2>&1
+            echo "=== Running tests ==="
+            npm test 2>&1
           else
             echo "No package-lock.json found, skipping test check"
           fi
@@ -44,7 +47,9 @@
         ];
 
         buildPhase = ''
-          prettier --check .
+          set -x
+          echo "=== Checking code formatting with Prettier ==="
+          prettier --check . 2>&1
         '';
 
         installPhase = ''
@@ -64,10 +69,13 @@
         ];
 
         buildPhase = ''
+          set -x
           export HOME=$TMPDIR
-          npm ci --frozen-lockfile
+          echo "=== Installing dependencies ==="
+          npm ci --frozen-lockfile 2>&1
+          echo "=== Running eslint ==="
           # Run eslint with proper file patterns, ignoring dist and node_modules
-          npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/"
+          npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/" 2>&1
         '';
 
         installPhase = ''
