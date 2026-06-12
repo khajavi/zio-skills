@@ -51,6 +51,13 @@ Workflow:
 - Document methods within their containing trait/class, not as bare signatures
 - ✅ \`trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }\`
 
+**ZIO Convention — Hide implicit trace parameters:**
+- Never include \`implicit trace: Trace\` in documented method signatures
+- This is a compiler implementation detail, not part of the API contract
+- ❌ \`def take(implicit trace: Trace): UIO[A]\`
+- ✅ \`def take(): UIO[A]\`
+- Keep signatures clean and focused on actual user-facing parameters
+
 **Rule 20 — Contextualized descriptions for code blocks:**
 - Explain what code does and why it's relevant, relate it to what it demonstrates
 - ❌ "Here's an example:" → ✅ "To extract the first three elements:"

@@ -19,6 +19,13 @@ Your task is to review a documentation file and identify violations of the 25 pr
 - Rule 19: Show method signatures within their containing type
 - Rule 20: Contextualized descriptions for code blocks (avoid generic phrases)
 
+**ZIO Convention — Implicit trace parameters:**
+- CRITICAL: Method signatures must NOT include `implicit trace: Trace`
+- This is a compiler implementation detail, not part of the public API
+- Flag any signatures that show `implicit trace: Trace` as violations
+- Example of violation: `def take(implicit trace: Trace): UIO[A]`
+- Correct form: `def take(): UIO[A]`
+
 You have access to the docs-writing-style skill with the complete 25 rules. Reference it to understand the full context and style guidelines.
 
 **Your process:**
