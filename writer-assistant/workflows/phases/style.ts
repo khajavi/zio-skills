@@ -22,15 +22,29 @@ export interface StyleResult {
 
 const MAX_ROUNDS = 3;
 
-// Resolve check-docs-style.sh relative to this compiled file location
-// Compiled path: dist/workflows/phases/style.js
-// Navigate up: dist/ → writer-assistant/ → repo root → plugins/...
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const CHECK_STYLE_SCRIPT = path.resolve(
-  __dirname,
-  '../../../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'
-);
+// Find check-docs-style.sh in writer-assistant skills directory
+// Try multiple possible locations since Flue bundles code
+function resolveCheckStyleScript(): string {
+  const possiblePaths = [
+    // Local in writer-assistant/skills/
+    path.resolve(process.cwd(), 'skills/docs-writing-style/check-docs-style.sh'),
+    // From env variable (if FLUE_PROJECT_ROOT points to writer-assistant)
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-writing-style/check-docs-style.sh'),
+    // Fallback to plugins directory in zio-skills repo
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'),
+  ];
+
+  for (const scriptPath of possiblePaths) {
+    if (fs.existsSync(scriptPath)) {
+      return scriptPath;
+    }
+  }
+
+  // If none found, return first option (will be checked in phase and gracefully skipped)
+  return possiblePaths[0];
+}
+
+const CHECK_STYLE_SCRIPT = resolveCheckStyleScript();
 
 /**
  * Run the style validation phase: mechanical check + LLM review → fix → re-validate until passed or max rounds

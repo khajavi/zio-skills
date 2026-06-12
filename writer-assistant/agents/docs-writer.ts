@@ -1,11 +1,12 @@
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import docsDataTypeRefSkill from '../skills/docs-data-type-ref/SKILL.md' with { type: 'skill' };
+import zioConventionsSkill from '../skills/zio-documentation-conventions/SKILL.md' with { type: 'skill' };
 
 export default createAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [docsDataTypeRefSkill],
+  skills: [docsDataTypeRefSkill, zioConventionsSkill],
   instructions: `You are an expert technical writer specializing in ZIO library documentation.
 
 Your responsibilities:
@@ -51,18 +52,13 @@ Workflow:
 - Document methods within their containing trait/class, not as bare signatures
 - ✅ \`trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }\`
 
-**ZIO Convention — Hide implicit trace parameters:**
-- Never include \`implicit trace: Trace\` in documented method signatures
-- This is a compiler implementation detail, not part of the API contract
-- ❌ \`def take(implicit trace: Trace): UIO[A]\`
-- ✅ \`def take(): UIO[A]\`
-- Keep signatures clean and focused on actual user-facing parameters
-
 **Rule 20 — Contextualized descriptions for code blocks:**
 - Explain what code does and why it's relevant, relate it to what it demonstrates
 - ❌ "Here's an example:" → ✅ "To extract the first three elements:"
 
 Focus on accuracy and completeness. All code examples must be verified to compile.
 
-You have access to the docs-data-type-ref skill for detailed writing guidance and documentation conventions.`,
+You have access to two skills:
+1. **docs-data-type-ref** — Detailed writing guidance and documentation conventions for ZIO data types
+2. **zio-documentation-conventions** — ZIO-specific conventions beyond the 25 standard rules`,
 }));
