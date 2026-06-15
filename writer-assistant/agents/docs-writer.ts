@@ -2,11 +2,12 @@ import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import docsDataTypeRefSkill from '../skills/docs-data-type-ref/SKILL.md' with { type: 'skill' };
 import docsWritingStyleSkill from '../skills/docs-writing-style/SKILL.md' with { type: 'skill' };
+import docsMdocConventionsSkill from '../skills/docs-mdoc-conventions/SKILL.md' with { type: 'skill' };
 
 export default createAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [docsDataTypeRefSkill, docsWritingStyleSkill],
+  skills: [docsDataTypeRefSkill, docsWritingStyleSkill, docsMdocConventionsSkill],
   instructions: `You are an expert technical writer specializing in ZIO library documentation.
 
 Your responsibilities:

@@ -44,17 +44,54 @@ function resolveCheckStyleScript(): string {
   return possiblePaths[0];
 }
 
+// Find check-mdoc-conventions.sh in writer-assistant skills directory
+function resolveCheckMdocScript(): string {
+  const possiblePaths = [
+    // Local in writer-assistant/skills/
+    path.resolve(process.cwd(), 'skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
+    // From env variable (if FLUE_PROJECT_ROOT points to writer-assistant)
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
+    // Fallback to plugins directory in zio-skills repo
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
+  ];
+
+  for (const scriptPath of possiblePaths) {
+    if (fs.existsSync(scriptPath)) {
+      return scriptPath;
+    }
+  }
+
+  // If none found, return first option (will be checked in phase and gracefully skipped)
+  return possiblePaths[0];
+}
+
 const CHECK_STYLE_SCRIPT = resolveCheckStyleScript();
+const CHECK_MDOC_SCRIPT = resolveCheckMdocScript();
 
 function runMechanicalCheck(outputPath: string, projectRoot: string): string {
+  const outputs: string[] = [];
+
   try {
-    return execSync(`bash "${CHECK_STYLE_SCRIPT}" "${outputPath}"`, {
+    const styleOutput = execSync(`bash "${CHECK_STYLE_SCRIPT}" "${outputPath}"`, {
       cwd: projectRoot,
       encoding: 'utf-8',
     });
+    outputs.push(styleOutput);
   } catch (error: any) {
-    return error.stdout || String(error);
+    outputs.push(error.stdout || String(error));
   }
+
+  try {
+    const mdocOutput = execSync(`bash "${CHECK_MDOC_SCRIPT}" "${outputPath}"`, {
+      cwd: projectRoot,
+      encoding: 'utf-8',
+    });
+    outputs.push(mdocOutput);
+  } catch (error: any) {
+    outputs.push(error.stdout || String(error));
+  }
+
+  return outputs.join('\n');
 }
 
 /**
@@ -84,12 +121,15 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
     };
   }
 
-  // Check if check-docs-style.sh exists
-  if (!fs.existsSync(CHECK_STYLE_SCRIPT)) {
-    console.log(`  ⚠ Style checker not found at ${CHECK_STYLE_SCRIPT}, skipping style validation`);
+  // Check if at least one checker script exists
+  const hasStyleChecker = fs.existsSync(CHECK_STYLE_SCRIPT);
+  const hasMdocChecker = fs.existsSync(CHECK_MDOC_SCRIPT);
+
+  if (!hasStyleChecker && !hasMdocChecker) {
+    console.log(`  ⚠ No style checkers found, skipping style validation`);
     return {
       ...result,
-      passed: true, // Gracefully skip if script doesn't exist
+      passed: true, // Gracefully skip if neither script exists
       rounds: 0,
     };
   }
@@ -228,12 +268,13 @@ Better to skip a fix than introduce new problems.`;
 /**
  * Extract verbatim violation lines (format: <file>:<line>: [Rule N] <description>)
  * from checker output, preserving location and description for the fixer.
+ * Matches both numeric rules (Rule 1, Rule 26) and mdoc rule (Rule mdoc).
  */
 function extractViolationLines(checkOutput: string): string[] {
   return checkOutput
     .split('\n')
     .map(line => line.trim())
-    .filter(line => /\[Rule \d+\]/.test(line));
+    .filter(line => /\[Rule (\d+|mdoc)\]/.test(line));
 }
 
 /** Extract a "file:line" key from a violation or fixer-report line. */
