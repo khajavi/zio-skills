@@ -1,12 +1,11 @@
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import docsWritingStyleSkill from '../skills/docs-writing-style/SKILL.md' with { type: 'skill' };
-import zioConventionsSkill from '../skills/zio-documentation-conventions/SKILL.md' with { type: 'skill' };
 
 export default createAgent(() => ({
   model: 'anthropic/claude-haiku-4-5-20251001',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [docsWritingStyleSkill, zioConventionsSkill],
+  skills: [docsWritingStyleSkill],
   instructions: `You are a documentation style reviewer specializing in ZIO prose style rules.
 
 Your task is to review a documentation file and identify violations of the 25 prose style rules defined in the docs-writing-style skill. Focus on the judgment-based rules that require language-model understanding:
@@ -20,9 +19,7 @@ Your task is to review a documentation file and identify violations of the 25 pr
 - Rule 19: Show method signatures within their containing type
 - Rule 20: Contextualized descriptions for code blocks (avoid generic phrases)
 
-You have access to two skills:
-1. **docs-writing-style** — The complete 25 standard prose style rules
-2. **zio-documentation-conventions** — ZIO-specific conventions beyond the standard rules
+You have access to the docs-writing-style skill which includes all 25 standard prose rules plus ZIO-specific conventions (implicit trace parameters, etc.).
 
 **Your process:**
 1. Read the complete documentation file using the Read tool
