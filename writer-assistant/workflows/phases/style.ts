@@ -1,7 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import type { FlueContext } from '@flue/runtime';
 import docsStyleCheckerAgent from '../../agents/docs-style-checker.js';
 
@@ -11,6 +10,7 @@ export interface StyleConfig {
   typeName: string;
   session: any; // AgentSession reused from writer for fixes
   init?: FlueContext['init']; // optional: for spawning LLM style checker agent
+  maxRounds?: number; // check+fix passes (default 1)
 }
 
 export interface StyleResult {
@@ -20,7 +20,7 @@ export interface StyleResult {
   unresolvedViolations: string[];
 }
 
-const MAX_ROUNDS = 3;
+const DEFAULT_MAX_ROUNDS = 1;
 
 // Find check-docs-style.sh in writer-assistant skills directory
 // Try multiple possible locations since Flue bundles code
@@ -46,13 +46,28 @@ function resolveCheckStyleScript(): string {
 
 const CHECK_STYLE_SCRIPT = resolveCheckStyleScript();
 
+function runMechanicalCheck(outputPath: string, projectRoot: string): string {
+  try {
+    return execSync(`bash "${CHECK_STYLE_SCRIPT}" "${outputPath}"`, {
+      cwd: projectRoot,
+      encoding: 'utf-8',
+    });
+  } catch (error: any) {
+    return error.stdout || String(error);
+  }
+}
+
 /**
- * Run the style validation phase: mechanical check + LLM review → fix → re-validate until passed or max rounds
- * Uses both check-docs-style.sh (mechanical rules) and a fresh docs-style-checker agent (judgment rules)
- * Iterates until style violations reach zero or MAX_ROUNDS is reached
+ * Run the style validation phase: each round = check (mechanical + LLM) → fix.
+ * Fixes are content-grounded: the fixer receives the exact violation lines with
+ * locations and is instructed to read the document at each location before fixing,
+ * so each fix derives from the actual content there (not from abstract rule
+ * descriptions, which produces repetitive template prose).
+ * After the final round, a mechanical re-check reports the post-fix state.
  */
 export async function runStylePhase(init: FlueContext['init'], config: StyleConfig): Promise<StyleResult> {
   const { outputPath, projectRoot, typeName, session, init: initForAgent } = config;
+  const maxRounds = config.maxRounds ?? DEFAULT_MAX_ROUNDS;
 
   const result: StyleResult = {
     passed: false,
@@ -79,37 +94,21 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
     };
   }
 
+  // file:line keys of violations the fixer reported it could not fix
   const unresolvable = new Set<string>();
 
-  for (let round = 1; round <= MAX_ROUNDS; round++) {
+  for (let round = 1; round <= maxRounds; round++) {
     result.rounds = round;
-    console.log(`\n[Phase 6] Round ${round}/${MAX_ROUNDS}: Checking documentation style...`);
+    console.log(`\n[Style] Round ${round}/${maxRounds}: Checking documentation style...`);
 
     // Phase A: Mechanical check via check-docs-style.sh
-    let checkOutput = '';
-    let checkPassed = false;
-
-    try {
-      checkOutput = execSync(`bash "${CHECK_STYLE_SCRIPT}" "${outputPath}"`, {
-        cwd: projectRoot,
-        encoding: 'utf-8',
-      });
-      checkPassed = true;
-    } catch (error: any) {
-      checkOutput = error.stdout || String(error);
-      checkPassed = false;
-    }
-
-    const mechanicalViolations = parseViolations(checkOutput);
-    const mechanicalCount = Object.values(mechanicalViolations).reduce((sum, count) => sum + count, 0);
-    console.log(`  [Mechanical] Found ${mechanicalCount} violation(s)`);
-    Object.entries(mechanicalViolations).forEach(([rule, count]) => {
-      if (count > 0) console.log(`    - Rule ${rule}: ${count}`);
-    });
+    const checkOutput = runMechanicalCheck(outputPath, projectRoot);
+    const mechanicalLines = extractViolationLines(checkOutput);
+    console.log(`  [Mechanical] Found ${mechanicalLines.length} violation(s)`);
+    logRuleCounts(countByRule(mechanicalLines));
 
     // Phase B: LLM-based judgment check (if init is available)
-    let llmViolations: { [rule: string]: number } = {};
-    let llmCount = 0;
+    let llmLines: string[] = [];
 
     if (initForAgent) {
       try {
@@ -140,29 +139,23 @@ Then output:
         const checkerResult = await checkerSession.prompt(checkerPrompt);
         const checkerText = checkerResult.text || String(checkerResult);
 
-        // Parse LLM violations (same format as mechanical: [Rule N])
-        llmViolations = parseViolations(checkerText);
-        llmCount = Object.values(llmViolations).reduce((sum, count) => sum + count, 0);
-        console.log(`  [LLM Review] Found ${llmCount} violation(s)`);
-        Object.entries(llmViolations).forEach(([rule, count]) => {
-          if (count > 0) console.log(`    - Rule ${rule}: ${count}`);
-        });
+        llmLines = extractViolationLines(checkerText);
+        console.log(`  [LLM Review] Found ${llmLines.length} violation(s)`);
+        logRuleCounts(countByRule(llmLines));
       } catch (error) {
         console.log(`  [LLM Review] Skipped (${error instanceof Error ? error.message : 'error'})`);
       }
     }
 
-    // Combine violations from both layers
-    const allViolations: { [rule: string]: number } = { ...mechanicalViolations };
-    Object.entries(llmViolations).forEach(([rule, count]) => {
-      allViolations[rule] = (allViolations[rule] || 0) + count;
+    // Combine both layers, drop violations the fixer already reported as unfixable
+    const allLines = [...mechanicalLines, ...llmLines].filter(line => {
+      const key = extractLocationKey(line);
+      return key === null || !unresolvable.has(key);
     });
 
-    const totalViolations = Object.values(allViolations).reduce((sum, count) => sum + count, 0);
-    result.violations = allViolations;
+    result.violations = countByRule(allLines);
 
-    // Check if passed (both layers clean)
-    if (checkPassed && mechanicalCount === 0 && llmCount === 0) {
+    if (allLines.length === 0) {
       console.log(`  ✓ Documentation style validated`);
       return {
         passed: true,
@@ -172,118 +165,96 @@ Then output:
       };
     }
 
-    if (round === MAX_ROUNDS) {
-      console.log(`  ⚠ Max rounds reached (${MAX_ROUNDS}). Returning unresolved violations.`);
-      const unresolved = Object.entries(allViolations)
-        .filter(([_, count]) => count > 0)
-        .map(([rule, count]) => `Rule ${rule}: ${count} violation(s)`);
-      return {
-        passed: false,
-        rounds: round,
-        violations: result.violations,
-        unresolvedViolations: unresolved,
-      };
-    }
+    // Phase C: Fix, grounded in the exact violations
+    console.log(`  Spawning fixer for ${allLines.length} violation(s)...`);
 
-    // Phase C: Spawn fixer for combined violations
-    console.log(`  Spawning fixer for ${totalViolations} combined violations...`);
+    const fixerPrompt = `Fix the following style violations in ${outputPath}.
 
-    const ruleDescriptions: { [key: string]: string } = {
-      '1': 'Person pronouns ("we" vs "you" usage)',
-      '2': 'Present tense only (no past tense)',
-      '3': 'No filler phrases (remove "as we can see", "it\'s worth noting")',
-      '4': 'Bullet capitalization (full sentences start with capital)',
-      '5': 'No manual line breaks in prose',
-      '7': 'Link format (use full filename with .md extension)',
-      '8': 'Always qualify method names (e.g., Chunk#map, not just map)',
-      '10': 'No duplicate heading (frontmatter title shouldn\'t be repeated as #)',
-      '11': 'Heading hierarchy (use ##, ###, ####)',
-      '12': 'No bare subheaders (intro sentence between ## and ###)',
-      '13': 'No lone subheaders (single subsection should be collapsed)',
-      '14': 'When to use #### (for organizing multiple topics under ###)',
-      '15': 'Code block intro prose (sentence ending with : before code)',
-      '16': 'Always include imports in code blocks',
-      '17': 'One concept per code block',
-      '18': 'Prefer val over var (use immutable patterns)',
-      '19': 'Method signatures within containing type',
-      '20': 'Contextualized descriptions for code blocks',
-      '22': 'Table column alignment (pad with spaces)',
-      '23': 'Scala 2.13 syntax default (use import x._ not import x.*)',
-      '25': 'Version placeholder (@VERSION@ not hardcoded)',
-    };
+The exact violations, with locations:
 
-    const violationsList = Object.entries(allViolations)
-      .filter(([_, count]) => count > 0)
-      .map(([rule, count]) => `- Rule ${rule}: ${count} violation(s) — ${ruleDescriptions[rule] || 'Style violation'}`)
-      .join('\n');
+${allLines.join('\n')}
 
-    const previousFeedbackSection = unresolvable.size > 0
-      ? `\n**Violations that persisted in previous rounds** (be extra careful with these):\n${Array.from(unresolvable).map(u => `- ${u}`).join('\n')}\n`
-      : '';
+Process:
 
-    const fixerPrompt = `Fix the following prose style violations in ${outputPath}:
+1. For each violation, Read the surrounding section of the file first.
+2. Base every fix on the actual content at that location. For intro sentences before code blocks, read the code block and write a sentence describing what that specific code demonstrates.
+3. Fix each violation independently — each location has different content, so read it before writing.
+4. Verify adjacent prose, code examples, links, and heading hierarchy still hold after each fix.
+5. Report each violation as one line:
+   - "✓ Fixed ${path.basename(outputPath)}:<line>" or
+   - "Could not fix ${path.basename(outputPath)}:<line> (reason)"
 
-${violationsList}
-${previousFeedbackSection}
-**Fixing instructions:**
-
-1. **Read the document** — Understand the overall structure and content
-2. **Apply fixes carefully** — Make targeted, minimal changes for each violation type
-3. **Verify no regressions** — After fixing, ensure:
-   - Adjacent paragraphs still make sense
-   - Code block introductions are still clear
-   - All links are still valid
-   - Heading hierarchy is maintained
-4. **Report your fixes:**
-   - List each violation fixed: "✓ Fixed Rule XX: [brief description]"
-   - List violations you couldn't fix: "Could not fix Rule XX: [reason]"
-
-Focus on quality over quantity. Better to skip a fix than introduce new problems.`;
+Better to skip a fix than introduce new problems.`;
 
     const fixerResult = await session.prompt(fixerPrompt);
     const fixerText = fixerResult.text || String(fixerResult);
 
-    // Parse fixer report
-    const fixedMatches = fixerText.match(/✓\s*Fixed\s+Rule\s+(\d+):/gi) || [];
-    const couldNotFixMatches = fixerText.match(/Could not fix\s+Rule\s+(\d+):/gi) || [];
+    // Parse fixer report (per-location)
+    const fixedMatches = fixerText.match(/✓\s*Fixed\s+\S+:\d+/gi) || [];
+    const couldNotFixMatches = fixerText.match(/Could not fix\s+\S+:\d+/gi) || [];
 
-    console.log(`    Fixed: ${fixedMatches.length} rule types, Could not fix: ${couldNotFixMatches.length} rule types`);
+    console.log(`    Fixed: ${fixedMatches.length}, Could not fix: ${couldNotFixMatches.length}`);
 
-    // Track unresolvable violations for next round
     couldNotFixMatches.forEach((match: string) => {
-      const ruleNum = match.match(/\d+/)?.[0] || 'unknown';
-      const key = `Rule ${ruleNum}`;
-      if (!unresolvable.has(key)) {
+      const key = extractLocationKey(match);
+      if (key) {
         unresolvable.add(key);
       }
     });
 
     if (unresolvable.size > 0) {
-      console.log(`  Unresolvable violations tracked: ${unresolvable.size}`);
+      console.log(`  Unresolvable locations tracked: ${unresolvable.size}`);
     }
   }
+
+  // Final mechanical re-check to report the post-fix state
+  const finalOutput = runMechanicalCheck(outputPath, projectRoot);
+  const finalLines = extractViolationLines(finalOutput).filter(line => {
+    const key = extractLocationKey(line);
+    return key === null || !unresolvable.has(key);
+  });
+  result.violations = countByRule(finalLines);
+  result.passed = finalLines.length === 0;
+  result.unresolvedViolations = [
+    ...finalLines,
+    ...Array.from(unresolvable).map(key => `${key} (fixer could not fix)`),
+  ];
+
+  console.log(`  [Final check] ${finalLines.length} mechanical violation(s) remaining`);
 
   return result;
 }
 
-interface ViolationCounts {
-  [rule: string]: number;
+/**
+ * Extract verbatim violation lines (format: <file>:<line>: [Rule N] <description>)
+ * from checker output, preserving location and description for the fixer.
+ */
+function extractViolationLines(checkOutput: string): string[] {
+  return checkOutput
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => /\[Rule \d+\]/.test(line));
 }
 
-function parseViolations(checkOutput: string): ViolationCounts {
-  const violations: ViolationCounts = {};
+/** Extract a "file:line" key from a violation or fixer-report line. */
+function extractLocationKey(line: string): string | null {
+  const match = line.match(/(\S+):(\d+)/);
+  return match ? `${path.basename(match[1])}:${match[2]}` : null;
+}
 
-  // Parse violations from check-docs-style.sh output format:
-  // docs/reference/chunk.md:42: [Rule 2] past tense detected
-  // docs/reference/chunk.md:71: [Rule 8] unqualified method `map`
-  // One [Rule N] per violation line
-  const linePattern = /\[Rule (\d+)\]/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = linePattern.exec(checkOutput)) !== null) {
-    const rule = match[1];
-    violations[rule] = (violations[rule] || 0) + 1;
+function countByRule(lines: string[]): { [rule: string]: number } {
+  const counts: { [rule: string]: number } = {};
+  for (const line of lines) {
+    const match = line.match(/\[Rule (\d+)\]/);
+    if (match) {
+      counts[match[1]] = (counts[match[1]] || 0) + 1;
+    }
   }
+  return counts;
+}
 
-  return violations;
+function logRuleCounts(counts: { [rule: string]: number }): void {
+  Object.entries(counts).forEach(([rule, count]) => {
+    if (count > 0) console.log(`    - Rule ${rule}: ${count}`);
+  });
 }
