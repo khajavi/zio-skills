@@ -158,4 +158,12 @@ Between consecutive code blocks, add bridging prose that explains what the next 
    - ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "<version>"`
    - ✅ `libraryDependencies += "dev.zio" %% "zio-blocks" % "@VERSION@"`
 
+## ZIO-Specific Conventions
+
+**Never include `implicit trace: Trace` in documented method signatures.** It is a compiler implementation detail, not part of the public API. Developers don't provide it explicitly—ZIO's macros inject it automatically.
+
+**Bad vs. Good:**
+- ❌ `def take(implicit trace: Trace): UIO[A]`
+- ✅ `def take(): UIO[A]`
+
 ---
