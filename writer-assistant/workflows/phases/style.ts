@@ -27,11 +27,11 @@ const DEFAULT_MAX_ROUNDS = 1;
 function resolveCheckStyleScript(): string {
   const possiblePaths = [
     // Local in writer-assistant/skills/
-    path.resolve(process.cwd(), 'skills/docs-writing-style-mechanical/check-docs-style.sh'),
+    path.resolve(process.cwd(), 'skills/docs-writing-style/check-docs-style.sh'),
     // From env variable (if FLUE_PROJECT_ROOT points to writer-assistant)
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-writing-style-mechanical/check-docs-style.sh'),
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-writing-style/check-docs-style.sh'),
     // Fallback to plugins directory in zio-skills repo
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-writing-style-mechanical/check-docs-style.sh'),
+    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'),
   ];
 
   for (const scriptPath of possiblePaths) {
@@ -226,14 +226,14 @@ Better to skip a fix than introduce new problems.`;
 }
 
 /**
- * Extract verbatim violation lines (format: <file>:<line>: [M-Rule N] or [J-Rule N] <description>)
+ * Extract verbatim violation lines (format: <file>:<line>: [Rule N] <description>)
  * from checker output, preserving location and description for the fixer.
  */
 function extractViolationLines(checkOutput: string): string[] {
   return checkOutput
     .split('\n')
     .map(line => line.trim())
-    .filter(line => /\[(M|J)-Rule \d+\]/.test(line));
+    .filter(line => /\[Rule \d+\]/.test(line));
 }
 
 /** Extract a "file:line" key from a violation or fixer-report line. */
@@ -245,7 +245,7 @@ function extractLocationKey(line: string): string | null {
 function countByRule(lines: string[]): { [rule: string]: number } {
   const counts: { [rule: string]: number } = {};
   for (const line of lines) {
-    const match = line.match(/\[((M|J)-Rule \d+)\]/);
+    const match = line.match(/\[Rule (\d+)\]/);
     if (match) {
       counts[match[1]] = (counts[match[1]] || 0) + 1;
     }
