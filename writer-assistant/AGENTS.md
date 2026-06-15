@@ -62,6 +62,47 @@ Node modules use `node:`. Named exports only.
 [workflow-name] Error: ...
 ```
 
+## Running Workflows
+
+### Foreground (Interactive)
+
+```bash
+npm run build
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node --payload '{...}'
+```
+
+### Background (Non-blocking)
+
+For long-running workflows (autopilot, verify-and-fix), run in background:
+
+**nohup (simple):**
+```bash
+nohup npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}' > workflow.log 2>&1 &
+```
+
+**screen (persistent):**
+```bash
+screen -S my-workflow
+npm run build
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node --payload '{...}'
+# Ctrl+A then D to detach
+# screen -r my-workflow to reattach
+```
+
+**Claude Code background execution:**
+Use the `run_in_background: true` parameter in Bash tool calls.
+
+### Monitoring
+
+```bash
+tail -f workflow.log           # nohup logs
+screen -r my-workflow          # reattach screen session
+ps aux | grep flue             # find process
+```
+
 ## Testing
 
 ```bash

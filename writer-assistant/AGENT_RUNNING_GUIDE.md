@@ -9,6 +9,53 @@ export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
 npx flue run crossref --target node --payload '{"docsDir":"/path/to/docs","mode":"step","targetFile":"reference/resource/scopedref.md","batchSize":1}'
 ```
 
+## Running in Background
+
+Long-running workflows (autopilot, verify-and-fix) should run in the background to avoid blocking your terminal.
+
+### Using nohup
+
+```bash
+nohup npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}' > crossref.log 2>&1 &
+```
+
+Monitor progress:
+```bash
+tail -f crossref.log
+```
+
+### Using screen/tmux
+
+Create a detachable session:
+
+```bash
+screen -S writer-agent
+npm run build
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}'
+
+# Detach: Ctrl+A then D
+# Reattach: screen -r writer-agent
+```
+
+### Using systemd-run (Linux)
+
+```bash
+systemd-run --user --scope -p MemoryLimit=2G \
+  npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}'
+```
+
+### Checking Background Process Status
+
+```bash
+ps aux | grep flue          # Find by process
+jobs                        # If backgrounded with &
+tail -f nohup.out          # Monitor default log
+```
+
 ## Prerequisites
 
 ✅ Before running the agent, ensure:
