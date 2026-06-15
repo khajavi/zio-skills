@@ -8,9 +8,9 @@ usage() {
 Usage: check-docs-style.sh <file.md>
 
 Mechanical style checker for ZIO project documentation. Validates a single
-Markdown file against the rules defined in docs-writing-style/SKILL.md.
+Markdown file against the rules defined in docs-writing-style-mechanical/SKILL.md.
 Violations are printed to stdout in the format:
-  <file>:<line>: [Rule N] <description>
+  <file>:<line>: [M-Rule N] <description>
 
 Arguments:
   <file.md>       Markdown file to check (required).
@@ -24,23 +24,23 @@ Exit codes:
   2  Invocation error (missing/extra arguments, file not found).
 
 Rules checked:
-  Rule 2   Present tense only (detect past-tense verbs in prose)
-  Rule 3   No padding/filler phrases
-  Rule 4   Bullet capitalization (full-sentence bullets start with capital)
-  Rule 7   Link to related docs (relative paths for doc links)
-  Rule 8   Always qualify method/constructor names (bare `map`, dot-prefixed `.map`, or unqualified `apply`)
-  Rule 10  No duplicate markdown heading
-  Rule 11  Heading hierarchy (no skipped levels)
-  Rule 12  No bare subheaders (### or #### immediately after ## or ###)
-  Rule 13  No lone subheaders (subsections must have ≥2 children)
-  Rule 15  Code block preceded by prose sentence ending with ":",
+  M-Rule 1   Present tense only (detect past-tense verbs in prose)
+  M-Rule 2   No padding/filler phrases
+  M-Rule 3   Bullet capitalization (full-sentence bullets start with capital)
+  M-Rule 5   Link to related docs (relative paths for doc links)
+  M-Rule 6   Always qualify method/constructor names (bare `map`, dot-prefixed `.map`, or unqualified `apply`)
+  M-Rule 7  No duplicate markdown heading
+  M-Rule 8  Heading hierarchy (no skipped levels)
+  M-Rule 9  No bare subheaders (### or #### immediately after ## or ###)
+  M-Rule 10  No lone subheaders (subsections must have ≥2 children)
+  M-Rule 11  Code block preceded by prose sentence ending with ":",
            and bridging prose between consecutive code blocks
-  Rule 16  Executable code blocks (scala mdoc*, python, etc.) include imports
-  Rule 18  Prefer "val" over "var" in Scala code blocks
-  Rule 22  Table column alignment (proper padding in separators)
-  Rule 23  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
-  Rule 25  Use @VERSION@ placeholder for version strings
-  Rule 26  ZIO implicit trace convention (no "implicit trace: Trace" in method signatures)
+  M-Rule 12  Executable code blocks (scala mdoc*, python, etc.) include imports
+  M-Rule 13  Prefer "val" over "var" in Scala code blocks
+  M-Rule 12  Table column alignment (proper padding in separators)
+  M-Rule 13  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
+  M-Rule 15  Use @VERSION@ placeholder for version strings
+  M-Rule 16  ZIO implicit trace convention (no "implicit trace: Trace" in method signatures)
 
 Examples:
   check-docs-style.sh docs/reference/chunk.md
@@ -92,7 +92,7 @@ count_violations "$(awk '
   {
     past_verbs = "returned|created|modified|called|used|passed|assigned|defined|calculated|computed|produced|generated|applied|executed"
     if ($0 ~ "\\<(" past_verbs ")\\>") {
-      print FILENAME ":" NR ": [Rule 2] past tense detected (use present tense: \"returns\", \"creates\", etc.)"
+      print FILENAME ":" NR ": [M-Rule 1] past tense detected (use present tense: \"returns\", \"creates\", etc.)"
     }
   }
 ' "$FILE")"
@@ -104,7 +104,7 @@ count_violations "$(awk '
   {
     fillers = "as we can see|it'\''s worth noting that|it should be noted that|importantly|needless to say|it is important to note that|by the way|obviously|clearly|basically|essentially"
     if ($0 ~ "(" fillers ")") {
-      print FILENAME ":" NR ": [Rule 3] filler phrase detected"
+      print FILENAME ":" NR ": [M-Rule 2] filler phrase detected"
     }
   }
 ' "$FILE")"
@@ -114,7 +114,7 @@ count_violations "$(awk '
   /^```/ { in_code = !in_code; next }
   in_code { next }
   /^# / {
-    print FILENAME ":" NR ": [Rule 10] markdown heading found (document title comes from frontmatter; start with ## instead)"
+    print FILENAME ":" NR ": [M-Rule 7] markdown heading found (document title comes from frontmatter; start with ## instead)"
   }
 ' "$FILE")"
 
@@ -133,7 +133,7 @@ count_violations "$(awk '
       if ((prev_header_level == 2 && current_level == 3) || \
           (prev_header_level == 2 && current_level == 4) || \
           (prev_header_level == 3 && current_level == 4)) {
-        print FILENAME ":" NR ": [Rule 11] bare subheader immediately after header (no prose)"
+        print FILENAME ":" NR ": [M-Rule 8] bare subheader immediately after header (no prose)"
       }
     }
 
@@ -158,9 +158,9 @@ count_violations "$(awk '
       in_code = 0
     } else {
       if (NR == 1) {
-        print FILENAME ":" NR ": [Rule 15] code block at start of file (no preceding prose)"
+        print FILENAME ":" NR ": [M-Rule 11] code block at start of file (no preceding prose)"
       } else if (!have_prose || last_prose_line !~ /:$/) {
-        print FILENAME ":" NR ": [Rule 15] code block not preceded by sentence ending with \":\""
+        print FILENAME ":" NR ": [M-Rule 11] code block not preceded by sentence ending with \":\""
       }
       in_code = 1
     }
@@ -187,7 +187,7 @@ count_violations "$(awk '
         # Check if there is prose (non-empty, non-header) between blocks
         # If last_code_end was within 2 lines, only blank lines or headers between blocks
         if (!had_prose_since_last_code) {
-          print FILENAME ":" NR ": [Rule 15] consecutive code blocks without bridging prose (add sentence ending with \":\" between blocks)"
+          print FILENAME ":" NR ": [M-Rule 11] consecutive code blocks without bridging prose (add sentence ending with \":\" between blocks)"
         }
       }
       in_code = 1
@@ -214,7 +214,7 @@ count_violations "$(awk '
     next
   }
   in_scala && /var[^a-zA-Z0-9_]|^var[[:space:]]|[[:space:]]var[[:space:]]/ {
-    print FILENAME ":" NR ": [Rule 18] \"var\" in Scala code block"
+    print FILENAME ":" NR ": [M-Rule 13] \"var\" in Scala code block"
   }
 ' "$FILE")"
 
@@ -294,7 +294,7 @@ try:
                 # Flag if it appears qualified elsewhere in the document
                 # This catches methods used both ways (qualified and unqualified)
                 if name in qualified_methods:
-                    print(f"{sys.argv[1]}:{lineno}: [Rule 8] unqualified method `{name}` (use Type#{name} or Type.{name})")
+                    print(f"{sys.argv[1]}:{lineno}: [M-Rule 6] unqualified method `{name}` (use Type#{name} or Type.{name})")
 except Exception as e:
     print(f"Error in Rule 8: {e}", file=sys.stderr)
     sys.exit(1)
@@ -322,7 +322,7 @@ count_violations "$(awk '
       if (paren_pos > 0) method_name = substr(method_name, 1, paren_pos - 1)
       # Skip very short names that are likely file extensions (e.g. .md, .js, .ts)
       if (length(method_name) > 2) {
-        print FILENAME ":" NR ": [Rule 8] unqualified dot-method `." method_name "` (use Type#" method_name " or Type." method_name ")"
+        print FILENAME ":" NR ": [M-Rule 6] unqualified dot-method `." method_name "` (use Type#" method_name " or Type." method_name ")"
       }
       line = substr(line, RSTART + RLENGTH)
     }
@@ -340,7 +340,7 @@ count_violations "$(awk '
     next
   }
   in_scala && /import[[:space:]]+.*\.\*/ {
-    print FILENAME ":" NR ": [Rule 23] Scala 3 glob import syntax detected (use \"import x._\" for Scala 2.13, not \"import x.*\")"
+    print FILENAME ":" NR ": [M-Rule 15] Scala 3 glob import syntax detected (use \"import x._\" for Scala 2.13, not \"import x.*\")"
   }
 ' "$FILE")"
 
@@ -349,9 +349,9 @@ count_violations "$(awk '
   /^```/ { in_code = !in_code; next }
   in_code && /libraryDependencies/ && /("[0-9]+\.[0-9]+\.[0-9]+"|"<version>")/ {
     if ($0 ~ /"[0-9]+\.[0-9]+\.[0-9]+"/) {
-      print FILENAME ":" NR ": [Rule 25] hardcoded version number (use \"@VERSION@\" placeholder)"
+      print FILENAME ":" NR ": [M-Rule 16] hardcoded version number (use \"@VERSION@\" placeholder)"
     } else if ($0 ~ /"<version>"/) {
-      print FILENAME ":" NR ": [Rule 25] use \"@VERSION@\" placeholder instead of \"<version>\""
+      print FILENAME ":" NR ": [M-Rule 16] use \"@VERSION@\" placeholder instead of \"<version>\""
     }
   }
 ' "$FILE")"
@@ -376,7 +376,7 @@ count_violations "$(awk '
         # Look for misaligned columns (single dash with no padding)
         if ($0 ~ /\| *-+ *\| *- *\|/ || $0 ~ /\| *- *\| *-+ *\|/) {
           # Has inconsistent dash patterns - likely misaligned
-          print FILENAME ":" NR ": [Rule 22] table column alignment - use consistent padding (e.g., | ----- | )"
+          print FILENAME ":" NR ": [M-Rule 14] table column alignment - use consistent padding (e.g., | ----- | )"
         }
       }
     }
@@ -405,7 +405,7 @@ count_violations "$(awk '
   /^```/ && in_code {
     in_code = 0
     if (!has_import) {
-      print FILENAME ":" code_start ": [Rule 16] code block missing import statements"
+      print FILENAME ":" code_start ": [M-Rule 12] code block missing import statements"
     }
     next
   }
@@ -422,7 +422,7 @@ count_violations "$(awk '
     # Bullet starts with lowercase letter (not a backtick identifier)
     # Check if it looks like a full sentence (ends with period/colon)
     if ($0 ~ /\.$|:$|[?!]$/) {
-      print FILENAME ":" NR ": [Rule 4] bullet point is full sentence but starts with lowercase"
+      print FILENAME ":" NR ": [M-Rule 3] bullet point is full sentence but starts with lowercase"
     }
   }
 ' "$FILE")"
@@ -436,9 +436,9 @@ count_violations "$(awk '
     if (prev_level > 0) {
       # Check for level jumps
       if (prev_level == 2 && current_level == 4) {
-        print FILENAME ":" NR ": [Rule 11] heading hierarchy skipped (## jumps directly to ####, use ### in between)"
+        print FILENAME ":" NR ": [M-Rule 8] heading hierarchy skipped (## jumps directly to ####, use ### in between)"
       } else if (prev_level == 3 && current_level > 4) {
-        print FILENAME ":" NR ": [Rule 11] heading hierarchy skipped (heading level jumped)"
+        print FILENAME ":" NR ": [M-Rule 8] heading hierarchy skipped (heading level jumped)"
       }
     }
     prev_level = current_level
@@ -461,7 +461,7 @@ count_violations "$(awk '
 
     # When we move to same or higher level, check if previous was lone
     if (prev_level > current_level && child_count[prev_header_line] == 1) {
-      print FILENAME ":" prev_header_line ": [Rule 13] lone subheader (must have ≥2 children or be promoted to parent level)"
+      print FILENAME ":" prev_header_line ": [M-Rule 10] lone subheader (must have ≥2 children or be promoted to parent level)"
     }
 
     prev_level = current_level
@@ -470,7 +470,7 @@ count_violations "$(awk '
   END {
     # Check last header
     if (prev_level > 0 && child_count[prev_header_line] == 1) {
-      print FILENAME ":" prev_header_line ": [Rule 13] lone subheader (must have ≥2 children or be promoted to parent level)"
+      print FILENAME ":" prev_header_line ": [M-Rule 10] lone subheader (must have ≥2 children or be promoted to parent level)"
     }
   }
 ' "$FILE")"
@@ -491,7 +491,7 @@ count_violations "$(awk '
         if (url !~ /^http/ && url !~ /^#/ && url ~ /\.md$/) {
           # Is it a relative path?
           if (url ~ /^\//) {
-            print FILENAME ":" NR ": [Rule 7] use relative path instead of absolute (use \"./type-name.md\" not \"/type-name.md\")"
+            print FILENAME ":" NR ": [M-Rule 5] use relative path instead of absolute (use \"./type-name.md\" not \"/type-name.md\")"
           }
         }
       }
@@ -511,7 +511,7 @@ count_violations "$(awk '
     next
   }
   in_scala && /implicit[[:space:]]+trace:[[:space:]]*Trace/ {
-    print FILENAME ":" NR ": [Rule 26] remove \"implicit trace: Trace\" from method signatures (ZIO convention)"
+    print FILENAME ":" NR ": [M-Rule 17] remove \"implicit trace: Trace\" from method signatures (ZIO convention)"
   }
 ' "$FILE")"
 
