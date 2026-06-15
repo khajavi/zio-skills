@@ -40,6 +40,7 @@ Rules checked:
   Rule 22  Table column alignment (proper padding in separators)
   Rule 23  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
   Rule 25  Use @VERSION@ placeholder for version strings
+  ZIO    Implicit trace convention (no "implicit trace: Trace" in signatures)
 
 Examples:
   check-docs-style.sh docs/reference/chunk.md
@@ -496,6 +497,21 @@ count_violations "$(awk '
       }
       $0 = substr($0, RSTART + RLENGTH)
     }
+  }
+' "$FILE")"
+
+# ZIO Convention: No implicit trace parameters in method signatures
+count_violations "$(awk '
+  /^```scala/ {
+    in_scala = 1
+    next
+  }
+  /^```/ {
+    in_scala = 0
+    next
+  }
+  in_scala && /implicit[[:space:]]+trace:[[:space:]]*Trace/ {
+    print FILENAME ":" NR ": [ZIO] implicit trace convention: remove \"implicit trace: Trace\" from method signatures"
   }
 ' "$FILE")"
 
