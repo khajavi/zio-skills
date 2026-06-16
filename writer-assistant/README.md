@@ -1,18 +1,17 @@
-# Crossref Agent
+# Writer Assistant
 
-A Flue-based TypeScript agent that automatically discovers and creates cross-references between pages in Markdown documentation, improving SEO and discoverability.
+A Flue-based TypeScript agent framework that automates documentation generation, styling, cross-linking, and validation for large-scale projects.
 
 ## Overview
 
-Crossref Agent analyzes your documentation and identifies where pages should link to each other. It:
+The writer-assistant coordinates specialized agents to handle documentation tasks:
 
-- **Discovers opportunities** — Scans all Markdown files to find cross-linking opportunities
-- **Suggests intelligently** — Uses Claude to identify inline links and "See Also" sections based on content relevance
-- **Applies safely** — Protects code blocks and frontmatter while inserting links
-- **Tracks confidence** — Applies high-confidence links automatically, queues others for review
-- **Provides insights** — Reports on link density, orphan pages, and coverage metrics
-
-Perfect for improving internal SEO, helping readers discover related documentation, and reducing orphaned pages.
+- **Crossref** — Analyzes documentation and creates cross-references between pages
+- **Write Data Type Reference** — Generates comprehensive API reference documentation from source code
+- **Write Tutorial** — Creates learning-oriented guides for newcomers (linear, step-by-step)
+- **Extract Metadata** — Extracts and populates metadata (title, description, keywords)
+- **Fix Writing Style** — Validates and fixes documentation for style compliance
+- **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
 
 ## Features
 
@@ -139,33 +138,58 @@ Optionally create `.crossref-config.json` in the parent of your docs directory:
 }
 ```
 
-### Run It
+### Run Crossref
 
 ```bash
 # Build fresh index
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"reindex"}'
 
 # Process pages one at a time
-flue run crossref --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"step","batchSize":1}'
 
-# Process a specific target file
-flue run crossref --target node \
-  --payload '{"docsDir":"./docs","mode":"step","targetFile":"reference/fiber/fiber.md"}'
-
-# Process all files in a directory recursively
-flue run crossref --target node \
-  --payload '{"docsDir":"./docs","mode":"step","targetDir":"reference/fiber/","batchSize":5}'
-
 # Process all remaining pages
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"autopilot"}'
 
 # View coverage report
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"report"}'
 ```
+
+### Write Data Type Reference
+
+Generate comprehensive API reference documentation from source code:
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala"
+}'
+```
+
+### Write Tutorial
+
+Create learning-oriented guides for newcomers:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers"
+}'
+```
+
+Tutorials follow a 7-section structure:
+1. Introduction (with learning objectives)
+2. Background / Big Picture (optional)
+3. Concept sections (3-6 sections, one concept each)
+4. Putting It Together (complete runnable example)
+5. Running the Examples (git clone + sbt commands)
+6. What You've Learned (recap of objectives)
+7. Where to Go Next (links to how-to guides)
 
 ## Development & CI
 

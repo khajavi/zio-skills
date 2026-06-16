@@ -24,8 +24,9 @@ writer-assistant/
 │   └── coding-agent.ts          # General software engineering
 │
 ├── workflows/                    # Workflow orchestrators
-│   ├── crossref.ts              # Main cross-reference workflow (6 modes)
-│   ├── write-data-type-ref.ts   # API reference generation
+│   ├── crossref.ts              # Cross-reference linking workflow (6 modes)
+│   ├── write-data-type-ref.ts   # API reference documentation generation
+│   ├── write-tutorial.ts        # Tutorial documentation generation
 │   ├── extract-metadata.ts      # Metadata extraction workflow
 │   ├── fix-writing-style.ts     # Writing style fixing workflow
 │   ├── coding-agent.ts          # Coding task dispatch
@@ -68,12 +69,17 @@ writer-assistant/
 │   │   └── SKILL.md             # Cross-linking strategy
 │   ├── docs-data-type-ref/
 │   │   └── SKILL.md             # API documentation structure
+│   ├── docs-tutorial/
+│   │   ├── SKILL.md             # Tutorial writing structure and tone
+│   │   └── CHECKLIST.md         # 38-item verification checklist
 │   ├── docs-research/
-│   │   └── SKILL.md             # Research methodology
-│   ├── docs-writing-style-mechanical/
-│   │   └── SKILL.md             # Mechanical style rules (punctuation, formatting)
-│   ├── docs-writing-style-judgment/
-│   │   └── SKILL.md             # Judgment-based style rules (clarity, tone)
+│   │   └── SKILL.md             # Research methodology (supports 4 doc types)
+│   ├── docs-writing-style/
+│   │   ├── SKILL.md             # Prose style rules
+│   │   └── check-docs-style.sh  # Mechanical rule checker
+│   ├── docs-mdoc-conventions/
+│   │   ├── SKILL.md             # mdoc modifier reference
+│   │   └── check-mdoc-conventions.sh # mdoc modifier checker
 │   └── metadata-extractor/
 │       └── SKILL.md             # Metadata extraction from content
 │
@@ -192,9 +198,11 @@ Persist state
 **Phases:**
 
 1. **Research Phase** — Analyze source code, extract type information, gather usage examples
-2. **Review Phase** — Validate extracted information, check for completeness
-3. **Style Phase** — Apply writing style fixes and standards
-4. **Mdoc Execution** — Run mdoc to compile examples in documentation
+2. **Write Phase** — Generate documentation following API reference structure
+3. **Verify Phase** — Check method coverage, compile mdoc examples to zero errors
+4. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
+5. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
+6. **Style Phase** — Mechanical + LLM prose style validation and fixing
 
 **Input:**
 
@@ -212,6 +220,48 @@ Persist state
 - Usage examples (mdoc-compiled)
 - Links to related types
 - See Also section
+- Full prose style compliance
+
+### 3.3. Write Tutorial Workflow (`workflows/write-tutorial.ts`)
+
+**Purpose:** Create learning-oriented guides for newcomers to ZIO library topics.
+
+**Phases:**
+
+1. **Research Phase** — Gather information about topic from source code, tests, examples
+2. **Write Phase** — Generate tutorial following 7-section structure with linear progression
+3. **Verify Phase** — Check structure compliance, compile mdoc examples to zero errors, run 38-item checklist
+4. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
+5. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
+6. **Style Phase** — Mechanical + LLM prose style validation and fixing
+
+**Input:**
+
+```json
+{
+  "projectRoot": "/path/to/project",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers"
+}
+```
+
+**7-Section Structure:**
+
+1. **Introduction** — Who it's for, learning objectives, section outline
+2. **Background** (optional) — Conceptual framing (no code)
+3. **Concept sections** (3-6 sections) — One concept per section with annotated code
+4. **Putting It Together** — Complete runnable example
+5. **Running the Examples** — git clone + sbt runMain commands
+6. **What You've Learned** — Recap of learning objectives
+7. **Where to Go Next** — Links to how-to guides and reference pages
+
+**Output:** Markdown file with:
+- Linear learning path (no branching)
+- Warm, welcoming tone ("Welcome", "Let's", "Notice that")
+- Line-by-line code annotations
+- Intermediate output demonstrations
+- Complete runnable example
+- Self-contained example files
 
 ### 3.3. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
@@ -387,13 +437,20 @@ type LinkSuggestion = {
 ### 5.2. Docs Writer Agent (`agents/docs-writer.ts`)
 
 **Model:** Claude Haiku 4.5  
-**Skill:** `skills/docs-data-type-ref/SKILL.md`
+**Skills:** 
+- `skills/docs-data-type-ref/SKILL.md` — API reference structure
+- `skills/docs-tutorial/SKILL.md` — Tutorial structure and tone
+- `skills/docs-writing-style/SKILL.md` — Prose style rules
+- `skills/docs-mdoc-conventions/SKILL.md` — mdoc modifier reference
 
 **Capabilities:**
 - Generates API reference documentation from code
+- Creates learning-oriented tutorials for newcomers
 - Structures documentation by type signature, methods, examples
+- Applies line-by-line code annotations
 - Creates See Also links
 - Applies inline examples
+- Validates mdoc modifier usage
 
 ### 5.3. Docs Researcher Agent (`agents/docs-researcher.ts`)
 
@@ -459,9 +516,10 @@ Skills are stored as markdown files (`SKILL.md`) in `skills/*/` directories. Eac
 
 - **cross-linker** — Identify cross-linking opportunities, select anchor text, determine confidence
 - **docs-data-type-ref** — Structure API documentation, organize methods, create examples
-- **docs-research** — Gather code information, extract signatures, find usage
-- **docs-writing-style-mechanical** — Punctuation, spacing, formatting rules
-- **docs-writing-style-judgment** — Clarity, tone, word choice evaluation
+- **docs-tutorial** — Structure learning-oriented guides, 7-section template, warm tone, linear progression
+- **docs-research** — Gather code information, extract signatures, find usage (supports: data-type-ref, tutorial, guide, explanation)
+- **docs-writing-style** — Prose style rules, clarity, tone, terminology, code block conventions
+- **docs-mdoc-conventions** — mdoc modifier reference, decision tree, Scala 2/3 tabs, admonitions
 - **metadata-extractor** — Extract title, description, keywords from content
 
 ## 7. Data Stores

@@ -1,4 +1,4 @@
-# Crossref Agent Running Guide
+# Writer Assistant Running Guide
 
 ## Quick Start (TL;DR)
 
@@ -258,7 +258,55 @@ npx flue run crossref --target node \
 6. 2 links queued for manual review (medium confidence)
 7. Results saved to `.crossref-state/`
 
-## Workflow Modes
+## Workflows
+
+### Crossref Agent
+
+Discover and insert cross-references between documentation pages.
+
+#### Modes
+
+- `reindex` — Build fresh index from all pages
+- `step` — Process one page batch, apply high-confidence links
+- `autopilot` — Loop step mode until all pages processed
+- `report` — Analyze coverage, orphans, link density
+
+### Write Data Type Reference
+
+Generate comprehensive API reference documentation from Scala source code.
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala"
+}'
+```
+
+**Phases:** Research → Write → Verify → Integrate → Review → Style
+
+### Write Tutorial
+
+Create learning-oriented guides for newcomers.
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers"
+}'
+```
+
+**Phases:** Research → Write → Verify → Integrate → Review → Style
+
+**Key differences from data-type-ref:**
+- Emphasizes 7-section structure (Introduction, Background, Concepts, Putting Together, Running Examples, What Learned, Where Next)
+- Linear learning path (no branching)
+- Line-by-line code annotations
+- Warm, welcoming tone
+- 38-item checklist verification in Phase 3
+
+## Workflow Modes (Crossref)
 
 ### `reindex`
 
