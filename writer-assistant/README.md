@@ -11,6 +11,8 @@ The writer-assistant coordinates specialized agents to handle documentation task
 - **Write Tutorial** — Creates learning-oriented guides for newcomers (linear, step-by-step)
 - **Extract Metadata** — Extracts and populates metadata (title, description, keywords)
 - **Fix Writing Style** — Validates and fixes documentation for style compliance
+- **Check mdoc** — Compiles and validates mdoc code blocks in individual files or directories (read-only checker)
+- **Fix mdoc** — Compiles mdoc code blocks and automatically fixes errors (with fixer loop, max 3 rounds)
 - **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
 
 ## Features
@@ -190,6 +192,64 @@ Tutorials follow a 7-section structure:
 5. Running the Examples (git clone + sbt commands)
 6. What You've Learned (recap of objectives)
 7. Where to Go Next (links to how-to guides)
+
+### Check mdoc Compilation
+
+Check and validate mdoc code blocks without running a full workflow. Accepts a single file, a list of files, or a directory (recursively expanded). **Read-only:** reports errors but does not fix them.
+
+```bash
+# Single file
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": "docs/reference/fiber.md"
+}'
+
+# Multiple files
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/fiber.md", "docs/reference/chunk.md"]
+}'
+
+# Entire directory (walks subdirectories)
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/concurrency/"]
+}'
+
+# Entire docs project
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+```
+
+Returns structured result with `success`, `errorCount`, `errors` (with file and line), and `durationMs`.
+
+### Fix mdoc Compilation
+
+Check and automatically fix mdoc code blocks. Same input as `check-mdoc`, but spawns a writer agent to fix errors with automatic re-checking. Loops up to `maxRounds` (default 3):
+
+```bash
+# Fix single file with auto-retry (up to 3 rounds)
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": "docs/reference/fiber.md"
+}'
+
+# Fix directory with custom max rounds
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/concurrency/"],
+  "maxRounds": 5
+}'
+
+# Fix entire docs project
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "maxRounds": 3
+}'
+```
+
+Returns structured result with `success`, `rounds` (iterations used), `errorCount` (remaining after all rounds), and `errors`.
 
 ## Development & CI
 

@@ -11,6 +11,7 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
+import { verifyBuild } from './phases/verify.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
@@ -273,8 +274,26 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('style');
 
+    // Phase 7: Verify Build
+    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    try {
+      const buildResult = await verifyBuild(docsDir);
+      buildVerifyResult = { ...buildResult, skipped: false };
+      console.log(`[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('No supported documentation build system detected')) {
+        console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
+        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
+      } else {
+        console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
+      }
+    }
+    phasesCompleted.push('verifyBuild');
+
     // Build final result
-    const success = phasesCompleted.length === 6;
+    const success = phasesCompleted.length === 7;
     console.log(`\n[docs-write-tutorial] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -300,6 +319,12 @@ Report final status and any updates made.`;
         violations: styleResult.violations,
         unresolvedViolations: styleResult.unresolvedViolations,
       },
+      buildVerify: {
+        success: buildVerifyResult.success,
+        skipped: buildVerifyResult.skipped,
+        buildSystem: buildVerifyResult.buildSystem,
+        durationMs: buildVerifyResult.durationMs,
+      },
     };
   } catch (error) {
     console.error(`[docs-write-tutorial] Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -323,6 +348,12 @@ Report final status and any updates made.`;
         rounds: 0,
         violations: {},
         unresolvedViolations: [],
+      },
+      buildVerify: {
+        success: false,
+        skipped: false,
+        buildSystem: 'unknown',
+        durationMs: 0,
       },
     };
   }

@@ -4,6 +4,14 @@ import * as path from 'node:path';
 import type { FlueContext } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { runStylePhase } from './phases/style.js';
+import { verifyBuild } from './phases/verify.js';
+
+function inferDocsDir(filePath: string): string | null {
+  const parts = filePath.split(path.sep);
+  const docsIdx = parts.lastIndexOf('docs');
+  if (docsIdx === -1) return null;
+  return parts.slice(0, docsIdx + 1).join(path.sep);
+}
 
 export async function run({ init, payload }: FlueContext) {
   const { filePath, typeName: typeNameInput } = payload as {
@@ -44,6 +52,30 @@ export async function run({ init, payload }: FlueContext) {
     }
     phasesCompleted.push('style');
 
+    // Phase 2: Verify Build
+    console.log('\n[Phase 2] Build Verification: Verifying documentation builds...');
+    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    const docsDir = inferDocsDir(filePath);
+    if (docsDir) {
+      try {
+        const buildResult = await verifyBuild(docsDir);
+        buildVerifyResult = { ...buildResult, skipped: false };
+        console.log(`[Phase 2] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('No supported documentation build system detected')) {
+          console.log('[Phase 2] ⚠ No documentation build system detected, skipping');
+          buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
+        } else {
+          console.log(`[Phase 2] ⚠ Build verification failed: ${msg}`);
+        }
+      }
+    } else {
+      console.log('[Phase 2] ⚠ Could not infer docs directory from file path, skipping build verification');
+      buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
+    }
+    phasesCompleted.push('verifyBuild');
+
     const success = styleResult.passed;
     console.log(`\n[fix-writing-style] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
@@ -60,6 +92,12 @@ export async function run({ init, payload }: FlueContext) {
         violations: styleResult.violations,
         unresolvedViolations: styleResult.unresolvedViolations,
       },
+      buildVerify: {
+        success: buildVerifyResult.success,
+        skipped: buildVerifyResult.skipped,
+        buildSystem: buildVerifyResult.buildSystem,
+        durationMs: buildVerifyResult.durationMs,
+      },
     };
   } catch (error) {
     console.error(`[fix-writing-style] Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -74,6 +112,12 @@ export async function run({ init, payload }: FlueContext) {
         rounds: 0,
         violations: {},
         unresolvedViolations: [],
+      },
+      buildVerify: {
+        success: false,
+        skipped: false,
+        buildSystem: 'unknown',
+        durationMs: 0,
       },
     };
   }

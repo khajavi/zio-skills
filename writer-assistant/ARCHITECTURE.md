@@ -25,10 +25,12 @@ writer-assistant/
 │
 ├── workflows/                    # Workflow orchestrators
 │   ├── crossref.ts              # Cross-reference linking workflow (6 modes)
-│   ├── write-data-type-ref.ts   # API reference documentation generation
-│   ├── write-tutorial.ts        # Tutorial documentation generation
+│   ├── write-data-type-ref.ts   # API reference documentation generation (7 phases)
+│   ├── write-tutorial.ts        # Tutorial documentation generation (7 phases)
 │   ├── extract-metadata.ts      # Metadata extraction workflow
-│   ├── fix-writing-style.ts     # Writing style fixing workflow
+│   ├── fix-writing-style.ts     # Writing style fixing workflow (2 phases)
+│   ├── check-mdoc.ts            # mdoc compilation checker (no agent, pure execSync, read-only)
+│   ├── fix-mdoc.ts              # mdoc compiler + fixer (writer agent fixer loop)
 │   ├── coding-agent.ts          # Coding task dispatch
 │   │
 │   ├── phases/                  # Workflow execution phases
@@ -47,6 +49,7 @@ writer-assistant/
 │       ├── confidence.ts        # Confidence threshold checking
 │       ├── cost.ts              # Token cost estimation
 │       ├── yaml.ts              # YAML frontmatter manipulation
+│       ├── mdoc-runner.ts       # Shared mdoc utilities (expand, resolve, run, parse)
 │       └── sidebar-parser.ts    # Docusaurus sidebar parsing
 │
 ├── lib/                         # Core libraries
@@ -203,6 +206,7 @@ Persist state
 4. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
 5. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
 6. **Style Phase** — Mechanical + LLM prose style validation and fixing
+7. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
 
 **Input:**
 
@@ -234,6 +238,7 @@ Persist state
 4. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
 5. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
 6. **Style Phase** — Mechanical + LLM prose style validation and fixing
+7. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
 
 **Input:**
 
@@ -263,7 +268,7 @@ Persist state
 - Complete runnable example
 - Self-contained example files
 
-### 3.3. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
+### 3.8. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 **Purpose:** Extract or generate metadata (title, description, keywords) for documentation pages.
 
@@ -289,12 +294,101 @@ keywords: ["keyword1", "keyword2"]
 
 **Purpose:** Validate and fix documentation for style compliance.
 
-**Two-Layer Validation:**
+**Phases:**
 
-1. **Mechanical Layer** — Rules-based fixes (punctuation, spacing, formatting)
-2. **Judgment Layer** — LLM-based evaluation (clarity, tone, word choice)
+1. **Style Phase** — Two-layer validation: mechanical rules-based checker + LLM judgment checker; fixer loop (max 3 rounds)
+2. **Build Verification Phase** — Run docs build; `docsDir` inferred by walking up from `filePath` to the nearest `docs/` ancestor; skip gracefully if no build system detected
 
-**Output:** Updated .md files with style improvements.
+**Input:**
+
+```json
+{
+  "filePath": "/path/to/docs/reference/fiber.md"
+}
+```
+
+**Output:** Updated .md file with style improvements + build verification result.
+
+### 3.5. Check mdoc Workflow (`workflows/check-mdoc.ts`)
+
+**Purpose:** Compile and validate mdoc code blocks in documentation files. No agent — pure `execSync`. Read-only checker; suitable as a standalone CI validation step.
+
+**Input:**
+
+```json
+{
+  "projectRoot": "/path/to/project",
+  "paths": ["docs/reference/fiber.md", "docs/reference/concurrency/"]
+}
+```
+
+- `paths` — optional string or string array of relative file paths or directories. Directories are walked recursively; only `.md`/`.mdx` files collected. Omit to build entire docs project (`sbt docs/mdoc`).
+
+**Output:**
+
+```json
+{
+  "success": true,
+  "command": "sbt \"docs/mdoc --in docs/reference/fiber.md --out website/docs/reference/fiber.md\"",
+  "errorCount": 0,
+  "errors": [],
+  "durationMs": 4321,
+  "resolvedPaths": ["docs/reference/fiber.md"]
+}
+```
+
+Each error entry: `{ file, line, message, raw }`.
+
+**Error handling:**
+- Missing paths → throws with list of unresolved entries
+- Build failure → returns `success: false` with parsed errors (does not throw)
+
+### 3.6. Fix mdoc Workflow (`workflows/fix-mdoc.ts`)
+
+**Purpose:** Compile mdoc code blocks, and if errors are found, automatically fix them using the docs-writer agent. Loops up to `maxRounds` (default 3).
+
+**Input:**
+
+```json
+{
+  "projectRoot": "/path/to/project",
+  "paths": ["docs/reference/fiber.md", "docs/reference/concurrency/"],
+  "maxRounds": 3
+}
+```
+
+- Same as `check-mdoc`: accepts file(s), directory(ies), or entire project
+- `maxRounds` — maximum fix attempts (default: 3)
+
+**Phases:**
+
+**Phase 1: Initial Check**
+- Run mdoc compile command
+- If success: return immediately
+- If errors: proceed to fix loop
+
+**Phase 2+: Fix loop (up to maxRounds)**
+- Spawn `docsWriterAgent` session once, reuse across rounds
+- Each round: send fixer prompt with exact error list (file:line:message)
+- Agent has `createRunMdoc` tool available for inline verification
+- After agent responds: re-run mechanical check
+- If zero errors: break early
+- Otherwise: next round
+
+**Output:**
+
+```json
+{
+  "success": true,
+  "rounds": 2,
+  "errorCount": 0,
+  "errors": [],
+  "durationMs": 8765,
+  "resolvedPaths": ["docs/reference/fiber.md"]
+}
+```
+
+### 3.7. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 ## 4. Core Components
 
