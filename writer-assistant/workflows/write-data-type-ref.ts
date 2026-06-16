@@ -146,7 +146,7 @@ Based on the research findings above, now write comprehensive reference document
 **Writing guidance:**
 - Use the docs-data-type-ref skill for detailed conventions
 - Opening definition: NO markdown heading, start immediately after frontmatter
-- Structure sections precisely as documented: Opening → Motivation → Quick Showcase → Installation → Construction → Core Operations → (Optional: Subtypes/Comparison/Advanced/Integration)
+- Structure sections precisely as documented: Opening → Motivation → Quick Showcase → Installation → Construction → Core Operations → (Optional: Subtypes/Comparison/Advanced) → (Integration: only when non-trivial cross-module wiring with runnable example)
 - For each method, provide: name + description → signature → usage example
 - All mdoc examples should use \`mdoc:reset\` for isolated blocks
 
