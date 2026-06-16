@@ -38,6 +38,7 @@ Rules checked:
   Rule 16  Executable code blocks (scala mdoc*, python, etc.) include imports
   Rule 18  Prefer "val" over "var" in Scala code blocks
   Rule 22  Table column alignment (proper padding in separators)
+  Rule 19  Show method signatures within their containing type (trait/class/object)
   Rule 23  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
   Rule 25  Use @VERSION@ placeholder for version strings
   Rule 26  ZIO implicit trace convention (no "implicit trace: Trace" in method signatures)
@@ -512,6 +513,31 @@ count_violations "$(awk '
   }
   in_scala && /implicit[[:space:]]+trace:[[:space:]]*Trace/ {
     print FILENAME ":" NR ": [Rule 26] remove \"implicit trace: Trace\" from method signatures (ZIO convention)"
+  }
+' "$FILE")"
+
+# Rule 19: Bare signatures (def/val/var) not wrapped in containing type
+# A bare def/val/var at start of line inside a ```scala block (not nested in trait/class/object) is a violation.
+count_violations "$(awk '
+  /^```scala/ {
+    in_scala = 1
+    nesting_depth = 0
+    next
+  }
+  /^```/ && in_scala {
+    in_scala = 0
+    next
+  }
+  in_scala && /^(trait|abstract[[:space:]]+class|class|object)[[:space:]]/ {
+    nesting_depth++
+    next
+  }
+  in_scala && /^}/ && nesting_depth > 0 {
+    nesting_depth--
+    next
+  }
+  in_scala && nesting_depth == 0 && /^[[:space:]]*(def|val|var)[[:space:]]/ {
+    print FILENAME ":" NR ": [Rule 19] bare signature outside containing type — wrap in trait/class/object"
   }
 ' "$FILE")"
 

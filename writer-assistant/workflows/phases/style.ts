@@ -208,8 +208,19 @@ Then output:
     // Phase C: Fix, grounded in the exact violations
     console.log(`  Spawning fixer for ${allLines.length} violation(s)...`);
 
-    const fixerPrompt = `Fix the following style violations in ${outputPath}.
+    // Extract violated rule numbers and inject rule hints for structural rules
+    const RULE_HINTS: Record<string, string> = {
+      '19': 'Rule 19 (signatures within containing type): bare `def`, `val`, or `var` in a code block must be wrapped inside its owning `trait`/`class`/`object`. Never show a standalone signature at top level of a code block.\nExample fixes:\n  Bad:  ```scala\n  def foo: Unit\n  ```\n  Good: ```scala\n  trait Foo {\n    def foo: Unit\n  }\n  ```\n\n  Bad:  ```scala\n  val live: ZLayer[Any, Nothing, Service]\n  ```\n  Good: ```scala\n  object Service {\n    val live: ZLayer[Any, Nothing, Service]\n  }\n  ```',
+    };
 
+    const violatedRuleNums = [...new Set(allLines.map(l => l.match(/\[Rule (\d+)\]/)?.[1]).filter(Boolean))];
+    const ruleHints = violatedRuleNums
+      .filter(r => RULE_HINTS[r!])
+      .map(r => RULE_HINTS[r!])
+      .join('\n\n');
+
+    const fixerPrompt = `Fix the following style violations in ${outputPath}.
+${ruleHints ? `\nRule guidance for the violations below:\n${ruleHints}\n` : ''}
 The exact violations, with locations:
 
 ${allLines.join('\n')}
