@@ -26,6 +26,7 @@ export async function run({ init, payload }: FlueContext) {
     docType,
     outputDocPath,
     packageName,
+    parentModule,
   } = payload as {
     projectRoot: string;
     moduleName: string;
@@ -33,6 +34,8 @@ export async function run({ init, payload }: FlueContext) {
     docType: DocType;
     outputDocPath?: string;
     packageName?: string;
+    /** If set, creates a self-contained sbt sub-project under {parentModule}/{moduleName}/. */
+    parentModule?: string;
   };
 
   if (!projectRoot) throw new Error('payload.projectRoot is required');
@@ -46,7 +49,8 @@ export async function run({ init, payload }: FlueContext) {
     throw new Error(`docType must be one of: ${validDocTypes.join(', ')}`);
   }
 
-  console.log(`[write-examples] projectRoot: ${projectRoot}`);
+  console.log(`[write-examples] projectRoot:   ${projectRoot}`);
+  console.log(`[write-examples] parentModule:  ${parentModule ?? '(flat — root level)'}`);
   console.log(`[write-examples] outputDocPath: ${outputDocPath ?? '(not provided)'}`);
 
   const result = await runExamplesPhase(init, {
@@ -56,6 +60,7 @@ export async function run({ init, payload }: FlueContext) {
     docType,
     outputDocPath,
     packageName,
+    parentModule,
   });
 
   const { success, exampleFiles, compileSuccess, lintSuccess, documentationAdded, durationMs } =

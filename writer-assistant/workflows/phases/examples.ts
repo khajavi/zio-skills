@@ -12,6 +12,14 @@ export interface RunExamplesOptions {
   docType: DocType;
   outputDocPath?: string;
   packageName?: string;
+  /**
+   * If set, the example is placed under {projectRoot}/{parentModule}/{moduleName}/ as a
+   * fully self-contained sbt project with its own build.sbt. The parent aggregator
+   * gets a RootProject reference added to its build.sbt. If the parent directory/build.sbt
+   * does not exist yet, it is created and the root build.sbt gets a RootProject reference
+   * to the parent.
+   */
+  parentModule?: string;
   /** Pass an existing writer session to reuse it instead of spawning a new agent. */
   session?: any;
 }
@@ -72,6 +80,10 @@ function getExampleFileNames(docType: DocType): string[] {
   }
 }
 
+function toCamelCase(kebab: string): string {
+  return kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 function getNamingNote(docType: DocType): string {
   switch (docType) {
     case 'data-type-ref':
@@ -96,19 +108,24 @@ export async function runExamplesPhase(
     docType,
     outputDocPath,
     packageName: inputPackageName,
+    parentModule,
     session: existingSession,
   } = options;
 
   const packageName = inputPackageName ?? moduleName.replace(/-/g, '');
-  const packageDir = path.join(projectRoot, moduleName, 'src', 'main', 'scala', packageName);
+  const moduleDir = parentModule
+    ? path.join(projectRoot, parentModule, moduleName)
+    : path.join(projectRoot, moduleName);
+  const packageDir = path.join(moduleDir, 'src', 'main', 'scala', packageName);
   const exampleFileNames = getExampleFileNames(docType);
   const exampleFilePaths = exampleFileNames.map(f => path.join(packageDir, f));
 
   const startMs = Date.now();
 
   console.log(`[examples] Creating ${docType} examples for: ${topic}`);
-  console.log(`  moduleName:  ${moduleName}`);
-  console.log(`  packageName: ${packageName}`);
+  console.log(`  moduleName:   ${moduleName}`);
+  console.log(`  packageName:  ${packageName}`);
+  if (parentModule) console.log(`  parentModule: ${parentModule}`);
 
   // Acquire writer session — reuse caller's session if provided
   let session = existingSession;
@@ -117,8 +134,52 @@ export async function runExamplesPhase(
     session = await harness.session();
   }
 
-  // Phase A: Setup — add sub-module to build.sbt + create directory
-  const setupPrompt = `Set up a new Scala example sub-module for documenting: ${topic}
+  // Phase A: Setup — create directory structure and wire sbt build files
+  const parentBuildSbt = parentModule
+    ? path.join(projectRoot, parentModule, 'build.sbt')
+    : null;
+  const parentExists = parentBuildSbt ? fs.existsSync(parentBuildSbt) : false;
+
+  const setupPrompt = parentModule
+    ? `Set up a new self-contained Scala example sub-module for documenting: ${topic}
+
+Project root:  ${projectRoot}
+Parent module: ${parentModule}   (dir: ${path.join(projectRoot, parentModule)})
+Module name:   ${moduleName}     (dir: ${moduleDir})
+Package name:  ${packageName}
+
+This project uses a RootProject hierarchy — each directory is its own self-contained sbt build.
+
+Steps:
+
+1. Create the source directory:
+   mkdir -p "${packageDir}"
+
+2. Create ${moduleDir}/build.sbt — a self-contained sbt project file.
+   - Read ${projectRoot}/build.sbt (or ${projectRoot}/.scala-version if it exists) to find the exact scalaVersion used
+   - Add libraryDependencies for ZIO core matching the version in the root build
+   - If the topic involves SLF4J, add "org.slf4j" % "slf4j-api" % "<version>" as well
+   - Keep it minimal (no publish settings, no plugins needed)
+   Example shape:
+   \`\`\`
+   scalaVersion := "3.x.x"
+   libraryDependencies += "dev.zio" %% "zio" % "2.x.x"
+   \`\`\`
+
+3. ${parentExists
+  ? `The parent aggregator already exists at ${parentBuildSbt}.
+   Add the following line to ${parentBuildSbt}:
+       lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))`
+  : `The parent aggregator does NOT exist yet. Create it:
+   a. mkdir -p "${path.join(projectRoot, parentModule)}"
+   b. Create ${parentBuildSbt} with:
+          lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))
+   c. Add the following line to ${path.join(projectRoot, 'build.sbt')}:
+          lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
+      (add it near the end of the file, before any root project definitions)`}
+
+Report: "✓ Setup complete" or describe issues.`
+    : `Set up a new Scala example sub-module for documenting: ${topic}
 
 Project root: ${projectRoot}
 Module name: ${moduleName}
@@ -191,7 +252,11 @@ Write all ${exampleFileNames.length} files now.`;
   console.log(`[examples] Created ${createdFiles.length}/${exampleFilePaths.length} example files`);
 
   // Phase C: Compile — one agent-assisted retry on failure
-  let compileResult = runSbt(`${moduleName}/compile`, projectRoot);
+  // Self-contained sub-modules compile from their own directory; flat modules compile from root.
+  const compileCwd = parentModule ? moduleDir : projectRoot;
+  const compileTarget = parentModule ? 'compile' : `${moduleName}/compile`;
+
+  let compileResult = runSbt(compileTarget, compileCwd);
   let compileSuccess = compileResult.exitCode === 0;
 
   if (!compileSuccess) {
@@ -204,14 +269,14 @@ ${compileResult.output.slice(0, 4000)}
 Read the failing files and fix the Scala code so it compiles.
 Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
 
-    compileResult = runSbt(`${moduleName}/compile`, projectRoot);
+    compileResult = runSbt(compileTarget, compileCwd);
     compileSuccess = compileResult.exitCode === 0;
   }
 
   console.log(`[examples] Compile: ${compileSuccess ? '✓ PASSED' : '✗ FAILED'}`);
 
-  // Phase D: Lint
-  runShell('git', ['add', path.join(projectRoot, moduleName)], projectRoot);
+  // Phase D: Lint — stage from module dir, run formatter/checker from root
+  runShell('git', ['add', moduleDir], projectRoot);
   const fmtResult = runSbt('fmtChanged', projectRoot);
   const checkResult = runSbt('check', projectRoot);
   const lintSuccess = checkResult.exitCode === 0;

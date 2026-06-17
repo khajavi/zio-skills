@@ -63,7 +63,7 @@ export async function run({ init, payload }: FlueContext) {
     outputPath: string;
     dataTypePath?: string;
     /** Optional: generate companion Scala examples after writing the article. */
-    examples?: { moduleName: string; packageName?: string };
+    examples?: { moduleName: string; packageName?: string; parentModule?: string };
   };
 
   // Validate inputs
@@ -171,6 +171,7 @@ Write the complete markdown file and save it to the specified output path.`;
         projectRoot,
         moduleName: examplesPayload.moduleName,
         packageName: examplesPayload.packageName,
+        parentModule: examplesPayload.parentModule,
         topic: typeName,
         docType: 'data-type-ref',
         outputDocPath: resolvedOutputPath,
