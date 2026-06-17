@@ -14,7 +14,7 @@ The writer-assistant coordinates specialized agents to handle documentation task
 - **Fix Writing Style** — Validates and fixes documentation for style compliance
 - **Check mdoc** — Compiles and validates mdoc code blocks in individual files or directories (read-only checker)
 - **Fix mdoc** — Compiles mdoc code blocks and automatically fixes errors (with fixer loop, max 3 rounds)
-- **Check Website** — Verifies the full documentation website builds successfully (read-only)
+- **Check Website** — Verifies the full documentation website builds successfully; optionally runs `sbt docs/mdoc` first (read-only)
 - **Fix Website** — Builds the website and automatically fixes errors (with fixer loop, max 3 rounds)
 - **Preview Website** — Starts a live documentation dev server (Docusaurus/MkDocs), optionally running `sbt docs/mdoc` first
 - **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
@@ -272,6 +272,25 @@ npx flue run preview-website --target node --payload '{
 Returns `{ success, url, pid, buildSystem, mdocRan, mdocSuccess }`. Stop the server with `kill <pid>`.
 
 **Auto-detection:** Same build-system detection as `check-website` (Docusaurus `website/`, root `package.json`, MkDocs). Preview commands: `yarn start` (Docusaurus) / `mkdocs serve` (MkDocs).
+
+### Check Website
+
+Verify the full documentation website builds successfully. Read-only.
+
+```bash
+# Check website only
+npx flue run check-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+
+# Run sbt docs/mdoc first, then check website
+npx flue run check-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "runMdoc": true
+}'
+```
+
+Returns `{ success, buildSystem, errorCount, errors, mdocRan, mdocSuccess }`.
 
 ### Check mdoc Compilation
 
