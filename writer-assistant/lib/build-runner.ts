@@ -158,20 +158,25 @@ async function executeZioBuildPipeline(docsDir: string, buildCwd: string, runMdo
     console.log('[build-runner] Skipping sbt docs/mdoc (runMdoc=false)\n');
   }
 
-  // Step 2: Run yarn install in website directory
-  console.log('\n[build-runner] Running prerequisite: yarn install\n');
-  result = await executeCommand('yarn', ['install'], buildCwd);
-  output += result.output;
-  if (result.exitCode !== 0) {
-    const durationMs = Date.now() - startTime;
-    return {
-      success: false,
-      exitCode: result.exitCode,
-      output,
-      durationMs,
-      buildSystem: 'docusaurus',
-      buildCwd,
-    };
+  // Step 2: Run yarn install only if node_modules missing (proxy env can break yarn install)
+  const nodeModules = path.join(buildCwd, 'node_modules');
+  if (!fs.existsSync(nodeModules)) {
+    console.log('\n[build-runner] Running prerequisite: yarn install\n');
+    result = await executeCommand('yarn', ['install'], buildCwd);
+    output += result.output;
+    if (result.exitCode !== 0) {
+      const durationMs = Date.now() - startTime;
+      return {
+        success: false,
+        exitCode: result.exitCode,
+        output,
+        durationMs,
+        buildSystem: 'docusaurus',
+        buildCwd,
+      };
+    }
+  } else {
+    console.log('\n[build-runner] node_modules present, skipping yarn install\n');
   }
 
   // Step 3: Run yarn build
