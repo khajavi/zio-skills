@@ -16,6 +16,7 @@ The writer-assistant coordinates specialized agents to handle documentation task
 - **Fix mdoc** — Compiles mdoc code blocks and automatically fixes errors (with fixer loop, max 3 rounds)
 - **Check Website** — Verifies the full documentation website builds successfully (read-only)
 - **Fix Website** — Builds the website and automatically fixes errors (with fixer loop, max 3 rounds)
+- **Preview Website** — Starts a live documentation dev server (Docusaurus/MkDocs), optionally running `sbt docs/mdoc` first
 - **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
 
 ## Features
@@ -245,9 +246,32 @@ npx flue run write-examples --target node --payload '{
 | `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
 | `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
 
-**Phases:** Setup (build.sbt + dir) → Generate Scala files → Compile (`sbt <module>/compile`) → Lint (`sbt fmtChanged && sbt check`) → Document (embed in article if `outputDocPath` provided).
+**Phases:** Setup (build.sbt + dir) → Generate Scala files → Compile (`sbt <module>/compile`) → **Run** (execute each example, verify output) → Lint (`sbt fmtChanged && sbt check`) → Document (embed in article if `outputDocPath` provided).
 
-Returns `{ success, exampleFiles, compileSuccess, lintSuccess, documentationAdded }`.
+**Hierarchical example modules** (`parentModule` payload field): creates a self-contained sbt project hierarchy — each directory has its own `build.sbt` linked via `RootProject(file(...))`, wired into the root project's `.aggregate(...)`.
+
+Returns `{ success, exampleFiles, compileSuccess, runSuccess, lintSuccess, documentationAdded }`.
+
+### Preview Website
+
+Start a live documentation dev server. The server runs in the background — the workflow returns once the port is accepting connections.
+
+```bash
+# Start preview immediately (no mdoc recompile)
+npx flue run preview-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+
+# Recompile mdoc first, then start preview
+npx flue run preview-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "runMdoc": true
+}'
+```
+
+Returns `{ success, url, pid, buildSystem, mdocRan, mdocSuccess }`. Stop the server with `kill <pid>`.
+
+**Auto-detection:** Same build-system detection as `check-website` (Docusaurus `website/`, root `package.json`, MkDocs). Preview commands: `yarn start` (Docusaurus) / `mkdocs serve` (MkDocs).
 
 ### Check mdoc Compilation
 

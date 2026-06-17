@@ -120,6 +120,10 @@ Tests pass before commit.
 - No force-push
 - Tests pass first
 
+## Documentation Maintenance
+
+After any significant change, update `README.md` (feature list + quick-start example) and `ARCHITECTURE.md` (directory tree + workflow section). Same commit or immediate `docs:` follow-up.
+
 ## Agents
 
 - Skill-driven (behavior in `skills/*/SKILL.md`)

@@ -34,6 +34,7 @@ writer-assistant/
 │   ├── fix-mdoc.ts              # mdoc compiler + fixer (writer agent fixer loop)
 │   ├── check-website.ts         # Full website build checker (no agent, read-only)
 │   ├── fix-website.ts           # Website build + fixer loop (writer agent, max 3 rounds)
+│   ├── preview-website.ts       # Start detached dev server (Docusaurus/MkDocs); optional mdoc step
 │   ├── coding-agent.ts          # Coding task dispatch
 │   │
 │   ├── phases/                  # Workflow execution phases
@@ -285,8 +286,11 @@ Persist state
 1. **Setup** — Add sbt sub-module entry to `build.sbt`, aggregate into root project, create package directory
 2. **Generate** — Write 3-5 Scala example files with type-specific naming conventions; `CompleteExample.scala` always last
 3. **Compile** — `sbt <moduleName>/compile`; one agent-assisted retry on failure
-4. **Lint** — `git add` → `sbt fmtChanged` → `sbt check`
-5. **Document** *(optional)* — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
+4. **Run** — Execute each example, verify exit code 0 and no exceptions in output; one re-compile if agent fixes a runtime error
+5. **Lint** — `git add` → `sbt fmtChanged` → `sbt check`
+6. **Document** *(optional)* — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
+
+**Hierarchical modules** (`parentModule` field): creates a `RootProject(file(...))` hierarchy — each directory is a self-contained sbt project with its own `build.sbt`. Root's `.aggregate(...)` is updated to include the new parent module. Compile and run execute from the sub-module directory (not root).
 
 **File naming by `docType`:**
 
@@ -310,7 +314,7 @@ Persist state
 }
 ```
 
-**Output:** `{ success, moduleName, packageDir, exampleFiles, compileSuccess, lintSuccess, documentationAdded, durationMs }`
+**Output:** `{ success, moduleName, packageDir, exampleFiles, compileSuccess, runSuccess, lintSuccess, documentationAdded, durationMs }`
 
 **Shared Phase:** The core logic lives in `workflows/phases/examples.ts` (`runExamplesPhase`), which accepts an optional `session` parameter. When called from `write-data-type-ref` or `write-tutorial`, the existing writer session is reused — no extra agent spawn.
 
@@ -324,7 +328,30 @@ Persist state
 
 Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphinx and for ZIO projects runs the full pipeline (`sbt docs/mdoc → yarn install → yarn build`).
 
-### 3.6. Fix Website Workflow (`workflows/fix-website.ts`)
+### 3.6. Preview Website Workflow (`workflows/preview-website.ts`)
+
+**Purpose:** Start a live documentation dev server in the background and return once ready.
+
+**Input:** `{ projectRoot: string; docsDir?: string; runMdoc?: boolean }`
+
+**Output:** `{ success, url, pid, buildSystem, previewCwd, mdocRan, mdocSuccess, mdocOutput }`
+
+**Phases:**
+
+1. *(optional)* **mdoc** — Run `sbt docs/mdoc` from `projectRoot` (only when `runMdoc: true`); abort if it fails
+2. **Preview** — Calls `runPreview(docsDir)` from `lib/build-runner.ts`: detects build system, spawns dev server detached (`proc.unref()`), polls TCP port until accepting connections, returns `{ url, pid }`
+
+**Build system → preview command mapping:**
+
+| Build System | Preview Command | Default URL |
+|---|---|---|
+| Docusaurus (`website/`) | `yarn start` | `http://localhost:3000` |
+| Docusaurus (root) | `npm run start` | `http://localhost:3000` |
+| MkDocs | `mkdocs serve` | `http://localhost:8000` |
+
+The server keeps running after the workflow exits. Stop it with `kill <pid>`.
+
+### 3.8. Fix Website Workflow (`workflows/fix-website.ts`)
 
 **Purpose:** Build the documentation website and automatically fix errors. Mirrors `fix-mdoc` pattern. Uses `docsWriterAgent` session for fixes; loops up to `maxRounds` (default 3).
 
@@ -337,7 +364,7 @@ Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphi
 1. **Initial Check** — Run `runBuild(docsDir)`; return early if already passing
 2. **Fix Loop** (up to `maxRounds`) — Prompt writer agent with error list → agent reads/fixes files → rebuild → re-check errors
 
-### 3.7. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
+### 3.9. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 **Purpose:** Extract or generate metadata (title, description, keywords) for documentation pages.
 
@@ -359,7 +386,7 @@ keywords: ["keyword1", "keyword2"]
 ---
 ```
 
-### 3.8. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
+### 3.10. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
 
 **Purpose:** Validate and fix documentation for style compliance.
 
