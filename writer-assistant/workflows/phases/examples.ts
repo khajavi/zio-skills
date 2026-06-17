@@ -174,9 +174,13 @@ Steps:
    a. mkdir -p "${path.join(projectRoot, parentModule)}"
    b. Create ${parentBuildSbt} with:
           lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))
-   c. Add the following line to ${path.join(projectRoot, 'build.sbt')}:
-          lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
-      (add it near the end of the file, before any root project definitions)`}
+   c. In ${path.join(projectRoot, 'build.sbt')}:
+      - Add the lazy val declaration (near the end, before root project definitions):
+            lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
+      - Find the root project definition (the \`lazy val root = project.in(file("."))\` block)
+        and add \`${toCamelCase(parentModule)}\` to its \`.aggregate(...)\` call.
+        Example: if root has \`.aggregate(root213)\`, change it to \`.aggregate(root213, ${toCamelCase(parentModule)})\`.
+        If the root project has no \`.aggregate(...)\` call yet, add one.`}
 
 Report: "✓ Setup complete" or describe issues.`
     : `Set up a new Scala example sub-module for documenting: ${topic}
