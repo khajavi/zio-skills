@@ -9,10 +9,13 @@ The writer-assistant coordinates specialized agents to handle documentation task
 - **Crossref** — Analyzes documentation and creates cross-references between pages
 - **Write Data Type Reference** — Generates comprehensive API reference documentation from source code
 - **Write Tutorial** — Creates learning-oriented guides for newcomers (linear, step-by-step)
+- **Write Examples** — Generates companion Scala example sub-modules with compile and lint verification
 - **Extract Metadata** — Extracts and populates metadata (title, description, keywords)
 - **Fix Writing Style** — Validates and fixes documentation for style compliance
 - **Check mdoc** — Compiles and validates mdoc code blocks in individual files or directories (read-only checker)
 - **Fix mdoc** — Compiles mdoc code blocks and automatically fixes errors (with fixer loop, max 3 rounds)
+- **Check Website** — Verifies the full documentation website builds successfully (read-only)
+- **Fix Website** — Builds the website and automatically fixes errors (with fixer loop, max 3 rounds)
 - **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
 
 ## Features
@@ -172,6 +175,19 @@ npx flue run write-data-type-ref --target node --payload '{
 }'
 ```
 
+To also generate companion Scala examples (Phase 2.5), add the `examples` field:
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala",
+  "examples": {
+    "moduleName": "zio-example-fiber"
+  }
+}'
+```
+
 ### Write Tutorial
 
 Create learning-oriented guides for newcomers:
@@ -184,6 +200,19 @@ npx flue run write-tutorial --target node --payload '{
 }'
 ```
 
+To also generate companion Scala examples (Phase 2.5), add the `examples` field:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers",
+  "examples": {
+    "moduleName": "zio-example-fibers"
+  }
+}'
+```
+
 Tutorials follow a 7-section structure:
 1. Introduction (with learning objectives)
 2. Background / Big Picture (optional)
@@ -192,6 +221,33 @@ Tutorials follow a 7-section structure:
 5. Running the Examples (git clone + sbt commands)
 6. What You've Learned (recap of objectives)
 7. Where to Go Next (links to how-to guides)
+
+### Write Examples
+
+Generate companion Scala example sub-modules for documentation. Can be run standalone or triggered automatically via `write-data-type-ref` and `write-tutorial` with the `examples` payload field.
+
+```bash
+npx flue run write-examples --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "moduleName": "zio-http-example-fiber",
+  "topic": "ZIO Fiber lifecycle management",
+  "docType": "data-type-ref",
+  "outputDocPath": "/path/to/zio-repo/docs/reference/fiber.md"
+}'
+```
+
+**`docType` values and generated file names:**
+
+| `docType`       | Generated files                                                                |
+|-----------------|--------------------------------------------------------------------------------|
+| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`          |
+| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala` |
+| `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
+| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
+
+**Phases:** Setup (build.sbt + dir) → Generate Scala files → Compile (`sbt <module>/compile`) → Lint (`sbt fmtChanged && sbt check`) → Document (embed in article if `outputDocPath` provided).
+
+Returns `{ success, exampleFiles, compileSuccess, lintSuccess, documentationAdded }`.
 
 ### Check mdoc Compilation
 

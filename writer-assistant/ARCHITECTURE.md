@@ -25,12 +25,15 @@ writer-assistant/
 │
 ├── workflows/                    # Workflow orchestrators
 │   ├── crossref.ts              # Cross-reference linking workflow (6 modes)
-│   ├── write-data-type-ref.ts   # API reference documentation generation (7 phases)
-│   ├── write-tutorial.ts        # Tutorial documentation generation (7 phases)
+│   ├── write-data-type-ref.ts   # API reference documentation generation (7-8 phases)
+│   ├── write-tutorial.ts        # Tutorial documentation generation (7-8 phases)
+│   ├── write-examples.ts        # Companion Scala example generation (standalone)
 │   ├── extract-metadata.ts      # Metadata extraction workflow
 │   ├── fix-writing-style.ts     # Writing style fixing workflow (2 phases)
 │   ├── check-mdoc.ts            # mdoc compilation checker (no agent, pure execSync, read-only)
 │   ├── fix-mdoc.ts              # mdoc compiler + fixer (writer agent fixer loop)
+│   ├── check-website.ts         # Full website build checker (no agent, read-only)
+│   ├── fix-website.ts           # Website build + fixer loop (writer agent, max 3 rounds)
 │   ├── coding-agent.ts          # Coding task dispatch
 │   │
 │   ├── phases/                  # Workflow execution phases
@@ -40,6 +43,7 @@ writer-assistant/
 │   │   ├── review.ts            # Review content
 │   │   ├── style.ts             # Apply style fixes
 │   │   ├── verify.ts            # Verify build success
+│   │   ├── examples.ts          # Generate + compile + lint Scala example files
 │   │   └── report.ts            # Generate coverage reports
 │   │
 │   └── utils/                   # Shared utilities
@@ -202,11 +206,12 @@ Persist state
 
 1. **Research Phase** — Analyze source code, extract type information, gather usage examples
 2. **Write Phase** — Generate documentation following API reference structure
-3. **Verify Phase** — Check method coverage, compile mdoc examples to zero errors
-4. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
-5. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
-6. **Style Phase** — Mechanical + LLM prose style validation and fixing
-7. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
+3. *(optional)* **Examples Phase** — Create companion Scala sub-module, compile and lint examples, embed `SourceFile.print()` calls in article (activated by `examples` payload field)
+4. **Verify Phase** — Check method coverage, compile mdoc examples to zero errors
+5. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
+6. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
+7. **Style Phase** — Mechanical + LLM prose style validation and fixing
+8. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
 
 **Input:**
 
@@ -214,7 +219,8 @@ Persist state
 {
   "projectRoot": "/path/to/project",
   "dataTypePath": "zio/Fiber.scala",
-  "outputPath": "docs/reference/fiber.md"
+  "outputPath": "docs/reference/fiber.md",
+  "examples": { "moduleName": "zio-example-fiber" }
 }
 ```
 
@@ -234,11 +240,12 @@ Persist state
 
 1. **Research Phase** — Gather information about topic from source code, tests, examples
 2. **Write Phase** — Generate tutorial following 7-section structure with linear progression
-3. **Verify Phase** — Check structure compliance, compile mdoc examples to zero errors, run 38-item checklist
-4. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
-5. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
-6. **Style Phase** — Mechanical + LLM prose style validation and fixing
-7. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
+3. *(optional)* **Examples Phase** — Create companion Scala sub-module, compile and lint examples, append shell-command "Running the Examples" section (activated by `examples` payload field)
+4. **Verify Phase** — Check structure compliance, compile mdoc examples to zero errors, run 38-item checklist
+5. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
+6. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
+7. **Style Phase** — Mechanical + LLM prose style validation and fixing
+8. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
 
 **Input:**
 
@@ -246,7 +253,8 @@ Persist state
 {
   "projectRoot": "/path/to/project",
   "outputPath": "docs/guides/getting-started-with-fibers.md",
-  "topic": "Getting Started with ZIO Fibers"
+  "topic": "Getting Started with ZIO Fibers",
+  "examples": { "moduleName": "zio-example-fibers" }
 }
 ```
 
@@ -268,7 +276,68 @@ Persist state
 - Complete runnable example
 - Self-contained example files
 
-### 3.8. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
+### 3.4. Write Examples Workflow (`workflows/write-examples.ts`)
+
+**Purpose:** Generate companion Scala example sub-modules for any documentation article. Runs standalone or is invoked as Phase 2.5 by `write-data-type-ref` and `write-tutorial` when `examples` payload is present.
+
+**Phases:**
+
+1. **Setup** — Add sbt sub-module entry to `build.sbt`, aggregate into root project, create package directory
+2. **Generate** — Write 3-5 Scala example files with type-specific naming conventions; `CompleteExample.scala` always last
+3. **Compile** — `sbt <moduleName>/compile`; one agent-assisted retry on failure
+4. **Lint** — `git add` → `sbt fmtChanged` → `sbt check`
+5. **Document** *(optional)* — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
+
+**File naming by `docType`:**
+
+| `docType`       | Files                                                                          |
+|-----------------|--------------------------------------------------------------------------------|
+| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`          |
+| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala` |
+| `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
+| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
+
+**Input:**
+
+```json
+{
+  "projectRoot": "/path/to/project",
+  "moduleName": "zio-http-example-fiber",
+  "topic": "ZIO Fiber lifecycle management",
+  "docType": "data-type-ref",
+  "outputDocPath": "/path/to/docs/reference/fiber.md",
+  "packageName": "ziohttpexamplefiber"
+}
+```
+
+**Output:** `{ success, moduleName, packageDir, exampleFiles, compileSuccess, lintSuccess, documentationAdded, durationMs }`
+
+**Shared Phase:** The core logic lives in `workflows/phases/examples.ts` (`runExamplesPhase`), which accepts an optional `session` parameter. When called from `write-data-type-ref` or `write-tutorial`, the existing writer session is reused — no extra agent spawn.
+
+### 3.5. Check Website Workflow (`workflows/check-website.ts`)
+
+**Purpose:** Verify the full documentation website builds successfully. No agent — pure shell. Read-only; suitable as a standalone CI validation step.
+
+**Input:** `{ projectRoot: string; docsDir?: string }`
+
+**Output:** `{ success, buildSystem, buildCwd, durationMs, errorCount, errors, output }`
+
+Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphinx and for ZIO projects runs the full pipeline (`sbt docs/mdoc → yarn install → yarn build`).
+
+### 3.6. Fix Website Workflow (`workflows/fix-website.ts`)
+
+**Purpose:** Build the documentation website and automatically fix errors. Mirrors `fix-mdoc` pattern. Uses `docsWriterAgent` session for fixes; loops up to `maxRounds` (default 3).
+
+**Input:** `{ projectRoot: string; docsDir?: string; maxRounds?: number }`
+
+**Output:** `{ success, rounds, errorCount, errors, durationMs, buildSystem, buildCwd }`
+
+**Phases:**
+
+1. **Initial Check** — Run `runBuild(docsDir)`; return early if already passing
+2. **Fix Loop** (up to `maxRounds`) — Prompt writer agent with error list → agent reads/fixes files → rebuild → re-check errors
+
+### 3.7. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 **Purpose:** Extract or generate metadata (title, description, keywords) for documentation pages.
 
@@ -290,7 +359,7 @@ keywords: ["keyword1", "keyword2"]
 ---
 ```
 
-### 3.4. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
+### 3.8. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
 
 **Purpose:** Validate and fix documentation for style compliance.
 
@@ -309,7 +378,7 @@ keywords: ["keyword1", "keyword2"]
 
 **Output:** Updated .md file with style improvements + build verification result.
 
-### 3.5. Check mdoc Workflow (`workflows/check-mdoc.ts`)
+### 3.9. Check mdoc Workflow (`workflows/check-mdoc.ts`)
 
 **Purpose:** Compile and validate mdoc code blocks in documentation files. No agent — pure `execSync`. Read-only checker; suitable as a standalone CI validation step.
 
@@ -343,7 +412,7 @@ Each error entry: `{ file, line, message, raw }`.
 - Missing paths → throws with list of unresolved entries
 - Build failure → returns `success: false` with parsed errors (does not throw)
 
-### 3.6. Fix mdoc Workflow (`workflows/fix-mdoc.ts`)
+### 3.10. Fix mdoc Workflow (`workflows/fix-mdoc.ts`)
 
 **Purpose:** Compile mdoc code blocks, and if errors are found, automatically fix them using the docs-writer agent. Loops up to `maxRounds` (default 3).
 
@@ -387,8 +456,6 @@ Each error entry: `{ file, line, message, raw }`.
   "resolvedPaths": ["docs/reference/fiber.md"]
 }
 ```
-
-### 3.7. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 ## 4. Core Components
 
