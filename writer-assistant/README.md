@@ -214,6 +214,19 @@ npx flue run write-tutorial --target node --payload '{
 }'
 ```
 
+To re-run only specific phases (e.g. debug a build failure without repeating research/write), use `skipPhases`:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers",
+  "skipPhases": ["research", "write", "verify", "integrate", "review", "style"]
+}'
+```
+
+Valid `skipPhases` values: `"research"`, `"write"`, `"examples"`, `"verify"`, `"integrate"`, `"review"`, `"style"`, `"verifyBuild"`.
+
 Tutorials follow a 7-section structure:
 1. Introduction (with learning objectives)
 2. Background / Big Picture (optional)

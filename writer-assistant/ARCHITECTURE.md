@@ -246,7 +246,9 @@ Persist state
 5. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
 6. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
 7. **Style Phase** — Mechanical + LLM prose style validation and fixing
-8. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); skip gracefully if no build system detected
+8. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); on failure, spawns writer agent to fix errors and retries up to 3 rounds; skip gracefully if no build system detected
+
+Any phase can be skipped via `skipPhases: string[]` — useful for re-running only the build phase after a partial failure without repeating expensive earlier phases.
 
 **Input:**
 
@@ -255,7 +257,8 @@ Persist state
   "projectRoot": "/path/to/project",
   "outputPath": "docs/guides/getting-started-with-fibers.md",
   "topic": "Getting Started with ZIO Fibers",
-  "examples": { "moduleName": "zio-example-fibers" }
+  "examples": { "moduleName": "zio-example-fibers" },
+  "skipPhases": ["research", "write", "verify", "integrate", "review", "style"]
 }
 ```
 
