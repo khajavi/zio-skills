@@ -236,7 +236,8 @@ export async function run({ init, payload }: FlueContext) {
     };
 
     // Determine which mode is active
-    const activeMode = targetFile ? 'file' : targetDir ? 'dir' : (mode as 'all' | 'missing');
+    // When targetFile/targetDir provided, use their scope ('dir') but respect explicit mode for extraction decision
+    const activeMode = targetDir ? 'dir' : (mode as 'all' | 'missing');
 
     // Check if extraction is needed
     if (!needsExtraction(activeMode, existingMetadata)) {
