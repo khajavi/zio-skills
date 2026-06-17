@@ -13,7 +13,32 @@ import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
 import { verifyBuild } from './phases/verify.js';
 import { runExamplesPhase } from './phases/examples.js';
+import { runBuild } from '../lib/build-runner.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
+
+function parseBuildErrors(output: string): string[] {
+  const errors: string[] = [];
+  for (const line of output.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    if (
+      t.includes('[info]') || t.includes('[success]') ||
+      t.includes('download') || t.includes('Downloading') ||
+      t.includes('yarn add') || t.includes('npm notice') ||
+      t.match(/^\d+%|Working/)
+    ) continue;
+    if (
+      t.toLowerCase().includes('error:') ||
+      t.toLowerCase().includes('[error]') ||
+      t.toLowerCase().includes('failed') ||
+      t.toLowerCase().includes('error ts') ||
+      t.includes('ERROR -') || t.includes('broken link') || t.includes('✖')
+    ) {
+      errors.push(line);
+    }
+  }
+  return errors;
+}
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
   if (!fs.existsSync(docsDir)) {
@@ -55,12 +80,19 @@ export async function run({ init, payload }: FlueContext) {
     outputPath,
     topic,
     examples: examplesPayload,
+    skipPhases = [],
   } = payload as {
     projectRoot: string;
     outputPath: string;
     topic: string;
     /** Optional: generate companion Scala examples after writing the tutorial. */
     examples?: { moduleName: string; packageName?: string; parentModule?: string };
+    /**
+     * Phase names to skip. Skipped phases are counted as completed without running.
+     * Valid values: "research" | "write" | "examples" | "verify" | "integrate" | "review" | "style" | "verifyBuild"
+     * Example: ["research","write","verify","integrate","review","style"] to run only the build phase.
+     */
+    skipPhases?: string[];
   };
 
   // Validate inputs
@@ -87,6 +119,7 @@ export async function run({ init, payload }: FlueContext) {
     console.log(`    [${i + 1}] ${dir}`);
   });
 
+  const docsDir = path.join(projectRoot, 'docs');
   const phasesCompleted: string[] = [];
 
   try {
@@ -94,25 +127,41 @@ export async function run({ init, payload }: FlueContext) {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
     // Phase 1: Research (in separate researcher agent)
-    console.log('\n[Phase 1] Research: Understanding the topic...');
-    const researchResult = await runResearchPhase(init, {
-      projectRoot,
-      typeName: topic,
-      resolvedOutputPath,
-      sourceDirs,
-      focus: 'tutorial',
-    });
-    console.log('[Phase 1] ✓ Research complete');
-    phasesCompleted.push('research');
+    let researchResult = '';
+    if (skipPhases.includes('research')) {
+      console.log('\n[Phase 1] ⏭ Research skipped');
+      phasesCompleted.push('research');
+    } else {
+      console.log('\n[Phase 1] Research: Understanding the topic...');
+      researchResult = await runResearchPhase(init, {
+        projectRoot,
+        typeName: topic,
+        resolvedOutputPath,
+        sourceDirs,
+        focus: 'tutorial',
+      });
+      console.log('[Phase 1] ✓ Research complete');
+      phasesCompleted.push('research');
+    }
 
-    // Phase 2-4: Initialize writer agent with fresh session
-    const harness = await init(docsWriterAgent, { name: 'docs-write-tutorial' });
-    const session = await harness.session();
+    // Phase 2-6: Initialize writer agent only if at least one of these phases will run
+    const writerPhases = ['write', 'verify', 'integrate', 'review', 'style'];
+    const needsWriterSession = writerPhases.some(p => !skipPhases.includes(p));
+    let session: Awaited<ReturnType<Awaited<ReturnType<typeof init>>['session']>> | null = null;
+    if (needsWriterSession) {
+      const harness = await init(docsWriterAgent, { name: 'docs-write-tutorial' });
+      session = await harness.session();
+    }
 
     // Phase 2: Write Documentation
-    console.log('\n[Phase 2] Writing: Generating tutorial...');
-    const phase2StartTime = Date.now();
-    const writePrompt = `**Research Findings (from research phase):**
+    let phase2StartTime = Date.now();
+    if (skipPhases.includes('write')) {
+      console.log('\n[Phase 2] ⏭ Write skipped');
+      phasesCompleted.push('write');
+    } else {
+      console.log('\n[Phase 2] Writing: Generating tutorial...');
+      phase2StartTime = Date.now();
+      const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
 ---
@@ -155,44 +204,53 @@ Based on the research findings above, now write a comprehensive tutorial for lea
 
 Write the complete markdown file and save it to the specified output path.`;
 
-    const writeResult = await session.prompt(writePrompt);
-    console.log('[Phase 2] ✓ Tutorial written');
-    phasesCompleted.push('write');
+      await session!.prompt(writePrompt);
+      console.log('[Phase 2] ✓ Tutorial written');
+      phasesCompleted.push('write');
+    }
 
     // Phase 2.5: Examples (optional — only when `examples` payload provided)
     let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
     if (examplesPayload) {
-      console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
-      examplesResult = await runExamplesPhase(init, {
-        projectRoot,
-        moduleName: examplesPayload.moduleName,
-        packageName: examplesPayload.packageName,
-        parentModule: examplesPayload.parentModule,
-        topic,
-        docType: 'tutorial',
-        outputDocPath: resolvedOutputPath,
-        session, // reuse the writer session
-      });
-      console.log(
-        `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
-        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
-      );
-      phasesCompleted.push('examples');
+      if (skipPhases.includes('examples')) {
+        console.log('\n[Phase 2.5] ⏭ Examples skipped');
+        phasesCompleted.push('examples');
+      } else {
+        console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
+        examplesResult = await runExamplesPhase(init, {
+          projectRoot,
+          moduleName: examplesPayload.moduleName,
+          packageName: examplesPayload.packageName,
+          parentModule: examplesPayload.parentModule,
+          topic,
+          docType: 'tutorial',
+          outputDocPath: resolvedOutputPath,
+          session: session!, // reuse the writer session
+        });
+        console.log(
+          `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
+          `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
+        );
+        phasesCompleted.push('examples');
+      }
     }
 
     // Detect all changed/new markdown files since Phase 2 started
-    const docsDir = path.join(projectRoot, 'docs');
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
     console.log(`\n[Phase 2→3] Found ${changedFiles.length} changed/new markdown files:`);
     changedFiles.forEach(file => console.log(`  - ${file}`));
 
     // Phase 3: Verify
-    console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    const changedFilesStr = changedFiles.length > 0
-      ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map(f => `- ${f}`).join('\n')}`
-      : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
+    if (skipPhases.includes('verify')) {
+      console.log('\n[Phase 3] ⏭ Verify skipped');
+      phasesCompleted.push('verify');
+    } else {
+      console.log('\n[Phase 3] Verifying: Checking documentation and code...');
+      const changedFilesStr = changedFiles.length > 0
+        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map(f => `- ${f}`).join('\n')}`
+        : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
 
-    const verifyPrompt = `**Phase 3: Verify Tutorial**
+      const verifyPrompt = `**Phase 3: Verify Tutorial**
 
 Verify the tutorial you just wrote for ${topic} at ${resolvedOutputPath}
 
@@ -227,16 +285,21 @@ Report:
 - Any fixes applied
 - CHECKLIST status`;
 
-    const verifyResult = await session.prompt(verifyPrompt, {
-      tools: [createRunMdoc(projectRoot)],
-    });
+      await session!.prompt(verifyPrompt, {
+        tools: [createRunMdoc(projectRoot)],
+      });
 
-    console.log('[Phase 3] ✓ Verification complete');
-    phasesCompleted.push('verify');
+      console.log('[Phase 3] ✓ Verification complete');
+      phasesCompleted.push('verify');
+    }
 
     // Phase 4: Format and Integrate
-    console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-    const integratePrompt = `**Phase 4: Format and Integrate**
+    if (skipPhases.includes('integrate')) {
+      console.log('\n[Phase 4] ⏭ Integrate skipped');
+      phasesCompleted.push('integrate');
+    } else {
+      console.log('\n[Phase 4] Integrating: Finalizing documentation...');
+      const integratePrompt = `**Phase 4: Format and Integrate**
 
 Finalize the tutorial for ${topic} and integrate it into the docs structure.
 
@@ -266,62 +329,133 @@ Finalize the tutorial for ${topic} and integrate it into the docs structure.
 
 Report final status and any updates made.`;
 
-    const integrateResult = await session.prompt(integratePrompt);
-    console.log('[Phase 4] ✓ Integration complete');
-    phasesCompleted.push('integrate');
+      await session!.prompt(integratePrompt);
+      console.log('[Phase 4] ✓ Integration complete');
+      phasesCompleted.push('integrate');
+    }
 
     // Phase 5: Review and Fix
-    console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
-    const reviewResult = await runReviewPhase(init, {
-      outputPath: resolvedOutputPath,
-      projectRoot,
-      typeName: topic,
-      session, // reuse writer session for fixes
-      sourceFiles: sourceDirs,
-    });
-    console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
-    if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
-      console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
-      reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+    let reviewResult = {
+      approved: true,
+      rounds: 0,
+      findingsFixed: { HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<string, number>,
+      unresolvedIssues: [] as string[],
+    };
+    if (skipPhases.includes('review')) {
+      console.log('\n[Phase 5] ⏭ Review skipped');
+      phasesCompleted.push('review');
+    } else {
+      console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+      reviewResult = await runReviewPhase(init, {
+        outputPath: resolvedOutputPath,
+        projectRoot,
+        typeName: topic,
+        session: session!, // reuse writer session for fixes
+        sourceFiles: sourceDirs,
+      });
+      console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
+      if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
+        console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
+        reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+      }
+      phasesCompleted.push('review');
     }
-    phasesCompleted.push('review');
 
     // Phase 6: Style Validation
-    console.log('\n[Phase 6] Validating: Checking prose style...');
-    const styleResult = await runStylePhase(init, {
-      outputPath: resolvedOutputPath,
-      projectRoot,
-      typeName: topic,
-      session, // reuse writer session for fixes
-    });
-    console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
-    if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
-      console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
-      styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+    let styleResult = {
+      passed: true,
+      rounds: 0,
+      violations: {} as Record<string, number>,
+      unresolvedViolations: [] as string[],
+    };
+    if (skipPhases.includes('style')) {
+      console.log('\n[Phase 6] ⏭ Style skipped');
+      phasesCompleted.push('style');
+    } else {
+      console.log('\n[Phase 6] Validating: Checking prose style...');
+      styleResult = await runStylePhase(init, {
+        outputPath: resolvedOutputPath,
+        projectRoot,
+        typeName: topic,
+        session: session!, // reuse writer session for fixes
+      });
+      console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+      if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
+        console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
+        styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+      }
+      phasesCompleted.push('style');
     }
-    phasesCompleted.push('style');
 
-    // Phase 7: Verify Build
-    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
-    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    // Phase 7: Build Verification with auto-fix loop
+    const MAX_BUILD_FIX_ROUNDS = 3;
+    console.log(`\n[Phase 7] Build Verification: Verifying documentation builds (max ${MAX_BUILD_FIX_ROUNDS} fix rounds)...`);
+    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false, rounds: 0 };
+    const buildStartMs = Date.now();
+
     try {
-      const buildResult = await verifyBuild(docsDir);
-      buildVerifyResult = { ...buildResult, skipped: false };
-      console.log(`[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+      const initialBuild = await runBuild(docsDir);
+      buildVerifyResult.buildSystem = initialBuild.buildSystem;
+
+      if (initialBuild.success && parseBuildErrors(initialBuild.output).length === 0) {
+        console.log(`[Phase 7] ✓ Build passed on first attempt (${initialBuild.buildSystem})`);
+        buildVerifyResult = { success: true, buildSystem: initialBuild.buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
+      } else {
+        let currentErrors = parseBuildErrors(initialBuild.output);
+        console.log(`[Phase 7] Found ${currentErrors.length} error(s), starting fix loop`);
+
+        // Ensure a writer session is available for fixing
+        if (!session) {
+          const fixHarness = await init(docsWriterAgent, { name: 'fix-website-fixer' });
+          session = await fixHarness.session();
+        }
+
+        let round = 0;
+        for (round = 1; round <= MAX_BUILD_FIX_ROUNDS; round++) {
+          if (currentErrors.length === 0) break;
+
+          console.log(`[Phase 7] Fix attempt ${round}/${MAX_BUILD_FIX_ROUNDS} (${currentErrors.length} error(s))`);
+          const errorList = currentErrors.map(e => `  ${e}`).join('\n');
+          await session.prompt(`Fix the following documentation website build errors in ${projectRoot}.\n\nErrors:\n${errorList}\n\nFor each error: read the file, identify the root cause (broken link, missing file, wrong path), fix it. If a link target doesn't exist, either correct the path or remove the link. Report each fix applied.`);
+
+          const reBuild = await runBuild(docsDir);
+          currentErrors = parseBuildErrors(reBuild.output);
+          buildVerifyResult.buildSystem = reBuild.buildSystem;
+
+          if (currentErrors.length === 0) {
+            console.log(`[Phase 7] ✓ All errors fixed after ${round} round(s)`);
+            break;
+          }
+          console.log(`[Phase 7] Still ${currentErrors.length} error(s) after round ${round}`);
+        }
+
+        buildVerifyResult = {
+          success: currentErrors.length === 0,
+          buildSystem: buildVerifyResult.buildSystem,
+          durationMs: Date.now() - buildStartMs,
+          skipped: false,
+          rounds: round,
+        };
+        console.log(`[Phase 7] ${buildVerifyResult.success ? '✓' : '⚠'} Build verification complete (${buildVerifyResult.rounds} fix round(s))`);
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('No supported documentation build system detected')) {
         console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
+        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: Date.now() - buildStartMs, skipped: true, rounds: 0 };
       } else {
         console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
+        buildVerifyResult.durationMs = Date.now() - buildStartMs;
       }
     }
     phasesCompleted.push('verifyBuild');
 
     // Build final result — base 7 phases + optional examples phase
     const expectedPhases = 7 + (examplesPayload ? 1 : 0);
-    const success = phasesCompleted.length === expectedPhases;
+    const success = phasesCompleted.length === expectedPhases &&
+      buildVerifyResult.success &&
+      reviewResult.approved &&
+      styleResult.passed;
     console.log(`\n[docs-write-tutorial] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -363,6 +497,7 @@ Report final status and any updates made.`;
         skipped: buildVerifyResult.skipped,
         buildSystem: buildVerifyResult.buildSystem,
         durationMs: buildVerifyResult.durationMs,
+        rounds: buildVerifyResult.rounds,
       },
     };
   } catch (error) {
@@ -394,6 +529,7 @@ Report final status and any updates made.`;
         skipped: false,
         buildSystem: 'unknown',
         durationMs: 0,
+        rounds: 0,
       },
     };
   }
