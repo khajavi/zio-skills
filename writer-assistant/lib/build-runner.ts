@@ -332,25 +332,47 @@ export async function runPreview(docsDir: string): Promise<PreviewResult> {
   const port = getPreviewPort(config.buildSystem);
   const url = `http://localhost:${port}`;
 
-  console.log(`[preview-runner] Starting ${config.buildSystem} dev server in background`);
+  // For Docusaurus with yarn, run `yarn install` only if node_modules is missing
+  if (config.buildSystem === 'docusaurus' && previewCmd === 'yarn') {
+    const nodeModules = path.join(config.buildCwd, 'node_modules');
+    if (!fs.existsSync(nodeModules)) {
+      console.log('[preview-runner] Running yarn install...');
+      const installResult = await executeCommand('yarn', ['install'], config.buildCwd);
+      if (installResult.exitCode !== 0) {
+        throw new Error(`yarn install failed:\n${installResult.output.slice(-1000)}`);
+      }
+      console.log('[preview-runner] ✓ yarn install done');
+    } else {
+      console.log('[preview-runner] node_modules present, skipping yarn install');
+    }
+  }
+
+  console.log(`[preview-runner] Starting ${config.buildSystem} dev server`);
   console.log(`[preview-runner] Working directory: ${config.buildCwd}`);
   console.log(`[preview-runner] Command: ${previewCmd} ${previewArgs.join(' ')}`);
-  console.log(`[preview-runner] URL: ${url}`);
+  console.log(`[preview-runner] URL: ${url}\n`);
 
   const proc = spawn(previewCmd, previewArgs, {
     cwd: config.buildCwd,
-    stdio: 'ignore',
+    stdio: ['ignore', 'pipe', 'pipe'],
     detached: true,
   });
-  proc.unref();
+
+  // Stream output to console while starting
+  proc.stdout?.on('data', (d: Buffer) => process.stdout.write(d));
+  proc.stderr?.on('data', (d: Buffer) => process.stderr.write(d));
 
   const pid = proc.pid ?? 0;
-  console.log(`[preview-runner] Server PID: ${pid}`);
-  console.log(`[preview-runner] Waiting for server to be ready on port ${port}...`);
+  console.log(`\n[preview-runner] Server PID: ${pid} — waiting for port ${port}...`);
 
-  await pollPort(port, 2000, 120_000);
+  await pollPort(port, 3000, 300_000);
 
-  console.log(`[preview-runner] ✓ Server ready at ${url}`);
+  // Detach: close pipes so parent process can exit; server keeps running
+  proc.stdout?.destroy();
+  proc.stderr?.destroy();
+  proc.unref();
+
+  console.log(`\n[preview-runner] ✓ Server ready at ${url}`);
 
   return {
     url,
