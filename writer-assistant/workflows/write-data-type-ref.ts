@@ -179,7 +179,7 @@ Write the complete markdown file and save it to the specified output path.`;
       });
       console.log(
         `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
-        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'})`
+        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
       );
       phasesCompleted.push('examples');
     }
@@ -339,6 +339,7 @@ Report final status and any updates made.`;
             moduleName: examplesResult.moduleName,
             exampleFiles: examplesResult.exampleFiles,
             compileSuccess: examplesResult.compileSuccess,
+            runSuccess: examplesResult.runSuccess,
             lintSuccess: examplesResult.lintSuccess,
             documentationAdded: examplesResult.documentationAdded,
           }

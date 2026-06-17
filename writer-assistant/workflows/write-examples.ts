@@ -12,6 +12,8 @@ export interface WriteExamplesResult {
   exampleFiles: string[];
   compileSuccess: boolean;
   compileOutput: string;
+  runSuccess: boolean;
+  runOutput: string;
   lintSuccess: boolean;
   lintOutput: string;
   documentationAdded: boolean;
@@ -69,6 +71,7 @@ export async function run({ init, payload }: FlueContext) {
   console.log(`\n[write-examples] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'} (${durationMs}ms)`);
   console.log(`  Examples:  ${exampleFiles.length} files`);
   console.log(`  Compile:   ${compileSuccess ? '✓' : '✗'}`);
+  console.log(`  Run:       ${result.runSuccess ? '✓' : '✗'}`);
   console.log(`  Lint:      ${lintSuccess ? '✓' : '✗'}`);
   console.log(`  Docs:      ${documentationAdded ? '✓' : '—'}`);
 

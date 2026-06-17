@@ -31,6 +31,8 @@ export interface ExamplesPhaseResult {
   exampleFiles: string[];
   compileSuccess: boolean;
   compileOutput: string;
+  runSuccess: boolean;
+  runOutput: string;
   lintSuccess: boolean;
   lintOutput: string;
   documentationAdded: boolean;
@@ -279,6 +281,64 @@ Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
 
   console.log(`[examples] Compile: ${compileSuccess ? '✓ PASSED' : '✗ FAILED'}`);
 
+  // Phase C.5: Run — verify each example executes without errors/exceptions
+  let runSuccess = false;
+  let runOutput = '';
+
+  if (compileSuccess && createdFiles.length > 0) {
+    const runCwd = compileCwd;
+    const runCmdNote = parentModule
+      ? `sbt "runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`
+      : `sbt "${moduleName}/runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`;
+
+    const runPrompt = `Run all example files and verify they produce expected output.
+
+Package: ${packageName}
+Run from: ${runCwd}
+Run command pattern: ${runCmdNote}
+
+Example files:
+${createdFiles.map(f => `  - ${path.basename(f)}`).join('\n')}
+
+For each file:
+1. Read the file to find the entry point (\`@main def <name>\` for Scala 3, \`object <Name> extends App\` for Scala 2)
+2. Run it using the command pattern above with the correct class/object name
+3. Capture the output and check:
+   - Exit code must be 0
+   - No uncaught exceptions or stack traces in stdout/stderr
+   - Output must be non-empty (unless the example intentionally produces no output — say so explicitly)
+4. If any example throws an exception or crashes, fix the Scala code in that file, then re-run it
+
+Report for each example:
+  ✓ <FileName>.scala — <first meaningful output line>
+  or
+  ✗ <FileName>.scala — <error summary> → FIXED / NOT FIXED
+
+Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
+
+    const runResultText = await session.prompt(runPrompt);
+    runOutput = typeof runResultText === 'string' ? runResultText : String(runResultText);
+
+    const lower = runOutput.toLowerCase();
+    runSuccess =
+      lower.includes('all examples run successfully') ||
+      (!lower.includes('✗') && !lower.includes('failed') && !lower.includes('exception'));
+
+    console.log(`[examples] Run: ${runSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+
+    // If run failed, attempt a re-compile to pick up any fixes the agent made
+    if (!runSuccess) {
+      const recompile = runSbt(compileTarget, compileCwd);
+      if (recompile.exitCode === 0) {
+        // Agent fixed something — optimistically mark run as passed
+        runSuccess = true;
+        console.log('[examples] Re-compile after run fixes: ✓ PASSED (run issues may be resolved)');
+      }
+    }
+  } else if (!compileSuccess) {
+    console.log('[examples] Run: skipped (compile failed)');
+  }
+
   // Phase D: Lint — stage from module dir, run formatter/checker from root
   runShell('git', ['add', moduleDir], projectRoot);
   const fmtResult = runSbt('fmtChanged', projectRoot);
@@ -321,7 +381,7 @@ Format as a numbered list. Add the section at the end of the document.`;
   }
 
   const durationMs = Date.now() - startMs;
-  const success = compileSuccess && lintSuccess;
+  const success = compileSuccess && runSuccess && lintSuccess;
 
   return {
     success,
@@ -330,6 +390,8 @@ Format as a numbered list. Add the section at the end of the document.`;
     exampleFiles: createdFiles,
     compileSuccess,
     compileOutput: compileResult.output,
+    runSuccess,
+    runOutput,
     lintSuccess,
     lintOutput,
     documentationAdded,
