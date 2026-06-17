@@ -120,7 +120,9 @@ Based on the research findings above, now write a comprehensive tutorial for lea
 **Requirements:**
 - Output file path: ${resolvedOutputPath}
 - File must be in docs/guides/ directory
-- File must have proper frontmatter with id and title
+- File must have proper frontmatter with id, title, description, and keywords
+  - description: one sentence, ≤150 characters, describes what the tutorial teaches
+  - keywords: 3-7 meaningful phrases (1-3 words each), e.g. feature names, patterns, learning outcomes
 - Follow the exact 7-section structure provided in the docs-tutorial skill
 - Every code example MUST use mdoc syntax
 - No blank lines between consecutive code blocks

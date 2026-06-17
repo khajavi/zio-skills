@@ -48,6 +48,8 @@ After writing, verify every item on this checklist:
 ## Style and Integration
 
 - [ ] The frontmatter `id` matches the filename
+- [ ] Frontmatter has `description` (one sentence, ≤150 characters)
+- [ ] Frontmatter has `keywords` (3-7 meaningful phrases, 1-3 words each)
 - [ ] The tutorial is in `docs/guides/` (same directory as how-to guides)
 - [ ] The tutorial is added to `sidebars.js` under the "Guides" category
 - [ ] The tutorial is linked from `docs/index.md`

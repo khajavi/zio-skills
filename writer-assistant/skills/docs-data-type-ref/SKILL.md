@@ -144,6 +144,11 @@ Place the file in `docs/reference/<type-name-kebab-case>.md` with frontmatter:
 ---
 id: <kebab-case-id>
 title: "<TypeName>"
+description: "<One-sentence summary of what the type does, ≤150 characters>"
+keywords:
+  - "<Feature Name>"
+  - "<Pattern or Concept>"
+  - "<Related Synonyms>"
 ---
 ```
 

@@ -137,7 +137,9 @@ Based on the research findings above, now write comprehensive reference document
 
 **Requirements:**
 - Output file path: ${resolvedOutputPath}
-- File must have proper frontmatter with id and title
+- File must have proper frontmatter with id, title, description, and keywords
+  - description: one sentence, ≤150 characters, describes what the type does
+  - keywords: 3-7 meaningful phrases (1-3 words each), e.g. feature names, patterns, synonyms
 - Follow the exact section structure provided in the docs-data-type-ref skill
 - Every public method MUST be documented
 - All code examples MUST use mdoc syntax
