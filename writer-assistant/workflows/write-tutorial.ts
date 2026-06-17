@@ -12,6 +12,7 @@ import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
 import { verifyBuild } from './phases/verify.js';
+import { runExamplesPhase } from './phases/examples.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
@@ -53,10 +54,13 @@ export async function run({ init, payload }: FlueContext) {
     projectRoot,
     outputPath,
     topic,
+    examples: examplesPayload,
   } = payload as {
     projectRoot: string;
     outputPath: string;
     topic: string;
+    /** Optional: generate companion Scala examples after writing the tutorial. */
+    examples?: { moduleName: string; packageName?: string };
   };
 
   // Validate inputs
@@ -154,6 +158,26 @@ Write the complete markdown file and save it to the specified output path.`;
     const writeResult = await session.prompt(writePrompt);
     console.log('[Phase 2] ✓ Tutorial written');
     phasesCompleted.push('write');
+
+    // Phase 2.5: Examples (optional — only when `examples` payload provided)
+    let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
+    if (examplesPayload) {
+      console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
+      examplesResult = await runExamplesPhase(init, {
+        projectRoot,
+        moduleName: examplesPayload.moduleName,
+        packageName: examplesPayload.packageName,
+        topic,
+        docType: 'tutorial',
+        outputDocPath: resolvedOutputPath,
+        session, // reuse the writer session
+      });
+      console.log(
+        `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
+        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'})`
+      );
+      phasesCompleted.push('examples');
+    }
 
     // Detect all changed/new markdown files since Phase 2 started
     const docsDir = path.join(projectRoot, 'docs');
@@ -294,8 +318,9 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('verifyBuild');
 
-    // Build final result
-    const success = phasesCompleted.length === 7;
+    // Build final result — base 7 phases + optional examples phase
+    const expectedPhases = 7 + (examplesPayload ? 1 : 0);
+    const success = phasesCompleted.length === expectedPhases;
     console.log(`\n[docs-write-tutorial] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -309,6 +334,16 @@ Report final status and any updates made.`;
       status: success ? 'success' : 'partial',
       phasesCompleted,
       success,
+      examples: examplesResult
+        ? {
+            success: examplesResult.success,
+            moduleName: examplesResult.moduleName,
+            exampleFiles: examplesResult.exampleFiles,
+            compileSuccess: examplesResult.compileSuccess,
+            lintSuccess: examplesResult.lintSuccess,
+            documentationAdded: examplesResult.documentationAdded,
+          }
+        : null,
       review: {
         approved: reviewResult.approved,
         rounds: reviewResult.rounds,
@@ -339,6 +374,7 @@ Report final status and any updates made.`;
       phasesCompleted,
       error: error instanceof Error ? error.message : String(error),
       success: false,
+      examples: null,
       review: {
         approved: false,
         rounds: 0,

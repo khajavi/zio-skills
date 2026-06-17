@@ -1,0 +1,269 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import docsWriterAgent from '../../agents/docs-writer.js';
+
+export type DocType = 'data-type-ref' | 'tutorial' | 'how-to-guide' | 'module-ref';
+
+export interface RunExamplesOptions {
+  projectRoot: string;
+  moduleName: string;
+  topic: string;
+  docType: DocType;
+  outputDocPath?: string;
+  packageName?: string;
+  /** Pass an existing writer session to reuse it instead of spawning a new agent. */
+  session?: any;
+}
+
+export interface ExamplesPhaseResult {
+  success: boolean;
+  moduleName: string;
+  packageDir: string;
+  exampleFiles: string[];
+  compileSuccess: boolean;
+  compileOutput: string;
+  lintSuccess: boolean;
+  lintOutput: string;
+  documentationAdded: boolean;
+  durationMs: number;
+}
+
+function runSbt(command: string, cwd: string): { exitCode: number; output: string } {
+  const result = spawnSync('sbt', [command], {
+    cwd,
+    encoding: 'utf-8',
+    timeout: 300_000,
+    shell: false,
+  });
+  const output = (result.stdout || '') + (result.stderr || '');
+  return { exitCode: result.status ?? 1, output };
+}
+
+function runShell(cmd: string, args: string[], cwd: string): void {
+  spawnSync(cmd, args, { cwd, encoding: 'utf-8', timeout: 60_000, shell: false });
+}
+
+function getExampleFileNames(docType: DocType): string[] {
+  switch (docType) {
+    case 'data-type-ref':
+      return ['BasicUsage.scala', 'AdvancedPatterns.scala', 'CompleteExample.scala'];
+    case 'tutorial':
+      return [
+        'Concept1Example.scala',
+        'Concept2Example.scala',
+        'Concept3Example.scala',
+        'CompleteExample.scala',
+      ];
+    case 'how-to-guide':
+      return [
+        'Step1BasicExample.scala',
+        'Step2IntermediateExample.scala',
+        'Step3AdvancedExample.scala',
+        'CompleteExample.scala',
+      ];
+    case 'module-ref':
+      return [
+        'MultiTypeComposition.scala',
+        'CommonPattern1.scala',
+        'CommonPattern2.scala',
+        'CompleteExample.scala',
+      ];
+  }
+}
+
+function getNamingNote(docType: DocType): string {
+  switch (docType) {
+    case 'data-type-ref':
+      return 'BasicUsage.scala: simple constructor/creation patterns; AdvancedPatterns.scala: complex compositions; CompleteExample.scala: full end-to-end usage.';
+    case 'tutorial':
+      return 'ConceptNExample.scala files: one per tutorial step/concept; CompleteExample.scala: the final "putting it all together" code.';
+    case 'how-to-guide':
+      return 'StepNXxxExample.scala files: one per procedural step; CompleteExample.scala: complete solution combining all steps.';
+    case 'module-ref':
+      return 'MultiTypeComposition.scala: composing multiple types from the module; CommonPatternN.scala: common usage patterns; CompleteExample.scala: comprehensive example.';
+  }
+}
+
+export async function runExamplesPhase(
+  init: any,
+  options: RunExamplesOptions
+): Promise<ExamplesPhaseResult> {
+  const {
+    projectRoot,
+    moduleName,
+    topic,
+    docType,
+    outputDocPath,
+    packageName: inputPackageName,
+    session: existingSession,
+  } = options;
+
+  const packageName = inputPackageName ?? moduleName.replace(/-/g, '');
+  const packageDir = path.join(projectRoot, moduleName, 'src', 'main', 'scala', packageName);
+  const exampleFileNames = getExampleFileNames(docType);
+  const exampleFilePaths = exampleFileNames.map(f => path.join(packageDir, f));
+
+  const startMs = Date.now();
+
+  console.log(`[examples] Creating ${docType} examples for: ${topic}`);
+  console.log(`  moduleName:  ${moduleName}`);
+  console.log(`  packageName: ${packageName}`);
+
+  // Acquire writer session — reuse caller's session if provided
+  let session = existingSession;
+  if (!session) {
+    const harness = await init(docsWriterAgent, { name: `examples-${moduleName}` });
+    session = await harness.session();
+  }
+
+  // Phase A: Setup — add sub-module to build.sbt + create directory
+  const setupPrompt = `Set up a new Scala example sub-module for documenting: ${topic}
+
+Project root: ${projectRoot}
+Module name: ${moduleName}
+Package name: ${packageName}
+
+Steps:
+1. Open ${path.join(projectRoot, 'build.sbt')}
+2. Add a new lazy val for ${moduleName} following the existing pattern in that file
+3. Add ${moduleName} to the aggregate(...) call in the root project
+4. Create the directory: ${packageDir}
+   Run: mkdir -p "${packageDir}"
+
+Report: "✓ Setup complete" or describe issues.`;
+
+  await session.prompt(setupPrompt);
+
+  // Phase B: Generate Scala example files
+  const fileList = exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n');
+
+  const generatePrompt = `Create ${exampleFileNames.length} Scala example files for: ${topic}
+
+Package directory: ${packageDir}
+Package name: ${packageName}
+
+Files to create:
+${fileList}
+
+Naming convention for ${docType}:
+${getNamingNote(docType)}
+
+Template (detect Scala version from build.sbt — use Scala 3 @main or Scala 2 object extends App):
+
+Scala 3:
+\`\`\`scala
+package ${packageName}
+
+/** Title: <concise title>
+  * Description: <1-2 sentences about what this example shows>
+  * Run: sbt "${moduleName}/runMain ${packageName}.<MainName>"
+  */
+@main def <mainName>(): Unit = {
+  // example code here
+}
+\`\`\`
+
+Scala 2.13:
+\`\`\`scala
+package ${packageName}
+
+/** Title: <concise title>
+  * Description: <1-2 sentences about what this example shows>
+  * Run: sbt "${moduleName}/runMain ${packageName}.<ObjectName>"
+  */
+object <ObjectName> extends App {
+  // example code here
+}
+\`\`\`
+
+Requirements:
+- Real, runnable ZIO code (no pseudocode or TODO stubs)
+- All imports at the top of each file
+- CompleteExample.scala: most comprehensive end-to-end demonstration
+- Each file independently runnable
+
+Write all ${exampleFileNames.length} files now.`;
+
+  await session.prompt(generatePrompt);
+
+  const createdFiles = exampleFilePaths.filter(f => fs.existsSync(f));
+  console.log(`[examples] Created ${createdFiles.length}/${exampleFilePaths.length} example files`);
+
+  // Phase C: Compile — one agent-assisted retry on failure
+  let compileResult = runSbt(`${moduleName}/compile`, projectRoot);
+  let compileSuccess = compileResult.exitCode === 0;
+
+  if (!compileSuccess) {
+    console.log('[examples] Compile failed — requesting fix...');
+    await session.prompt(`Fix compilation errors in ${packageDir}.
+
+Compile output (first 4000 chars):
+${compileResult.output.slice(0, 4000)}
+
+Read the failing files and fix the Scala code so it compiles.
+Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
+
+    compileResult = runSbt(`${moduleName}/compile`, projectRoot);
+    compileSuccess = compileResult.exitCode === 0;
+  }
+
+  console.log(`[examples] Compile: ${compileSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+
+  // Phase D: Lint
+  runShell('git', ['add', path.join(projectRoot, moduleName)], projectRoot);
+  const fmtResult = runSbt('fmtChanged', projectRoot);
+  const checkResult = runSbt('check', projectRoot);
+  const lintSuccess = checkResult.exitCode === 0;
+  const lintOutput = fmtResult.output + '\n' + checkResult.output;
+
+  console.log(`[examples] Lint: ${lintSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+
+  // Phase E: Document — embed examples in article (optional)
+  let documentationAdded = false;
+  if (outputDocPath && fs.existsSync(outputDocPath)) {
+    const useSourceFile = docType === 'data-type-ref' || docType === 'module-ref';
+
+    const docPrompt = useSourceFile
+      ? `Add a "Running the Examples" section to ${outputDocPath}.
+
+Use SourceFile.print() calls to embed example source code inline.
+Example files:
+${createdFiles.map(f => `  - ${f}`).join('\n')}
+
+Pattern (inside a \`\`\`scala mdoc:passthrough block):
+  println(SourceFile.print("${moduleName}/src/main/scala/${packageName}/<FileName>.scala"))
+
+Add the section at the end of the document, after all type documentation.
+Include a brief intro sentence before each embedded example.`
+      : `Add a "Running the Examples" section to ${outputDocPath}.
+
+List each example with its run command:
+${createdFiles.map(f => {
+  const className = path.basename(f, '.scala');
+  return `  - ${path.basename(f)}\n    Run: sbt "${moduleName}/runMain ${packageName}.${className}"`;
+}).join('\n')}
+
+Format as a numbered list. Add the section at the end of the document.`;
+
+    await session.prompt(docPrompt);
+    documentationAdded = true;
+    console.log('[examples] ✓ Documentation section added');
+  }
+
+  const durationMs = Date.now() - startMs;
+  const success = compileSuccess && lintSuccess;
+
+  return {
+    success,
+    moduleName,
+    packageDir,
+    exampleFiles: createdFiles,
+    compileSuccess,
+    compileOutput: compileResult.output,
+    lintSuccess,
+    lintOutput,
+    documentationAdded,
+    durationMs,
+  };
+}
