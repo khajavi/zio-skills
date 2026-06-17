@@ -250,6 +250,116 @@ async function executeBuild(config: BuildConfig, docsDir: string): Promise<Build
   });
 }
 
+export interface PreviewResult {
+  url: string;
+  pid: number;
+  buildSystem: string;
+  previewCwd: string;
+}
+
+function getPreviewPort(buildSystem: string): number {
+  return buildSystem === 'mkdocs' ? 8000 : 3000;
+}
+
+function pollPort(port: number, intervalMs: number, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const net = require('node:net');
+    const deadline = Date.now() + timeoutMs;
+    const check = () => {
+      const client = new net.Socket();
+      client.setTimeout(500);
+      client
+        .connect(port, '127.0.0.1', () => {
+          client.destroy();
+          resolve();
+        })
+        .on('error', () => {
+          client.destroy();
+          if (Date.now() >= deadline) {
+            reject(new Error(`Preview server did not start on port ${port} within ${timeoutMs}ms`));
+          } else {
+            setTimeout(check, intervalMs);
+          }
+        })
+        .on('timeout', () => {
+          client.destroy();
+          if (Date.now() >= deadline) {
+            reject(new Error(`Preview server did not start on port ${port} within ${timeoutMs}ms`));
+          } else {
+            setTimeout(check, intervalMs);
+          }
+        });
+    };
+    check();
+  });
+}
+
+/**
+ * Start a detached documentation preview server and return once it is ready.
+ * The server keeps running in the background after this function returns.
+ */
+export async function runPreview(docsDir: string): Promise<PreviewResult> {
+  const config = detectBuildSystem(docsDir);
+  if (!config) {
+    const parentDir = path.dirname(docsDir);
+    throw new Error(
+      `No supported documentation build system detected in ${docsDir}.\n` +
+        `Checked:\n` +
+        `  - ${path.join(parentDir, 'website', 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'mkdocs.yml')} (MkDocs)\n`
+    );
+  }
+
+  // Map build commands to preview commands
+  let previewCmd: string;
+  let previewArgs: string[];
+  if (config.buildSystem === 'docusaurus') {
+    if (config.buildCommand.startsWith('yarn')) {
+      previewCmd = 'yarn';
+      previewArgs = ['start'];
+    } else {
+      previewCmd = 'npm';
+      previewArgs = ['run', 'start'];
+    }
+  } else if (config.buildSystem === 'mkdocs') {
+    previewCmd = 'mkdocs';
+    previewArgs = ['serve'];
+  } else {
+    throw new Error(`Preview not supported for build system: ${config.buildSystem}`);
+  }
+
+  const port = getPreviewPort(config.buildSystem);
+  const url = `http://localhost:${port}`;
+
+  console.log(`[preview-runner] Starting ${config.buildSystem} dev server in background`);
+  console.log(`[preview-runner] Working directory: ${config.buildCwd}`);
+  console.log(`[preview-runner] Command: ${previewCmd} ${previewArgs.join(' ')}`);
+  console.log(`[preview-runner] URL: ${url}`);
+
+  const proc = spawn(previewCmd, previewArgs, {
+    cwd: config.buildCwd,
+    stdio: 'ignore',
+    detached: true,
+  });
+  proc.unref();
+
+  const pid = proc.pid ?? 0;
+  console.log(`[preview-runner] Server PID: ${pid}`);
+  console.log(`[preview-runner] Waiting for server to be ready on port ${port}...`);
+
+  await pollPort(port, 2000, 120_000);
+
+  console.log(`[preview-runner] ✓ Server ready at ${url}`);
+
+  return {
+    url,
+    pid,
+    buildSystem: config.buildSystem,
+    previewCwd: config.buildCwd,
+  };
+}
+
 /**
  * Auto-detect build system and run build
  * Throws if no supported build system is found
