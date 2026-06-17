@@ -17,8 +17,9 @@ export interface CheckWebsiteResult {
 }
 
 /**
- * Parse website build errors from output.
- * Filters for lines containing error keywords, excluding noise.
+ * Parse true build errors (not warnings) from output.
+ * Only captures lines that indicate actual build failures, not Docusaurus
+ * warnings that still allow a successful build (broken links, deprecated options, etc.).
  */
 function parseWebsiteBuildErrors(output: string): string[] {
   const lines = output.split('\n');
@@ -28,10 +29,14 @@ function parseWebsiteBuildErrors(output: string): string[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Skip noise: progress, downloads, info messages
+    // Skip noise and known non-fatal Docusaurus warnings
     if (
       trimmed.includes('[info]') ||
+      trimmed.includes('[INFO]') ||
       trimmed.includes('[success]') ||
+      trimmed.includes('[SUCCESS]') ||
+      trimmed.includes('[WARNING]') ||
+      trimmed.includes('[webpackbar]') ||
       trimmed.includes('download') ||
       trimmed.includes('Downloading') ||
       trimmed.includes('yarn add') ||
@@ -41,16 +46,14 @@ function parseWebsiteBuildErrors(output: string): string[] {
       continue;
     }
 
-    // Capture error/warning lines
+    // Capture actual error lines (not warnings)
     if (
-      trimmed.toLowerCase().includes('error:') ||
       trimmed.toLowerCase().includes('[error]') ||
-      trimmed.toLowerCase().includes('failed') ||
       trimmed.toLowerCase().includes('error ts') ||
       trimmed.includes('ERROR -') ||
-      trimmed.includes('WARNING -') ||
-      trimmed.includes('broken link') ||
-      trimmed.includes('✖')
+      trimmed.includes('✖') ||
+      // yarn/npm fatal errors (non-warning)
+      (trimmed.toLowerCase().startsWith('error ') && !trimmed.includes('[WARNING]'))
     ) {
       errors.push(line);
     }
@@ -80,24 +83,37 @@ export async function run({ payload }: FlueContext) {
     throw new Error(`docs directory not found: ${docsDir}`);
   }
 
-  console.log(`[check-website] Starting website build check`);
-  console.log(`  Project root: ${projectRoot}`);
-  console.log(`  Docs directory: ${docsDir}`);
-  console.log(`  Run mdoc first: ${runMdoc}`);
+  console.log(`\n══════════════════════════════════════════`);
+  console.log(`  check-website`);
+  console.log(`══════════════════════════════════════════`);
+  console.log(`  Project root : ${projectRoot}`);
+  console.log(`  Docs dir     : ${docsDir}`);
+  console.log(`  Run mdoc     : ${runMdoc}`);
+  console.log(`══════════════════════════════════════════\n`);
 
   const startMs = Date.now();
+
+  console.log(`[check-website] ▶ Starting build...`);
+  console.log(`─────────────────────────────────────────\n`);
 
   try {
     const buildResult = await runBuild(docsDir, runMdoc);
     const durationMs = Date.now() - startMs;
 
-    const errors = parseWebsiteBuildErrors(buildResult.output);
-    const success = buildResult.success && errors.length === 0;
+    console.log(`\n─────────────────────────────────────────`);
 
-    console.log(`\n[check-website] ${success ? '✓ PASSED' : '✗ FAILED'} (${durationMs}ms)`);
+    // Trust exit code as ground truth. Docusaurus warnings (broken links, deprecated
+    // options) don't fail the build — only capture true errors for the error list.
+    const errors = parseWebsiteBuildErrors(buildResult.output);
+    const success = buildResult.success;
+
+    const elapsed = (durationMs / 1000).toFixed(1);
+    console.log(`[check-website] ${success ? '✓ PASSED' : '✗ FAILED'} in ${elapsed}s`);
     if (errors.length > 0) {
-      console.log(`  Errors (${errors.length}):`);
+      console.log(`\n  Build errors (${errors.length}):`);
       errors.forEach(e => console.log(`    ${e}`));
+    } else if (!success) {
+      console.log(`  Build exited with non-zero code — see output above for details`);
     }
 
     return {
@@ -114,8 +130,10 @@ export async function run({ payload }: FlueContext) {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const durationMs = Date.now() - startMs;
+    const elapsed = (durationMs / 1000).toFixed(1);
 
-    console.error(`\n[check-website] ✗ Build check failed: ${errorMsg}`);
+    console.error(`\n─────────────────────────────────────────`);
+    console.error(`[check-website] ✗ FAILED in ${elapsed}s: ${errorMsg}`);
 
     return {
       success: false,
