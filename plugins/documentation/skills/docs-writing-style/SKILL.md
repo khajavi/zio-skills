@@ -128,6 +128,12 @@ Between consecutive code blocks, add bridging prose that explains what the next 
    - ❌ "We can see this in action:"  
      ✅ "When filtering an empty chunk, the result contains no elements:"
 
+21. **Paragraphs over bullets for connected narrative**: Use bullets only for independent, enumerable items. When items form a connected narrative — building on each other, explaining cause-and-effect, or describing a single concept — write prose instead.
+
+   **Bad vs. Good:**
+   - ❌ "The code above:\n  - We open three streams\n  - Each has its own queues\n  - There is no crosstalk"
+   - ✅ "The code above opens three streams, each with its own queues. There is no crosstalk."
+
 ## Table Formatting
 
 22. **Pad column alignment**: Align table columns with spaces for readability.
