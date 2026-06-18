@@ -37,6 +37,7 @@ Rules checked:
            and bridging prose between consecutive code blocks
   Rule 16  Executable code blocks (scala mdoc*, python, etc.) include imports
   Rule 18  Prefer "val" over "var" in Scala code blocks
+  Rule 21  No blank lines between bullet list items
   Rule 22  Table column alignment (proper padding in separators)
   Rule 19  Show method signatures within their containing type (trait/class/object)
   Rule 23  Default to Scala 2.13.x syntax (no Scala 3 glob imports)
@@ -539,6 +540,22 @@ count_violations "$(awk '
   in_scala && nesting_depth == 0 && /^[[:space:]]*(def|val|var)[[:space:]]/ {
     print FILENAME ":" NR ": [Rule 19] bare signature outside containing type — wrap in trait/class/object"
   }
+' "$FILE")"
+
+# Rule 21: No blank lines between bullet list items
+count_violations "$(awk '
+  /^```/ { in_code = !in_code; next }
+  in_code { next }
+  /^[[:space:]]*[-*][[:space:]]|^[[:space:]]*[0-9]+\.[[:space:]]/ {
+    if (in_list && blank_count > 0) {
+      print FILENAME ":" NR ": [Rule 21] blank line between list items (remove empty lines within the list)"
+    }
+    in_list = 1
+    blank_count = 0
+    next
+  }
+  in_list && /^[[:space:]]*$/ { blank_count++ }
+  in_list && !/^[[:space:]]*$/ { in_list = 0; blank_count = 0 }
 ' "$FILE")"
 
 # Report summary
