@@ -1,4 +1,4 @@
-name: CI # test run
+name: CI
 
 on:
   push:
@@ -15,28 +15,23 @@ concurrency:
 
 jobs:
   nix-checks:
+    name: Nix checks (writer-assistant)
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
-    strategy:
-      matrix:
-        project: [writer-assistant]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: DeterminateSystems/determinate-nix-action@v3
+        uses: cachix/install-nix-action@v31
 
-      - name: FlakeHub cache
-        uses: DeterminateSystems/flakehub-cache-action@main
+      - name: Format
+        run: nix build ./writer-assistant#checks.x86_64-linux.format
 
-      - name: Check flake lock file health
-        uses: DeterminateSystems/flake-checker-action@main
-        with:
-          flake-lock-path: ${{ matrix.project }}/flake.lock
+      - name: Lint
+        run: nix build ./writer-assistant#checks.x86_64-linux.lint
 
-      - name: nix flake check (${{ matrix.project }})
-        run: cd ${{ matrix.project }} && nix flake check
+      - name: Build
+        run: nix build ./writer-assistant#checks.x86_64-linux.build
+
+      - name: Test
+        run: nix build ./writer-assistant#checks.x86_64-linux.test
