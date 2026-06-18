@@ -9,22 +9,34 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   nix-checks:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      matrix:
+        project: [writer-assistant]
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v9
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: FlakeHub cache
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Check flake lock file health
+        uses: DeterminateSystems/flake-checker-action@main
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          flake-lock-path: ${{ matrix.project }}/flake.lock
 
-      - name: Use Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v4
-
-      - name: Run nix flake check for writer-assistant
-        run: cd writer-assistant && nix flake check
+      - name: nix flake check (${{ matrix.project }})
+        run: cd ${{ matrix.project }} && nix flake check
