@@ -31,7 +31,7 @@ jobs:
         run: cd writer-assistant && nix develop -c npx prettier --check .
 
       - name: Lint
-        run: cd writer-assistant && nix develop -c npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/"
+        run: cd writer-assistant && nix develop -c npx eslint .
 
       - name: Build
         run: cd writer-assistant && nix develop -c npm run build
