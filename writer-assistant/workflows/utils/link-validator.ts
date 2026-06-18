@@ -43,6 +43,17 @@ export function validateSuggestion(
   const resolvedTarget = path.resolve(sourceDir, suggestion.targetRelativePath);
   const normalizedDocsDir = path.resolve(docsDir);
 
+  // Lexical bounds check first — catches traversal before file existence check
+  const docsDirWithSep = normalizedDocsDir.endsWith(path.sep)
+    ? normalizedDocsDir
+    : normalizedDocsDir + path.sep;
+  if (!resolvedTarget.startsWith(docsDirWithSep) && resolvedTarget !== normalizedDocsDir) {
+    console.log(
+      `[VALIDATOR] [${suggestion.targetId}] FAILED: path_unresolvable (${suggestion.targetRelativePath})`
+    );
+    return { ok: false, reason: 'path_unresolvable' };
+  }
+
   // Resolve symlinks to prevent symlink-based traversal attacks
   let realTarget: string;
   try {

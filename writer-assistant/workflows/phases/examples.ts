@@ -120,7 +120,7 @@ export async function runExamplesPhase(
     : path.join(projectRoot, moduleName);
   const packageDir = path.join(moduleDir, 'src', 'main', 'scala', packageName);
   const exampleFileNames = getExampleFileNames(docType);
-  const exampleFilePaths = exampleFileNames.map(f => path.join(packageDir, f));
+  const exampleFilePaths = exampleFileNames.map((f) => path.join(packageDir, f));
 
   const startMs = Date.now();
 
@@ -137,9 +137,7 @@ export async function runExamplesPhase(
   }
 
   // Phase A: Setup — create directory structure and wire sbt build files
-  const parentBuildSbt = parentModule
-    ? path.join(projectRoot, parentModule, 'build.sbt')
-    : null;
+  const parentBuildSbt = parentModule ? path.join(projectRoot, parentModule, 'build.sbt') : null;
   const parentExists = parentBuildSbt ? fs.existsSync(parentBuildSbt) : false;
 
   const setupPrompt = parentModule
@@ -168,11 +166,12 @@ Steps:
    libraryDependencies += "dev.zio" %% "zio" % "2.x.x"
    \`\`\`
 
-3. ${parentExists
-  ? `The parent aggregator already exists at ${parentBuildSbt}.
+3. ${
+        parentExists
+          ? `The parent aggregator already exists at ${parentBuildSbt}.
    Add the following line to ${parentBuildSbt}:
        lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))`
-  : `The parent aggregator does NOT exist yet. Create it:
+          : `The parent aggregator does NOT exist yet. Create it:
    a. mkdir -p "${path.join(projectRoot, parentModule)}"
    b. Create ${parentBuildSbt} with:
           lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))
@@ -182,7 +181,8 @@ Steps:
       - Find the root project definition (the \`lazy val root = project.in(file("."))\` block)
         and add \`${toCamelCase(parentModule)}\` to its \`.aggregate(...)\` call.
         Example: if root has \`.aggregate(root213)\`, change it to \`.aggregate(root213, ${toCamelCase(parentModule)})\`.
-        If the root project has no \`.aggregate(...)\` call yet, add one.`}
+        If the root project has no \`.aggregate(...)\` call yet, add one.`
+      }
 
 Report: "✓ Setup complete" or describe issues.`
     : `Set up a new Scala example sub-module for documenting: ${topic}
@@ -254,7 +254,7 @@ Write all ${exampleFileNames.length} files now.`;
 
   await session.prompt(generatePrompt);
 
-  const createdFiles = exampleFilePaths.filter(f => fs.existsSync(f));
+  const createdFiles = exampleFilePaths.filter((f) => fs.existsSync(f));
   console.log(`[examples] Created ${createdFiles.length}/${exampleFilePaths.length} example files`);
 
   // Phase C: Compile — one agent-assisted retry on failure
@@ -298,7 +298,7 @@ Run from: ${runCwd}
 Run command pattern: ${runCmdNote}
 
 Example files:
-${createdFiles.map(f => `  - ${path.basename(f)}`).join('\n')}
+${createdFiles.map((f) => `  - ${path.basename(f)}`).join('\n')}
 
 For each file:
 1. Read the file to find the entry point (\`@main def <name>\` for Scala 3, \`object <Name> extends App\` for Scala 2)
@@ -358,7 +358,7 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
 
 Use SourceFile.print() calls to embed example source code inline.
 Example files:
-${createdFiles.map(f => `  - ${f}`).join('\n')}
+${createdFiles.map((f) => `  - ${f}`).join('\n')}
 
 Pattern (inside a \`\`\`scala mdoc:passthrough block):
   println(SourceFile.print("${moduleName}/src/main/scala/${packageName}/<FileName>.scala"))
@@ -368,10 +368,12 @@ Include a brief intro sentence before each embedded example.`
       : `Add a "Running the Examples" section to ${outputDocPath}.
 
 List each example with its run command:
-${createdFiles.map(f => {
-  const className = path.basename(f, '.scala');
-  return `  - ${path.basename(f)}\n    Run: sbt "${moduleName}/runMain ${packageName}.${className}"`;
-}).join('\n')}
+${createdFiles
+  .map((f) => {
+    const className = path.basename(f, '.scala');
+    return `  - ${path.basename(f)}\n    Run: sbt "${moduleName}/runMain ${packageName}.${className}"`;
+  })
+  .join('\n')}
 
 Format as a numbered list. Add the section at the end of the document.`;
 

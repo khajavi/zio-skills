@@ -3,6 +3,7 @@
 ## Context
 
 After the A/B test, we know:
+
 - **Separated researcher agent**: Better context management but 37% more tokens — worth it for large, complex types
 - **Single session (baseline)**: Fewer tokens, sufficient for small types where context window pressure is not a concern
 
@@ -47,13 +48,13 @@ Add back the **session-based research function** alongside the existing harness-
 export async function runResearchPhase(
   init: FlueContext['init'],
   config: ResearchConfig
-): Promise<string>
+): Promise<string>;
 
 // New (single-session path): uses the writer's own session
 export async function runResearchPhaseInSession(
   session: FlueSession,
   config: ResearchConfig
-): Promise<string>
+): Promise<string>;
 ```
 
 `runResearchPhaseInSession` uses the same `buildResearchPrompt(config)` helper — identical prompt content, just delivered via the shared session instead of a child harness.
@@ -72,13 +73,17 @@ const LARGE_SOURCE_THRESHOLD_BYTES = 15_000;
 const absoluteSourcePath = dataTypeInfo?.filePath
   ? path.resolve(projectRoot, dataTypeInfo.filePath)
   : null;
-const sourceFileSizeBytes = absoluteSourcePath && fs.existsSync(absoluteSourcePath)
-  ? fs.statSync(absoluteSourcePath).size
-  : null;
-const useSeparateResearcher = !sourceFileSizeBytes || sourceFileSizeBytes > LARGE_SOURCE_THRESHOLD_BYTES;
+const sourceFileSizeBytes =
+  absoluteSourcePath && fs.existsSync(absoluteSourcePath)
+    ? fs.statSync(absoluteSourcePath).size
+    : null;
+const useSeparateResearcher =
+  !sourceFileSizeBytes || sourceFileSizeBytes > LARGE_SOURCE_THRESHOLD_BYTES;
 
 // Log the routing decision
-console.log(`  Architecture: ${useSeparateResearcher ? 'separate researcher agent' : 'single session'}`);
+console.log(
+  `  Architecture: ${useSeparateResearcher ? 'separate researcher agent' : 'single session'}`
+);
 if (sourceFileSizeBytes) {
   const kb = (sourceFileSizeBytes / 1024).toFixed(1);
   console.log(`  Source file: ${kb}KB (threshold: ${LARGE_SOURCE_THRESHOLD_BYTES / 1000}KB)`);
@@ -112,10 +117,10 @@ Phases 3 and 4 are unchanged — they use `session.prompt(...)` and work identic
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `agents/docs-writer.ts` | Restore `docsResearchSkill` import and add back to `skills: []` |
-| `workflows/phases/research.ts` | Add `runResearchPhaseInSession(session, config)`; extract shared prompt builder |
+| File                               | Change                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `agents/docs-writer.ts`            | Restore `docsResearchSkill` import and add back to `skills: []`                      |
+| `workflows/phases/research.ts`     | Add `runResearchPhaseInSession(session, config)`; extract shared prompt builder      |
 | `workflows/write-data-type-ref.ts` | Add threshold constant, size measurement, routing branch, conditional Phase 2 prompt |
 
 `agents/docs-researcher.ts` — **no change** (stays research-only)  
@@ -143,6 +148,7 @@ npx flue run write-data-type-ref --target node --payload '{
 ```
 
 Expected in log:
+
 ```
 Architecture: single session
 Source file: X.XKB (threshold: 15KB)
@@ -162,6 +168,7 @@ npx flue run write-data-type-ref --target node --payload '{
 ```
 
 Expected in log:
+
 ```
 Architecture: separate researcher agent
 Source file: XX.XKB (threshold: 15KB)

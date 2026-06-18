@@ -16,7 +16,11 @@ import { verifyBuild } from './phases/verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
-function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
+function findRecentlyModifiedMarkdownFiles(
+  projectRoot: string,
+  docsDir: string,
+  sinceTime: number
+): string[] {
   if (!fs.existsSync(docsDir)) {
     return [];
   }
@@ -50,8 +54,6 @@ function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string,
   return result;
 }
 
-
-
 export async function run({ init, payload }: FlueContext) {
   const {
     projectRoot,
@@ -83,7 +85,7 @@ export async function run({ init, payload }: FlueContext) {
   const outputFileName = path.basename(outputPath, '.md');
   const outputTypeNameCandidate = outputFileName
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join('');
 
   // Use dataTypePath type name if provided, otherwise infer from output path
@@ -179,7 +181,7 @@ Write the complete markdown file and save it to the specified output path.`;
       });
       console.log(
         `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
-        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
+          `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
       );
       phasesCompleted.push('examples');
     }
@@ -188,13 +190,14 @@ Write the complete markdown file and save it to the specified output path.`;
     const docsDir = path.join(projectRoot, 'docs');
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
     console.log(`\n[Phase 2→3] Found ${changedFiles.length} changed/new markdown files:`);
-    changedFiles.forEach(file => console.log(`  - ${file}`));
+    changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    const changedFilesStr = changedFiles.length > 0
-      ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map(f => `- ${f}`).join('\n')}`
-      : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
+    const changedFilesStr =
+      changedFiles.length > 0
+        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
+        : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
 
     const verifyPrompt = `**Phase 3: Verify Documentation**
 
@@ -277,10 +280,12 @@ Report final status and any updates made.`;
       session, // reuse writer session for fixes
       sourceFiles: sourceDirs,
     });
-    console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
+    console.log(
+      `[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
+    );
     if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
       console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
-      reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+      reviewResult.unresolvedIssues.forEach((issue) => console.log(`    - ${issue}`));
     }
     phasesCompleted.push('review');
 
@@ -292,20 +297,29 @@ Report final status and any updates made.`;
       typeName,
       session, // reuse writer session for fixes
     });
-    console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+    console.log(
+      `[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+    );
     if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
       console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
-      styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+      styleResult.unresolvedViolations.forEach((violation) => console.log(`    - ${violation}`));
     }
     phasesCompleted.push('style');
 
     // Phase 7: Verify Build
     console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
-    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    let buildVerifyResult = {
+      success: false,
+      buildSystem: 'unknown',
+      durationMs: 0,
+      skipped: false,
+    };
     try {
       const buildResult = await verifyBuild(docsDir);
       buildVerifyResult = { ...buildResult, skipped: false };
-      console.log(`[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+      console.log(
+        `[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`
+      );
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('No supported documentation build system detected')) {
@@ -364,7 +378,9 @@ Report final status and any updates made.`;
       },
     };
   } catch (error) {
-    console.error(`[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`
+    );
     return {
       typeName,
       outputPath,

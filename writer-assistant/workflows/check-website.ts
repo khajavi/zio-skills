@@ -63,7 +63,11 @@ function parseWebsiteBuildErrors(output: string): string[] {
 }
 
 export async function run({ payload }: FlueContext) {
-  const { projectRoot, docsDir: inputDocsDir, runMdoc = false } = payload as {
+  const {
+    projectRoot,
+    docsDir: inputDocsDir,
+    runMdoc = false,
+  } = payload as {
     projectRoot: string;
     docsDir?: string;
     /** Run `sbt docs/mdoc` before checking the website. Default: false. */
@@ -111,7 +115,7 @@ export async function run({ payload }: FlueContext) {
     console.log(`[check-website] ${success ? '✓ PASSED' : '✗ FAILED'} in ${elapsed}s`);
     if (errors.length > 0) {
       console.log(`\n  Build errors (${errors.length}):`);
-      errors.forEach(e => console.log(`    ${e}`));
+      errors.forEach((e) => console.log(`    ${e}`));
     } else if (!success) {
       console.log(`  Build exited with non-zero code — see output above for details`);
     }

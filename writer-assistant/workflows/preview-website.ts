@@ -17,7 +17,11 @@ export interface PreviewWebsiteResult {
 }
 
 export async function run({ payload }: FlueContext) {
-  const { projectRoot, docsDir: inputDocsDir, runMdoc = false } = payload as {
+  const {
+    projectRoot,
+    docsDir: inputDocsDir,
+    runMdoc = false,
+  } = payload as {
     projectRoot: string;
     docsDir?: string;
     /** Whether to run `sbt docs/mdoc` before starting the preview server. Default: false. */

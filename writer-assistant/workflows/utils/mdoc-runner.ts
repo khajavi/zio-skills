@@ -48,10 +48,11 @@ export function expandPath(absPath: string, projectRoot: string): string[] {
  * Resolve and normalize path entries (string or string[]) into absolute paths,
  * then expand directories to collect all .md/.mdx files.
  */
-export function resolvePaths(projectRoot: string, rawPaths?: string | string[]): { resolvedPaths: string[]; missing: string[] } {
-  const pathEntries: string[] = rawPaths
-    ? (Array.isArray(rawPaths) ? rawPaths : [rawPaths])
-    : [];
+export function resolvePaths(
+  projectRoot: string,
+  rawPaths?: string | string[]
+): { resolvedPaths: string[]; missing: string[] } {
+  const pathEntries: string[] = rawPaths ? (Array.isArray(rawPaths) ? rawPaths : [rawPaths]) : [];
 
   const resolvedPaths: string[] = [];
   const missing: string[] = [];
@@ -73,9 +74,7 @@ export function buildMdocCommand(resolvedPaths: string[]): string {
   if (resolvedPaths.length === 0) {
     return 'sbt docs/mdoc';
   }
-  const pairs = resolvedPaths
-    .map(p => `--in ${p} --out ${p.replace(/^/, 'website/')}`)
-    .join(' ');
+  const pairs = resolvedPaths.map((p) => `--in ${p} --out ${p.replace(/^/, 'website/')}`).join(' ');
   return `sbt "docs/mdoc ${pairs}"`;
 }
 

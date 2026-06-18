@@ -77,12 +77,14 @@ npx flue run crossref --target node --payload '{...}'
 For long-running workflows (autopilot, verify-and-fix), run in background:
 
 **nohup (simple):**
+
 ```bash
 nohup npx flue run crossref --target node \
   --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}' > workflow.log 2>&1 &
 ```
 
 **screen (persistent):**
+
 ```bash
 screen -S my-workflow
 npm run build

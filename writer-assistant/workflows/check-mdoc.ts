@@ -30,7 +30,9 @@ export async function run({ payload }: FlueContext) {
   const { resolvedPaths, missing } = resolvePaths(projectRoot, rawPaths);
 
   if (missing.length > 0) {
-    throw new Error(`Paths not found (relative to projectRoot):\n${missing.map(p => `  - ${p}`).join('\n')}`);
+    throw new Error(
+      `Paths not found (relative to projectRoot):\n${missing.map((p) => `  - ${p}`).join('\n')}`
+    );
   }
 
   const command = buildMdocCommand(resolvedPaths);
@@ -39,7 +41,7 @@ export async function run({ payload }: FlueContext) {
   console.log(`  Project root: ${projectRoot}`);
   if (resolvedPaths.length > 0) {
     console.log(`  Files to compile (${resolvedPaths.length}):`);
-    resolvedPaths.forEach(p => console.log(`    - ${p}`));
+    resolvedPaths.forEach((p) => console.log(`    - ${p}`));
   } else {
     console.log(`  Scope: entire docs project`);
   }
@@ -55,7 +57,7 @@ export async function run({ payload }: FlueContext) {
   console.log(`\n[check-mdoc] ${success ? '✓ PASSED' : '✗ FAILED'} (${durationMs}ms)`);
   if (errors.length > 0) {
     console.log(`  Errors (${errors.length}):`);
-    errors.forEach(e => {
+    errors.forEach((e) => {
       const loc = e.file ? `${e.file}${e.line != null ? `:${e.line}` : ''}` : '(general)';
       console.log(`    [${loc}] ${e.message}`);
     });

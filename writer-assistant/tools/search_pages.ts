@@ -9,9 +9,7 @@ export function createSearchPages(state: CrossrefState) {
       'Search the documentation index for pages by title, keywords, or topic. Returns matching pages ranked by relevance.',
     parameters: v.object({
       query: v.string(),
-      limit: v.optional(
-        v.number()
-      ),
+      limit: v.optional(v.number()),
     }),
     execute: async (args: Record<string, any>) => {
       const query = (args.query as string).toLowerCase();

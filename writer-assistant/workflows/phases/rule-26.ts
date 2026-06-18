@@ -8,7 +8,11 @@
  */
 
 import * as fs from 'node:fs';
-import { findRule26Violations, fixRule26, formatViolation } from '../../lib/rule-26-implicit-trace.js';
+import {
+  findRule26Violations,
+  fixRule26,
+  formatViolation,
+} from '../../lib/rule-26-implicit-trace.js';
 
 export interface Rule26CheckResult {
   passed: boolean;
@@ -93,10 +97,7 @@ export function formatRule26Report(result: Rule26CheckResult): string {
     return '✓ Rule 26 passed (no implicit trace parameters)';
   }
 
-  const lines = [
-    `✗ Rule 26 violations (${result.violations.length})`,
-    '',
-  ];
+  const lines = [`✗ Rule 26 violations (${result.violations.length})`, ''];
 
   result.violations.forEach((v) => {
     lines.push(v.message);

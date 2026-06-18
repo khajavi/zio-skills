@@ -17,35 +17,38 @@ Custom tools for Flue agents to accomplish documentation research and writing ta
 The main entry point for comprehensive GitHub research. Searches commits, issues, and PRs, then analyzes findings for key insights.
 
 **Parameters:**
+
 ```typescript
 interface GitHubResearchContext {
-  repository: string;  // e.g., "zio/zio"
-  topic: string;       // e.g., "Cached"
-  limit?: number;      // Default: 30 (per search type)
+  repository: string; // e.g., "zio/zio"
+  topic: string; // e.g., "Cached"
+  limit?: number; // Default: 30 (per search type)
 }
 ```
 
 **Returns:**
+
 ```typescript
 interface ResearchFindings {
-  commits: GitHubSearchResult[];        // Matching commits
-  issues: GitHubSearchResult[];         // Matching issues
-  prs: GitHubSearchResult[];            // Matching pull requests
-  keyInsights: string[];                // Performance, errors, patterns
-  designRationale: string[];            // Design-related items (top 5)
-  architectureDecisions: string[];      // Architecture-related items (top 5)
+  commits: GitHubSearchResult[]; // Matching commits
+  issues: GitHubSearchResult[]; // Matching issues
+  prs: GitHubSearchResult[]; // Matching pull requests
+  keyInsights: string[]; // Performance, errors, patterns
+  designRationale: string[]; // Design-related items (top 5)
+  architectureDecisions: string[]; // Architecture-related items (top 5)
 }
 ```
 
 **Example:**
+
 ```typescript
 const findings = await conductGitHubResearch({
   repository: 'zio/zio',
   topic: 'Cached',
-  limit: 30
+  limit: 30,
 });
 
-console.log(findings.designRationale);     // Top 5 design discussions
+console.log(findings.designRationale); // Top 5 design discussions
 console.log(findings.architectureDecisions); // Top 5 architecture items
 ```
 
@@ -61,7 +64,7 @@ Uses: `gh search commits "<topic>" --repo owner/repo --json sha,url,author,commi
 const commits = searchCommits({
   repository: 'zio/zio',
   topic: 'Cached',
-  limit: 20
+  limit: 20,
 });
 // Returns: id (short sha), title (first line of message), url, date, author (login), summary
 ```
@@ -77,7 +80,7 @@ Uses: `gh search issues "<topic>" --repo owner/repo --json number,title,url,crea
 ```typescript
 const issues = searchIssues({
   repository: 'zio/zio',
-  topic: 'Cached'
+  topic: 'Cached',
 });
 ```
 
@@ -92,7 +95,7 @@ Uses: `gh search prs "<topic>" --repo owner/repo --json number,title,url,created
 ```typescript
 const prs = searchPullRequests({
   repository: 'zio/zio',
-  topic: 'Cached'
+  topic: 'Cached',
 });
 ```
 
@@ -107,6 +110,7 @@ Used for high-value issues to understand detailed design discussions.
 Uses: `gh issue view <number> --repo owner/repo --comments --json <fields>`
 
 **Returns:**
+
 ```typescript
 interface IssueDetails {
   number: number;
@@ -126,6 +130,7 @@ interface IssueDetails {
 ```
 
 **Example:**
+
 ```typescript
 const issue = findings.issues[0];
 if (issue) {
@@ -145,6 +150,7 @@ Used for understanding implementation context and decisions.
 Uses: `gh pr view <number> --repo owner/repo --comments --json <fields>`
 
 **Returns:**
+
 ```typescript
 interface PrDetails {
   number: number;
@@ -177,6 +183,7 @@ Used for understanding specific implementation changes.
 Uses: `gh api repos/<owner>/<repo>/commits/<sha>`
 
 **Returns:**
+
 ```typescript
 interface CommitDetails {
   sha: string;
@@ -209,12 +216,16 @@ console.log(report);
 When performing Step 2 (GitHub History Research):
 
 ```typescript
-import { conductGitHubResearch, readIssueDetails, readPrDetails } from '../tools/github-research.js';
+import {
+  conductGitHubResearch,
+  readIssueDetails,
+  readPrDetails,
+} from '../tools/github-research.js';
 
 const findings = await conductGitHubResearch({
   repository: 'zio/zio',
   topic: 'Cached',
-  limit: 30
+  limit: 30,
 });
 
 // Findings are automatically categorized
@@ -228,7 +239,7 @@ if (issue) {
   const fullDiscussion = readIssueDetails('zio/zio', parseInt(issue.id));
   if (fullDiscussion) {
     // Use fullDiscussion in research notes
-    fullDiscussion.comments.forEach(c => {
+    fullDiscussion.comments.forEach((c) => {
       // Process comment
     });
   }
@@ -256,6 +267,7 @@ The agent's `local()` sandbox in `agents/docs-writer.ts` has shell access to run
 ## Error Handling
 
 All functions gracefully handle errors:
+
 - If `gh` is not installed or not authenticated, search functions return empty arrays
 - Detail reader functions (`readIssueDetails`, `readPrDetails`, `readCommitDetails`) return `null` if the item is not found
 - The workflow continues with available findings
@@ -266,14 +278,14 @@ All functions gracefully handle errors:
 
 This tool uses these official `gh` commands:
 
-| Command | Purpose | Notes |
-|---------|---------|-------|
-| `gh search commits` | Find commits by topic | Returns short SHA, message, author login, dates |
-| `gh search issues` | Find issues by topic | Returns number, title, author login, body, state, labels |
-| `gh search prs` | Find PRs by topic | Returns number, title, author login, body, state, isDraft |
-| `gh issue view` | Get full issue details | Requires `--comments` to populate comments field |
-| `gh pr view` | Get full PR details | Richest field set; includes diffs, reviews, merged status |
-| `gh api` | Direct REST API calls | Used for commit details with full file stats |
+| Command             | Purpose                | Notes                                                     |
+| ------------------- | ---------------------- | --------------------------------------------------------- |
+| `gh search commits` | Find commits by topic  | Returns short SHA, message, author login, dates           |
+| `gh search issues`  | Find issues by topic   | Returns number, title, author login, body, state, labels  |
+| `gh search prs`     | Find PRs by topic      | Returns number, title, author login, body, state, isDraft |
+| `gh issue view`     | Get full issue details | Requires `--comments` to populate comments field          |
+| `gh pr view`        | Get full PR details    | Richest field set; includes diffs, reviews, merged status |
+| `gh api`            | Direct REST API calls  | Used for commit details with full file stats              |
 
 All commands use `--json` flags to return structured data instead of human-readable text, making results easy for agents to parse.
 
