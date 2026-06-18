@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   nix-checks:
-    name: Nix checks (writer-assistant)
+    name: Check Writer Assistant Module
     runs-on: ubuntu-latest
 
     steps:
