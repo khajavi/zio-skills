@@ -290,7 +290,7 @@ def take(implicit trace: Trace)
 
       const message = formatViolation('fiber.md', violation);
       expect(message).toBe(
-        'fiber.md:42: [Rule 26] remove "implicit trace: Trace" from method signatures (ZIO convention)',
+        'fiber.md:42: [Rule 26] remove "implicit trace: Trace" from method signatures (ZIO convention)'
       );
     });
   });

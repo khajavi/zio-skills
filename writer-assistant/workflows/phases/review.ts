@@ -25,7 +25,10 @@ const MAX_ROUNDS = 5;
  * Uses a fresh critic agent each round, reuses the writer session for fixes
  * Iterates until HIGH + MEDIUM findings reach zero or MAX_ROUNDS is reached
  */
-export async function runReviewPhase(init: FlueContext['init'], config: ReviewConfig): Promise<ReviewResult> {
+export async function runReviewPhase(
+  init: FlueContext['init'],
+  config: ReviewConfig
+): Promise<ReviewResult> {
   const { outputPath, projectRoot, typeName, session, sourceFiles = [], relatedDocs = [] } = config;
 
   const result: ReviewResult = {
@@ -54,8 +57,10 @@ export async function runReviewPhase(init: FlueContext['init'], config: ReviewCo
     const criticSession = await harness.session();
 
     // Build critic prompt
-    const sourceFilesList = sourceFiles.length > 0 ? sourceFiles.map(f => `  - ${f}`).join('\n') : '  (none provided)';
-    const relatedDocsList = relatedDocs.length > 0 ? relatedDocs.map(f => `  - ${f}`).join('\n') : '  (none provided)';
+    const sourceFilesList =
+      sourceFiles.length > 0 ? sourceFiles.map((f) => `  - ${f}`).join('\n') : '  (none provided)';
+    const relatedDocsList =
+      relatedDocs.length > 0 ? relatedDocs.map((f) => `  - ${f}`).join('\n') : '  (none provided)';
 
     const criticPrompt = `Review the documentation file for ${typeName}.
 
@@ -91,7 +96,15 @@ For each finding, use this format:
 Use SEVERITY: HIGH, MEDIUM, LOW
 Use dimension: accuracy, completeness, consistency, clarity, structure
 
-${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do not re-flag):**\n${Array.from(unresolvable).map(u => `- ${u}`).join('\n')}\n` : ''}
+${
+  unresolvable.size > 0
+    ? `\n**Exclude these previously unresolvable issues (do not re-flag):**\n${Array.from(
+        unresolvable
+      )
+        .map((u) => `- ${u}`)
+        .join('\n')}\n`
+    : ''
+}
 
 ### Verdict
 
@@ -104,7 +117,7 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
     if (!criticText.includes('### Findings') || !criticText.includes('### Verdict')) {
       console.log('  ⚠ Invalid critic response format, retrying...');
       const retryResult = await criticSession.prompt(
-        'Your response was incomplete. Please re-run the analysis and ensure your output includes both "### Findings" and "### Verdict" sections.',
+        'Your response was incomplete. Please re-run the analysis and ensure your output includes both "### Findings" and "### Verdict" sections.'
       );
       criticText = retryResult.text || String(retryResult);
 
@@ -126,7 +139,9 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
     const verdict = verdictSection.toLowerCase().includes('**approved**') ? 'APPROVED' : 'ITERATE';
 
     const actionableCount = findings.HIGH.length + findings.MEDIUM.length;
-    console.log(`  Found: ${findings.HIGH.length} HIGH, ${findings.MEDIUM.length} MEDIUM, ${findings.LOW.length} LOW (actionable: ${actionableCount})`);
+    console.log(
+      `  Found: ${findings.HIGH.length} HIGH, ${findings.MEDIUM.length} MEDIUM, ${findings.LOW.length} LOW (actionable: ${actionableCount})`
+    );
     if (unresolvable.size > 0) {
       console.log(`  Unresolvable issues tracked: ${unresolvable.size}`);
     }
@@ -157,7 +172,7 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
 
     if (round === MAX_ROUNDS) {
       console.log(`  ⚠ Max rounds reached (${MAX_ROUNDS}). Returning unresolved issues.`);
-      const unresolved = actionable.map(f => f.title);
+      const unresolved = actionable.map((f) => f.title);
       return {
         approved: false,
         rounds: round,
@@ -170,16 +185,25 @@ ${unresolvable.size > 0 ? `\n**Exclude these previously unresolvable issues (do 
     console.log(`  Spawning fixer for ${actionable.length} findings...`);
 
     // Build fixer prompt with verification steps and previous feedback
-    const previousFeedbackSection = unresolvable.size > 0
-      ? `\n**Issues that persisted in previous rounds** (be extra careful with these):\n${Array.from(unresolvable).map(u => `- ${u}`).join('\n')}\n`
-      : '';
+    const previousFeedbackSection =
+      unresolvable.size > 0
+        ? `\n**Issues that persisted in previous rounds** (be extra careful with these):\n${Array.from(
+            unresolvable
+          )
+            .map((u) => `- ${u}`)
+            .join('\n')}\n`
+        : '';
 
     const fixerPrompt = `Fix the following documentation issues in ${outputPath}:
 
-${actionable.map((f, i) => `${i + 1}. **${f.severity}/${f.dimension}** — ${f.title}
+${actionable
+  .map(
+    (f, i) => `${i + 1}. **${f.severity}/${f.dimension}** — ${f.title}
    Location: ${f.location}
    Problem: ${f.problem}
-   Suggestion: ${f.suggestion}`).join('\n\n')}
+   Suggestion: ${f.suggestion}`
+  )
+  .join('\n\n')}
 ${previousFeedbackSection}
 **Critical verification steps for each fix:**
 
@@ -202,7 +226,8 @@ Focus on quality over quantity. Better to skip a fix than introduce new problems
 
     // Parse fixer report: track which specific issues were fixed vs couldn't be fixed
     const fixedMatches = fixerText.match(/✓\s*Fixed:\s*(.+?)(?=\n|✓|Could not|$)/gi) || [];
-    const couldNotFixMatches = fixerText.match(/Could not fix:\s*(.+?)(?=\n|✓|Could not|$)/gi) || [];
+    const couldNotFixMatches =
+      fixerText.match(/Could not fix:\s*(.+?)(?=\n|✓|Could not|$)/gi) || [];
 
     console.log(`    Fixed: ${fixedMatches.length}, Could not fix: ${couldNotFixMatches.length}`);
 
@@ -249,7 +274,8 @@ function parseFindings(findingsText: string): ParsedFindings {
   const result: ParsedFindings = { HIGH: [], MEDIUM: [], LOW: [] };
 
   // Match pattern: **SEVERITY/dimension** — title
-  const findingPattern = /\*\*(HIGH|MEDIUM|LOW)\/(\w+)\*\*\s*—\s*(.+?)\n\s*-\s*Location:\s*(.+?)\n\s*-\s*Problem:\s*(.+?)\n\s*-\s*(?:Impact:.*?\n\s*)?-\s*Suggestion:\s*(.+?)(?=\n\*\*|$)/gs;
+  const findingPattern =
+    /\*\*(HIGH|MEDIUM|LOW)\/(\w+)\*\*\s*—\s*(.+?)\n\s*-\s*Location:\s*(.+?)\n\s*-\s*Problem:\s*(.+?)\n\s*-\s*(?:Impact:.*?\n\s*)?-\s*Suggestion:\s*(.+?)(?=\n\*\*|$)/gs;
 
   let match: RegExpExecArray | null;
   while ((match = findingPattern.exec(findingsText)) !== null) {

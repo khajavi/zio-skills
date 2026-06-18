@@ -7,18 +7,21 @@
 **Common causes:**
 
 ### Missing Import
+
 ```scala mdoc:silent
 // ❌ Missing: where is Product?
 val p = Product("Widget", 99)
 ```
 
 **Fix:** Add the import:
+
 ```scala mdoc:silent
 case class Product(name: String, price: Double)
 val p = Product("Widget", 99)
 ```
 
 ### Type Mismatch
+
 ```scala mdoc:silent
 case class User(name: String, age: Int)
 ```
@@ -29,11 +32,13 @@ val user = User("Alice", "thirty")
 ```
 
 **Fix:** Match the types:
+
 ```scala mdoc:compile-only
 val user = User("Alice", 30)
 ```
 
 ### Undefined Method
+
 ```scala mdoc:silent
 case class Point(x: Int, y: Int)
 ```
@@ -44,12 +49,14 @@ val moved = Point(1, 2).moveTo(3, 4)
 ```
 
 **Fix:** Define the method or use available operations:
+
 ```scala mdoc:compile-only
 val p = Point(1, 2)
 val moved = Point(3, 4)  // Create new point
 ```
 
 ### Implicit Not Found
+
 ```scala mdoc:compile-only
 // ❌ Schema not derived
 case class Product(name: String, price: Double)
@@ -57,6 +64,7 @@ val schema = Schema[Product]
 ```
 
 **Fix:** Add the implicit derivation:
+
 ```scala mdoc:compile-only
 import zio.blocks.schema.Schema
 
@@ -71,6 +79,7 @@ implicit val schema: Schema[Product] = Schema.derived
 **Symptom:** Compilation error like "type Person is defined twice" when redefining a name in a later block.
 
 ### Reason
+
 Once a `mdoc:silent` block runs, the name stays in scope for all subsequent blocks. You can't redefine it in another `silent` block:
 
 ```scala mdoc:silent
@@ -83,6 +92,7 @@ case class Person(name: String, email: String)
 ```
 
 ### Fix 1: Use `mdoc:silent:nest`
+
 ```scala mdoc:silent
 case class Person(name: String, age: Int)
 val alice = Person("Alice", 30)
@@ -97,6 +107,7 @@ val bob = Person("Bob", "bob@example.com")
 The `:nest` modifier wraps code in an anonymous object, creating a new namespace.
 
 ### Fix 2: Use `mdoc:silent:reset`
+
 Use this when you want a **completely fresh scope** (often better for new sections of a guide):
 
 ```scala mdoc:silent
@@ -109,6 +120,7 @@ case class Person(name: String, email: String)
 ```
 
 ### Fix 3: Use different names
+
 If you just need a variation, name them differently:
 
 ```scala mdoc:silent
@@ -123,6 +135,7 @@ case class PersonV2(name: String, email: String)
 **Symptom:** You use `mdoc` but nothing appears in the rendered output.
 
 ### Reason 1: You used `mdoc:compile-only` instead of `mdoc`
+
 ```scala mdoc:silent
 def greet(name: String) = s"Hello, $name"
 ```
@@ -133,11 +146,13 @@ greet("World")
 ```
 
 **Fix:** Use `mdoc` to render output:
+
 ```scala mdoc
 greet("World")
 ```
 
 ### Reason 2: The variable isn't in scope
+
 ```scala mdoc:compile-only
 val x = 42
 ```
@@ -148,6 +163,7 @@ x + 1
 ```
 
 **Fix:** Use `mdoc:silent` for setup, then `mdoc` for output:
+
 ```scala mdoc:silent
 val x = 42
 ```
@@ -157,6 +173,7 @@ x + 1
 ```
 
 ### Reason 3: You're in an `mdoc:silent` block
+
 ```scala mdoc:silent
 // ❌ This is hidden — silenced output
 val result = 2 + 2
@@ -164,6 +181,7 @@ result
 ```
 
 **Fix:** Put the expression in a separate `mdoc` block:
+
 ```scala mdoc:silent
 val result = 2 + 2
 ```
@@ -179,9 +197,11 @@ result
 **Symptom:** A name you thought was cleared is still accessible after reset.
 
 ### Reason
+
 Scope is per-document-section. If the blocks are in **different Markdown sections** separated by headers or prose, they may not share scope. Reset applies within the current context.
 
 **Example (wrong assumption):**
+
 ```scala mdoc:silent
 val x = 1
 ```
@@ -206,6 +226,7 @@ val y = x + 1
 **Symptom:** Your blocks compile individually but fail when run together.
 
 ### Reason
+
 Scope is **cumulative and sequential**. If Block B depends on something defined in Block A, Block A **must come first**:
 
 ```scala mdoc:silent
@@ -228,6 +249,7 @@ val name = "Alice"
 ```
 
 **Fix:** Arrange blocks in dependency order:
+
 1. Imports
 2. Type definitions (case classes, traits)
 3. Helper functions
@@ -240,6 +262,7 @@ val name = "Alice"
 **Symptom:** You have `import zio.blocks.schema._` in multiple blocks and wonder if there's duplication.
 
 ### Answer
+
 **No conflict.** Imports are idempotent. Importing the same module multiple times is safe:
 
 ```scala mdoc:silent
@@ -261,6 +284,7 @@ val x = Schema[Int]
 **Symptom:** You want readers to see the import statement, but you don't want it in scope.
 
 ### Solution: Use `mdoc:compile-only`
+
 ```scala mdoc:compile-only
 import zio.blocks.schema._
 import zio.blocks.schema.json._
@@ -281,9 +305,11 @@ import zio.blocks.schema._
 **Symptom:** You manually wrote `// Right(42)` but mdoc shows `// val res0: Either[...] = Right(42)`.
 
 ### Why This Happens
+
 You used `mdoc:compile-only` (which doesn't evaluate) but manually added a result comment. mdoc doesn't evaluate `compile-only` blocks, so the comment is just text.
 
 ### Fix
+
 Use `mdoc` and let mdoc render the actual output:
 
 ```scala mdoc:silent
@@ -305,16 +331,20 @@ mdoc will show the real evaluated results, which are always more accurate than h
 **Symptom:** Your example is long and you're not sure how to structure it.
 
 ### Guideline
+
 Split into **multiple blocks** if:
+
 - You want to explain something **between the setup and the usage**
 - Different **sections** of the example should be independently visible
 - The output of one part is **educational by itself**
 
 Keep as **one block** if:
+
 - It's a **self-contained, standalone example** (use `compile-only`)
 - All parts are **equally important** and best understood together
 
 ### Example: Multi-block (Progressive Narrative)
+
 ```scala mdoc:silent
 case class Request(id: String, status: String)
 val req = Request("123", "pending")
@@ -331,6 +361,7 @@ updated
 ```
 
 ### Example: Single-block (Self-Contained)
+
 ```scala mdoc:compile-only
 case class Request(id: String, status: String)
 val req = Request("123", "pending")

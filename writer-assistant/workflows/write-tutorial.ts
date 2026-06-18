@@ -22,17 +22,23 @@ function parseBuildErrors(output: string): string[] {
     const t = line.trim();
     if (!t) continue;
     if (
-      t.includes('[info]') || t.includes('[success]') ||
-      t.includes('download') || t.includes('Downloading') ||
-      t.includes('yarn add') || t.includes('npm notice') ||
+      t.includes('[info]') ||
+      t.includes('[success]') ||
+      t.includes('download') ||
+      t.includes('Downloading') ||
+      t.includes('yarn add') ||
+      t.includes('npm notice') ||
       t.match(/^\d+%|Working/)
-    ) continue;
+    )
+      continue;
     if (
       t.toLowerCase().includes('error:') ||
       t.toLowerCase().includes('[error]') ||
       t.toLowerCase().includes('failed') ||
       t.toLowerCase().includes('error ts') ||
-      t.includes('ERROR -') || t.includes('broken link') || t.includes('✖')
+      t.includes('ERROR -') ||
+      t.includes('broken link') ||
+      t.includes('✖')
     ) {
       errors.push(line);
     }
@@ -40,7 +46,11 @@ function parseBuildErrors(output: string): string[] {
   return errors;
 }
 
-function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
+function findRecentlyModifiedMarkdownFiles(
+  projectRoot: string,
+  docsDir: string,
+  sinceTime: number
+): string[] {
   if (!fs.existsSync(docsDir)) {
     return [];
   }
@@ -146,7 +156,7 @@ export async function run({ init, payload }: FlueContext) {
 
     // Phase 2-6: Initialize writer agent only if at least one of these phases will run
     const writerPhases = ['write', 'verify', 'integrate', 'review', 'style'];
-    const needsWriterSession = writerPhases.some(p => !skipPhases.includes(p));
+    const needsWriterSession = writerPhases.some((p) => !skipPhases.includes(p));
     let session: Awaited<ReturnType<Awaited<ReturnType<typeof init>>['session']>> | null = null;
     if (needsWriterSession) {
       const harness = await init(docsWriterAgent, { name: 'docs-write-tutorial' });
@@ -229,7 +239,7 @@ Write the complete markdown file and save it to the specified output path.`;
         });
         console.log(
           `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
-          `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
+            `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
         );
         phasesCompleted.push('examples');
       }
@@ -238,7 +248,7 @@ Write the complete markdown file and save it to the specified output path.`;
     // Detect all changed/new markdown files since Phase 2 started
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
     console.log(`\n[Phase 2→3] Found ${changedFiles.length} changed/new markdown files:`);
-    changedFiles.forEach(file => console.log(`  - ${file}`));
+    changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
     if (skipPhases.includes('verify')) {
@@ -246,9 +256,10 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-      const changedFilesStr = changedFiles.length > 0
-        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map(f => `- ${f}`).join('\n')}`
-        : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
+      const changedFilesStr =
+        changedFiles.length > 0
+          ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
+          : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
 
       const verifyPrompt = `**Phase 3: Verify Tutorial**
 
@@ -353,10 +364,12 @@ Report final status and any updates made.`;
         session: session!, // reuse writer session for fixes
         sourceFiles: sourceDirs,
       });
-      console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
+      console.log(
+        `[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
+      );
       if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
         console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
-        reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+        reviewResult.unresolvedIssues.forEach((issue) => console.log(`    - ${issue}`));
       }
       phasesCompleted.push('review');
     }
@@ -379,18 +392,28 @@ Report final status and any updates made.`;
         typeName: topic,
         session: session!, // reuse writer session for fixes
       });
-      console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+      console.log(
+        `[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+      );
       if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
         console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
-        styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+        styleResult.unresolvedViolations.forEach((violation) => console.log(`    - ${violation}`));
       }
       phasesCompleted.push('style');
     }
 
     // Phase 7: Build Verification with auto-fix loop
     const MAX_BUILD_FIX_ROUNDS = 3;
-    console.log(`\n[Phase 7] Build Verification: Verifying documentation builds (max ${MAX_BUILD_FIX_ROUNDS} fix rounds)...`);
-    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false, rounds: 0 };
+    console.log(
+      `\n[Phase 7] Build Verification: Verifying documentation builds (max ${MAX_BUILD_FIX_ROUNDS} fix rounds)...`
+    );
+    let buildVerifyResult = {
+      success: false,
+      buildSystem: 'unknown',
+      durationMs: 0,
+      skipped: false,
+      rounds: 0,
+    };
     const buildStartMs = Date.now();
 
     try {
@@ -399,7 +422,13 @@ Report final status and any updates made.`;
 
       if (initialBuild.success && parseBuildErrors(initialBuild.output).length === 0) {
         console.log(`[Phase 7] ✓ Build passed on first attempt (${initialBuild.buildSystem})`);
-        buildVerifyResult = { success: true, buildSystem: initialBuild.buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
+        buildVerifyResult = {
+          success: true,
+          buildSystem: initialBuild.buildSystem,
+          durationMs: Date.now() - buildStartMs,
+          skipped: false,
+          rounds: 0,
+        };
       } else {
         let currentErrors = parseBuildErrors(initialBuild.output);
         console.log(`[Phase 7] Found ${currentErrors.length} error(s), starting fix loop`);
@@ -414,9 +443,13 @@ Report final status and any updates made.`;
         for (round = 1; round <= MAX_BUILD_FIX_ROUNDS; round++) {
           if (currentErrors.length === 0) break;
 
-          console.log(`[Phase 7] Fix attempt ${round}/${MAX_BUILD_FIX_ROUNDS} (${currentErrors.length} error(s))`);
-          const errorList = currentErrors.map(e => `  ${e}`).join('\n');
-          await session.prompt(`Fix the following documentation website build errors in ${projectRoot}.\n\nErrors:\n${errorList}\n\nFor each error: read the file, identify the root cause (broken link, missing file, wrong path), fix it. If a link target doesn't exist, either correct the path or remove the link. Report each fix applied.`);
+          console.log(
+            `[Phase 7] Fix attempt ${round}/${MAX_BUILD_FIX_ROUNDS} (${currentErrors.length} error(s))`
+          );
+          const errorList = currentErrors.map((e) => `  ${e}`).join('\n');
+          await session.prompt(
+            `Fix the following documentation website build errors in ${projectRoot}.\n\nErrors:\n${errorList}\n\nFor each error: read the file, identify the root cause (broken link, missing file, wrong path), fix it. If a link target doesn't exist, either correct the path or remove the link. Report each fix applied.`
+          );
 
           const reBuild = await runBuild(docsDir);
           currentErrors = parseBuildErrors(reBuild.output);
@@ -436,13 +469,21 @@ Report final status and any updates made.`;
           skipped: false,
           rounds: round,
         };
-        console.log(`[Phase 7] ${buildVerifyResult.success ? '✓' : '⚠'} Build verification complete (${buildVerifyResult.rounds} fix round(s))`);
+        console.log(
+          `[Phase 7] ${buildVerifyResult.success ? '✓' : '⚠'} Build verification complete (${buildVerifyResult.rounds} fix round(s))`
+        );
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('No supported documentation build system detected')) {
         console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: Date.now() - buildStartMs, skipped: true, rounds: 0 };
+        buildVerifyResult = {
+          success: true,
+          buildSystem: 'none',
+          durationMs: Date.now() - buildStartMs,
+          skipped: true,
+          rounds: 0,
+        };
       } else {
         console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
         buildVerifyResult.durationMs = Date.now() - buildStartMs;
@@ -452,7 +493,8 @@ Report final status and any updates made.`;
 
     // Build final result — base 7 phases + optional examples phase
     const expectedPhases = 7 + (examplesPayload ? 1 : 0);
-    const success = phasesCompleted.length === expectedPhases &&
+    const success =
+      phasesCompleted.length === expectedPhases &&
       buildVerifyResult.success &&
       reviewResult.approved &&
       styleResult.passed;
@@ -501,7 +543,9 @@ Report final status and any updates made.`;
       },
     };
   } catch (error) {
-    console.error(`[docs-write-tutorial] Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `[docs-write-tutorial] Error: ${error instanceof Error ? error.message : String(error)}`
+    );
     return {
       topic,
       outputPath,

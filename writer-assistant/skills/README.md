@@ -10,13 +10,13 @@ Skills in this directory are behavior specifications for autonomous Flue agents.
 
 ### Two Skill Ecosystems
 
-| Aspect | `plugins/documentation/skills/` | `writer-assistant/skills/` |
-|---|---|---|
-| **Audience** | Human operators (Claude Code CLI) | Flue agent runtime |
-| **Invocation** | `/skill-name` slash commands | `import ... with { type: 'skill' }` in agent code |
-| **Style** | Instructional, verbose, task-oriented | Procedural, focused, behavior specification |
-| **Scope** | 22 comprehensive documentation skills | 3 skills actively used by agents |
-| **Source of truth** | Canonical | Adapted subset |
+| Aspect              | `plugins/documentation/skills/`       | `writer-assistant/skills/`                        |
+| ------------------- | ------------------------------------- | ------------------------------------------------- |
+| **Audience**        | Human operators (Claude Code CLI)     | Flue agent runtime                                |
+| **Invocation**      | `/skill-name` slash commands          | `import ... with { type: 'skill' }` in agent code |
+| **Style**           | Instructional, verbose, task-oriented | Procedural, focused, behavior specification       |
+| **Scope**           | 22 comprehensive documentation skills | 3 skills actively used by agents                  |
+| **Source of truth** | Canonical                             | Adapted subset                                    |
 
 ### Adaptation Contract
 
@@ -29,6 +29,7 @@ Agent skills are **adapted versions** of the canonical plugin skills. When adapt
 - ❌ **Remove:** Detailed instructions for manual human actions
 
 Example adaptation (docs-research):
+
 - **Original** (plugin): "Create one task per research step..."
 - **Adapted** (agent): "Execute research steps in order..." (assumes programmatic execution)
 
@@ -83,17 +84,21 @@ Example: A feature is added to `plugins/documentation/skills/docs-research/SKILL
 ### Example: Adding "error handling patterns" section
 
 In `plugins/documentation/skills/docs-research/SKILL.md`:
+
 ```markdown
 ### Step 1e: Find Error Handling Patterns
+
 - Grep for Exception and Error handling in source
 - Note common exception types and recovery patterns
 ```
 
 In `writer-assistant/skills/docs-research/SKILL.md`:
+
 ```markdown
 ### Additional Research: Error Handling
 
 Include in Step 1d findings:
+
 - Common exception types and error conditions
 - Recovery patterns and error handling idioms
 ```
@@ -112,7 +117,7 @@ import docsDataTypeRefSkill from '../skills/docs-data-type-ref/SKILL.md' with { 
 export default createAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local(),
-  skills: [docsResearchSkill, docsDataTypeRefSkill],  // ← skills loaded here
+  skills: [docsResearchSkill, docsDataTypeRefSkill], // ← skills loaded here
   instructions: `You have access to: docs-research, docs-data-type-ref`,
 }));
 ```
@@ -124,6 +129,7 @@ When the agent runs, Flue includes the skill content in the system prompt. The a
 ## No Symlinks or Build Pipelines
 
 Explicit, maintained adaptation is intentional. We do not:
+
 - Symlink agent skills to plugin skills (breaks some environments, forces agents to consume human-oriented content verbatim)
 - Auto-copy files (loses intentional adaptation and hides divergence)
 

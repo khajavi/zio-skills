@@ -6,7 +6,8 @@ import * as path from 'node:path';
 export function createRunMdoc(projectRoot: string) {
   return defineTool({
     name: 'run_mdoc',
-    description: 'Compile markdown/mdx files with mdoc and get structured error feedback. Returns: success status, error count, and parsed error messages. Use this instead of running sbt directly to get reliable error parsing for iterative fixes.',
+    description:
+      'Compile markdown/mdx files with mdoc and get structured error feedback. Returns: success status, error count, and parsed error messages. Use this instead of running sbt directly to get reliable error parsing for iterative fixes.',
     parameters: v.object({
       paths: v.optional(v.array(v.string())),
     }),
@@ -20,10 +21,12 @@ export function createRunMdoc(projectRoot: string) {
         // Build command with --in and --out pairs for each path
         // docs/reference/core/runtime.md → website/docs/reference/core/runtime.md
         // docs/reference/core/ → website/docs/reference/core/
-        const pairs = paths.map(inPath => {
-          const outPath = inPath.replace(/^/, 'website/');
-          return `--in ${inPath} --out ${outPath}`;
-        }).join(' ');
+        const pairs = paths
+          .map((inPath) => {
+            const outPath = inPath.replace(/^/, 'website/');
+            return `--in ${inPath} --out ${outPath}`;
+          })
+          .join(' ');
         command = `sbt "docs/mdoc ${pairs}"`;
       }
 
@@ -51,8 +54,8 @@ export function createRunMdoc(projectRoot: string) {
       // Parse [error] lines
       const errorLines = fullOutput
         .split('\n')
-        .filter(line => line.includes('[error]'))
-        .map(line => line.trim())
+        .filter((line) => line.includes('[error]'))
+        .map((line) => line.trim())
         .slice(0, 20); // limit to 20 errors to avoid bloat
 
       const errorCount = errorLines.length;
@@ -69,6 +72,6 @@ export function createRunMdoc(projectRoot: string) {
         errorCount,
         errors: errorLines,
       });
-    }
+    },
   });
 }

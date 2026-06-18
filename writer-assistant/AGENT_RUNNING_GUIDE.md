@@ -21,6 +21,7 @@ nohup npx flue run crossref --target node \
 ```
 
 Monitor progress:
+
 ```bash
 tail -f crossref.log
 ```
@@ -300,6 +301,7 @@ npx flue run write-tutorial --target node --payload '{
 **Phases:** Research → Write → Verify → Integrate → Review → Style
 
 **Key differences from data-type-ref:**
+
 - Emphasizes 7-section structure (Introduction, Background, Concepts, Putting Together, Running Examples, What Learned, Where Next)
 - Linear learning path (no branching)
 - Line-by-line code annotations

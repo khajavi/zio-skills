@@ -29,9 +29,15 @@ function resolveCheckStyleScript(): string {
     // Local in writer-assistant/skills/
     path.resolve(process.cwd(), 'skills/docs-writing-style/check-docs-style.sh'),
     // From env variable (if FLUE_PROJECT_ROOT points to writer-assistant)
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-writing-style/check-docs-style.sh'),
+    path.resolve(
+      process.env.FLUE_PROJECT_ROOT || '',
+      'skills/docs-writing-style/check-docs-style.sh'
+    ),
     // Fallback to plugins directory in zio-skills repo
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'),
+    path.resolve(
+      process.env.FLUE_PROJECT_ROOT || '',
+      '../../plugins/documentation/skills/docs-writing-style/check-docs-style.sh'
+    ),
   ];
 
   for (const scriptPath of possiblePaths) {
@@ -50,9 +56,15 @@ function resolveCheckMdocScript(): string {
     // Local in writer-assistant/skills/
     path.resolve(process.cwd(), 'skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
     // From env variable (if FLUE_PROJECT_ROOT points to writer-assistant)
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', 'skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
+    path.resolve(
+      process.env.FLUE_PROJECT_ROOT || '',
+      'skills/docs-mdoc-conventions/check-mdoc-conventions.sh'
+    ),
     // Fallback to plugins directory in zio-skills repo
-    path.resolve(process.env.FLUE_PROJECT_ROOT || '', '../../plugins/documentation/skills/docs-mdoc-conventions/check-mdoc-conventions.sh'),
+    path.resolve(
+      process.env.FLUE_PROJECT_ROOT || '',
+      '../../plugins/documentation/skills/docs-mdoc-conventions/check-mdoc-conventions.sh'
+    ),
   ];
 
   for (const scriptPath of possiblePaths) {
@@ -102,7 +114,10 @@ function runMechanicalCheck(outputPath: string, projectRoot: string): string {
  * descriptions, which produces repetitive template prose).
  * After the final round, a mechanical re-check reports the post-fix state.
  */
-export async function runStylePhase(init: FlueContext['init'], config: StyleConfig): Promise<StyleResult> {
+export async function runStylePhase(
+  init: FlueContext['init'],
+  config: StyleConfig
+): Promise<StyleResult> {
   const { outputPath, projectRoot, typeName, session, init: initForAgent } = config;
   const maxRounds = config.maxRounds ?? DEFAULT_MAX_ROUNDS;
 
@@ -152,7 +167,9 @@ export async function runStylePhase(init: FlueContext['init'], config: StyleConf
 
     if (initForAgent) {
       try {
-        const checkerHarness = await initForAgent(docsStyleCheckerAgent, { name: `docs-style-checker-round-${round}` });
+        const checkerHarness = await initForAgent(docsStyleCheckerAgent, {
+          name: `docs-style-checker-round-${round}`,
+        });
         const checkerSession = await checkerHarness.session();
 
         const checkerPrompt = `Review the documentation file for prose style rule violations:
@@ -188,7 +205,7 @@ Then output:
     }
 
     // Combine both layers, drop violations the fixer already reported as unfixable
-    const allLines = [...mechanicalLines, ...llmLines].filter(line => {
+    const allLines = [...mechanicalLines, ...llmLines].filter((line) => {
       const key = extractLocationKey(line);
       return key === null || !unresolvable.has(key);
     });
@@ -213,10 +230,12 @@ Then output:
       '19': 'Rule 19 (signatures within containing type): bare `def`, `val`, or `var` in a code block must be wrapped inside its owning `trait`/`class`/`object`. Never show a standalone signature at top level of a code block.\nExample fixes:\n  Bad:  ```scala\n  def foo: Unit\n  ```\n  Good: ```scala\n  trait Foo {\n    def foo: Unit\n  }\n  ```\n\n  Bad:  ```scala\n  val live: ZLayer[Any, Nothing, Service]\n  ```\n  Good: ```scala\n  object Service {\n    val live: ZLayer[Any, Nothing, Service]\n  }\n  ```',
     };
 
-    const violatedRuleNums = [...new Set(allLines.map(l => l.match(/\[Rule (\d+)\]/)?.[1]).filter(Boolean))];
+    const violatedRuleNums = [
+      ...new Set(allLines.map((l) => l.match(/\[Rule (\d+)\]/)?.[1]).filter(Boolean)),
+    ];
     const ruleHints = violatedRuleNums
-      .filter(r => RULE_HINTS[r!])
-      .map(r => RULE_HINTS[r!])
+      .filter((r) => RULE_HINTS[r!])
+      .map((r) => RULE_HINTS[r!])
       .join('\n\n');
 
     const fixerPrompt = `Fix the following style violations in ${outputPath}.
@@ -260,7 +279,7 @@ Better to skip a fix than introduce new problems.`;
 
   // Final mechanical re-check to report the post-fix state
   const finalOutput = runMechanicalCheck(outputPath, projectRoot);
-  const finalLines = extractViolationLines(finalOutput).filter(line => {
+  const finalLines = extractViolationLines(finalOutput).filter((line) => {
     const key = extractLocationKey(line);
     return key === null || !unresolvable.has(key);
   });
@@ -268,7 +287,7 @@ Better to skip a fix than introduce new problems.`;
   result.passed = finalLines.length === 0;
   result.unresolvedViolations = [
     ...finalLines,
-    ...Array.from(unresolvable).map(key => `${key} (fixer could not fix)`),
+    ...Array.from(unresolvable).map((key) => `${key} (fixer could not fix)`),
   ];
 
   console.log(`  [Final check] ${finalLines.length} mechanical violation(s) remaining`);
@@ -284,8 +303,8 @@ Better to skip a fix than introduce new problems.`;
 function extractViolationLines(checkOutput: string): string[] {
   return checkOutput
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => /\[Rule (\d+|mdoc)\]/.test(line));
+    .map((line) => line.trim())
+    .filter((line) => /\[Rule (\d+|mdoc)\]/.test(line));
 }
 
 /** Extract a "file:line" key from a violation or fixer-report line. */

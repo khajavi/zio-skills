@@ -23,7 +23,11 @@ export interface FixMdocResult {
 const DEFAULT_MAX_ROUNDS = 3;
 
 export async function run({ init, payload }: FlueContext) {
-  const { projectRoot, paths: rawPaths, maxRounds: inputMaxRounds } = payload as {
+  const {
+    projectRoot,
+    paths: rawPaths,
+    maxRounds: inputMaxRounds,
+  } = payload as {
     projectRoot: string;
     paths?: string | string[];
     maxRounds?: number;
@@ -36,7 +40,9 @@ export async function run({ init, payload }: FlueContext) {
   const { resolvedPaths, missing } = resolvePaths(projectRoot, rawPaths);
 
   if (missing.length > 0) {
-    throw new Error(`Paths not found (relative to projectRoot):\n${missing.map(p => `  - ${p}`).join('\n')}`);
+    throw new Error(
+      `Paths not found (relative to projectRoot):\n${missing.map((p) => `  - ${p}`).join('\n')}`
+    );
   }
 
   const command = buildMdocCommand(resolvedPaths);
@@ -45,7 +51,7 @@ export async function run({ init, payload }: FlueContext) {
   console.log(`  Project root: ${projectRoot}`);
   if (resolvedPaths.length > 0) {
     console.log(`  Files to compile (${resolvedPaths.length}):`);
-    resolvedPaths.forEach(p => console.log(`    - ${p}`));
+    resolvedPaths.forEach((p) => console.log(`    - ${p}`));
   } else {
     console.log(`  Scope: entire docs project`);
   }
@@ -91,7 +97,7 @@ export async function run({ init, payload }: FlueContext) {
 
     // Prepare error list for fixer
     const errorList = currentErrors
-      .map(e => `  ${e.file}${e.line != null ? `:${e.line}` : ''}: ${e.message}`)
+      .map((e) => `  ${e.file}${e.line != null ? `:${e.line}` : ''}: ${e.message}`)
       .join('\n');
 
     const fixPrompt = `Fix the following mdoc compilation errors in ${projectRoot}.
@@ -137,7 +143,7 @@ Focus on fixing the actual compilation errors, not cosmetic issues.`;
   console.log(`\n[fix-mdoc] ${finalSuccess ? '✓ SUCCESS' : '⚠ PARTIAL'} (${round} round(s))`);
   if (currentErrors.length > 0) {
     console.log(`  Remaining errors (${currentErrors.length}):`);
-    currentErrors.forEach(e => {
+    currentErrors.forEach((e) => {
       const loc = e.file ? `${e.file}${e.line != null ? `:${e.line}` : ''}` : '(general)';
       console.log(`    [${loc}] ${e.message}`);
     });

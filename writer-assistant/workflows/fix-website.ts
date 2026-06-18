@@ -61,7 +61,11 @@ function parseWebsiteBuildErrors(output: string): string[] {
 }
 
 export async function run({ init, payload }: FlueContext) {
-  const { projectRoot, docsDir: inputDocsDir, maxRounds: inputMaxRounds } = payload as {
+  const {
+    projectRoot,
+    docsDir: inputDocsDir,
+    maxRounds: inputMaxRounds,
+  } = payload as {
     projectRoot: string;
     docsDir?: string;
     maxRounds?: number;
@@ -143,7 +147,7 @@ export async function run({ init, payload }: FlueContext) {
     }
 
     // Prepare error list for fixer
-    const errorList = currentErrors.map(e => `  ${e}`).join('\n');
+    const errorList = currentErrors.map((e) => `  ${e}`).join('\n');
 
     const fixPrompt = `Fix the following documentation website build errors in ${projectRoot}.
 
@@ -195,7 +199,7 @@ Focus on fixing the actual build errors. Be pragmatic—if a link is broken, fix
   console.log(`\n[fix-website] ${finalSuccess ? '✓ SUCCESS' : '⚠ PARTIAL'} (${round} round(s))`);
   if (currentErrors.length > 0) {
     console.log(`  Remaining errors (${currentErrors.length}):`);
-    currentErrors.slice(0, 5).forEach(e => console.log(`    ${e}`));
+    currentErrors.slice(0, 5).forEach((e) => console.log(`    ${e}`));
     if (currentErrors.length > 5) {
       console.log(`    ... and ${currentErrors.length - 5} more`);
     }

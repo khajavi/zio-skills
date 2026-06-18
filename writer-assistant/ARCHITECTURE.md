@@ -157,14 +157,14 @@ Returns JSON: { suggestions: [...] }
 
 **Modes:**
 
-| Mode           | Purpose                                       | Output                          |
-|----------------|-----------------------------------------------|---------------------------------|
-| `reindex`      | Build fresh documentation index              | `.crossref-state/index.json`    |
-| `step`         | Process one page batch, apply high-conf links| Updated .md files + state       |
-| `autopilot`    | Loop `step` until all pages processed        | Complete documentation updated  |
-| `report`       | Analyze coverage, orphans, link density      | Coverage report (stdout)        |
-| `verify`       | Verify documentation build succeeds          | Build result JSON               |
-| `verify-and-fix` | Auto-fix build failures, re-verify         | Fixed docs + build success/fail |
+| Mode             | Purpose                                       | Output                          |
+| ---------------- | --------------------------------------------- | ------------------------------- |
+| `reindex`        | Build fresh documentation index               | `.crossref-state/index.json`    |
+| `step`           | Process one page batch, apply high-conf links | Updated .md files + state       |
+| `autopilot`      | Loop `step` until all pages processed         | Complete documentation updated  |
+| `report`         | Analyze coverage, orphans, link density       | Coverage report (stdout)        |
+| `verify`         | Verify documentation build succeeds           | Build result JSON               |
+| `verify-and-fix` | Auto-fix build failures, re-verify            | Fixed docs + build success/fail |
 
 **State Management:**
 
@@ -207,7 +207,7 @@ Persist state
 
 1. **Research Phase** — Analyze source code, extract type information, gather usage examples
 2. **Write Phase** — Generate documentation following API reference structure
-3. *(optional)* **Examples Phase** — Create companion Scala sub-module, compile and lint examples, embed `SourceFile.print()` calls in article (activated by `examples` payload field)
+3. _(optional)_ **Examples Phase** — Create companion Scala sub-module, compile and lint examples, embed `SourceFile.print()` calls in article (activated by `examples` payload field)
 4. **Verify Phase** — Check method coverage, compile mdoc examples to zero errors
 5. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
 6. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
@@ -226,6 +226,7 @@ Persist state
 ```
 
 **Output:** Markdown file with:
+
 - Type signature and constructor
 - Method reference documentation
 - Usage examples (mdoc-compiled)
@@ -241,7 +242,7 @@ Persist state
 
 1. **Research Phase** — Gather information about topic from source code, tests, examples
 2. **Write Phase** — Generate tutorial following 7-section structure with linear progression
-3. *(optional)* **Examples Phase** — Create companion Scala sub-module, compile and lint examples, append shell-command "Running the Examples" section (activated by `examples` payload field)
+3. _(optional)_ **Examples Phase** — Create companion Scala sub-module, compile and lint examples, append shell-command "Running the Examples" section (activated by `examples` payload field)
 4. **Verify Phase** — Check structure compliance, compile mdoc examples to zero errors, run 38-item checklist
 5. **Integrate Phase** — Update sidebars.js under "Guides", docs/index.md, cross-references
 6. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
@@ -273,6 +274,7 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 7. **Where to Go Next** — Links to how-to guides and reference pages
 
 **Output:** Markdown file with:
+
 - Linear learning path (no branching)
 - Warm, welcoming tone ("Welcome", "Let's", "Notice that")
 - Line-by-line code annotations
@@ -291,18 +293,18 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 3. **Compile** — `sbt <moduleName>/compile`; one agent-assisted retry on failure
 4. **Run** — Execute each example, verify exit code 0 and no exceptions in output; one re-compile if agent fixes a runtime error
 5. **Lint** — `git add` → `sbt fmtChanged` → `sbt check`
-6. **Document** *(optional)* — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
+6. **Document** _(optional)_ — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
 
 **Hierarchical modules** (`parentModule` field): creates a `RootProject(file(...))` hierarchy — each directory is a self-contained sbt project with its own `build.sbt`. Root's `.aggregate(...)` is updated to include the new parent module. Compile and run execute from the sub-module directory (not root).
 
 **File naming by `docType`:**
 
-| `docType`       | Files                                                                          |
-|-----------------|--------------------------------------------------------------------------------|
-| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`          |
-| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala` |
+| `docType`       | Files                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`                                              |
+| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala`                 |
 | `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
-| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
+| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala`              |
 
 **Input:**
 
@@ -341,16 +343,16 @@ Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphi
 
 **Phases:**
 
-1. *(optional)* **mdoc** — Run `sbt docs/mdoc` from `projectRoot` (only when `runMdoc: true`); abort if it fails
+1. _(optional)_ **mdoc** — Run `sbt docs/mdoc` from `projectRoot` (only when `runMdoc: true`); abort if it fails
 2. **Preview** — Calls `runPreview(docsDir)` from `lib/build-runner.ts`: detects build system, spawns dev server detached (`proc.unref()`), polls TCP port until accepting connections, returns `{ url, pid }`
 
 **Build system → preview command mapping:**
 
-| Build System | Preview Command | Default URL |
-|---|---|---|
-| Docusaurus (`website/`) | `yarn start` | `http://localhost:3000` |
-| Docusaurus (root) | `npm run start` | `http://localhost:3000` |
-| MkDocs | `mkdocs serve` | `http://localhost:8000` |
+| Build System            | Preview Command | Default URL             |
+| ----------------------- | --------------- | ----------------------- |
+| Docusaurus (`website/`) | `yarn start`    | `http://localhost:3000` |
+| Docusaurus (root)       | `npm run start` | `http://localhost:3000` |
+| MkDocs                  | `mkdocs serve`  | `http://localhost:8000` |
 
 The server keeps running after the workflow exits. Stop it with `kill <pid>`.
 
@@ -373,19 +375,20 @@ The server keeps running after the workflow exits. Stop it with `kill <pid>`.
 
 **Modes:**
 
-| Mode      | Use Case                                      |
-|-----------|-----------------------------------------------|
-| `all`     | Extract metadata for all pages (pre-enrichment)|
-| `missing` | Extract only for pages without metadata      |
-| `file`    | Extract for single specific file             |
-| `dir`     | Extract for all pages in directory recursively|
+| Mode      | Use Case                                        |
+| --------- | ----------------------------------------------- |
+| `all`     | Extract metadata for all pages (pre-enrichment) |
+| `missing` | Extract only for pages without metadata         |
+| `file`    | Extract for single specific file                |
+| `dir`     | Extract for all pages in directory recursively  |
 
 **Output:** Page frontmatter updated with:
+
 ```yaml
 ---
-title: "Page Title"
-description: "Natural language summary"
-keywords: ["keyword1", "keyword2"]
+title: 'Page Title'
+description: 'Natural language summary'
+keywords: ['keyword1', 'keyword2']
 ---
 ```
 
@@ -439,6 +442,7 @@ keywords: ["keyword1", "keyword2"]
 Each error entry: `{ file, line, message, raw }`.
 
 **Error handling:**
+
 - Missing paths → throws with list of unresolved entries
 - Build failure → returns `success: false` with parsed errors (does not throw)
 
@@ -462,11 +466,13 @@ Each error entry: `{ file, line, message, raw }`.
 **Phases:**
 
 **Phase 1: Initial Check**
+
 - Run mdoc compile command
 - If success: return immediately
 - If errors: proceed to fix loop
 
 **Phase 2+: Fix loop (up to maxRounds)**
+
 - Spawn `docsWriterAgent` session once, reuse across rounds
 - Each round: send fixer prompt with exact error list (file:line:message)
 - Agent has `createRunMdoc` tool available for inline verification
@@ -492,6 +498,7 @@ Each error entry: `{ file, line, message, raw }`.
 ### 4.1. State Store (`lib/state-store.ts`)
 
 **Responsibilities:**
+
 - Load/save index and suggestions from/to disk
 - Migrate old state formats for backwards compatibility
 - Atomic writes with error recovery
@@ -501,43 +508,43 @@ Each error entry: `{ file, line, message, raw }`.
 
 ```typescript
 type CrossrefState = {
-  indexBuiltAt: string,           // ISO timestamp
-  docsDir: string,                // Documentation directory path
-  index: PageIndexEntry[],        // All discovered pages
-  processed: string[],            // IDs of processed pages
-  suggestions: LinkSuggestion[],  // All suggestions (accumulated)
+  indexBuiltAt: string; // ISO timestamp
+  docsDir: string; // Documentation directory path
+  index: PageIndexEntry[]; // All discovered pages
+  processed: string[]; // IDs of processed pages
+  suggestions: LinkSuggestion[]; // All suggestions (accumulated)
   tokens: {
-    inputTotal: number,
-    outputTotal: number,
-    runningCost: number
-  }
-}
+    inputTotal: number;
+    outputTotal: number;
+    runningCost: number;
+  };
+};
 
 type PageIndexEntry = {
-  id: string,                     // Unique ID (slug from path)
-  title: string,
-  path: string,                   // Relative path from docs
-  absPath: string,                // Absolute filesystem path
-  description?: string,           // From frontmatter or extracted
-  keywords?: string[],            // From frontmatter or extracted
-  contextualTitle?: string,       // Alternative title
-  sectionType?: string,           // "reference" | "guide" | "tutorial" | "overview" | "other"
-  existingLinkCount: number,
-  adjacentPages?: string[]        // Page IDs in same directory
-}
+  id: string; // Unique ID (slug from path)
+  title: string;
+  path: string; // Relative path from docs
+  absPath: string; // Absolute filesystem path
+  description?: string; // From frontmatter or extracted
+  keywords?: string[]; // From frontmatter or extracted
+  contextualTitle?: string; // Alternative title
+  sectionType?: string; // "reference" | "guide" | "tutorial" | "overview" | "other"
+  existingLinkCount: number;
+  adjacentPages?: string[]; // Page IDs in same directory
+};
 
 type LinkSuggestion = {
-  sourceId: string,               // Page being analyzed
-  targetId: string,               // Target page (from index)
-  targetTitle: string,
-  targetRelativePath: string,     // Computed (never from LLM)
-  anchorText: string,             // 1-5 word phrase to link
-  description?: string,           // Why it's related
-  type: 'inline' | 'see_also',
-  confidence: 'high' | 'medium' | 'low',
-  reasoning: string,
-  status: 'pending' | 'applied' | 'skipped'
-}
+  sourceId: string; // Page being analyzed
+  targetId: string; // Target page (from index)
+  targetTitle: string;
+  targetRelativePath: string; // Computed (never from LLM)
+  anchorText: string; // 1-5 word phrase to link
+  description?: string; // Why it's related
+  type: 'inline' | 'see_also';
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+  status: 'pending' | 'applied' | 'skipped';
+};
 ```
 
 ### 4.2. Markdown Parser (`lib/markdown-parser.ts`)
@@ -560,11 +567,13 @@ type LinkSuggestion = {
 ### 4.3. Link Insertion & Validation
 
 **Link Inserter** (`workflows/utils/link-inserter.ts`):
+
 - Insert inline links: `[Text](./path.md)` in prose
 - Insert See Also sections at end of page
 - Fallback: find partial matches if exact not found
 
 **Link Validator** (`workflows/utils/link-validator.ts`):
+
 - Path safety: symlink resolution, boundary checks
 - Duplicate detection: anchor not already linked
 - Anchor validation: heading exists in target
@@ -589,17 +598,20 @@ type LinkSuggestion = {
 ### 4.5. Build Verification & Auto-Fixing
 
 **Verify Phase** (`workflows/phases/verify.ts`):
+
 - Auto-detect build system: Docusaurus, MkDocs, Sphinx, Hugo
 - Run build command
 - Parse output for success/failure
 
 **Auto-Fixer** (`lib/auto-fixer.ts`):
+
 - Extract structured errors from build output
 - Analyze errors holistically
 - Dispatch `coding-agent` to fix files
 - Re-verify and retry
 
 **Fixable Issues:**
+
 - Broken links (missing extensions, wrong paths, bad anchors)
 - Syntax errors (unclosed code fences, YAML issues)
 - Missing files (remove broken references)
@@ -613,12 +625,14 @@ type LinkSuggestion = {
 **Skill:** `skills/cross-linker/SKILL.md`
 
 **Capabilities:**
+
 - Analyzes page content for cross-linking opportunities
 - Searches documentation index
 - Validates anchor existence
 - Returns structured suggestions (confidence levels)
 
 **Tool Availability:**
+
 - `search_pages` — Find pages by query
 - `search_page_content` — Search page prose for terms
 - `validate_anchor` — Check if heading exists
@@ -628,13 +642,15 @@ type LinkSuggestion = {
 ### 5.2. Docs Writer Agent (`agents/docs-writer.ts`)
 
 **Model:** Claude Haiku 4.5  
-**Skills:** 
+**Skills:**
+
 - `skills/docs-data-type-ref/SKILL.md` — API reference structure
 - `skills/docs-tutorial/SKILL.md` — Tutorial structure and tone
 - `skills/docs-writing-style/SKILL.md` — Prose style rules
 - `skills/docs-mdoc-conventions/SKILL.md` — mdoc modifier reference
 
 **Capabilities:**
+
 - Generates API reference documentation from code
 - Creates learning-oriented tutorials for newcomers
 - Structures documentation by type signature, methods, examples
@@ -649,6 +665,7 @@ type LinkSuggestion = {
 **Skill:** `skills/docs-research/SKILL.md`
 
 **Capabilities:**
+
 - Gathers information from source code
 - Extracts type signatures and method names
 - Identifies usage patterns
@@ -660,6 +677,7 @@ type LinkSuggestion = {
 **Skill:** `skills/metadata-extractor/SKILL.md`
 
 **Capabilities:**
+
 - Extracts or generates metadata from page content
 - Infers title from frontmatter or heading
 - Generates natural language description
@@ -671,6 +689,7 @@ type LinkSuggestion = {
 **Skill:** `skills/docs-writing-style-judgment/SKILL.md`
 
 **Capabilities:**
+
 - Validates prose clarity and tone
 - Checks terminology consistency
 - Identifies style issues requiring judgment
@@ -679,6 +698,7 @@ type LinkSuggestion = {
 ### 5.6. Docs Reviewer Agent (`agents/docs-reviewer.ts`)
 
 **Capabilities:**
+
 - Reviews documentation completeness
 - Validates examples compile and work
 - Checks internal consistency
@@ -689,6 +709,7 @@ type LinkSuggestion = {
 **Model:** Claude Haiku 4.5
 
 **Capabilities:**
+
 - General-purpose software engineering tasks
 - Modifies files to fix errors
 - Handles cross-project dependencies
@@ -720,6 +741,7 @@ Skills are stored as markdown files (`SKILL.md`) in `skills/*/` directories. Eac
 **Type:** JSON array of `PageIndexEntry` objects
 
 **Purpose:**
+
 - Fast search by title, keywords, topic
 - Enable adjacency queries
 - Track metadata (sectionType, existingLinkCount)
@@ -730,15 +752,17 @@ Skills are stored as markdown files (`SKILL.md`) in `skills/*/` directories. Eac
 **Location:** YAML header in each `.md` file
 
 **Fields:**
+
 ```yaml
 ---
-title: "Page Title"
-description: "1-3 sentence summary"
-keywords: ["keyword1", "keyword2"]
+title: 'Page Title'
+description: '1-3 sentence summary'
+keywords: ['keyword1', 'keyword2']
 ---
 ```
 
 **Usage:**
+
 - Populated by `extract-metadata` workflow
 - Used by `page-linker` to find relevant pages
 - Improves link quality
@@ -748,6 +772,7 @@ keywords: ["keyword1", "keyword2"]
 **Type:** JSON array of `LinkSuggestion` objects
 
 **Purpose:**
+
 - Accumulate all suggestions across runs
 - Enable manual review of pending suggestions
 - Track applied/skipped/pending status
@@ -779,6 +804,7 @@ npm test:watch
 **Vitest** — Test runner with snapshot support
 
 **Test Coverage:**
+
 - 19 tests for markdown parsing
 - 11 tests for link insertion
 - 4 tests for validation
@@ -833,11 +859,13 @@ flue run write-data-type-ref --target node \
 ## 11. Limitations & Future Work
 
 ### Current Limitations
+
 - State stored locally (no multi-instance coordination)
 - Suggestions from LLM cannot be directly overridden
 - No conflict detection for overlapping link text
 
 ### Future Enhancements
+
 - Incremental reindex (update only changed files)
 - Manual suggestion override interface
 - Real-time analytics dashboard

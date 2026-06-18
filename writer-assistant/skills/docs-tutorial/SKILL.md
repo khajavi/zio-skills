@@ -136,7 +136,7 @@ The `id` must match the filename (without `.md`).
 Start with a welcome:
 
 ```
-Welcome to [Tutorial Title]! This tutorial is for [target learner] who [assumed prior knowledge]. 
+Welcome to [Tutorial Title]! This tutorial is for [target learner] who [assumed prior knowledge].
 You don't need any prior experience with [topic] to follow along.
 
 ## Learning Objectives
@@ -168,15 +168,17 @@ For each concept section:
 2. **Show minimal, annotated code** in an appropriate mdoc block.
 3. **Annotate the code line-by-line** with bullet points immediately after:
 
-```
+````
 ```scala mdoc
 val x = foo()  // create something
 println(x)
-```
+````
 
 The code above:
+
 - `foo()` — creates [what]
 - `println(x)` — prints the result to see what was created
+
 ```
 
 4. **Show the result** — if the code produces output, use `mdoc` (not `mdoc:compile-only`) to show evaluated output.
@@ -184,6 +186,7 @@ The code above:
 6. **Use Docusaurus admonitions** for important notes (use sparingly):
 
 ```
+
 :::note[Title]
 [Important observation that the learner should remember.]
 :::
@@ -195,6 +198,7 @@ The code above:
 :::caution[Title]
 [Something to watch out for or a common mistake.]
 :::
+
 ```
 
 7. **Provide copy-pasteable code** — never use pseudo-code or fake error messages.
@@ -213,6 +217,7 @@ Provide git clone + sbt runMain commands for each companion example (see `docs-e
 Recap as achievements, mirroring the "Learning Objectives" section:
 
 ```
+
 ## What You've Learned
 
 In this tutorial, you learned:
@@ -222,6 +227,7 @@ In this tutorial, you learned:
 - The relationship between [concept D] and [concept E]
 
 You now have a solid foundation in [topic]. The next step is to see how to [apply this in practice].
+
 ```
 
 #### Where to Go Next
@@ -229,12 +235,14 @@ You now have a solid foundation in [topic]. The next step is to see how to [appl
 Provide links to deepen knowledge:
 
 ```
+
 ## Where to Go Next
 
 - **Ready to use this in practice?** Check out the how-to guide [Guide Name](../guides/guide-name.md).
 - **Want to dive deeper into the API?** Read the reference page for [`TypeName`](../reference/type-name.md).
 - **Interested in related concepts?** Explore [Related Topic](./related-topic.md).
-```
+
+````
 
 ### Writing Style Rules
 
@@ -259,7 +267,7 @@ Before integration, verify all code examples compile:
 
 ```bash
 sbt "docs/mdoc --in docs/guides/<tutorial-name>.md"
-```
+````
 
 **Important:** Always use `--in <file.md>`. Never use bare `sbt docs/mdoc` (it recompiles all documentation).
 
@@ -280,6 +288,7 @@ Before submitting, work through the **[CHECKLIST.md](./CHECKLIST.md)** — all 3
 ## Step 6: Integrate into Docs
 
 Place in `docs/guides/`. Update:
+
 - `sidebars.js` — add under "Guides" category (not "Reference")
 - `docs/index.md` — add cross-reference
 - Related reference pages — add reciprocal links in "See also" sections
