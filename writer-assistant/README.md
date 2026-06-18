@@ -1,18 +1,23 @@
-# Crossref Agent
+# Writer Assistant
 
-A Flue-based TypeScript agent that automatically discovers and creates cross-references between pages in Markdown documentation, improving SEO and discoverability.
+A Flue-based TypeScript agent framework that automates documentation generation, styling, cross-linking, and validation for large-scale projects.
 
 ## Overview
 
-Crossref Agent analyzes your documentation and identifies where pages should link to each other. It:
+The writer-assistant coordinates specialized agents to handle documentation tasks:
 
-- **Discovers opportunities** — Scans all Markdown files to find cross-linking opportunities
-- **Suggests intelligently** — Uses Claude to identify inline links and "See Also" sections based on content relevance
-- **Applies safely** — Protects code blocks and frontmatter while inserting links
-- **Tracks confidence** — Applies high-confidence links automatically, queues others for review
-- **Provides insights** — Reports on link density, orphan pages, and coverage metrics
-
-Perfect for improving internal SEO, helping readers discover related documentation, and reducing orphaned pages.
+- **Crossref** — Analyzes documentation and creates cross-references between pages
+- **Write Data Type Reference** — Generates comprehensive API reference documentation from source code
+- **Write Tutorial** — Creates learning-oriented guides for newcomers (linear, step-by-step)
+- **Write Examples** — Generates companion Scala example sub-modules with compile and lint verification
+- **Extract Metadata** — Extracts and populates metadata (title, description, keywords)
+- **Fix Writing Style** — Validates and fixes documentation for style compliance
+- **Check mdoc** — Compiles and validates mdoc code blocks in individual files or directories (read-only checker)
+- **Fix mdoc** — Compiles mdoc code blocks and automatically fixes errors (with fixer loop, max 3 rounds)
+- **Check Website** — Verifies the full documentation website builds successfully; optionally runs `sbt docs/mdoc` first (read-only)
+- **Fix Website** — Builds the website and automatically fixes errors (with fixer loop, max 3 rounds)
+- **Preview Website** — Starts a live documentation dev server (Docusaurus/MkDocs), optionally running `sbt docs/mdoc` first
+- **Verify Builds** — Checks documentation builds succeed and auto-fixes failures
 
 ## Features
 
@@ -139,33 +144,224 @@ Optionally create `.crossref-config.json` in the parent of your docs directory:
 }
 ```
 
-### Run It
+### Run Crossref
 
 ```bash
 # Build fresh index
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"reindex"}'
 
 # Process pages one at a time
-flue run crossref --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"step","batchSize":1}'
 
-# Process a specific target file
-flue run crossref --target node \
-  --payload '{"docsDir":"./docs","mode":"step","targetFile":"reference/fiber/fiber.md"}'
-
-# Process all files in a directory recursively
-flue run crossref --target node \
-  --payload '{"docsDir":"./docs","mode":"step","targetDir":"reference/fiber/","batchSize":5}'
-
 # Process all remaining pages
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"autopilot"}'
 
 # View coverage report
-flue run workflows/crossref.ts --target node \
+npx flue run crossref --target node \
   --payload '{"docsDir":"./docs","mode":"report"}'
 ```
+
+### Write Data Type Reference
+
+Generate comprehensive API reference documentation from source code:
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala"
+}'
+```
+
+To also generate companion Scala examples (Phase 2.5), add the `examples` field:
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala",
+  "examples": {
+    "moduleName": "zio-example-fiber"
+  }
+}'
+```
+
+### Write Tutorial
+
+Create learning-oriented guides for newcomers:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers"
+}'
+```
+
+To also generate companion Scala examples (Phase 2.5), add the `examples` field:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers",
+  "examples": {
+    "moduleName": "zio-example-fibers"
+  }
+}'
+```
+
+To re-run only specific phases (e.g. debug a build failure without repeating research/write), use `skipPhases`:
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers",
+  "skipPhases": ["research", "write", "verify", "integrate", "review", "style"]
+}'
+```
+
+Valid `skipPhases` values: `"research"`, `"write"`, `"examples"`, `"verify"`, `"integrate"`, `"review"`, `"style"`, `"verifyBuild"`.
+
+Tutorials follow a 7-section structure:
+1. Introduction (with learning objectives)
+2. Background / Big Picture (optional)
+3. Concept sections (3-6 sections, one concept each)
+4. Putting It Together (complete runnable example)
+5. Running the Examples (git clone + sbt commands)
+6. What You've Learned (recap of objectives)
+7. Where to Go Next (links to how-to guides)
+
+### Write Examples
+
+Generate companion Scala example sub-modules for documentation. Can be run standalone or triggered automatically via `write-data-type-ref` and `write-tutorial` with the `examples` payload field.
+
+```bash
+npx flue run write-examples --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "moduleName": "zio-http-example-fiber",
+  "topic": "ZIO Fiber lifecycle management",
+  "docType": "data-type-ref",
+  "outputDocPath": "/path/to/zio-repo/docs/reference/fiber.md"
+}'
+```
+
+**`docType` values and generated file names:**
+
+| `docType`       | Generated files                                                                |
+|-----------------|--------------------------------------------------------------------------------|
+| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`          |
+| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala` |
+| `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
+| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
+
+**Phases:** Setup (build.sbt + dir) → Generate Scala files → Compile (`sbt <module>/compile`) → **Run** (execute each example, verify output) → Lint (`sbt fmtChanged && sbt check`) → Document (embed in article if `outputDocPath` provided).
+
+**Hierarchical example modules** (`parentModule` payload field): creates a self-contained sbt project hierarchy — each directory has its own `build.sbt` linked via `RootProject(file(...))`, wired into the root project's `.aggregate(...)`.
+
+Returns `{ success, exampleFiles, compileSuccess, runSuccess, lintSuccess, documentationAdded }`.
+
+### Preview Website
+
+Start a live documentation dev server. The server runs in the background — the workflow returns once the port is accepting connections.
+
+```bash
+# Start preview immediately (no mdoc recompile)
+npx flue run preview-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+
+# Recompile mdoc first, then start preview
+npx flue run preview-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "runMdoc": true
+}'
+```
+
+Returns `{ success, url, pid, buildSystem, mdocRan, mdocSuccess }`. Stop the server with `kill <pid>`.
+
+**Auto-detection:** Same build-system detection as `check-website` (Docusaurus `website/`, root `package.json`, MkDocs). Preview commands: `yarn start` (Docusaurus) / `mkdocs serve` (MkDocs).
+
+### Check Website
+
+Verify the full documentation website builds successfully. Read-only.
+
+```bash
+# Check website only
+npx flue run check-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+
+# Run sbt docs/mdoc first, then check website
+npx flue run check-website --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "runMdoc": true
+}'
+```
+
+Returns `{ success, buildSystem, errorCount, errors, mdocRan, mdocSuccess }`.
+
+### Check mdoc Compilation
+
+Check and validate mdoc code blocks without running a full workflow. Accepts a single file, a list of files, or a directory (recursively expanded). **Read-only:** reports errors but does not fix them.
+
+```bash
+# Single file
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": "docs/reference/fiber.md"
+}'
+
+# Multiple files
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/fiber.md", "docs/reference/chunk.md"]
+}'
+
+# Entire directory (walks subdirectories)
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/concurrency/"]
+}'
+
+# Entire docs project
+npx flue run check-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo"
+}'
+```
+
+Returns structured result with `success`, `errorCount`, `errors` (with file and line), and `durationMs`.
+
+### Fix mdoc Compilation
+
+Check and automatically fix mdoc code blocks. Same input as `check-mdoc`, but spawns a writer agent to fix errors with automatic re-checking. Loops up to `maxRounds` (default 3):
+
+```bash
+# Fix single file with auto-retry (up to 3 rounds)
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": "docs/reference/fiber.md"
+}'
+
+# Fix directory with custom max rounds
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "paths": ["docs/reference/concurrency/"],
+  "maxRounds": 5
+}'
+
+# Fix entire docs project
+npx flue run fix-mdoc --target node --payload '{
+  "projectRoot": "/path/to/zio-repo",
+  "maxRounds": 3
+}'
+```
+
+Returns structured result with `success`, `rounds` (iterations used), `errorCount` (remaining after all rounds), and `errors`.
 
 ## Development & CI
 

@@ -1,4 +1,4 @@
-# Crossref Agent Running Guide
+# Writer Assistant Running Guide
 
 ## Quick Start (TL;DR)
 
@@ -7,6 +7,53 @@ To run the agent on a specific file:
 ```bash
 export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
 npx flue run crossref --target node --payload '{"docsDir":"/path/to/docs","mode":"step","targetFile":"reference/resource/scopedref.md","batchSize":1}'
+```
+
+## Running in Background
+
+Long-running workflows (autopilot, verify-and-fix) should run in the background to avoid blocking your terminal.
+
+### Using nohup
+
+```bash
+nohup npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}' > crossref.log 2>&1 &
+```
+
+Monitor progress:
+```bash
+tail -f crossref.log
+```
+
+### Using screen/tmux
+
+Create a detachable session:
+
+```bash
+screen -S writer-agent
+npm run build
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
+npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}'
+
+# Detach: Ctrl+A then D
+# Reattach: screen -r writer-agent
+```
+
+### Using systemd-run (Linux)
+
+```bash
+systemd-run --user --scope -p MemoryLimit=2G \
+  npx flue run crossref --target node \
+  --payload '{"docsDir":"/path/to/docs","mode":"autopilot"}'
+```
+
+### Checking Background Process Status
+
+```bash
+ps aux | grep flue          # Find by process
+jobs                        # If backgrounded with &
+tail -f nohup.out          # Monitor default log
 ```
 
 ## Prerequisites
@@ -211,7 +258,55 @@ npx flue run crossref --target node \
 6. 2 links queued for manual review (medium confidence)
 7. Results saved to `.crossref-state/`
 
-## Workflow Modes
+## Workflows
+
+### Crossref Agent
+
+Discover and insert cross-references between documentation pages.
+
+#### Modes
+
+- `reindex` — Build fresh index from all pages
+- `step` — Process one page batch, apply high-confidence links
+- `autopilot` — Loop step mode until all pages processed
+- `report` — Analyze coverage, orphans, link density
+
+### Write Data Type Reference
+
+Generate comprehensive API reference documentation from Scala source code.
+
+```bash
+npx flue run write-data-type-ref --target node --payload '{
+  "projectRoot": "/path/to/zio",
+  "outputPath": "docs/reference/fiber.md",
+  "dataTypePath": "core/shared/src/main/scala/zio/Fiber.scala"
+}'
+```
+
+**Phases:** Research → Write → Verify → Integrate → Review → Style
+
+### Write Tutorial
+
+Create learning-oriented guides for newcomers.
+
+```bash
+npx flue run write-tutorial --target node --payload '{
+  "projectRoot": "/path/to/zio",
+  "outputPath": "docs/guides/getting-started-with-fibers.md",
+  "topic": "Getting Started with ZIO Fibers"
+}'
+```
+
+**Phases:** Research → Write → Verify → Integrate → Review → Style
+
+**Key differences from data-type-ref:**
+- Emphasizes 7-section structure (Introduction, Background, Concepts, Putting Together, Running Examples, What Learned, Where Next)
+- Linear learning path (no branching)
+- Line-by-line code annotations
+- Warm, welcoming tone
+- 38-item checklist verification in Phase 3
+
+## Workflow Modes (Crossref)
 
 ### `reindex`
 

@@ -37,7 +37,8 @@ Then invoke a skill in Claude Code:
 /docs-data-type-ref
 /docs-how-to-guide
 /docs-tutorial
-/docs-writing-style
+/docs-writing-style-judgment
+/docs-writing-style-mechanical
 ```
 
 ### Cursor
@@ -154,7 +155,8 @@ Authoring helpers:
 - **`docs-organize-types`** — Group types into logical sidebar categories
 
 Quality checks:
-- **`docs-writing-style`** — Prose style rules with mechanical validation script
+- **`docs-writing-style-judgment`** — Judgment-based prose rules requiring language understanding (Rules J-1 to J-9)
+- **`docs-writing-style-mechanical`** — Mechanical prose rules checkable via regex (Rules M-1 to M-17) with `check-docs-style.sh` script
 - **`docs-mdoc-conventions`** — mdoc code-block modifiers and Docusaurus admonitions
 - **`docs-check-compliance`** — Audit a doc file against a rule skill
 - **`docs-verify-compliance`** — Fix compliance issues in a doc file
@@ -163,6 +165,30 @@ Quality checks:
 - **`docs-report-method-coverage`** — Check that all public members are documented
 - **`docs-data-type-list-members`** — Extract public members from a Scala type
 - **`docs-skill-retrospection`** — Improve a docs-* skill from execution feedback
+
+### Writing Style Rules Split
+
+The `docs-writing-style` skill has been split into two focused skills to separate concerns and reduce token overhead:
+
+**Judgment-Based Rules (docs-writing-style-judgment)**
+- J-1: Person pronouns ("we" vs "you")
+- J-2: No manual line breaks in prose
+- J-3: Qualified method names (semantic cases)
+- J-4: Type name alone rule
+- J-5: No bare subheaders (quality check)
+- J-6: When to use ####
+- J-7: One concept per code block
+- J-8: Method signatures within containing type
+- J-9: Contextualized descriptions for code blocks
+
+**Mechanical Rules (docs-writing-style-mechanical)**
+- M-1 to M-17: Rules checkable via regex/bash (present tense, filler phrases, bullet capitalization, link formats, heading hierarchy, code block structure, table alignment, Scala syntax, implicit trace convention, etc.)
+
+Usage:
+- **LLM checker agent** imports only judgment skill (smaller, focused)
+- **Writer agent** imports both judgment and mechanical skills
+- **Mechanical checker script** runs independently via `check-docs-style.sh`
+- Violations reported as `[J-Rule N]` (judgment) and `[M-Rule N]` (mechanical) to avoid ambiguity
 
 ## Planned Skills
 

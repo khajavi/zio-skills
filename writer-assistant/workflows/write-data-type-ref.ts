@@ -10,6 +10,10 @@ import {
   inferSourceDirs,
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
+import { runReviewPhase } from './phases/review.js';
+import { runStylePhase } from './phases/style.js';
+import { verifyBuild } from './phases/verify.js';
+import { runExamplesPhase } from './phases/examples.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(projectRoot: string, docsDir: string, sinceTime: number): string[] {
@@ -53,10 +57,13 @@ export async function run({ init, payload }: FlueContext) {
     projectRoot,
     outputPath,
     dataTypePath,
+    examples: examplesPayload,
   } = payload as {
     projectRoot: string;
     outputPath: string;
     dataTypePath?: string;
+    /** Optional: generate companion Scala examples after writing the article. */
+    examples?: { moduleName: string; packageName?: string; parentModule?: string };
   };
 
   // Validate inputs
@@ -134,7 +141,9 @@ Based on the research findings above, now write comprehensive reference document
 
 **Requirements:**
 - Output file path: ${resolvedOutputPath}
-- File must have proper frontmatter with id and title
+- File must have proper frontmatter with id, title, description, and keywords
+  - description: one sentence, ≤150 characters, describes what the type does
+  - keywords: 3-7 meaningful phrases (1-3 words each), e.g. feature names, patterns, synonyms
 - Follow the exact section structure provided in the docs-data-type-ref skill
 - Every public method MUST be documented
 - All code examples MUST use mdoc syntax
@@ -144,7 +153,7 @@ Based on the research findings above, now write comprehensive reference document
 **Writing guidance:**
 - Use the docs-data-type-ref skill for detailed conventions
 - Opening definition: NO markdown heading, start immediately after frontmatter
-- Structure sections precisely as documented: Opening → Motivation → Quick Showcase → Installation → Construction → Core Operations → (Optional: Subtypes/Comparison/Advanced/Integration)
+- Structure sections precisely as documented: Opening → Motivation → Quick Showcase → Installation → Construction → Core Operations → (Optional: Subtypes/Comparison/Advanced) → (Integration: only when non-trivial cross-module wiring with runnable example)
 - For each method, provide: name + description → signature → usage example
 - All mdoc examples should use \`mdoc:reset\` for isolated blocks
 
@@ -153,6 +162,27 @@ Write the complete markdown file and save it to the specified output path.`;
     const writeResult = await session.prompt(writePrompt);
     console.log('[Phase 2] ✓ Documentation written');
     phasesCompleted.push('write');
+
+    // Phase 2.5: Examples (optional — only when `examples` payload provided)
+    let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
+    if (examplesPayload) {
+      console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
+      examplesResult = await runExamplesPhase(init, {
+        projectRoot,
+        moduleName: examplesPayload.moduleName,
+        packageName: examplesPayload.packageName,
+        parentModule: examplesPayload.parentModule,
+        topic: typeName,
+        docType: 'data-type-ref',
+        outputDocPath: resolvedOutputPath,
+        session, // reuse the writer session
+      });
+      console.log(
+        `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
+        `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
+      );
+      phasesCompleted.push('examples');
+    }
 
     // Detect all changed/new markdown files since Phase 2 started
     const docsDir = path.join(projectRoot, 'docs');
@@ -238,8 +268,58 @@ Report final status and any updates made.`;
     console.log('[Phase 4] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
-    // Build final result
-    const success = phasesCompleted.length === 4;
+    // Phase 5: Review and Fix
+    console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+    const reviewResult = await runReviewPhase(init, {
+      outputPath: resolvedOutputPath,
+      projectRoot,
+      typeName,
+      session, // reuse writer session for fixes
+      sourceFiles: sourceDirs,
+    });
+    console.log(`[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`);
+    if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
+      console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
+      reviewResult.unresolvedIssues.forEach(issue => console.log(`    - ${issue}`));
+    }
+    phasesCompleted.push('review');
+
+    // Phase 6: Style Validation
+    console.log('\n[Phase 6] Validating: Checking prose style...');
+    const styleResult = await runStylePhase(init, {
+      outputPath: resolvedOutputPath,
+      projectRoot,
+      typeName,
+      session, // reuse writer session for fixes
+    });
+    console.log(`[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+    if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
+      console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
+      styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+    }
+    phasesCompleted.push('style');
+
+    // Phase 7: Verify Build
+    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    try {
+      const buildResult = await verifyBuild(docsDir);
+      buildVerifyResult = { ...buildResult, skipped: false };
+      console.log(`[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('No supported documentation build system detected')) {
+        console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
+        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
+      } else {
+        console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
+      }
+    }
+    phasesCompleted.push('verifyBuild');
+
+    // Build final result — base 7 phases + optional examples phase
+    const expectedPhases = 7 + (examplesPayload ? 1 : 0);
+    const success = phasesCompleted.length === expectedPhases;
     console.log(`\n[docs-write-data-type-ref] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output file: ${resolvedOutputPath}`);
@@ -253,6 +333,35 @@ Report final status and any updates made.`;
       status: success ? 'success' : 'partial',
       phasesCompleted,
       success,
+      examples: examplesResult
+        ? {
+            success: examplesResult.success,
+            moduleName: examplesResult.moduleName,
+            exampleFiles: examplesResult.exampleFiles,
+            compileSuccess: examplesResult.compileSuccess,
+            runSuccess: examplesResult.runSuccess,
+            lintSuccess: examplesResult.lintSuccess,
+            documentationAdded: examplesResult.documentationAdded,
+          }
+        : null,
+      review: {
+        approved: reviewResult.approved,
+        rounds: reviewResult.rounds,
+        findingsFixed: reviewResult.findingsFixed,
+        unresolvedIssues: reviewResult.unresolvedIssues,
+      },
+      style: {
+        passed: styleResult.passed,
+        rounds: styleResult.rounds,
+        violations: styleResult.violations,
+        unresolvedViolations: styleResult.unresolvedViolations,
+      },
+      buildVerify: {
+        success: buildVerifyResult.success,
+        skipped: buildVerifyResult.skipped,
+        buildSystem: buildVerifyResult.buildSystem,
+        durationMs: buildVerifyResult.durationMs,
+      },
     };
   } catch (error) {
     console.error(`[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -265,6 +374,25 @@ Report final status and any updates made.`;
       phasesCompleted,
       error: error instanceof Error ? error.message : String(error),
       success: false,
+      examples: null,
+      review: {
+        approved: false,
+        rounds: 0,
+        findingsFixed: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+        unresolvedIssues: [],
+      },
+      style: {
+        passed: false,
+        rounds: 0,
+        violations: {},
+        unresolvedViolations: [],
+      },
+      buildVerify: {
+        success: false,
+        skipped: false,
+        buildSystem: 'unknown',
+        durationMs: 0,
+      },
     };
   }
 }

@@ -129,43 +129,54 @@ function isScalaProject(parentDir: string): boolean {
 }
 
 /**
- * Execute the ZIO build pipeline: sbt mdoc → yarn install → yarn build
+ * Execute the ZIO build pipeline: [sbt mdoc →] yarn install → yarn build
  */
-async function executeZioBuildPipeline(docsDir: string, buildCwd: string): Promise<BuildResult> {
+async function executeZioBuildPipeline(docsDir: string, buildCwd: string, runMdoc: boolean): Promise<BuildResult> {
   const startTime = Date.now();
   const parentDir = path.dirname(docsDir);
   let output = '';
 
-  // Step 1: Run sbt docs/mdoc
-  console.log('[build-runner] Running prerequisite: sbt docs/mdoc\n');
-  let result = await executeCommand('sbt', ['-v', 'docs/mdoc'], parentDir);
-  output += result.output;
-  if (result.exitCode !== 0) {
-    const durationMs = Date.now() - startTime;
-    return {
-      success: false,
-      exitCode: result.exitCode,
-      output,
-      durationMs,
-      buildSystem: 'docusaurus',
-      buildCwd,
-    };
+  let result: { exitCode: number; output: string };
+
+  // Step 1 (optional): Run sbt docs/mdoc
+  if (runMdoc) {
+    console.log('[build-runner] Running prerequisite: sbt docs/mdoc\n');
+    result = await executeCommand('sbt', ['-v', 'docs/mdoc'], parentDir);
+    output += result.output;
+    if (result.exitCode !== 0) {
+      const durationMs = Date.now() - startTime;
+      return {
+        success: false,
+        exitCode: result.exitCode,
+        output,
+        durationMs,
+        buildSystem: 'docusaurus',
+        buildCwd,
+      };
+    }
+  } else {
+    console.log('[build-runner] Skipping sbt docs/mdoc (runMdoc=false)\n');
   }
 
-  // Step 2: Run yarn install in website directory
-  console.log('\n[build-runner] Running prerequisite: yarn install\n');
-  result = await executeCommand('yarn', ['install'], buildCwd);
-  output += result.output;
-  if (result.exitCode !== 0) {
-    const durationMs = Date.now() - startTime;
-    return {
-      success: false,
-      exitCode: result.exitCode,
-      output,
-      durationMs,
-      buildSystem: 'docusaurus',
-      buildCwd,
-    };
+  // Step 2: Run yarn install only if node_modules missing (proxy env can break yarn install)
+  const nodeModules = path.join(buildCwd, 'node_modules');
+  if (!fs.existsSync(nodeModules)) {
+    console.log('\n[build-runner] Running prerequisite: yarn install\n');
+    result = await executeCommand('yarn', ['install'], buildCwd);
+    output += result.output;
+    if (result.exitCode !== 0) {
+      const durationMs = Date.now() - startTime;
+      return {
+        success: false,
+        exitCode: result.exitCode,
+        output,
+        durationMs,
+        buildSystem: 'docusaurus',
+        buildCwd,
+      };
+    }
+  } else {
+    console.log('\n[build-runner] node_modules present, skipping yarn install\n');
   }
 
   // Step 3: Run yarn build
@@ -187,7 +198,7 @@ async function executeZioBuildPipeline(docsDir: string, buildCwd: string): Promi
 /**
  * Execute a build command and capture output
  */
-async function executeBuild(config: BuildConfig, docsDir: string): Promise<BuildResult> {
+async function executeBuild(config: BuildConfig, docsDir: string, runMdoc: boolean): Promise<BuildResult> {
   const startTime = Date.now();
   const parentDir = path.dirname(docsDir);
 
@@ -198,8 +209,9 @@ async function executeBuild(config: BuildConfig, docsDir: string): Promise<Build
     fs.existsSync(path.join(docsDir, '..', 'build.sbt'))
   ) {
     console.log('[build-runner] Detected Scala project with website subdirectory (ZIO pattern)');
-    console.log('[build-runner] Using full build pipeline: sbt mdoc → yarn install → yarn build\n');
-    return executeZioBuildPipeline(docsDir, config.buildCwd);
+    const pipelineDesc = runMdoc ? 'sbt mdoc → yarn install → yarn build' : 'yarn install → yarn build';
+    console.log(`[build-runner] Using build pipeline: ${pipelineDesc}\n`);
+    return executeZioBuildPipeline(docsDir, config.buildCwd, runMdoc);
   }
 
   // Standard single-command build
@@ -250,11 +262,143 @@ async function executeBuild(config: BuildConfig, docsDir: string): Promise<Build
   });
 }
 
+export interface PreviewResult {
+  url: string;
+  pid: number;
+  buildSystem: string;
+  previewCwd: string;
+}
+
+function getPreviewPort(buildSystem: string): number {
+  return buildSystem === 'mkdocs' ? 8000 : 3000;
+}
+
+function pollPort(port: number, intervalMs: number, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const net = require('node:net');
+    const deadline = Date.now() + timeoutMs;
+    const check = () => {
+      const client = new net.Socket();
+      client.setTimeout(500);
+      client
+        .connect(port, '127.0.0.1', () => {
+          client.destroy();
+          resolve();
+        })
+        .on('error', () => {
+          client.destroy();
+          if (Date.now() >= deadline) {
+            reject(new Error(`Preview server did not start on port ${port} within ${timeoutMs}ms`));
+          } else {
+            setTimeout(check, intervalMs);
+          }
+        })
+        .on('timeout', () => {
+          client.destroy();
+          if (Date.now() >= deadline) {
+            reject(new Error(`Preview server did not start on port ${port} within ${timeoutMs}ms`));
+          } else {
+            setTimeout(check, intervalMs);
+          }
+        });
+    };
+    check();
+  });
+}
+
 /**
- * Auto-detect build system and run build
- * Throws if no supported build system is found
+ * Start a detached documentation preview server and return once it is ready.
+ * The server keeps running in the background after this function returns.
  */
-export async function runBuild(docsDir: string): Promise<BuildResult> {
+export async function runPreview(docsDir: string): Promise<PreviewResult> {
+  const config = detectBuildSystem(docsDir);
+  if (!config) {
+    const parentDir = path.dirname(docsDir);
+    throw new Error(
+      `No supported documentation build system detected in ${docsDir}.\n` +
+        `Checked:\n` +
+        `  - ${path.join(parentDir, 'website', 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'package.json')} (Docusaurus)\n` +
+        `  - ${path.join(parentDir, 'mkdocs.yml')} (MkDocs)\n`
+    );
+  }
+
+  // Map build commands to preview commands
+  let previewCmd: string;
+  let previewArgs: string[];
+  if (config.buildSystem === 'docusaurus') {
+    if (config.buildCommand.startsWith('yarn')) {
+      previewCmd = 'yarn';
+      previewArgs = ['start'];
+    } else {
+      previewCmd = 'npm';
+      previewArgs = ['run', 'start'];
+    }
+  } else if (config.buildSystem === 'mkdocs') {
+    previewCmd = 'mkdocs';
+    previewArgs = ['serve'];
+  } else {
+    throw new Error(`Preview not supported for build system: ${config.buildSystem}`);
+  }
+
+  const port = getPreviewPort(config.buildSystem);
+  const url = `http://localhost:${port}`;
+
+  // For Docusaurus with yarn, run `yarn install` only if node_modules is missing
+  if (config.buildSystem === 'docusaurus' && previewCmd === 'yarn') {
+    const nodeModules = path.join(config.buildCwd, 'node_modules');
+    if (!fs.existsSync(nodeModules)) {
+      console.log('[preview-runner] Running yarn install...');
+      const installResult = await executeCommand('yarn', ['install'], config.buildCwd);
+      if (installResult.exitCode !== 0) {
+        throw new Error(`yarn install failed:\n${installResult.output.slice(-1000)}`);
+      }
+      console.log('[preview-runner] ✓ yarn install done');
+    } else {
+      console.log('[preview-runner] node_modules present, skipping yarn install');
+    }
+  }
+
+  console.log(`[preview-runner] Starting ${config.buildSystem} dev server`);
+  console.log(`[preview-runner] Working directory: ${config.buildCwd}`);
+  console.log(`[preview-runner] Command: ${previewCmd} ${previewArgs.join(' ')}`);
+  console.log(`[preview-runner] URL: ${url}\n`);
+
+  const proc = spawn(previewCmd, previewArgs, {
+    cwd: config.buildCwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
+  });
+
+  // Stream output to console while starting
+  proc.stdout?.on('data', (d: Buffer) => process.stdout.write(d));
+  proc.stderr?.on('data', (d: Buffer) => process.stderr.write(d));
+
+  const pid = proc.pid ?? 0;
+  console.log(`\n[preview-runner] Server PID: ${pid} — waiting for port ${port}...`);
+
+  await pollPort(port, 3000, 300_000);
+
+  // Detach: close pipes so parent process can exit; server keeps running
+  proc.stdout?.destroy();
+  proc.stderr?.destroy();
+  proc.unref();
+
+  console.log(`\n[preview-runner] ✓ Server ready at ${url}`);
+
+  return {
+    url,
+    pid,
+    buildSystem: config.buildSystem,
+    previewCwd: config.buildCwd,
+  };
+}
+
+/**
+ * Auto-detect build system and run build.
+ * @param runMdoc - For Scala/ZIO projects, whether to run `sbt docs/mdoc` before building. Default: false.
+ */
+export async function runBuild(docsDir: string, runMdoc = false): Promise<BuildResult> {
   const config = detectBuildSystem(docsDir);
 
   if (!config) {
@@ -273,5 +417,5 @@ export async function runBuild(docsDir: string): Promise<BuildResult> {
   console.log(`[build-runner] Detected ${config.buildSystem} build system`);
   console.log(`[build-runner] Working directory: ${config.buildCwd}\n`);
 
-  return executeBuild(config, docsDir);
+  return executeBuild(config, docsDir, runMdoc);
 }

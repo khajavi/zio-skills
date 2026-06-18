@@ -104,9 +104,13 @@ Compare with analogous concepts (Java, Scala stdlib, theoretical CS) when it add
 #### Section 10: Advanced Usage / Building Blocks (if applicable)
 Show how the type composes with other types or builds higher-level abstractions.
 
-#### Section 11: Integration (if applicable)
-Show how this type integrates with other data types in the same library and module.
-Add cross-references to related docs.
+#### Section 11: Integration (high-confidence only)
+Include ONLY when ALL of these are true:
+- The type has non-trivial integration with another specific ZIO module or external library (e.g., ZIO HTTP, ZIO Kafka, SLF4J MDC).
+- The integration requires setup or wiring beyond a simple `import` or method call.
+- There is a concrete, runnable code example to show — not just a prose description.
+
+Skip this section if the "integration" is just using the type alongside other ZIO primitives (Fiber, ZLayer, Ref) in normal ZIO programs — that is not integration, it is basic usage. When in doubt, omit.
 
 #### Section 12: Running the Examples (required when standalone examples exist)
 Create runnable example project and embed using `SourceFile.print` with description → source link → run command.
@@ -140,6 +144,11 @@ Place the file in `docs/reference/<type-name-kebab-case>.md` with frontmatter:
 ---
 id: <kebab-case-id>
 title: "<TypeName>"
+description: "<One-sentence summary of what the type does, ≤150 characters>"
+keywords:
+  - "<Feature Name>"
+  - "<Pattern or Concept>"
+  - "<Related Synonyms>"
 ---
 ```
 
