@@ -21,24 +21,17 @@ export interface WriteExamplesResult {
 }
 
 export async function run({ init, payload }: FlueContext) {
-  const {
-    projectRoot,
-    moduleName,
-    topic,
-    docType,
-    outputDocPath,
-    packageName,
-    parentModule,
-  } = payload as {
-    projectRoot: string;
-    moduleName: string;
-    topic: string;
-    docType: DocType;
-    outputDocPath?: string;
-    packageName?: string;
-    /** If set, creates a self-contained sbt sub-project under {parentModule}/{moduleName}/. */
-    parentModule?: string;
-  };
+  const { projectRoot, moduleName, topic, docType, outputDocPath, packageName, parentModule } =
+    payload as {
+      projectRoot: string;
+      moduleName: string;
+      topic: string;
+      docType: DocType;
+      outputDocPath?: string;
+      packageName?: string;
+      /** If set, creates a self-contained sbt sub-project under {parentModule}/{moduleName}/. */
+      parentModule?: string;
+    };
 
   if (!projectRoot) throw new Error('payload.projectRoot is required');
   if (!moduleName) throw new Error('payload.moduleName is required');

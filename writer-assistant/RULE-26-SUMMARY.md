@@ -7,6 +7,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
 ## What Was Implemented
 
 ### 1. Core Library (`lib/rule-26-implicit-trace.ts`)
+
 - Pure TypeScript module for detection and fixing
 - No I/O dependencies — can be used anywhere
 - 4 exported functions:
@@ -16,6 +17,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
   - `formatViolation()` — human-readable messages
 
 ### 2. Test Suite (`tests/rule-26-implicit-trace.test.ts`)
+
 - 27 comprehensive tests
 - ✅ All passing
 - Coverage:
@@ -25,6 +27,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
   - Edge cases and boundary conditions
 
 ### 3. CLI Tool (`tools/rule-26-checker.ts`)
+
 - Standalone command-line interface
 - Three modes:
   - `check` — verify no violations exist
@@ -33,6 +36,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
 - Verbose output option
 
 ### 4. Workflow Integration (`workflows/phases/rule-26.ts`)
+
 - Programmatic integration for documentation workflows
 - Functions:
   - `checkRule26()` — validation without fixing
@@ -42,6 +46,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
   - `fixRule26InPlace()` — async fixing hook
 
 ### 5. Documentation (`docs/`)
+
 - **RULE-26-CHECKER.md** — User guide with examples
 - **RULE-26-IMPLEMENTATION.md** — Architecture and integration guide
 
@@ -50,6 +55,7 @@ This is a complete mechanical rule checker for ZIO's implicit trace convention.
 ### Detection
 
 Scans Scala code blocks for the pattern:
+
 ```regex
 /implicit\s+trace\s*:\s*Trace/i
 ```
@@ -74,7 +80,7 @@ def take(): UIO[A]
 
 Already included in `skills/docs-writing-style/check-docs-style.sh`:
 
-```bash
+````bash
 # Rule 26: ZIO implicit trace convention
 count_violations "$(awk '
   /^```scala/ { in_scala = 1; next }
@@ -83,7 +89,7 @@ count_violations "$(awk '
     print FILENAME ":" NR ": [Rule 26] ..."
   }
 ' "$FILE")"
-```
+````
 
 ### TypeScript Usage
 

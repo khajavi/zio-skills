@@ -228,6 +228,7 @@ npx flue run write-tutorial --target node --payload '{
 Valid `skipPhases` values: `"research"`, `"write"`, `"examples"`, `"verify"`, `"integrate"`, `"review"`, `"style"`, `"verifyBuild"`.
 
 Tutorials follow a 7-section structure:
+
 1. Introduction (with learning objectives)
 2. Background / Big Picture (optional)
 3. Concept sections (3-6 sections, one concept each)
@@ -252,12 +253,12 @@ npx flue run write-examples --target node --payload '{
 
 **`docType` values and generated file names:**
 
-| `docType`       | Generated files                                                                |
-|-----------------|--------------------------------------------------------------------------------|
-| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`          |
-| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala` |
+| `docType`       | Generated files                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `data-type-ref` | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala`                                              |
+| `tutorial`      | `Concept1Example.scala`, `Concept2Example.scala`, `Concept3Example.scala`, `CompleteExample.scala`                 |
 | `how-to-guide`  | `Step1BasicExample.scala`, `Step2IntermediateExample.scala`, `Step3AdvancedExample.scala`, `CompleteExample.scala` |
-| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala` |
+| `module-ref`    | `MultiTypeComposition.scala`, `CommonPattern1.scala`, `CommonPattern2.scala`, `CompleteExample.scala`              |
 
 **Phases:** Setup (build.sbt + dir) → Generate Scala files → Compile (`sbt <module>/compile`) → **Run** (execute each example, verify output) → Lint (`sbt fmtChanged && sbt check`) → Document (embed in article if `outputDocPath` provided).
 

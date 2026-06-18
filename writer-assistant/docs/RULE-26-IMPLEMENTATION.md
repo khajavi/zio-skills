@@ -5,6 +5,7 @@ This document describes the complete Rule 26 implementation for ZIO documentatio
 ## Overview
 
 **Rule 26** enforces the ZIO convention:
+
 - **Do not include `implicit trace: Trace` in documented method signatures**
 - ZIO's compiler macros inject trace parameters automatically
 - They're implementation details, not part of the public API
@@ -51,14 +52,15 @@ Pure TypeScript module with no I/O dependencies. Used everywhere.
 
 **Exports:**
 
-| Function | Purpose | Returns |
-|----------|---------|---------|
-| `findRule26Violations(content)` | Find all violations | `Rule26Violation[]` |
-| `fixRule26(content)` | Fix violations in content | `Rule26FixResult` |
-| `violatesRule26(content)` | Boolean check | `boolean` |
-| `formatViolation(filename, violation)` | Human-readable message | `string` |
+| Function                               | Purpose                   | Returns             |
+| -------------------------------------- | ------------------------- | ------------------- |
+| `findRule26Violations(content)`        | Find all violations       | `Rule26Violation[]` |
+| `fixRule26(content)`                   | Fix violations in content | `Rule26FixResult`   |
+| `violatesRule26(content)`              | Boolean check             | `boolean`           |
+| `formatViolation(filename, violation)` | Human-readable message    | `string`            |
 
 **Example:**
+
 ```typescript
 import { fixRule26 } from './lib/rule-26-implicit-trace.js';
 
@@ -75,7 +77,7 @@ if (result.fixed) {
 
 Mechanical rule checker for CI and pre-commit hooks. Includes Rule 26 validation:
 
-```bash
+````bash
 # Rule 26: ZIO implicit trace convention (no "implicit trace: Trace" in method signatures)
 count_violations "$(awk '
   /^```scala/ {
@@ -90,9 +92,10 @@ count_violations "$(awk '
     print FILENAME ":" NR ": [Rule 26] remove \"implicit trace: Trace\" from method signatures (ZIO convention)"
   }
 ' "$FILE")"
-```
+````
 
 **Usage:**
+
 ```bash
 bash skills/docs-writing-style/check-docs-style.sh docs/fiber.md
 # Exit 0: no violations
@@ -109,7 +112,7 @@ Workflow phase for programmatic checking and fixing.
 // Check without modifying
 const result = checkRule26('docs/fiber.md', false);
 if (!result.passed) {
-  result.violations.forEach(v => console.log(v.message));
+  result.violations.forEach((v) => console.log(v.message));
 }
 
 // Apply fixes
@@ -150,6 +153,7 @@ npm test -- tests/rule-26-implicit-trace.test.ts
 ```
 
 **Coverage:**
+
 - ✅ Detection in various contexts
 - ✅ Fixing with different parameter arrangements
 - ✅ Whitespace handling
@@ -221,12 +225,14 @@ Rule 26 violations are detected using a regex pattern:
 ```
 
 **Properties:**
+
 - ✅ Case-insensitive (matches `Trace`, `TRACE`, `trace`)
 - ✅ Whitespace-tolerant (tabs, multiple spaces)
 - ✅ Only matches in Scala code blocks (` ```scala`)
 - ✅ Ignores other code block types
 
 **Examples that match:**
+
 ```scala
 implicit trace: Trace
 implicit  trace:  Trace
@@ -235,6 +241,7 @@ implicit TRACE: TRACE
 ```
 
 **Examples that DON'T match:**
+
 ```scala
 trace: Trace            // no implicit keyword
 implicit myTrace: Trace // different parameter name
@@ -245,6 +252,7 @@ implicit myTrace: Trace // different parameter name
 When `implicit trace: Trace` is found, it's removed cleanly based on context:
 
 ### Scenario 1: Standalone parameter
+
 ```scala
 // Input
 (implicit trace: Trace)
@@ -254,6 +262,7 @@ When `implicit trace: Trace` is found, it's removed cleanly based on context:
 ```
 
 ### Scenario 2: First parameter
+
 ```scala
 // Input
 (implicit trace: Trace, other: String)
@@ -263,6 +272,7 @@ When `implicit trace: Trace` is found, it's removed cleanly based on context:
 ```
 
 ### Scenario 3: Middle parameter
+
 ```scala
 // Input
 (x: Int, implicit trace: Trace, y: String)
@@ -272,6 +282,7 @@ When `implicit trace: Trace` is found, it's removed cleanly based on context:
 ```
 
 ### Scenario 4: Last parameter
+
 ```scala
 // Input
 (x: Int, implicit trace: Trace)
@@ -292,7 +303,7 @@ import rule26Phase from './phases/rule-26.js';
 // During mechanical validation
 const rule26Result = rule26Phase.checkRule26(outputPath);
 if (!rule26Result.passed) {
-  violations.push(...rule26Result.violations.map(v => v.message));
+  violations.push(...rule26Result.violations.map((v) => v.message));
 }
 
 // During fixing phase
@@ -358,13 +369,14 @@ npm test -- --coverage tests/rule-26-implicit-trace.test.ts
 
 **Ensure it's in a Scala code block:**
 
-```markdown
+````markdown
 ✅ ```scala
 def method(implicit trace: Trace): UIO[A]
-```
+````
 
 ❌ ```
 def method(implicit trace: Trace): UIO[A]
+
 ```
 
 ❌ In prose: `implicit trace: Trace`
@@ -373,6 +385,7 @@ def method(implicit trace: Trace): UIO[A]
 ### Fix looks wrong
 
 Check for:
+
 - Unbalanced parentheses (edge case)
 - Unusual formatting with extra spaces before/after
 
@@ -381,6 +394,7 @@ Report with reproduction steps if found.
 ### Not part of style workflow
 
 Rule 26 checking is included in:
+
 - ✅ `check-docs-style.sh` (bash script) — always run
 - ✅ Manual CLI tool — optional, run on demand
 - ⚠️ TypeScript integration — requires explicit integration

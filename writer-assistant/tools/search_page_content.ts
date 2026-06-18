@@ -11,9 +11,7 @@ export function createSearchPageContent(state: CrossrefState) {
     parameters: v.object({
       pageId: v.string(),
       searchTerm: v.string(),
-      contextLines: v.optional(
-        v.number()
-      ),
+      contextLines: v.optional(v.number()),
     }),
     execute: async (args: Record<string, any>) => {
       const pageId = args.pageId as string;

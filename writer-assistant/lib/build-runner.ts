@@ -131,7 +131,11 @@ function isScalaProject(parentDir: string): boolean {
 /**
  * Execute the ZIO build pipeline: [sbt mdoc →] yarn install → yarn build
  */
-async function executeZioBuildPipeline(docsDir: string, buildCwd: string, runMdoc: boolean): Promise<BuildResult> {
+async function executeZioBuildPipeline(
+  docsDir: string,
+  buildCwd: string,
+  runMdoc: boolean
+): Promise<BuildResult> {
   const startTime = Date.now();
   const parentDir = path.dirname(docsDir);
   let output = '';
@@ -198,7 +202,11 @@ async function executeZioBuildPipeline(docsDir: string, buildCwd: string, runMdo
 /**
  * Execute a build command and capture output
  */
-async function executeBuild(config: BuildConfig, docsDir: string, runMdoc: boolean): Promise<BuildResult> {
+async function executeBuild(
+  config: BuildConfig,
+  docsDir: string,
+  runMdoc: boolean
+): Promise<BuildResult> {
   const startTime = Date.now();
   const parentDir = path.dirname(docsDir);
 
@@ -209,7 +217,9 @@ async function executeBuild(config: BuildConfig, docsDir: string, runMdoc: boole
     fs.existsSync(path.join(docsDir, '..', 'build.sbt'))
   ) {
     console.log('[build-runner] Detected Scala project with website subdirectory (ZIO pattern)');
-    const pipelineDesc = runMdoc ? 'sbt mdoc → yarn install → yarn build' : 'yarn install → yarn build';
+    const pipelineDesc = runMdoc
+      ? 'sbt mdoc → yarn install → yarn build'
+      : 'yarn install → yarn build';
     console.log(`[build-runner] Using build pipeline: ${pipelineDesc}\n`);
     return executeZioBuildPipeline(docsDir, config.buildCwd, runMdoc);
   }

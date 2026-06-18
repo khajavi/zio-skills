@@ -97,13 +97,15 @@ if (result.fixed) {
 Scans markdown content and returns all Rule 26 violations found in Scala code blocks.
 
 **Returns:**
+
 - Array of violations with `line`, `content`, and `match` properties
 - Empty array if no violations found
 
 **Example:**
+
 ```typescript
 const violations = findRule26Violations(content);
-violations.forEach(v => {
+violations.forEach((v) => {
   console.log(`Line ${v.line}: ${v.match}`);
 });
 ```
@@ -113,6 +115,7 @@ violations.forEach(v => {
 Removes all `implicit trace: Trace` parameters from Scala code blocks.
 
 **Returns:**
+
 ```typescript
 {
   fixed: boolean;           // true if at least one fix applied
@@ -123,6 +126,7 @@ Removes all `implicit trace: Trace` parameters from Scala code blocks.
 ```
 
 **Example:**
+
 ```typescript
 const result = fixRule26(content);
 if (result.fixed) {
@@ -136,6 +140,7 @@ if (result.fixed) {
 Quick boolean check — returns `true` if any Rule 26 violations exist.
 
 **Example:**
+
 ```typescript
 if (violatesRule26(content)) {
   const result = fixRule26(content);
@@ -166,16 +171,19 @@ Non-Scala code blocks are completely ignored (e.g., JavaScript, Python, plain te
 When removing `implicit trace: Trace`, the fixer handles four scenarios:
 
 1. **Standalone parameter** → Remove entire parameter
+
    ```scala
    (implicit trace: Trace) → ()
    ```
 
 2. **Leading parameter** → Remove with trailing comma
+
    ```scala
    (implicit trace: Trace, x: T) → (x: T)
    ```
 
 3. **Trailing parameter** → Remove with preceding comma
+
    ```scala
    (x: T, implicit trace: Trace) → (x: T)
    ```
@@ -201,6 +209,7 @@ npm test -- tests/rule-26-implicit-trace.test.ts
 ```
 
 Test coverage:
+
 - ✅ Multiple violation detection
 - ✅ Parameter removal in all positions (leading, trailing, standalone)
 - ✅ Whitespace handling (tabs, multiple spaces)
@@ -232,6 +241,7 @@ In Scala, use `implicit trace: Trace` for...
 ### Fixed file looks wrong
 
 Check for:
+
 1. Unbalanced parentheses (report as issue)
 2. Unusual formatting with `implicit trace: Trace` (regex-unfriendly)
 

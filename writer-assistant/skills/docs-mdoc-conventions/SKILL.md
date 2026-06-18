@@ -38,12 +38,13 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
   (for self-contained examples). Use `invisible` only when you need imports shared across blocks
   but must **not** appear anywhere in the rendered output.
 
-- **No mdoc** (plain `` ```scala ``) — Renders source code only, not compiled.
+- **No mdoc** (plain ` ```scala `) — Renders source code only, not compiled.
   Use for pseudocode, ASCII diagrams, type signatures for illustration, or non-Scala syntax (e.g., sbt configuration).
 
 - **Never hardcode expression output in comments**: Let mdoc render output automatically, don't add comments like `// None` or `// "hello"`. Use bare `mdoc` to show all vals; only use `mdoc:silent` when output is verbose boilerplate.
 
 **Bad vs. Good:**
+
 - ❌ `val x = 42 // 42`  
   ✅ `val x = 42` (mdoc renders the output)
 
@@ -51,7 +52,7 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
 
 Use this decision tree to pick the right modifier:
 
-```
+````
 Is this real executable Scala code?
 │
 ├─ NO → Use plain ```scala (pseudocode, ASCII art, type signatures)
@@ -73,7 +74,7 @@ Is this real executable Scala code?
          ├─ YES → Use mdoc:silent:nest (shadow existing names)
          │
          └─ NO → Use mdoc:silent (regular setup)
-```
+````
 
 **After any mdoc:silent block**, if you later need a completely different context (new domain, new imports), use `mdoc:silent:reset` to clear all state.
 
@@ -166,6 +167,7 @@ add(2, 3)
 ```
 
 ### Pattern 5: Multi-Step Guide
+
 1. **Setup block** → `mdoc:silent` (case classes, imports)
 2. **Example 1** → `mdoc` (show output)
 3. **Building on Example 1** → `mdoc` (reuse prior definitions)
@@ -207,7 +209,7 @@ val file = ScalaFile(
 ScalaEmitter.emit(file, EmitterConfig())
 ```
 
-**Rule:** In multi-example documents, `:reset` is not "sparingly used"—it is used **once per independent example**. The "use sparingly" advice in the Tips section applies to *within* a single example (where `:nest` is usually better).
+**Rule:** In multi-example documents, `:reset` is not "sparingly used"—it is used **once per independent example**. The "use sparingly" advice in the Tips section applies to _within_ a single example (where `:nest` is usually better).
 
 ## When to Use `:reset`
 
@@ -221,11 +223,11 @@ ScalaEmitter.emit(file, EmitterConfig())
 - **Never manually write `// result` comments** — use `mdoc` to show real output
 - **Test locally with `sbt docs`** before committing mdoc blocks
 - **Group related setup blocks** — define all prerequisites in one `silent` block if possible
-- **Use `:reset` at the right scope** — once per independent example in multi-example documents; prefer `:nest` for minor redefinitions *within* a single example
+- **Use `:reset` at the right scope** — once per independent example in multi-example documents; prefer `:nest` for minor redefinitions _within_ a single example
 
 ## Mechanical Validation
 
-Before submitting changes, run the mdoc-conventions checker against the file. It flags any plain ```` ```scala ```` block that should carry an mdoc modifier:
+Before submitting changes, run the mdoc-conventions checker against the file. It flags any plain ` ```scala ` block that should carry an mdoc modifier:
 
 ```
 bash writer-assistant/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <file.md>
@@ -233,11 +235,11 @@ bash writer-assistant/skills/docs-mdoc-conventions/check-mdoc-conventions.sh <fi
 
 Run with `--help` for full usage. **Exit codes:**
 
-| Code | Meaning                                                          |
-|------|------------------------------------------------------------------|
+| Code | Meaning                                                            |
+| ---- | ------------------------------------------------------------------ |
 | `0`  | No violations — every executable Scala block has an mdoc modifier. |
-| `1`  | One or more code blocks are missing mdoc modifiers.              |
-| `2`  | Invocation error (missing/extra arguments, file not found).      |
+| `1`  | One or more code blocks are missing mdoc modifiers.                |
+| `2`  | Invocation error (missing/extra arguments, file not found).        |
 
 ## Troubleshooting
 

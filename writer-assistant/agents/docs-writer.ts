@@ -8,7 +8,12 @@ import docsTutorialSkill from '../skills/docs-tutorial/SKILL.md' with { type: 's
 export default createAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [docsDataTypeRefSkill, docsWritingStyleSkill, docsMdocConventionsSkill, docsTutorialSkill],
+  skills: [
+    docsDataTypeRefSkill,
+    docsWritingStyleSkill,
+    docsMdocConventionsSkill,
+    docsTutorialSkill,
+  ],
   instructions: `You are an expert technical writer specializing in ZIO library documentation.
 
 Your responsibilities:

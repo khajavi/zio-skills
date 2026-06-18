@@ -11,6 +11,7 @@ Use this procedure when researching a documentation topic to understand the comp
 ## Core Mission
 
 Provide documentation authors with comprehensive understanding of:
+
 - Complete public API surface (all methods, signatures, variants)
 - Real-world usage patterns and composition examples
 - Design decisions and architectural relationships
@@ -22,6 +23,7 @@ Provide documentation authors with comprehensive understanding of:
 ### 1. Discovery Phase
 
 **Locate core source files:**
+
 - Use Glob and Grep to find source files for the topic:
   ```
   Glob: **/src/main/scala*/**/<TypeName>.scala
@@ -30,6 +32,7 @@ Provide documentation authors with comprehensive understanding of:
 - For modules: identify all core types and their source file locations
 
 **Identify scope and boundaries:**
+
 - Read the full source file(s) — understand every public method, type parameter, companion object, and factory method
 - Map what is public API vs. internal implementation
 - Note accessibility modifiers, deprecated methods, and alternative names
@@ -57,23 +60,27 @@ Provide documentation authors with comprehensive understanding of:
 ### 3. Architecture & Design Analysis
 
 **Map abstraction layers and patterns:**
+
 - Identify layers: constructors → transformations → queries → finalization
 - Document common patterns: builders, factories, functional chains, state management
 - Note which operations are composable vs. terminal
 - Understand type relationships: inheritance, composition, sealed traits vs. open hierarchies
 
 **Design rationale:**
+
 - Search GitHub history for design decisions, API evolution, known tradeoffs
 - Identify any documented anti-patterns or common misconceptions
 
 ### 4. Documentation Landscape
 
 **Understand existing coverage:**
+
 - Check `docs/reference/` and `docs/` for existing documentation
 - Identify what is already documented vs. gaps to address
 - Note examples or patterns already documented elsewhere
 
 **Identify documentation gaps:**
+
 - Methods lacking test coverage
 - Performance characteristics not captured
 - Edge cases not exercised in tests
@@ -84,6 +91,7 @@ Provide documentation authors with comprehensive understanding of:
 ### Step 1a: Read Core Source Files
 
 For each core type, read the full source file to understand:
+
 - All public methods and their signatures
 - Type parameters, variance, constraints
 - Companion object and factory methods
@@ -92,6 +100,7 @@ For each core type, read the full source file to understand:
 ### Step 1b: Read Test Files
 
 Search and read test suites to understand:
+
 - Construction patterns and common usages
 - Method chaining and composition examples
 - Edge cases: empty inputs, single elements, large data
@@ -101,6 +110,7 @@ Search and read test suites to understand:
 ### Step 1c: Find Supporting Types
 
 Identify every type that core methods depend on:
+
 1. Grep imports in test files for the full dependency graph
 2. For each supporting type, read enough source and documentation to explain it in context
 3. Trace return types through multiple layers if needed
@@ -117,13 +127,17 @@ Identify every type that core methods depend on:
 Use the `github-research` tool (available in `tools/github-research.ts`) to systematically gather design rationale and context:
 
 ```typescript
-import { conductGitHubResearch, readIssueDetails, readPullRequestDetails } from '../tools/github-research.js';
+import {
+  conductGitHubResearch,
+  readIssueDetails,
+  readPullRequestDetails,
+} from '../tools/github-research.js';
 
 // Comprehensive search and analysis
 const findings = await conductGitHubResearch({
   repository: 'zio/zio',
   topic: 'Cached',
-  limit: 30
+  limit: 30,
 });
 
 // Results organized by category:

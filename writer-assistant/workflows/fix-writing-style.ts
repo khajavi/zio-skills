@@ -45,22 +45,31 @@ export async function run({ init, payload }: FlueContext) {
       init, // pass init so style phase can spawn LLM checker agent
     });
 
-    console.log(`[Phase 1] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`);
+    console.log(
+      `[Phase 1] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+    );
     if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
       console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
-      styleResult.unresolvedViolations.forEach(violation => console.log(`    - ${violation}`));
+      styleResult.unresolvedViolations.forEach((violation) => console.log(`    - ${violation}`));
     }
     phasesCompleted.push('style');
 
     // Phase 2: Verify Build
     console.log('\n[Phase 2] Build Verification: Verifying documentation builds...');
-    let buildVerifyResult = { success: false, buildSystem: 'unknown', durationMs: 0, skipped: false };
+    let buildVerifyResult = {
+      success: false,
+      buildSystem: 'unknown',
+      durationMs: 0,
+      skipped: false,
+    };
     const docsDir = inferDocsDir(filePath);
     if (docsDir) {
       try {
         const buildResult = await verifyBuild(docsDir);
         buildVerifyResult = { ...buildResult, skipped: false };
-        console.log(`[Phase 2] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`);
+        console.log(
+          `[Phase 2] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`
+        );
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         if (msg.includes('No supported documentation build system detected')) {
@@ -71,7 +80,9 @@ export async function run({ init, payload }: FlueContext) {
         }
       }
     } else {
-      console.log('[Phase 2] ⚠ Could not infer docs directory from file path, skipping build verification');
+      console.log(
+        '[Phase 2] ⚠ Could not infer docs directory from file path, skipping build verification'
+      );
       buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
     }
     phasesCompleted.push('verifyBuild');
@@ -100,7 +111,9 @@ export async function run({ init, payload }: FlueContext) {
       },
     };
   } catch (error) {
-    console.error(`[fix-writing-style] Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `[fix-writing-style] Error: ${error instanceof Error ? error.message : String(error)}`
+    );
     return {
       filePath,
       typeName,

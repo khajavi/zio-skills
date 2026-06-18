@@ -1,6 +1,6 @@
 ---
 name: docs-writing-style
-description: Prose style rules for documentation (reference pages, how-to guides, tutorials). Use this skill whenever writing or editing documentation to ensure consistency, clarity, and professionalism across all docs. 
+description: Prose style rules for documentation (reference pages, how-to guides, tutorials). Use this skill whenever writing or editing documentation to ensure consistency, clarity, and professionalism across all docs.
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -20,9 +20,11 @@ Apply all fixes. Mark each task `completed` as you finish it.
 
 **Phase 3 — Mechanical validation**
 After all tasks are `completed`, run:
+
 ```
 bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-writing-style/check-docs-style.sh <file.md>
 ```
+
 Verify exit code is 0. If not, re-open the relevant tasks and fix.
 
 ## Mechanical Validation
@@ -37,14 +39,13 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for 
 
 **Exit codes:**
 
-| Code | Meaning                                                          |
-|------|------------------------------------------------------------------|
-| `0`  | No violations — all checked rules pass.                          |
-| `1`  | One or more violations found. Details printed to stdout.         |
-| `2`  | Invocation error (missing/extra arguments, file not found).      |
+| Code | Meaning                                                     |
+| ---- | ----------------------------------------------------------- |
+| `0`  | No violations — all checked rules pass.                     |
+| `1`  | One or more violations found. Details printed to stdout.    |
+| `2`  | Invocation error (missing/extra arguments, file not found). |
 
 **Rule 8** detects unqualified methods using heuristics (camelCase in backticks, confident if qualified elsewhere). Update `SAFE_NAMES` in `check-docs-style.sh` to avoid false positives.
-
 
 ## Prose Style Rules
 
@@ -75,23 +76,28 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for 
 
 10. **No duplicate markdown heading**: Do not create a markdown heading (`#`) that duplicates the frontmatter title. The frontmatter title is sufficient:
 
-   **Bad vs. Good:**
-   - ❌ Frontmatter has `title: "As Type"`, then document starts with `# As Type`
-   - ✅ Start directly with `## Overview` or `## Use Cases`
+    **Bad vs. Good:**
+
+- ❌ Frontmatter has `title: "As Type"`, then document starts with `# As Type`
+- ✅ Start directly with `## Overview` or `## Use Cases`
 
 ## Heading and Code Block Layout Rules
 
 11. **Heading hierarchy**: Use `##` for major sections, `###` for subsections, and `####` for subsubsections. All three levels are fully supported and encouraged.
 12. **No bare subheaders**: Always write an intro sentence between a `##` header and its first `###` subheader. Explain why this section exists and what problem it solves. This can be a single sentence or a short paragraph.
 
-   **Bad vs. Good:**
-   - ❌ `## Operations` → `### Map` (no intro between them)  
-     ✅ `## Operations` → `To transform values, use these operations.` → `### Map`
-13. **No lone subheaders**: Never create a subsection with only one child. 
+    **Bad vs. Good:**
 
-   **Bad vs. Good:**
-   - ❌ `## Overview` → `### Definition` (only one subsection)  
-     ✅ `## Overview` (put the definition content directly here)
+- ❌ `## Operations` → `### Map` (no intro between them)  
+  ✅ `## Operations` → `To transform values, use these operations.` → `### Map`
+
+13. **No lone subheaders**: Never create a subsection with only one child.
+
+    **Bad vs. Good:**
+
+- ❌ `## Overview` → `### Definition` (only one subsection)  
+  ✅ `## Overview` (put the definition content directly here)
+
 14. **When to use `####`**: Use `####` to organize multiple related topics under a single `###`. Example:
     ```
     ### Operations
@@ -100,14 +106,14 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for 
     #### Zipping
     #### Scanning
     ```
-15. **Every code block must be preceded by a prose sentence ending with `:`**: Never follow a heading directly with a code block. Always write an intro sentence that ends with `:`. 
+15. **Every code block must be preceded by a prose sentence ending with `:`**: Never follow a heading directly with a code block. Always write an intro sentence that ends with `:`.
 
-    **Bad vs. Good:**
-    - ❌ `#### Chunk#map` → (code block immediately)  
-      ✅ `#### Chunk#map` → `To transform each element:` → (code block)
-Between consecutive code blocks, add bridging prose that explains what the next block demonstrates:
-    - ❌ (code block) (code block) (no prose between)  
-      ✅ (code block) `Next, create the result:` (code block)
+        **Bad vs. Good:**
+        - ❌ `#### Chunk#map` → (code block immediately)
+          ✅ `#### Chunk#map` → `To transform each element:` → (code block)
+
+    Between consecutive code blocks, add bridging prose that explains what the next block demonstrates: - ❌ (code block) (code block) (no prose between)  
+     ✅ (code block) `Next, create the result:` (code block)
 
 ## Code Block Rules
 
@@ -116,53 +122,59 @@ Between consecutive code blocks, add bridging prose that explains what the next 
 18. **Prefer `val` over `var`**: Use immutable patterns everywhere if possible.
 19. **Show method signatures within their containing type**: Document methods within their containing trait/class, not as bare signatures. Provides context about ownership and API surface.
 
-   **Bad vs. Good:**
-   - ❌ `def map[B](f: A => B): ZIO[R, E, B] = ???`
-   - ✅ `trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }`
+    **Bad vs. Good:**
+
+- ❌ `def map[B](f: A => B): ZIO[R, E, B] = ???`
+- ✅ `trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }`
 
 20. **Write contextualized descriptions for code blocks**: When showing example code snippets, explain what they do and why they are relevant. Provide context before every code block with a sentence that introduces it, explains its purpose, and ends with a colon (`:`). The introduction must be contextualized — relate it to what the code demonstrates or why it matters in context (avoid generic phrases like "here's an example" or "we can see this in action").
-   
-   **Bad vs. Good:**
-   - ❌ "Here's an example:"  
-     ✅ "To extract the first three elements from the end of the chunk:"
-   - ❌ "We can see this in action:"  
-     ✅ "When filtering an empty chunk, the result contains no elements:"
+
+    **Bad vs. Good:**
+
+- ❌ "Here's an example:"  
+  ✅ "To extract the first three elements from the end of the chunk:"
+- ❌ "We can see this in action:"  
+  ✅ "When filtering an empty chunk, the result contains no elements:"
 
 ## Table Formatting
 
 22. **Pad column alignment**: Align table columns with spaces for readability.
 
-   **Bad (minimal spacing):**
-   ```
-   | Name | Value |
-   | - | - |
-   ```
+    **Bad (minimal spacing):**
 
-   **Good (padded for alignment):**
-   ```
-   | Name  | Value     |
-   | ----- | --------- |
-   ```
+```
+| Name | Value |
+| - | - |
+```
+
+**Good (padded for alignment):**
+
+```
+| Name  | Value     |
+| ----- | --------- |
+```
 
 ## Scala Version
 
-23. **Default to Scala 2.13.x syntax**: Use Scala 2.13 syntax only. Always use `import x._` for wildcard imports, never `import x.*`. 
+23. **Default to Scala 2.13.x syntax**: Use Scala 2.13 syntax only. Always use `import x._` for wildcard imports, never `import x.*`.
 24. **Use tabs for version-specific syntax**: Use tabbed code blocks to show syntax differences between Scala 2 and 3 (e.g., `using` vs `implicit`, wildcard imports). Scala 2 is always the default tab.
 
 ## Dependency Declarations
 
-25. **Use @VERSION@ placeholder for versions**: 
+25. **Use @VERSION@ placeholder for versions**:
 
-   **Bad vs. Good:**
-   - ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "1.0.0"`
-   - ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "<version>"`
-   - ✅ `libraryDependencies += "dev.zio" %% "zio-blocks" % "@VERSION@"`
+    **Bad vs. Good:**
+
+- ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "1.0.0"`
+- ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "<version>"`
+- ✅ `libraryDependencies += "dev.zio" %% "zio-blocks" % "@VERSION@"`
 
 ## ZIO-Specific Conventions
 
 26. **Never include `implicit trace: Trace` in documented method signatures.** It is a compiler implementation detail, not part of the public API. Developers don't provide it explicitly—ZIO's macros inject it automatically.
 
 **Bad vs. Good:**
+
 - ❌ `def take(implicit trace: Trace): UIO[A]`
 - ✅ `def take(): UIO[A]`
 
