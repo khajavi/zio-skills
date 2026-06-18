@@ -33,7 +33,7 @@ Before validating manually, run the mechanical style checks to catch common viol
 bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-writing-style/check-docs-style.sh <file.md>
 ```
 
-This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 22, 23, and 25 for mechanical violations. Run with `--help` for the full rule list and usage examples.
+This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 21, 22, 23, and 25 for mechanical violations. Run with `--help` for the full rule list and usage examples.
 
 **Exit codes:**
 
@@ -128,11 +128,15 @@ Between consecutive code blocks, add bridging prose that explains what the next 
    - ❌ "We can see this in action:"  
      ✅ "When filtering an empty chunk, the result contains no elements:"
 
-21. **Paragraphs over bullets for connected narrative**: Use bullets only for independent, enumerable items. When items form a connected narrative — building on each other, explaining cause-and-effect, or describing a single concept — write prose instead.
+21. **Bullet list formatting**: Use bullets only for independent, enumerable items. When items form a connected narrative — building on each other, explaining cause-and-effect, or describing a single concept — write prose instead. Never place blank lines between bullet items.
 
-   **Bad vs. Good:**
+   **Bad vs. Good (connected narrative):**
    - ❌ "The code above:\n  - We open three streams\n  - Each has its own queues\n  - There is no crosstalk"
    - ✅ "The code above opens three streams, each with its own queues. There is no crosstalk."
+
+   **Bad vs. Good (blank lines between bullets):**
+   - ❌ "- item one\n\n- item two\n\n- item three"
+   - ✅ "- item one\n- item two\n- item three"
 
 ## Table Formatting
 
