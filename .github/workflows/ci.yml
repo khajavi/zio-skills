@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  nix-checks:
+  writer-assistant:
     name: Check Writer Assistant Module
     runs-on: ubuntu-latest
 
