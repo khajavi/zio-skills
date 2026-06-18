@@ -24,14 +24,17 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
+      - name: Install npm deps
+        run: cd writer-assistant && nix develop -c npm ci --frozen-lockfile
+
       - name: Format
-        run: nix build ./writer-assistant#checks.x86_64-linux.format
+        run: cd writer-assistant && nix develop -c npx prettier --check .
 
       - name: Lint
-        run: nix build ./writer-assistant#checks.x86_64-linux.lint
+        run: cd writer-assistant && nix develop -c npx eslint "**/*.ts" --ignore-pattern "dist/" --ignore-pattern "node_modules/"
 
       - name: Build
-        run: nix build ./writer-assistant#checks.x86_64-linux.build
+        run: cd writer-assistant && nix develop -c npm run build
 
       - name: Test
-        run: nix build ./writer-assistant#checks.x86_64-linux.test
+        run: cd writer-assistant && nix develop -c npm test
