@@ -81,9 +81,9 @@ function getNamingNote(docType: DocType): string {
     case 'data-type-ref':
       return 'BasicUsage.scala: simple constructor/creation patterns; AdvancedPatterns.scala: complex compositions; CompleteExample.scala: full end-to-end usage.';
     case 'tutorial':
-      return 'Name each file after the concept it demonstrates (e.g., CreatingStreams.scala, MessageExchange.scala, StreamLifecycle.scala). Always include CompleteExample.scala as the final comprehensive example.';
+      return 'Name each file <ConceptName>Example<N>.scala where N is the study order (e.g., CreatingAMuxExample1.scala, ConcurrentStreamsExample2.scala, ErrorHandlingExample3.scala). Always include CompleteExample.scala (no number) as the final comprehensive example.';
     case 'how-to-guide':
-      return 'Name each file after the step it demonstrates (e.g., ConnectingToDatabase.scala, QueryingWithFilters.scala). Always include CompleteExample.scala as the complete solution.';
+      return 'Name each file <StepName>Example<N>.scala where N is the step order (e.g., ConnectingToDatabaseExample1.scala, QueryingWithFiltersExample2.scala). Always include CompleteExample.scala (no number) as the complete solution.';
     case 'module-ref':
       return 'MultiTypeComposition.scala: composing multiple types from the module; CommonPatternN.scala: common usage patterns; CompleteExample.scala: comprehensive example.';
   }
