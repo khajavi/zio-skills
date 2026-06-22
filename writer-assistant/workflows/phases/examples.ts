@@ -232,7 +232,7 @@ using the same API calls and patterns shown in that section's code examples.
 `
     : '';
 
-  const fileCount = exampleFileNames ? exampleFileNames.length : '3-4';
+  const fileCount = exampleFileNames ? exampleFileNames.length : hasDoc ? 'one per concept section' : '3-4';
 
   const generatePrompt = `${articleReadingPreamble}Create ${fileCount} Scala example files for: ${topic}
 
@@ -279,7 +279,7 @@ Requirements:
 - CompleteExample.scala: most comprehensive end-to-end demonstration
 - Each file independently runnable
 
-Write all ${fileCount} files now.`;
+Write all files now.`;
 
   await session.prompt(generatePrompt);
 
