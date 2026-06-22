@@ -41,9 +41,9 @@ After writing, verify every item on this checklist:
 ## Running the Examples Section
 
 - [ ] The tutorial includes a "Running the Examples" section after "Putting It Together"
-- [ ] The section includes `git clone https://github.com/zio/<repo-name>.git` and `cd <repo-name>`
-- [ ] Every companion example file is listed with its `sbt "schema-examples/runMain ..."` command
-- [ ] The section includes `sbt "schema-examples/compile"` as an alternative
+- [ ] Each example has a `###` subsection with a narrative description (1–2 sentences)
+- [ ] Each subsection has a `<details>` block with `mdoc:embed` showing the source
+- [ ] Each subsection has an "Observe X:" sentence followed by a `bash` run command
 
 ## Style and Integration
 
