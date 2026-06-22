@@ -54,24 +54,14 @@ function runShell(cmd: string, args: string[], cwd: string): void {
   spawnSync(cmd, args, { cwd, encoding: 'utf-8', timeout: 60_000, shell: false });
 }
 
-function getExampleFileNames(docType: DocType): string[] {
+function getExampleFileNames(docType: DocType): string[] | null {
   switch (docType) {
     case 'data-type-ref':
       return ['BasicUsage.scala', 'AdvancedPatterns.scala', 'CompleteExample.scala'];
     case 'tutorial':
-      return [
-        'Concept1Example.scala',
-        'Concept2Example.scala',
-        'Concept3Example.scala',
-        'CompleteExample.scala',
-      ];
+      return null; // agent chooses semantic names; directory is scanned after generation
     case 'how-to-guide':
-      return [
-        'Step1BasicExample.scala',
-        'Step2IntermediateExample.scala',
-        'Step3AdvancedExample.scala',
-        'CompleteExample.scala',
-      ];
+      return null; // agent chooses semantic names; directory is scanned after generation
     case 'module-ref':
       return [
         'MultiTypeComposition.scala',
@@ -91,9 +81,9 @@ function getNamingNote(docType: DocType): string {
     case 'data-type-ref':
       return 'BasicUsage.scala: simple constructor/creation patterns; AdvancedPatterns.scala: complex compositions; CompleteExample.scala: full end-to-end usage.';
     case 'tutorial':
-      return 'ConceptNExample.scala files: one per tutorial step/concept; CompleteExample.scala: the final "putting it all together" code.';
+      return 'Name each file after the concept it demonstrates (e.g., CreatingStreams.scala, MessageExchange.scala, StreamLifecycle.scala). Always include CompleteExample.scala as the final comprehensive example.';
     case 'how-to-guide':
-      return 'StepNXxxExample.scala files: one per procedural step; CompleteExample.scala: complete solution combining all steps.';
+      return 'Name each file after the step it demonstrates (e.g., ConnectingToDatabase.scala, QueryingWithFilters.scala). Always include CompleteExample.scala as the complete solution.';
     case 'module-ref':
       return 'MultiTypeComposition.scala: composing multiple types from the module; CommonPatternN.scala: common usage patterns; CompleteExample.scala: comprehensive example.';
   }
@@ -119,8 +109,10 @@ export async function runExamplesPhase(
     ? path.join(projectRoot, parentModule, moduleName)
     : path.join(projectRoot, moduleName);
   const packageDir = path.join(moduleDir, 'src', 'main', 'scala', packageName);
-  const exampleFileNames = getExampleFileNames(docType);
-  const exampleFilePaths = exampleFileNames.map((f) => path.join(packageDir, f));
+  const exampleFileNames = getExampleFileNames(docType); // null for tutorial/how-to-guide
+  const exampleFilePaths = exampleFileNames
+    ? exampleFileNames.map((f) => path.join(packageDir, f))
+    : [];
 
   const startMs = Date.now();
 
@@ -203,9 +195,11 @@ Report: "✓ Setup complete" or describe issues.`;
   await session.prompt(setupPrompt);
 
   // Phase B: Generate Scala example files
-  const fileList = exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n');
+  const fileList = exampleFileNames
+    ? exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
+    : '  (3-4 files — choose names based on the topic concepts; see naming convention below)';
 
-  const generatePrompt = `Create ${exampleFileNames.length} Scala example files for: ${topic}
+  const generatePrompt = `Create ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
 
 Package directory: ${packageDir}
 Package name: ${packageName}
@@ -250,12 +244,19 @@ Requirements:
 - CompleteExample.scala: most comprehensive end-to-end demonstration
 - Each file independently runnable
 
-Write all ${exampleFileNames.length} files now.`;
+Write all ${exampleFileNames ? exampleFileNames.length : '3-4'} files now.`;
 
   await session.prompt(generatePrompt);
 
-  const createdFiles = exampleFilePaths.filter((f) => fs.existsSync(f));
-  console.log(`[examples] Created ${createdFiles.length}/${exampleFilePaths.length} example files`);
+  const createdFiles = exampleFileNames
+    ? exampleFilePaths.filter((f) => fs.existsSync(f))
+    : fs.existsSync(packageDir)
+      ? fs.readdirSync(packageDir)
+          .filter((f) => f.endsWith('.scala'))
+          .map((f) => path.join(packageDir, f))
+      : [];
+  const expectedCount = exampleFileNames ? exampleFileNames.length : '3-4';
+  console.log(`[examples] Created ${createdFiles.length}/${expectedCount} example files`);
 
   // Phase C: Compile — one agent-assisted retry on failure
   // Self-contained sub-modules compile from their own directory; flat modules compile from root.
