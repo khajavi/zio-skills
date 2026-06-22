@@ -413,7 +413,7 @@ ${createdFiles.map(f => embedBlock(moduleName, packageName, path.basename(f, '.s
 3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
-Add the section at the end of the document.`;
+Add the section after the "What You've Learned" section and before the "Where to Go Next" section.`;
 
     await session.prompt(docPrompt);
     documentationAdded = true;
