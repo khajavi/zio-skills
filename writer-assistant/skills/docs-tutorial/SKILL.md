@@ -210,7 +210,28 @@ Show the complete working example combining everything from the tutorial. Use `m
 
 #### Running the Examples
 
-Provide git clone + sbt runMain commands for each companion example (see `docs-examples` skill).
+All examples in this tutorial have corresponding runnable Scala files in the `zio-examples` module. Run them in order to progressively build your understanding in practice.
+
+For each companion example, add a `###` subsection with this structure:
+
+1. **Narrative** (1–2 sentences): what the example demonstrates and why it matters.
+2. **Embedded source** in a `<details>` block:
+   ```
+   <details>
+     <summary>path/to/ExampleFile.scala</summary>
+
+   `​`​`scala mdoc:embed:path/to/ExampleFile.scala:show-line-numbers
+   `​`​`
+
+   </details>
+   ```
+3. **"Observe X:"** — one sentence describing what to watch in the output, ending with `:`.
+4. **Run command** in a `bash` block:
+   ```bash
+   sbt "module/runMain package.ClassName"
+   ```
+
+> **Dependency**: `mdoc:embed` requires `"dev.zio" %% "zio-sbt-source" % "0.6.0"` in `libraryDependencies`.
 
 #### What You've Learned
 

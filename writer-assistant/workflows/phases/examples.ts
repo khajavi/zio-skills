@@ -367,15 +367,29 @@ Add the section at the end of the document, after all type documentation.
 Include a brief intro sentence before each embedded example.`
       : `Add a "Running the Examples" section to ${outputDocPath}.
 
-List each example with its run command:
-${createdFiles
-  .map((f) => {
-    const className = path.basename(f, '.scala');
-    return `  - ${path.basename(f)}\n    Run: sbt "${moduleName}/runMain ${packageName}.${className}"`;
-  })
-  .join('\n')}
+Start with intro paragraph: "All examples in this tutorial have corresponding runnable Scala files in the \`${moduleName}\` module. Run them in order to progressively build your understanding in practice."
 
-Format as a numbered list. Add the section at the end of the document.`;
+For each example below, add a ### subsection with:
+1. A 1-2 sentence narrative explaining what this example demonstrates.
+2. A <details> block embedding the source:
+   <details>
+     <summary>${moduleName}/src/main/scala/${packageName}/<FileName>.scala</summary>
+
+   \`\`\`scala mdoc:embed:${moduleName}/src/main/scala/${packageName}/<FileName>.scala:show-line-numbers
+   \`\`\`
+
+   </details>
+3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
+4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
+
+Examples:
+${createdFiles.map(f => {
+  const className = path.basename(f, '.scala');
+  const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
+  return `  - ${className}: ${relPath}`;
+}).join('\n')}
+
+Add the section at the end of the document.`;
 
     await session.prompt(docPrompt);
     documentationAdded = true;
