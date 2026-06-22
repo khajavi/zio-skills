@@ -207,7 +207,7 @@ Persist state
 
 1. **Research Phase** — Analyze source code, extract type information, gather usage examples
 2. **Write Phase** — Generate documentation following API reference structure
-3. _(optional)_ **Examples Phase** — Create companion Scala sub-module, compile and lint examples, embed `SourceFile.print()` calls in article (activated by `examples` payload field)
+3. _(optional)_ **Examples Phase** — Create companion Scala sub-module, compile and lint examples, embed examples using `mdoc:embed` (activated by `examples` payload field)
 4. **Verify Phase** — Check method coverage, compile mdoc examples to zero errors
 5. **Integrate Phase** — Update sidebars.js, docs/index.md, cross-references
 6. **Review Phase** — Critic→fixer loop for content accuracy (max 5 rounds)
@@ -293,7 +293,7 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 3. **Compile** — `sbt <moduleName>/compile`; one agent-assisted retry on failure
 4. **Run** — Execute each example, verify exit code 0 and no exceptions in output; one re-compile if agent fixes a runtime error
 5. **Lint** — `git add` → `sbt fmtChanged` → `sbt check`
-6. **Document** _(optional)_ — Embed examples in article: `SourceFile.print()` for `data-type-ref`/`module-ref`; shell run commands for `tutorial`/`how-to-guide`
+6. **Document** _(optional)_ — Embed examples in article: `mdoc:embed` inside `<details>` blocks for all doc types; `tutorial`/`how-to-guide` also include `###` subsections with "Observe X:" sentences and run commands
 
 **Hierarchical modules** (`parentModule` field): creates a `RootProject(file(...))` hierarchy — each directory is a self-contained sbt project with its own `build.sbt`. Root's `.aggregate(...)` is updated to include the new parent module. Compile and run execute from the sub-module directory (not root).
 

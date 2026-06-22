@@ -133,7 +133,7 @@ Skip this section if the "integration" is just using the type alongside other ZI
 
 #### Section 12: Running the Examples (required when standalone examples exist)
 
-Create runnable example project and embed using `SourceFile.print` with description → source link → run command.
+Create runnable example project and embed using `mdoc:embed:path/to/file.scala:show-line-numbers` inside a `<details>` block, with description → embedded source → run command.
 
 ### Phase 3: Verify
 
