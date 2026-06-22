@@ -195,11 +195,33 @@ Report: "✓ Setup complete" or describe issues.`;
   await session.prompt(setupPrompt);
 
   // Phase B: Generate Scala example files
+  const hasDoc = !exampleFileNames && outputDocPath && fs.existsSync(outputDocPath);
+
   const fileList = exampleFileNames
     ? exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
-    : '  (3-4 files — choose names based on the topic concepts; see naming convention below)';
+    : hasDoc
+      ? '  (derive from the article sections — see instructions below)'
+      : '  (3-4 files — choose names based on the topic concepts; see naming convention below)';
 
-  const generatePrompt = `Create ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
+  const articleReadingPreamble = hasDoc
+    ? `Before creating files, read the article at: ${outputDocPath}
+
+Identify the concept sections in order (numbered sections like "## 1. Title", "## 2. Title").
+Skip sections: Introduction, Background, Big Picture, What You've Learned, Where to Go Next, Running the Examples.
+
+Derive one file per concept section:
+- For each "## N. Section Title": create <SectionTitlePascalCase>Example<N>.scala
+  Example: "## 1. Creating a Mux" → CreatingAMuxExample1.scala
+  Example: "## 3. The Stream Lifecycle" → StreamLifecycleExample3.scala
+- For "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number)
+
+The code in each file must demonstrate the same concept as the corresponding article section,
+using the same API calls and patterns shown in that section's code examples.
+
+`
+    : '';
+
+  const generatePrompt = `${articleReadingPreamble}Create ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
 
 Package directory: ${packageDir}
 Package name: ${packageName}
