@@ -133,26 +133,22 @@ export async function runExamplesPhase(
   const parentExists = parentBuildSbt ? fs.existsSync(parentBuildSbt) : false;
 
   const setupPrompt = parentModule
-    ? `Set up a new self-contained Scala example sub-module for documenting: ${topic}
+    ? `Scaffold ${topic} example sub-module (self-contained sbt build).
 
-Project root:  ${projectRoot}
-Parent module: ${parentModule}   (dir: ${path.join(projectRoot, parentModule)})
-Module name:   ${moduleName}     (dir: ${moduleDir})
-Package name:  ${packageName}
+Root: ${projectRoot}
+Parent: ${parentModule} (${path.join(projectRoot, parentModule)})
+Module: ${moduleName} (${moduleDir})
+Package: ${packageName}
 
-This project uses a RootProject hierarchy — each directory is its own self-contained sbt build.
+RootProject hierarchy — each dir = own sbt build.
 
-Steps:
+1. mkdir -p "${packageDir}"
 
-1. Create the source directory:
-   mkdir -p "${packageDir}"
-
-2. Create ${moduleDir}/build.sbt — a self-contained sbt project file.
-   - Read ${projectRoot}/build.sbt (or ${projectRoot}/.scala-version if it exists) to find the exact scalaVersion used
-   - Add libraryDependencies for ZIO core matching the version in the root build
-   - If the topic involves SLF4J, add "org.slf4j" % "slf4j-api" % "<version>" as well
-   - Keep it minimal (no publish settings, no plugins needed)
-   Example shape:
+2. Create ${moduleDir}/build.sbt:
+   - Read ${projectRoot}/build.sbt (or ${projectRoot}/.scala-version) for exact scalaVersion
+   - Add ZIO core libraryDependency at same version as root
+   - SLF4J in topic? Add "org.slf4j" % "slf4j-api" % "<version>"
+   - Minimal — no publish, no plugins
    \`\`\`
    scalaVersion := "3.x.x"
    libraryDependencies += "dev.zio" %% "zio" % "2.x.x"
@@ -160,37 +156,30 @@ Steps:
 
 3. ${
         parentExists
-          ? `The parent aggregator already exists at ${parentBuildSbt}.
-   Add the following line to ${parentBuildSbt}:
+          ? `Parent aggregator exists at ${parentBuildSbt}. Add:
        lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))`
-          : `The parent aggregator does NOT exist yet. Create it:
+          : `Parent aggregator missing. Create:
    a. mkdir -p "${path.join(projectRoot, parentModule)}"
-   b. Create ${parentBuildSbt} with:
+   b. ${parentBuildSbt}:
           lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))
-   c. In ${path.join(projectRoot, 'build.sbt')}:
-      - Add the lazy val declaration (near the end, before root project definitions):
-            lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
-      - Find the root project definition (the \`lazy val root = project.in(file("."))\` block)
-        and add \`${toCamelCase(parentModule)}\` to its \`.aggregate(...)\` call.
-        Example: if root has \`.aggregate(root213)\`, change it to \`.aggregate(root213, ${toCamelCase(parentModule)})\`.
-        If the root project has no \`.aggregate(...)\` call yet, add one.`
+   c. ${path.join(projectRoot, 'build.sbt')}:
+      - Add near end: lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
+      - Add ${toCamelCase(parentModule)} to root .aggregate(...) call
+        e.g. .aggregate(root213) → .aggregate(root213, ${toCamelCase(parentModule)})`
       }
 
-Report: "✓ Setup complete" or describe issues.`
-    : `Set up a new Scala example sub-module for documenting: ${topic}
+Report: ✓ Setup complete or describe issues.`
+    : `Scaffold ${topic} example sub-module.
 
-Project root: ${projectRoot}
-Module name: ${moduleName}
-Package name: ${packageName}
+Root: ${projectRoot}
+Module: ${moduleName}
+Package: ${packageName}
 
-Steps:
-1. Open ${path.join(projectRoot, 'build.sbt')}
-2. Add a new lazy val for ${moduleName} following the existing pattern in that file
-3. Add ${moduleName} to the aggregate(...) call in the root project
-4. Create the directory: ${packageDir}
-   Run: mkdir -p "${packageDir}"
+1. ${path.join(projectRoot, 'build.sbt')}: add lazy val for ${moduleName} following existing pattern
+2. Add ${moduleName} to root project aggregate(...)
+3. mkdir -p "${packageDir}"
 
-Report: "✓ Setup complete" or describe issues.`;
+Report: ✓ Setup complete or describe issues.`;
 
   await session.prompt(setupPrompt);
 
@@ -204,35 +193,34 @@ Report: "✓ Setup complete" or describe issues.`;
       : '  (3-4 files — choose names based on the topic concepts; see naming convention below)';
 
   const articleReadingPreamble = hasDoc
-    ? `Before creating files, read the article at: ${outputDocPath}
+    ? `Read article: ${outputDocPath}
 
-Identify the concept sections in order (numbered sections like "## 1. Title", "## 2. Title").
-Skip sections: Introduction, Background, Big Picture, What You've Learned, Where to Go Next, Running the Examples.
+Find numbered concept sections ("## 1. Title", "## 2. Title", ...).
+Skip: Introduction, Background, Big Picture, What You've Learned, Where to Go Next, Running the Examples.
 
-Derive one file per concept section:
-- For each "## N. Section Title": create <SectionTitlePascalCase>Example<N>.scala
-  Example: "## 1. Creating a Mux" → CreatingAMuxExample1.scala
-  Example: "## 3. The Stream Lifecycle" → StreamLifecycleExample3.scala
-- For "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number)
+Map sections to files:
+- "## N. Section Title" → <SectionTitlePascalCase>Example<N>.scala
+  "## 1. Creating a Mux" → CreatingAMuxExample1.scala
+  "## 3. The Stream Lifecycle" → StreamLifecycleExample3.scala
+- "## Putting It Together" (or equivalent synthesis section) → CompleteExample.scala (no number)
 
-The code in each file must demonstrate the same concept as the corresponding article section,
-using the same API calls and patterns shown in that section's code examples.
+Code in each file must match corresponding article section — same API calls, same patterns.
 
 `
     : '';
 
-  const generatePrompt = `${articleReadingPreamble}Create ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
+  const generatePrompt = `${articleReadingPreamble}Write ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
 
-Package directory: ${packageDir}
-Package name: ${packageName}
+Dir: ${packageDir}
+Package: ${packageName}
 
-Files to create:
+Files:
 ${fileList}
 
-Naming convention for ${docType}:
+Naming (${docType}):
 ${getNamingNote(docType)}
 
-Template (detect Scala version from build.sbt — use Scala 3 @main or Scala 2 object extends App):
+Template — detect Scala version from build.sbt:
 
 Scala 3:
 \`\`\`scala
@@ -260,13 +248,13 @@ object <ObjectName> extends App {
 }
 \`\`\`
 
-Requirements:
-- Real, runnable ZIO code (no pseudocode or TODO stubs)
-- All imports at the top of each file
-- CompleteExample.scala: most comprehensive end-to-end demonstration
-- Each file independently runnable
+Rules:
+- Real ZIO code — no pseudocode, no TODO stubs
+- Imports at top of each file
+- CompleteExample.scala: full end-to-end demo
+- Each file runs standalone
 
-Write all ${exampleFileNames ? exampleFileNames.length : '3-4'} files now.`;
+Write all files now.`;
 
   await session.prompt(generatePrompt);
 
@@ -290,13 +278,13 @@ Write all ${exampleFileNames ? exampleFileNames.length : '3-4'} files now.`;
 
   if (!compileSuccess) {
     console.log('[examples] Compile failed — requesting fix...');
-    await session.prompt(`Fix compilation errors in ${packageDir}.
+    await session.prompt(`Fix compile errors in ${packageDir}.
 
-Compile output (first 4000 chars):
+Output:
 ${compileResult.output.slice(0, 4000)}
 
-Read the failing files and fix the Scala code so it compiles.
-Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
+Read failing files, fix Scala code.
+Report: ✓ Fixed <file> or ✗ Could not fix <file> (reason)`);
 
     compileResult = runSbt(compileTarget, compileCwd);
     compileSuccess = compileResult.exitCode === 0;
@@ -314,30 +302,26 @@ Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
       ? `sbt "runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`
       : `sbt "${moduleName}/runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`;
 
-    const runPrompt = `Run all example files and verify they produce expected output.
+    const runPrompt = `Run all examples, verify output.
 
 Package: ${packageName}
-Run from: ${runCwd}
-Run command pattern: ${runCmdNote}
+Dir: ${runCwd}
+Command: ${runCmdNote}
 
-Example files:
+Files:
 ${createdFiles.map((f) => `  - ${path.basename(f)}`).join('\n')}
 
 For each file:
-1. Read the file to find the entry point (\`@main def <name>\` for Scala 3, \`object <Name> extends App\` for Scala 2)
-2. Run it using the command pattern above with the correct class/object name
-3. Capture the output and check:
-   - Exit code must be 0
-   - No uncaught exceptions or stack traces in stdout/stderr
-   - Output must be non-empty (unless the example intentionally produces no output — say so explicitly)
-4. If any example throws an exception or crashes, fix the Scala code in that file, then re-run it
+1. Read — find entry point (@main def for Scala 3, object extends App for Scala 2)
+2. Run with correct class name
+3. Check: exit code 0, no exceptions/stack traces, non-empty output (note if intentionally empty)
+4. Crash/exception → fix file, re-run
 
-Report for each example:
-  ✓ <FileName>.scala — <first meaningful output line>
-  or
-  ✗ <FileName>.scala — <error summary> → FIXED / NOT FIXED
+Report:
+  ✓ <FileName>.scala — <first output line>
+  ✗ <FileName>.scala — <error> → FIXED / NOT FIXED
 
-Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
+Last line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
 
     const runResultText = await session.prompt(runPrompt);
     runOutput = typeof runResultText === 'string' ? runResultText : String(runResultText);
@@ -377,24 +361,22 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
     const useSourceFile = docType === 'data-type-ref' || docType === 'module-ref';
 
     const docPrompt = useSourceFile
-      ? `Add a "Running the Examples" section to ${outputDocPath}.
+      ? `Append "Running the Examples" section to ${outputDocPath}.
 
-Use SourceFile.print() calls to embed example source code inline.
-Example files:
-${createdFiles.map((f) => `  - ${f}`).join('\n')}
-
-Pattern (inside a \`\`\`scala mdoc:passthrough block):
+Embed each file with SourceFile.print() inside \`\`\`scala mdoc:passthrough:
   println(SourceFile.print("${moduleName}/src/main/scala/${packageName}/<FileName>.scala"))
 
-Add the section at the end of the document, after all type documentation.
-Include a brief intro sentence before each embedded example.`
-      : `Add a "Running the Examples" section to ${outputDocPath}.
+Files:
+${createdFiles.map((f) => `  - ${f}`).join('\n')}
 
-Start with intro paragraph: "All examples in this tutorial have corresponding runnable Scala files in the \`${moduleName}\` module. Run them in order to progressively build your understanding in practice."
+Place after all type docs. One intro sentence per example.`
+      : `Append "Running the Examples" section to ${outputDocPath}.
 
-For each example below, add a ### subsection with:
-1. A 1-2 sentence narrative explaining what this example demonstrates.
-2. A <details> block embedding the source:
+Intro paragraph: "All examples in this tutorial have corresponding runnable Scala files in the \`${moduleName}\` module. Run them in order to progressively build your understanding."
+
+For each example, add ### subsection:
+1. 1-2 sentence narrative — what this example shows.
+2. <details> block:
    <details>
      <summary>${moduleName}/src/main/scala/${packageName}/<FileName>.scala</summary>
 
@@ -402,17 +384,15 @@ For each example below, add a ### subsection with:
    \`\`\`
 
    </details>
-3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
-4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
+3. "Observe X:" sentence — what to watch in output.
+4. bash block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
-Examples:
+Files:
 ${createdFiles.map(f => {
   const className = path.basename(f, '.scala');
   const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
   return `  - ${className}: ${relPath}`;
-}).join('\n')}
-
-Add the section at the end of the document.`;
+}).join('\n')}`;
 
     await session.prompt(docPrompt);
     documentationAdded = true;
