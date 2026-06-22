@@ -76,6 +76,17 @@ function toCamelCase(kebab: string): string {
   return kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
+function embedBlock(moduleName: string, packageName: string, fileName: string): string {
+  const relPath = `${moduleName}/src/main/scala/${packageName}/${fileName}.scala`;
+  return `<details>
+  <summary>${relPath}</summary>
+
+\`\`\`scala mdoc:embed:${relPath}:show-line-numbers
+\`\`\`
+
+</details>`;
+}
+
 function getNamingNote(docType: DocType): string {
   switch (docType) {
     case 'data-type-ref':
@@ -221,7 +232,9 @@ using the same API calls and patterns shown in that section's code examples.
 `
     : '';
 
-  const generatePrompt = `${articleReadingPreamble}Create ${exampleFileNames ? exampleFileNames.length : '3-4'} Scala example files for: ${topic}
+  const fileCount = exampleFileNames ? exampleFileNames.length : '3-4';
+
+  const generatePrompt = `${articleReadingPreamble}Create ${fileCount} Scala example files for: ${topic}
 
 Package directory: ${packageDir}
 Package name: ${packageName}
@@ -266,7 +279,7 @@ Requirements:
 - CompleteExample.scala: most comprehensive end-to-end demonstration
 - Each file independently runnable
 
-Write all ${exampleFileNames ? exampleFileNames.length : '3-4'} files now.`;
+Write all ${fileCount} files now.`;
 
   await session.prompt(generatePrompt);
 
@@ -379,23 +392,14 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
     const docPrompt = useSourceFile
       ? `Add a "Running the Examples" section to ${outputDocPath}.
 
-For each example below, add a brief intro sentence then embed the source with a <details> block:
+For each example below, add a brief intro sentence then embed the source:
 
-<details>
-  <summary>${moduleName}/src/main/scala/${packageName}/<FileName>.scala</summary>
-
-\`\`\`scala mdoc:embed:${moduleName}/src/main/scala/${packageName}/<FileName>.scala:show-line-numbers
-\`\`\`
-
-</details>
-
-Then add a bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
-
-Examples:
 ${createdFiles.map(f => {
   const className = path.basename(f, '.scala');
-  return `  - ${className}: ${moduleName}/src/main/scala/${packageName}/${className}.scala`;
-}).join('\n')}
+  return embedBlock(moduleName, packageName, className);
+}).join('\n\n')}
+
+Then add a bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
 Add the section at the end of the document, after all type documentation.`
       : `Add a "Running the Examples" section to ${outputDocPath}.
@@ -404,23 +408,10 @@ Start with intro paragraph: "All examples in this tutorial have corresponding ru
 
 For each example below, add a ### subsection with:
 1. A 1-2 sentence narrative explaining what this example demonstrates.
-2. A <details> block embedding the source:
-   <details>
-     <summary>${moduleName}/src/main/scala/${packageName}/<FileName>.scala</summary>
-
-   \`\`\`scala mdoc:embed:${moduleName}/src/main/scala/${packageName}/<FileName>.scala:show-line-numbers
-   \`\`\`
-
-   </details>
+2. The source embedded with this block:
+${createdFiles.map(f => embedBlock(moduleName, packageName, path.basename(f, '.scala'))).join('\n')}
 3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
-
-Examples:
-${createdFiles.map(f => {
-  const className = path.basename(f, '.scala');
-  const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
-  return `  - ${className}: ${relPath}`;
-}).join('\n')}
 
 Add the section at the end of the document.`;
 
