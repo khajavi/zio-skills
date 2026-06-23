@@ -252,7 +252,9 @@ Scala 3:
 package ${packageName}
 
 /** Title: <concise title>
+  *
   * Description: <1-2 sentences about what this example shows>
+  *
   * Run: sbt "${moduleName}/runMain ${packageName}.<MainName>"
   */
 @main def <mainName>(): Unit = {
@@ -265,7 +267,9 @@ Scala 2.13:
 package ${packageName}
 
 /** Title: <concise title>
+  *
   * Description: <1-2 sentences about what this example shows>
+  *
   * Run: sbt "${moduleName}/runMain ${packageName}.<ObjectName>"
   */
 object <ObjectName> extends App {
