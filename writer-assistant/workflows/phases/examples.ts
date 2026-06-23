@@ -57,16 +57,16 @@ function runShell(cmd: string, args: string[], cwd: string): void {
 function getExampleFileNames(docType: DocType): string[] | null {
   switch (docType) {
     case 'data-type-ref':
-      return ['BasicUsage.scala', 'AdvancedPatterns.scala', 'CompleteExample.scala'];
+      return ['Example1BasicUsage.scala', 'Example2AdvancedPatterns.scala', 'CompleteExample.scala'];
     case 'tutorial':
       return null; // agent chooses semantic names; directory is scanned after generation
     case 'how-to-guide':
       return null; // agent chooses semantic names; directory is scanned after generation
     case 'module-ref':
       return [
-        'MultiTypeComposition.scala',
-        'CommonPattern1.scala',
-        'CommonPattern2.scala',
+        'Example1MultiTypeComposition.scala',
+        'Example2CommonPattern.scala',
+        'Example3CommonPattern.scala',
         'CompleteExample.scala',
       ];
   }
@@ -92,9 +92,9 @@ function getNamingNote(docType: DocType): string {
     case 'data-type-ref':
       return 'BasicUsage.scala: simple constructor/creation patterns; AdvancedPatterns.scala: complex compositions; CompleteExample.scala: full end-to-end usage.';
     case 'tutorial':
-      return 'Name each file <ConceptName>Example<N>.scala where N is the study order (e.g., CreatingAMuxExample1.scala, ConcurrentStreamsExample2.scala, ErrorHandlingExample3.scala). Always include CompleteExample.scala (no number) as the final comprehensive example.';
+      return 'Name each file Example<N><ConceptName>.scala where N is the study order (e.g., Example1CreatingAMux.scala, Example2ConcurrentStreams.scala, Example3ErrorHandling.scala). Always include CompleteExample.scala (no number) as the final comprehensive example.';
     case 'how-to-guide':
-      return 'Name each file <StepName>Example<N>.scala where N is the step order (e.g., ConnectingToDatabaseExample1.scala, QueryingWithFiltersExample2.scala). Always include CompleteExample.scala (no number) as the complete solution.';
+      return 'Name each file Example<N><StepName>.scala where N is the step order (e.g., Example1ConnectingToDatabase.scala, Example2QueryingWithFilters.scala). Always include CompleteExample.scala (no number) as the complete solution.';
     case 'module-ref':
       return 'MultiTypeComposition.scala: composing multiple types from the module; CommonPatternN.scala: common usage patterns; CompleteExample.scala: comprehensive example.';
   }
@@ -221,9 +221,9 @@ Identify the concept sections in order (numbered sections like "## 1. Title", "#
 Skip sections: Introduction, Background, Big Picture, What You've Learned, Where to Go Next, Running the Examples.
 
 Derive one file per concept section:
-- For each "## N. Section Title": create <SectionTitlePascalCase>Example<N>.scala
-  Example: "## 1. Creating a Mux" → CreatingAMuxExample1.scala
-  Example: "## 3. The Stream Lifecycle" → StreamLifecycleExample3.scala
+- For each "## N. Section Title": create Example<N><SectionTitlePascalCase>.scala
+  Example: "## 1. Creating a Mux" → Example1CreatingAMux.scala
+  Example: "## 3. The Stream Lifecycle" → Example3StreamLifecycle.scala
 - For "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number)
 
 The code in each file must demonstrate the same concept as the corresponding article section,
