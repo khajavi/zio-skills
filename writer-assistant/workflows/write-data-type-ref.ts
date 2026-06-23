@@ -14,6 +14,7 @@ import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
 import { verifyBuild } from './phases/verify.js';
 import { runExamplesPhase } from './phases/examples.js';
+import { runDiagramPhase } from './phases/diagram.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 
 function findRecentlyModifiedMarkdownFiles(
@@ -60,12 +61,15 @@ export async function run({ init, payload }: FlueContext) {
     outputPath,
     dataTypePath,
     examples: examplesPayload,
+    diagram: diagramPayload,
   } = payload as {
     projectRoot: string;
     outputPath: string;
     dataTypePath?: string;
     /** Optional: generate companion Scala examples after writing the article. */
     examples?: { moduleName: string; packageName?: string; parentModule?: string };
+    /** Optional: generate an interactive JSX diagram and embed it in the article. */
+    diagram?: { outputPath?: string; prompt?: string };
   };
 
   // Validate inputs
@@ -184,6 +188,32 @@ Write the complete markdown file and save it to the specified output path.`;
           `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
       );
       phasesCompleted.push('examples');
+    }
+
+    // Phase 2.6: Diagram (optional — only when `diagram` payload provided)
+    let diagramResult: Awaited<ReturnType<typeof runDiagramPhase>> | null = null;
+    if (diagramPayload) {
+      console.log('\n[Phase 2.6] Diagram: Generating interactive JSX diagram...');
+      const jsxRelPath =
+        diagramPayload.outputPath ??
+        path.join(path.dirname(outputPath), `${typeName}Diagram.jsx`);
+      const resolvedJsxPath = path.resolve(projectRoot, jsxRelPath);
+      diagramResult = await runDiagramPhase(init, {
+        projectRoot,
+        typeName,
+        resolvedJsxPath,
+        sourceDirs,
+        dataTypeInfo,
+        researchResult,
+        userPrompt: diagramPayload.prompt,
+        session, // reuse writer session for article patching
+        articlePath: resolvedOutputPath,
+      });
+      console.log(
+        `[Phase 2.6] ${diagramResult.success ? '✓' : '⚠'} Diagram phase complete ` +
+          `(component: ${diagramResult.componentName}, article patched: ${diagramResult.articlePatched})`
+      );
+      phasesCompleted.push('diagram');
     }
 
     // Detect all changed/new markdown files since Phase 2 started
@@ -331,8 +361,8 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('verifyBuild');
 
-    // Build final result — base 7 phases + optional examples phase
-    const expectedPhases = 7 + (examplesPayload ? 1 : 0);
+    // Build final result — base 7 phases + optional examples and diagram phases
+    const expectedPhases = 7 + (examplesPayload ? 1 : 0) + (diagramPayload ? 1 : 0);
     const success = phasesCompleted.length === expectedPhases;
     console.log(`\n[docs-write-data-type-ref] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
@@ -356,6 +386,14 @@ Report final status and any updates made.`;
             runSuccess: examplesResult.runSuccess,
             lintSuccess: examplesResult.lintSuccess,
             documentationAdded: examplesResult.documentationAdded,
+          }
+        : null,
+      diagram: diagramResult
+        ? {
+            success: diagramResult.success,
+            componentName: diagramResult.componentName,
+            jsxOutputPath: diagramResult.jsxOutputPath,
+            articlePatched: diagramResult.articlePatched,
           }
         : null,
       review: {
@@ -391,6 +429,7 @@ Report final status and any updates made.`;
       error: error instanceof Error ? error.message : String(error),
       success: false,
       examples: null,
+      diagram: null,
       review: {
         approved: false,
         rounds: 0,

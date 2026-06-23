@@ -1,0 +1,172 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import type { FlueContext } from '@flue/runtime';
+import diagramDesignerAgent from '../../agents/diagram-designer.js';
+
+export interface DiagramConfig {
+  projectRoot: string;
+  typeName: string;
+  resolvedJsxPath: string;
+  sourceDirs: string[];
+  dataTypeInfo?: { filePath?: string; fileName?: string; typeName?: string };
+  researchResult: string;
+  baseUrl?: string;
+  userPrompt?: string;
+  /** Reuse an existing writer FlueSession to patch the article after JSX is created. */
+  session?: any;
+  /** Absolute path to the MDX article to patch with ## Diagram section. */
+  articlePath?: string;
+}
+
+export interface DiagramResult {
+  success: boolean;
+  componentName: string;
+  jsxOutputPath: string;
+  articlePatched: boolean;
+}
+
+// Read the two canonical reference JSX files to embed as style examples in the prompt.
+// Falls back gracefully if files are not found (e.g. different project layout).
+function readReferenceJsx(projectRoot: string): string {
+  const candidates = [
+    path.join(projectRoot, 'docs/reference/ringbuffer/MpscDiagram.jsx'),
+    path.join(projectRoot, 'docs/reference/MuxDataFlow.jsx'),
+  ];
+
+  const found = candidates
+    .filter((p) => fs.existsSync(p))
+    .map((p) => `// --- ${path.basename(p)} ---\n${fs.readFileSync(p, 'utf8')}`);
+
+  return found.length > 0
+    ? `Here are two existing diagram components to use as style and structure references:\n\n${found.join('\n\n')}`
+    : 'No existing reference diagrams found — infer conventions from the research notes.';
+}
+
+/**
+ * Run the diagram design phase.
+ * Spawns a diagram-designer agent to generate an interactive JSX component,
+ * then optionally patches the article MDX to add a ## Diagram section.
+ */
+export async function runDiagramPhase(
+  init: FlueContext['init'],
+  config: DiagramConfig
+): Promise<DiagramResult> {
+  const {
+    projectRoot,
+    typeName,
+    resolvedJsxPath,
+    researchResult,
+    baseUrl,
+    userPrompt,
+    session,
+    articlePath,
+  } = config;
+
+  const jsxFileName = path.basename(resolvedJsxPath);
+  // Derive component name: strip extension, keep PascalCase
+  const componentName = path.basename(jsxFileName, '.jsx');
+
+  const referenceJsx = readReferenceJsx(projectRoot);
+
+  const designPrompt = `**Diagram Design Phase: ${typeName}**
+
+## Research Notes
+
+${researchResult}
+
+---
+
+## Reference Examples
+
+${referenceJsx}
+
+---
+
+## Your Task
+
+Design and implement an interactive JSX diagram for **${typeName}** that makes its data flow or core algorithm immediately understandable through hands-on manipulation.
+
+**Component name:** \`${componentName}\` (default export)
+
+**Output file:** \`${resolvedJsxPath}\`
+${baseUrl ? `\n**Documentation site:** ${baseUrl}\n` : ''}
+${userPrompt ? `\n**Design notes from author:** ${userPrompt}\n` : ''}
+
+## Design guidelines
+
+1. **Study the research notes** — identify the core data flow or algorithm worth visualizing
+2. **Choose the right visualization:**
+   - Ring buffers, queues, bounded data structures → SVG slots with index arrows
+   - State machines, lifecycle → node/edge graph with state transitions highlighted
+   - Multi-actor message passing → layered zones with flow arrows between them
+3. **Make every operation observable:** when a user triggers an action, show which element was affected, what values changed, and what decision was reached
+4. **Trace panel:** show the actual variable values computed during the operation (like a debugger watch window)
+5. **History log:** list past operations so users can navigate back/forward to replay steps
+
+## Constraints
+
+- Only import from React — no other dependencies
+- All CSS as inline style objects
+- Default export the component
+- Self-contained — no external data files or API calls
+- Must compile in a Docusaurus MDX environment (React 18)
+
+Write the complete JSX file to the output path now.`;
+
+  process.env.FLUE_PROJECT_ROOT = projectRoot;
+
+  const harness = await init(diagramDesignerAgent, { name: `diagram-designer-${typeName}` });
+  const designSession = await harness.session();
+
+  let designSuccess = false;
+  try {
+    await designSession.prompt(designPrompt);
+    designSuccess = fs.existsSync(resolvedJsxPath);
+  } catch (error) {
+    console.error(`[diagram phase] Design agent error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Patch the article MDX if session + articlePath provided
+  let articlePatched = false;
+  if (designSuccess && session && articlePath && fs.existsSync(articlePath)) {
+    const patchPrompt = `**Patch Article: Add ## Diagram Section**
+
+A new interactive diagram component has been created at:
+\`${resolvedJsxPath}\`
+
+Component name: \`${componentName}\`
+JSX file name: \`${jsxFileName}\`
+
+Please update the article at \`${articlePath}\` to reference this diagram:
+
+1. **Add import at the top of the file** — immediately after the frontmatter (after the closing \`---\`), add:
+   \`import ${componentName} from './${jsxFileName}';\`
+   If other imports already exist there, add it alongside them.
+
+2. **Insert a \`## Diagram\` section** — find the most appropriate position:
+   - After any algorithm/internals explanation section (e.g. \`## Algorithm\`, \`## How It Works\`, \`## Internals\`)
+   - Before any usage patterns section (e.g. \`## Common Patterns\`, \`## Advanced Usage\`, \`## Usage\`)
+   - If neither landmark exists, insert it after the first major section
+
+3. **Section content** (write all three elements):
+   - 2-3 sentences explaining what the diagram visualizes (the data flow or algorithm it shows)
+   - The component tag on its own line: \`<${componentName} />\`
+   - 1 sentence describing how to interact (what buttons do, what the trace panel shows)
+
+Do not modify any other part of the article.`;
+
+    try {
+      await session.prompt(patchPrompt);
+      articlePatched = true;
+    } catch (error) {
+      console.error(`[diagram phase] Article patch error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  return {
+    success: designSuccess,
+    componentName,
+    jsxOutputPath: resolvedJsxPath,
+    articlePatched,
+  };
+}
