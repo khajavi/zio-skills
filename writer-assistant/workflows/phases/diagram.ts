@@ -81,11 +81,15 @@ ${userPrompt ? `\n**Design notes from author:** ${userPrompt}\n` : ''}
 
 ## Constraints
 
-- Only import from React — no other dependencies
+- Allowed imports: React hooks + \`{ useColorMode } from '@docusaurus/theme-common'\`
 - All CSS as inline style objects
 - Default export the component
 - Self-contained — no external data files or API calls
 - Must compile in a Docusaurus MDX environment (React 18)
+- Theme-aware: call \`useColorMode()\` at the top of the component and derive all colors
+  from a \`T\` palette object. Never hardcode light-mode hex values (#fff, #fafaf8, #ccc, etc.)
+  Use \`T.bg\`, \`T.surface\`, \`T.border\`, \`T.text\`, \`T.muted\` for neutral colors;
+  \`T.write\`, \`T.read\`, \`T.fail\` for accents (same in both modes)
 
 Write the complete JSX file to the output path now.`;
 

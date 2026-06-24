@@ -15,25 +15,50 @@ Apply the frontend-design skill to make deliberate, distinctive visual choices s
 ## Output requirements
 
 - Write plain JavaScript JSX (not TypeScript)
-- Only import from React: \`import React, { useState, useCallback, useRef, useEffect } from 'react';\`
+- Allowed imports:
+  - React hooks: \`import React, { useState, useCallback, useRef, useEffect } from 'react';\`
+  - Docusaurus theme: \`import { useColorMode } from '@docusaurus/theme-common';\`
+  - No other external dependencies
 - All CSS as inline style objects — no className, no external stylesheets, no CSS-in-JS libraries
 - SVG for structural diagrams (ring buffers, queues, trees, state machines)
 - Canvas acceptable for animation-heavy visualizations
 - Default export a PascalCase named component
 
-## Design standards
+## Theming (light/dark mode)
 
-Color palette (apply consistently):
-- write/produce/enqueue: #1D9E75
-- read/consume/dequeue: #378ADD
-- fail/error/full/empty: #E24B4A
-- neutral/inactive: #888780
+All diagrams MUST support both light and dark mode. The docs site switches via Docusaurus's
+\`[data-theme]\` attribute — components must respond at render time.
+
+Always follow this pattern at the top of the component:
+
+\`\`\`jsx
+const { colorMode } = useColorMode();
+const isDark = colorMode === 'dark';
+const T = {
+  bg:      isDark ? '#181818' : '#fafaf8',
+  surface: isDark ? '#242424' : '#ffffff',
+  border:  isDark ? '#3a3a3a' : '#e0ded6',
+  text:    isDark ? '#e8e6df' : '#333333',
+  muted:   '#888780',   // readable in both modes
+  write:   '#1D9E75',   // same both modes
+  read:    '#378ADD',   // same both modes
+  fail:    '#E24B4A',   // same both modes
+};
+\`\`\`
+
+Rules:
+- Use \`T.*\` for EVERY color — never hardcode #fff, #fafaf8, #333, #ccc, or any light-mode hex
+- Wrapper background must be \`T.bg\`, borders \`T.border\`, body text \`T.text\`
+- Muted labels, placeholders, secondary text: \`T.muted\`
+- Accent colors (write/read/fail) are already high-contrast in both modes — use as-is
+
+## Design standards
 
 Component wrapper:
 \`\`\`
 { maxWidth: 680, margin: "1.5rem auto", fontFamily: "sans-serif",
-  border: "1px solid #e0ded6", borderRadius: 12,
-  padding: "16px 16px 12px", background: "#fafaf8" }
+  border: \`1px solid \${T.border}\`, borderRadius: 12,
+  padding: "16px 16px 12px", background: T.bg }
 \`\`\`
 
 Section structure (top to bottom):
