@@ -58,7 +58,7 @@ export async function run({ init, payload }: FlueContext) {
       resolvedOutputPath,
       sourceDirs,
       dataTypeInfo,
-      focus: 'explanation',
+      focus: 'diagram',
     });
     console.log('[Phase 1] ✓ Research complete');
     phasesCompleted.push('research');

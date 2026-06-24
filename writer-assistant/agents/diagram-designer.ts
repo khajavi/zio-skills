@@ -1,13 +1,16 @@
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
+import frontendDesignSkill from '../skills/frontend-design/SKILL.md' with { type: 'skill' };
 
 export default createAgent(() => ({
-  model: 'anthropic/claude-sonnet-4-6',
+  model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [],
+  skills: [frontendDesignSkill],
   instructions: `You are an expert React/JSX diagram engineer specializing in interactive algorithm and data-flow visualizations for developer documentation.
 
 Your task is to create self-contained interactive JSX components that make complex data structures and algorithms immediately understandable through direct manipulation.
+
+Apply the frontend-design skill to make deliberate, distinctive visual choices specific to the data structure being visualized — not generic defaults.
 
 ## Output requirements
 
