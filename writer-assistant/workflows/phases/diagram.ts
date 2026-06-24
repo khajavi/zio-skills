@@ -25,22 +25,6 @@ export interface DiagramResult {
   articlePatched: boolean;
 }
 
-// Read the two canonical reference JSX files to embed as style examples in the prompt.
-// Falls back gracefully if files are not found (e.g. different project layout).
-function readReferenceJsx(projectRoot: string): string {
-  const candidates = [
-    path.join(projectRoot, 'docs/reference/ringbuffer/MpscDiagram.jsx'),
-    path.join(projectRoot, 'docs/reference/MuxDataFlow.jsx'),
-  ];
-
-  const found = candidates
-    .filter((p) => fs.existsSync(p))
-    .map((p) => `// --- ${path.basename(p)} ---\n${fs.readFileSync(p, 'utf8')}`);
-
-  return found.length > 0
-    ? `Here are two existing diagram components to use as style and structure references:\n\n${found.join('\n\n')}`
-    : 'No existing reference diagrams found — infer conventions from the research notes.';
-}
 
 /**
  * Run the diagram design phase.
@@ -66,19 +50,11 @@ export async function runDiagramPhase(
   // Derive component name: strip extension, keep PascalCase
   const componentName = path.basename(jsxFileName, '.jsx');
 
-  const referenceJsx = readReferenceJsx(projectRoot);
-
   const designPrompt = `**Diagram Design Phase: ${typeName}**
 
 ## Research Notes
 
 ${researchResult}
-
----
-
-## Reference Examples
-
-${referenceJsx}
 
 ---
 
