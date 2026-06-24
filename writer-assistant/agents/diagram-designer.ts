@@ -3,7 +3,7 @@ import { local } from '@flue/runtime/node';
 import frontendDesignSkill from '../skills/frontend-design/SKILL.md' with { type: 'skill' };
 
 export default createAgent(() => ({
-  model: 'anthropic/claude-haiku-4-5',
+  model: 'anthropic/claude-sonnet-4-6',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
   skills: [frontendDesignSkill],
   instructions: `You are an expert React/JSX diagram engineer specializing in interactive algorithm and data-flow visualizations for developer documentation.
