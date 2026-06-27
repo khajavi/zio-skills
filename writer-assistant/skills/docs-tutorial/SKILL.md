@@ -216,11 +216,12 @@ For each companion example, add a `###` subsection with this structure:
 
 1. **Narrative** (1–2 sentences): what the example demonstrates and why it matters.
 2. **Embedded source** in a `<details>` block:
-   ```
+```
+
    <details>
      <summary>path/to/ExampleFile.scala</summary>
 
-   `​`​`scala mdoc:embed:path/to/ExampleFile.scala:show-line-numbers
+`​`​`scala mdoc:embed:path/to/ExampleFile.scala:show-line-numbers
    `​`​`
 
    </details>
@@ -263,7 +264,7 @@ Provide links to deepen knowledge:
 - **Want to dive deeper into the API?** Read the reference page for [`TypeName`](../reference/type-name.md).
 - **Interested in related concepts?** Explore [Related Topic](./related-topic.md).
 
-````
+```
 
 ### Writing Style Rules
 
@@ -288,7 +289,7 @@ Before integration, verify all code examples compile:
 
 ```bash
 sbt "docs/mdoc --in docs/guides/<tutorial-name>.md"
-````
+```
 
 **Important:** Always use `--in <file.md>`. Never use bare `sbt docs/mdoc` (it recompiles all documentation).
 
