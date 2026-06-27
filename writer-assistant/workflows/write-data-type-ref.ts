@@ -216,6 +216,7 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('diagram');
     }
 
+
     // Detect all changed/new markdown files since Phase 2 started
     const docsDir = path.join(projectRoot, 'docs');
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
