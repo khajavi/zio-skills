@@ -107,19 +107,7 @@ ps aux | grep flue             # find process
 
 ## Formatting
 
-After editing any `.ts` or `.js` file, run:
-
-```bash
-npx prettier --write <file>
-```
-
-Or for all changed files:
-
-```bash
-npx prettier --write .
-```
-
-Prettier must pass before commit. CI enforces this with `npx prettier --check`.
+Run `npx prettier --write <file>` after every edit. CI enforces it.
 
 ## Testing
 
