@@ -105,6 +105,22 @@ screen -r my-workflow          # reattach screen session
 ps aux | grep flue             # find process
 ```
 
+## Formatting
+
+After editing any `.ts` or `.js` file, run:
+
+```bash
+npx prettier --write <file>
+```
+
+Or for all changed files:
+
+```bash
+npx prettier --write .
+```
+
+Prettier must pass before commit. CI enforces this with `npx prettier --check`.
+
 ## Testing
 
 ```bash
