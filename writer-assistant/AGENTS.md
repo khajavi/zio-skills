@@ -130,6 +130,8 @@ Tests pass before commit.
 
 After any significant change, update `README.md` (feature list + quick-start example) and `ARCHITECTURE.md` (directory tree + workflow section). Same commit or immediate `docs:` follow-up.
 
+After developing a new workflow or agent, update `AGENT_RUNNING_GUIDE.md` with the new workflow's payload schema and usage example.
+
 ## Agents
 
 - Skill-driven (behavior in `skills/*/SKILL.md`)
