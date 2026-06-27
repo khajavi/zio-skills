@@ -320,10 +320,10 @@ npx flue run fix-writing-style --target node --payload '{
 
 **Phases:** Style (mechanical + LLM, max 1 round) → Build Verify
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `filePath` | yes | Absolute path to the `.md` file |
-| `typeName` | no | Display name (defaults to filename) |
+| Parameter  | Required | Description                         |
+| ---------- | -------- | ----------------------------------- |
+| `filePath` | yes      | Absolute path to the `.md` file     |
+| `typeName` | no       | Display name (defaults to filename) |
 
 ### Reduce Redundancy
 
@@ -337,13 +337,14 @@ npx flue run reduce-redundancy --target node --payload '{
 
 **Phases:** Scan & Fix (max 3 rounds) → Build Verify
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `filePath` | yes | Absolute path to the `.md` file |
-| `typeName` | no | Display name (defaults to filename) |
-| `maxRounds` | no | Max scan→fix iterations (default: 3) |
+| Parameter   | Required | Description                          |
+| ----------- | -------- | ------------------------------------ |
+| `filePath`  | yes      | Absolute path to the `.md` file      |
+| `typeName`  | no       | Display name (defaults to filename)  |
+| `maxRounds` | no       | Max scan→fix iterations (default: 3) |
 
 **Redundancy types detected:**
+
 - **Lexical** — repeated words or phrases in adjacent sentences
 - **Structural** — decorative transitions (`furthermore`, `moreover`, `as mentioned above`)
 - **Semantic** — concepts, definitions, or motivations explained more than once

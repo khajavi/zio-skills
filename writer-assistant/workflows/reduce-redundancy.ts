@@ -13,7 +13,11 @@ function inferDocsDir(filePath: string): string | null {
 }
 
 export async function run({ init, payload }: FlueContext) {
-  const { filePath, typeName: typeNameInput, maxRounds } = payload as {
+  const {
+    filePath,
+    typeName: typeNameInput,
+    maxRounds,
+  } = payload as {
     filePath: string;
     typeName?: string;
     maxRounds?: number;

@@ -207,4 +207,3 @@ function parseFindings(text: string): RedundancyFinding[] {
 function redundancyKey(f: RedundancyFinding): string {
   return `${f.type}:${f.section}:${f.description.slice(0, 60)}`;
 }
-
