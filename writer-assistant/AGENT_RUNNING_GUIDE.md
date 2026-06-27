@@ -308,6 +308,48 @@ npx flue run write-tutorial --target node --payload '{
 - Warm, welcoming tone
 - 38-item checklist verification in Phase 3
 
+### Fix Writing Style
+
+Validate and fix prose style violations in a documentation file.
+
+```bash
+npx flue run fix-writing-style --target node --payload '{
+  "filePath": "/path/to/docs/reference/fiber.md"
+}'
+```
+
+**Phases:** Style (mechanical + LLM, max 1 round) → Build Verify
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `filePath` | yes | Absolute path to the `.md` file |
+| `typeName` | no | Display name (defaults to filename) |
+
+### Reduce Redundancy
+
+Remove lexical, structural, and semantic redundancy from a documentation file.
+
+```bash
+npx flue run reduce-redundancy --target node --payload '{
+  "filePath": "/path/to/docs/reference/chunk.md"
+}'
+```
+
+**Phases:** Scan & Fix (max 3 rounds) → Build Verify
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `filePath` | yes | Absolute path to the `.md` file |
+| `typeName` | no | Display name (defaults to filename) |
+| `maxRounds` | no | Max scan→fix iterations (default: 3) |
+
+**Redundancy types detected:**
+- **Lexical** — repeated words or phrases in adjacent sentences
+- **Structural** — decorative transitions (`furthermore`, `moreover`, `as mentioned above`)
+- **Semantic** — concepts, definitions, or motivations explained more than once
+
+Each round: fresh scanner agent detects remaining redundancies → fixer agent (shared session) applies fixes. Unresolvable items are tracked and skipped in subsequent rounds.
+
 ## Workflow Modes (Crossref)
 
 ### `reindex`
