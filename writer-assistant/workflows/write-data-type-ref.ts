@@ -195,8 +195,7 @@ Write the complete markdown file and save it to the specified output path.`;
     if (diagramPayload) {
       console.log('\n[Phase 2.6] Diagram: Generating interactive JSX diagram...');
       const jsxRelPath =
-        diagramPayload.outputPath ??
-        path.join(path.dirname(outputPath), `${typeName}Diagram.jsx`);
+        diagramPayload.outputPath ?? path.join(path.dirname(outputPath), `${typeName}Diagram.jsx`);
       const resolvedJsxPath = path.resolve(projectRoot, jsxRelPath);
       diagramResult = await runDiagramPhase(init, {
         projectRoot,
@@ -215,7 +214,6 @@ Write the complete markdown file and save it to the specified output path.`;
       );
       phasesCompleted.push('diagram');
     }
-
 
     // Detect all changed/new markdown files since Phase 2 started
     const docsDir = path.join(projectRoot, 'docs');

@@ -25,7 +25,6 @@ export interface DiagramResult {
   articlePatched: boolean;
 }
 
-
 /**
  * Run the diagram design phase.
  * Spawns a diagram-designer agent to generate an interactive JSX component,
@@ -103,7 +102,9 @@ Write the complete JSX file to the output path now.`;
     await designSession.prompt(designPrompt);
     designSuccess = fs.existsSync(resolvedJsxPath);
   } catch (error) {
-    console.error(`[diagram phase] Design agent error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `[diagram phase] Design agent error: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   // Patch the article MDX if session + articlePath provided
@@ -139,7 +140,9 @@ Do not modify any other part of the article.`;
       await session.prompt(patchPrompt);
       articlePatched = true;
     } catch (error) {
-      console.error(`[diagram phase] Article patch error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `[diagram phase] Article patch error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

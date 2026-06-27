@@ -57,7 +57,11 @@ function runShell(cmd: string, args: string[], cwd: string): void {
 function getExampleFileNames(docType: DocType): string[] | null {
   switch (docType) {
     case 'data-type-ref':
-      return ['Example1BasicUsage.scala', 'Example2AdvancedPatterns.scala', 'CompleteExample.scala'];
+      return [
+        'Example1BasicUsage.scala',
+        'Example2AdvancedPatterns.scala',
+        'CompleteExample.scala',
+      ];
     case 'tutorial':
       return null; // agent chooses semantic names; directory is scanned after generation
     case 'how-to-guide':
@@ -232,7 +236,11 @@ using the same API calls and patterns shown in that section's code examples.
 `
     : '';
 
-  const fileCount = exampleFileNames ? exampleFileNames.length : hasDoc ? 'one per concept section' : '3-4';
+  const fileCount = exampleFileNames
+    ? exampleFileNames.length
+    : hasDoc
+      ? 'one per concept section'
+      : '3-4';
 
   const generatePrompt = `${articleReadingPreamble}Create ${fileCount} Scala example files for: ${topic}
 
@@ -290,7 +298,8 @@ Write all files now.`;
   const createdFiles = exampleFileNames
     ? exampleFilePaths.filter((f) => fs.existsSync(f))
     : fs.existsSync(packageDir)
-      ? fs.readdirSync(packageDir)
+      ? fs
+          .readdirSync(packageDir)
           .filter((f) => f.endsWith('.scala'))
           .map((f) => path.join(packageDir, f))
       : [];
@@ -398,10 +407,12 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
 
 For each example below, add a brief intro sentence then embed the source:
 
-${createdFiles.map(f => {
-  const className = path.basename(f, '.scala');
-  return embedBlock(moduleName, packageName, className);
-}).join('\n\n')}
+${createdFiles
+  .map((f) => {
+    const className = path.basename(f, '.scala');
+    return embedBlock(moduleName, packageName, className);
+  })
+  .join('\n\n')}
 
 Then add a bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
@@ -413,7 +424,7 @@ Start with intro paragraph: "All examples in this tutorial have corresponding ru
 For each example below, add a ### subsection with:
 1. A 1-2 sentence narrative explaining what this example demonstrates.
 2. The source embedded with this block:
-${createdFiles.map(f => embedBlock(moduleName, packageName, path.basename(f, '.scala'))).join('\n')}
+${createdFiles.map((f) => embedBlock(moduleName, packageName, path.basename(f, '.scala'))).join('\n')}
 3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
