@@ -1,7 +1,9 @@
 import 'dotenv/config.js';
+import * as v from 'valibot';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { FlueContext } from '@flue/runtime';
+import { defineWorkflow } from '@flue/runtime';
+import docsWriterAgent from '../agents/docs-writer.js';
 import { runBuild } from '../lib/build-runner.js';
 
 export interface CheckWebsiteResult {
@@ -62,19 +64,25 @@ function parseWebsiteBuildErrors(output: string): string[] {
   return errors;
 }
 
-export async function run({ payload }: FlueContext) {
+export default defineWorkflow({
+  agent: docsWriterAgent,
+  input: v.looseObject({}),
+  run: checkWebsiteRun as (ctx: any) => any,
+});
+
+async function checkWebsiteRun({ input }: { input: any }) {
   const {
     projectRoot,
     docsDir: inputDocsDir,
     runMdoc = false,
-  } = payload as {
+  } = input as {
     projectRoot: string;
     docsDir?: string;
     /** Run `sbt docs/mdoc` before checking the website. Default: false. */
     runMdoc?: boolean;
   };
 
-  if (!projectRoot) throw new Error('payload.projectRoot is required');
+  if (!projectRoot) throw new Error('input.projectRoot is required');
   if (!fs.existsSync(projectRoot)) throw new Error(`projectRoot not found: ${projectRoot}`);
 
   const docsDir = inputDocsDir

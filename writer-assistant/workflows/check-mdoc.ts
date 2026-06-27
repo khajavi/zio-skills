@@ -1,6 +1,8 @@
 import 'dotenv/config.js';
+import * as v from 'valibot';
 import * as fs from 'node:fs';
-import type { FlueContext } from '@flue/runtime';
+import { defineWorkflow } from '@flue/runtime';
+import docsWriterAgent from '../agents/docs-writer.js';
 import {
   MdocError,
   resolvePaths,
@@ -18,13 +20,19 @@ export interface CheckMdocResult {
   resolvedPaths: string[];
 }
 
-export async function run({ payload }: FlueContext) {
-  const { projectRoot, paths: rawPaths } = payload as {
+export default defineWorkflow({
+  agent: docsWriterAgent,
+  input: v.looseObject({}),
+  run: checkMdocRun as (ctx: any) => any,
+});
+
+async function checkMdocRun({ input }: { input: any }) {
+  const { projectRoot, paths: rawPaths } = input as {
     projectRoot: string;
     paths?: string | string[];
   };
 
-  if (!projectRoot) throw new Error('payload.projectRoot is required');
+  if (!projectRoot) throw new Error('input.projectRoot is required');
   if (!fs.existsSync(projectRoot)) throw new Error(`projectRoot not found: ${projectRoot}`);
 
   const { resolvedPaths, missing } = resolvePaths(projectRoot, rawPaths);

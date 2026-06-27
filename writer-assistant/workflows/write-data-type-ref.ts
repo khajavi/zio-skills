@@ -1,7 +1,8 @@
+import * as v from 'valibot';
 import 'dotenv/config.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { FlueContext } from '@flue/runtime';
+import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import {
   toKebabCase,
@@ -55,14 +56,20 @@ function findRecentlyModifiedMarkdownFiles(
   return result;
 }
 
-export async function run({ init, payload }: FlueContext) {
+export default defineWorkflow({
+  agent: docsWriterAgent,
+  input: v.looseObject({}),
+  run: writeDataTypeRefRun as (ctx: any) => any,
+});
+
+async function writeDataTypeRefRun({ harness, input }: { harness: any; input: any }) {
   const {
     projectRoot,
     outputPath,
     dataTypePath,
     examples: examplesPayload,
     diagram: diagramPayload,
-  } = payload as {
+  } = input as {
     projectRoot: string;
     outputPath: string;
     dataTypePath?: string;
@@ -73,8 +80,8 @@ export async function run({ init, payload }: FlueContext) {
   };
 
   // Validate inputs
-  if (!projectRoot) throw new Error('payload.projectRoot is required');
-  if (!outputPath) throw new Error('payload.outputPath is required');
+  if (!projectRoot) throw new Error('input.projectRoot is required');
+  if (!outputPath) throw new Error('input.outputPath is required');
 
   // Validate paths and resolve relative output path
   const resolvedOutputPath = validatePathsAndResolve(projectRoot, outputPath);
@@ -118,7 +125,7 @@ export async function run({ init, payload }: FlueContext) {
 
     // Phase 1: Research (in separate researcher agent)
     console.log('\n[Phase 1] Research: Understanding the data type...');
-    const researchResult = await runResearchPhase(init, {
+    const researchResult = await runResearchPhase(harness, {
       projectRoot,
       typeName,
       resolvedOutputPath,
@@ -129,9 +136,8 @@ export async function run({ init, payload }: FlueContext) {
     console.log('[Phase 1] ✓ Research complete');
     phasesCompleted.push('research');
 
-    // Phase 2-4: Initialize writer agent with fresh session
-    const harness = await init(docsWriterAgent, { name: 'docs-write-data-type-ref' });
-    const session = await harness.session();
+    // Phase 2-4: Initialize writer session
+    const session = await harness.session('docs-write-data-type-ref');
 
     // Phase 2: Write Documentation
     console.log('\n[Phase 2] Writing: Generating documentation...');
@@ -173,7 +179,7 @@ Write the complete markdown file and save it to the specified output path.`;
     let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
     if (examplesPayload) {
       console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
-      examplesResult = await runExamplesPhase(init, {
+      examplesResult = await runExamplesPhase(harness, {
         projectRoot,
         moduleName: examplesPayload.moduleName,
         packageName: examplesPayload.packageName,
@@ -197,7 +203,7 @@ Write the complete markdown file and save it to the specified output path.`;
       const jsxRelPath =
         diagramPayload.outputPath ?? path.join(path.dirname(outputPath), `${typeName}Diagram.jsx`);
       const resolvedJsxPath = path.resolve(projectRoot, jsxRelPath);
-      diagramResult = await runDiagramPhase(init, {
+      diagramResult = await runDiagramPhase(harness, {
         projectRoot,
         typeName,
         resolvedJsxPath,
@@ -302,7 +308,7 @@ Report final status and any updates made.`;
 
     // Phase 5: Review and Fix
     console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
-    const reviewResult = await runReviewPhase(init, {
+    const reviewResult = await runReviewPhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName,
@@ -320,7 +326,7 @@ Report final status and any updates made.`;
 
     // Phase 6: Style Validation
     console.log('\n[Phase 6] Validating: Checking prose style...');
-    const styleResult = await runStylePhase(init, {
+    const styleResult = await runStylePhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName,

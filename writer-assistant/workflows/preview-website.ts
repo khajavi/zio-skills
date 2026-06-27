@@ -1,8 +1,10 @@
 import 'dotenv/config.js';
+import * as v from 'valibot';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import type { FlueContext } from '@flue/runtime';
+import { defineWorkflow } from '@flue/runtime';
+import docsWriterAgent from '../agents/docs-writer.js';
 import { runPreview } from '../lib/build-runner.js';
 
 export interface PreviewWebsiteResult {
@@ -16,19 +18,25 @@ export interface PreviewWebsiteResult {
   mdocOutput: string;
 }
 
-export async function run({ payload }: FlueContext) {
+export default defineWorkflow({
+  agent: docsWriterAgent,
+  input: v.looseObject({}),
+  run: previewWebsiteRun as (ctx: any) => any,
+});
+
+async function previewWebsiteRun({ input }: { input: any }) {
   const {
     projectRoot,
     docsDir: inputDocsDir,
     runMdoc = false,
-  } = payload as {
+  } = input as {
     projectRoot: string;
     docsDir?: string;
     /** Whether to run `sbt docs/mdoc` before starting the preview server. Default: false. */
     runMdoc?: boolean;
   };
 
-  if (!projectRoot) throw new Error('payload.projectRoot is required');
+  if (!projectRoot) throw new Error('input.projectRoot is required');
   if (!fs.existsSync(projectRoot)) throw new Error(`projectRoot not found: ${projectRoot}`);
 
   const docsDir = inputDocsDir
