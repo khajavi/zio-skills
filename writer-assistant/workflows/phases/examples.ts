@@ -383,11 +383,13 @@ For each example below, add a ### subsection with:
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
 Examples:
-${createdFiles.map(f => {
-  const className = path.basename(f, '.scala');
-  const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
-  return `  - ${className}: ${relPath}`;
-}).join('\n')}
+${createdFiles
+  .map((f) => {
+    const className = path.basename(f, '.scala');
+    const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
+    return `  - ${className}: ${relPath}`;
+  })
+  .join('\n')}
 
 Add the section at the end of the document.`;
 
