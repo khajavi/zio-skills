@@ -197,7 +197,7 @@ Based on the research findings above, now write a comprehensive tutorial for lea
 2. Background / Big Picture (optional, no code)
 3. Concept sections (3-6 sections, one concept each)
 4. Putting It Together (complete runnable example)
-5. Running the Examples (git clone + sbt runMain commands)
+5. Running the Examples (### per example: narrative + mdoc:embed source in <details> + "Observe X:" + bash run command)
 6. What You've Learned (recap of objectives)
 7. Where to Go Next (links to how-to guides and reference pages)
 
