@@ -54,29 +54,23 @@ function runShell(cmd: string, args: string[], cwd: string): void {
   spawnSync(cmd, args, { cwd, encoding: 'utf-8', timeout: 60_000, shell: false });
 }
 
-function getExampleFileNames(docType: DocType): string[] {
+function getExampleFileNames(docType: DocType): string[] | null {
   switch (docType) {
     case 'data-type-ref':
-      return ['BasicUsage.scala', 'AdvancedPatterns.scala', 'CompleteExample.scala'];
+      return [
+        'Example1BasicUsage.scala',
+        'Example2AdvancedPatterns.scala',
+        'CompleteExample.scala',
+      ];
     case 'tutorial':
-      return [
-        'Concept1Example.scala',
-        'Concept2Example.scala',
-        'Concept3Example.scala',
-        'CompleteExample.scala',
-      ];
+      return null; // agent chooses semantic names; directory is scanned after generation
     case 'how-to-guide':
-      return [
-        'Step1BasicExample.scala',
-        'Step2IntermediateExample.scala',
-        'Step3AdvancedExample.scala',
-        'CompleteExample.scala',
-      ];
+      return null; // agent chooses semantic names; directory is scanned after generation
     case 'module-ref':
       return [
-        'MultiTypeComposition.scala',
-        'CommonPattern1.scala',
-        'CommonPattern2.scala',
+        'Example1MultiTypeComposition.scala',
+        'Example2CommonPattern.scala',
+        'Example3CommonPattern.scala',
         'CompleteExample.scala',
       ];
   }
@@ -86,14 +80,25 @@ function toCamelCase(kebab: string): string {
   return kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
+function embedBlock(moduleName: string, packageName: string, fileName: string): string {
+  const relPath = `${moduleName}/src/main/scala/${packageName}/${fileName}.scala`;
+  return `<details>
+  <summary>${relPath}</summary>
+
+\`\`\`scala mdoc:embed:${relPath}:show-line-numbers
+\`\`\`
+
+</details>`;
+}
+
 function getNamingNote(docType: DocType): string {
   switch (docType) {
     case 'data-type-ref':
       return 'BasicUsage.scala: simple constructor/creation patterns; AdvancedPatterns.scala: complex compositions; CompleteExample.scala: full end-to-end usage.';
     case 'tutorial':
-      return 'ConceptNExample.scala files: one per tutorial step/concept; CompleteExample.scala: the final "putting it all together" code.';
+      return 'Name each file Example<N><ConceptName>.scala where N is the study order (e.g., Example1CreatingAMux.scala, Example2ConcurrentStreams.scala, Example3ErrorHandling.scala). Always include CompleteExample.scala (no number) as the final comprehensive example.';
     case 'how-to-guide':
-      return 'StepNXxxExample.scala files: one per procedural step; CompleteExample.scala: complete solution combining all steps.';
+      return 'Name each file Example<N><StepName>.scala where N is the step order (e.g., Example1ConnectingToDatabase.scala, Example2QueryingWithFilters.scala). Always include CompleteExample.scala (no number) as the complete solution.';
     case 'module-ref':
       return 'MultiTypeComposition.scala: composing multiple types from the module; CommonPatternN.scala: common usage patterns; CompleteExample.scala: comprehensive example.';
   }
@@ -119,8 +124,10 @@ export async function runExamplesPhase(
     ? path.join(projectRoot, parentModule, moduleName)
     : path.join(projectRoot, moduleName);
   const packageDir = path.join(moduleDir, 'src', 'main', 'scala', packageName);
-  const exampleFileNames = getExampleFileNames(docType);
-  const exampleFilePaths = exampleFileNames.map((f) => path.join(packageDir, f));
+  const exampleFileNames = getExampleFileNames(docType); // null for tutorial/how-to-guide
+  const exampleFilePaths = exampleFileNames
+    ? exampleFileNames.map((f) => path.join(packageDir, f))
+    : [];
 
   const startMs = Date.now();
 
@@ -203,9 +210,39 @@ Report: "✓ Setup complete" or describe issues.`;
   await session.prompt(setupPrompt);
 
   // Phase B: Generate Scala example files
-  const fileList = exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n');
+  const hasDoc = !exampleFileNames && outputDocPath && fs.existsSync(outputDocPath);
 
-  const generatePrompt = `Create ${exampleFileNames.length} Scala example files for: ${topic}
+  const fileList = exampleFileNames
+    ? exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
+    : hasDoc
+      ? '  (derive from the article sections — see instructions below)'
+      : '  (3-4 files — choose names based on the topic concepts; see naming convention below)';
+
+  const articleReadingPreamble = hasDoc
+    ? `Before creating files, read the article at: ${outputDocPath}
+
+Identify the concept sections in order (numbered sections like "## 1. Title", "## 2. Title").
+Skip sections: Introduction, Background, Big Picture, What You've Learned, Where to Go Next, Running the Examples.
+
+Derive one file per concept section:
+- For each "## N. Section Title": create Example<N><SectionTitlePascalCase>.scala
+  Example: "## 1. Creating a Mux" → Example1CreatingAMux.scala
+  Example: "## 3. The Stream Lifecycle" → Example3StreamLifecycle.scala
+- For "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number)
+
+The code in each file must demonstrate the same concept as the corresponding article section,
+using the same API calls and patterns shown in that section's code examples.
+
+`
+    : '';
+
+  const fileCount = exampleFileNames
+    ? exampleFileNames.length
+    : hasDoc
+      ? 'one per concept section'
+      : '3-4';
+
+  const generatePrompt = `${articleReadingPreamble}Create ${fileCount} Scala example files for: ${topic}
 
 Package directory: ${packageDir}
 Package name: ${packageName}
@@ -223,7 +260,9 @@ Scala 3:
 package ${packageName}
 
 /** Title: <concise title>
+  *
   * Description: <1-2 sentences about what this example shows>
+  *
   * Run: sbt "${moduleName}/runMain ${packageName}.<MainName>"
   */
 @main def <mainName>(): Unit = {
@@ -236,7 +275,9 @@ Scala 2.13:
 package ${packageName}
 
 /** Title: <concise title>
+  *
   * Description: <1-2 sentences about what this example shows>
+  *
   * Run: sbt "${moduleName}/runMain ${packageName}.<ObjectName>"
   */
 object <ObjectName> extends App {
@@ -250,12 +291,20 @@ Requirements:
 - CompleteExample.scala: most comprehensive end-to-end demonstration
 - Each file independently runnable
 
-Write all ${exampleFileNames.length} files now.`;
+Write all files now.`;
 
   await session.prompt(generatePrompt);
 
-  const createdFiles = exampleFilePaths.filter((f) => fs.existsSync(f));
-  console.log(`[examples] Created ${createdFiles.length}/${exampleFilePaths.length} example files`);
+  const createdFiles = exampleFileNames
+    ? exampleFilePaths.filter((f) => fs.existsSync(f))
+    : fs.existsSync(packageDir)
+      ? fs
+          .readdirSync(packageDir)
+          .filter((f) => f.endsWith('.scala'))
+          .map((f) => path.join(packageDir, f))
+      : [];
+  const expectedCount = exampleFileNames ? exampleFileNames.length : '3-4';
+  console.log(`[examples] Created ${createdFiles.length}/${expectedCount} example files`);
 
   // Phase C: Compile — one agent-assisted retry on failure
   // Self-contained sub-modules compile from their own directory; flat modules compile from root.
@@ -356,42 +405,30 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
     const docPrompt = useSourceFile
       ? `Add a "Running the Examples" section to ${outputDocPath}.
 
-Use SourceFile.print() calls to embed example source code inline.
-Example files:
-${createdFiles.map((f) => `  - ${f}`).join('\n')}
+For each example below, add a brief intro sentence then embed the source:
 
-Pattern (inside a \`\`\`scala mdoc:passthrough block):
-  println(SourceFile.print("${moduleName}/src/main/scala/${packageName}/<FileName>.scala"))
+${createdFiles
+  .map((f) => {
+    const className = path.basename(f, '.scala');
+    return embedBlock(moduleName, packageName, className);
+  })
+  .join('\n\n')}
 
-Add the section at the end of the document, after all type documentation.
-Include a brief intro sentence before each embedded example.`
+Then add a bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
+
+Add the section at the end of the document, after all type documentation.`
       : `Add a "Running the Examples" section to ${outputDocPath}.
 
 Start with intro paragraph: "All examples in this tutorial have corresponding runnable Scala files in the \`${moduleName}\` module. Run them in order to progressively build your understanding in practice."
 
 For each example below, add a ### subsection with:
 1. A 1-2 sentence narrative explaining what this example demonstrates.
-2. A <details> block embedding the source:
-   <details>
-     <summary>${moduleName}/src/main/scala/${packageName}/<FileName>.scala</summary>
-
-   \`\`\`scala mdoc:embed:${moduleName}/src/main/scala/${packageName}/<FileName>.scala:show-line-numbers
-   \`\`\`
-
-   </details>
+2. The source embedded with this block:
+${createdFiles.map((f) => embedBlock(moduleName, packageName, path.basename(f, '.scala'))).join('\n')}
 3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"
 
-Examples:
-${createdFiles
-  .map((f) => {
-    const className = path.basename(f, '.scala');
-    const relPath = path.relative(process.env.FLUE_PROJECT_ROOT || '', f);
-    return `  - ${className}: ${relPath}`;
-  })
-  .join('\n')}
-
-Add the section at the end of the document.`;
+Add the section after the "What You've Learned" section and before the "Where to Go Next" section.`;
 
     await session.prompt(docPrompt);
     documentationAdded = true;

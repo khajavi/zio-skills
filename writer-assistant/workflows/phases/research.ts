@@ -1,7 +1,7 @@
 import type { FlueContext } from '@flue/runtime';
 import docsResearcherAgent from '../../agents/docs-researcher.js';
 
-export type ResearchFocus = 'data-type-ref' | 'tutorial' | 'guide' | 'explanation';
+export type ResearchFocus = 'data-type-ref' | 'tutorial' | 'guide' | 'explanation' | 'diagram';
 
 export interface ResearchConfig {
   projectRoot: string;
@@ -75,6 +75,7 @@ function getDocumentationTypeLabel(focus: ResearchFocus): string {
     tutorial: 'Tutorial',
     guide: 'How-To Guide',
     explanation: 'Explanation',
+    diagram: 'Diagram Internals Research',
   };
   return labels[focus];
 }
@@ -88,6 +89,19 @@ function getFocusInstruction(focus: ResearchFocus, typeName: string): string {
     guide: `**Focus:** Map configuration options, decision points, and integration patterns. Emphasize: setup requirements, tradeoffs, use case selection, integration examples.`,
 
     explanation: `**Focus:** Trace design motivation, architectural decisions, and rationale. Emphasize: design principles, problem domain, historical context, comparisons with alternatives.`,
+
+    diagram: `**Focus:** Extract the internal mechanics needed to build a faithful interactive diagram.
+
+Specifically gather:
+- Internal state variables (names, types, what they represent)
+- Concurrency primitives used (semaphores, promises, locks, atomics) and how they interact
+- Key operations: for each public method, what internal state is read, in what order, and what changes
+- State machine: all valid states and transitions (e.g. open → broken → reset)
+- Lifecycle: how the data structure is created, used, and destroyed
+- Edge cases visible to callers: full, empty, broken, interrupted states
+- Any counters or indices that advance monotonically
+
+Do NOT focus on documentation gaps, comparisons, or historical rationale — only what is needed to implement a correct interactive simulation.`,
   };
   return instructions[focus];
 }

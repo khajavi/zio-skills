@@ -105,6 +105,10 @@ screen -r my-workflow          # reattach screen session
 ps aux | grep flue             # find process
 ```
 
+## Formatting
+
+Run `npx prettier --write <file>` after every edit. CI enforces it.
+
 ## Testing
 
 ```bash
