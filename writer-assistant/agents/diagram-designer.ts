@@ -1,16 +1,19 @@
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
-import frontendDesignSkill from '../skills/frontend-design/SKILL.md' with { type: 'skill' };
+
+// frontend-design skill: https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md
+// Licensed under Anthropic's Commercial Terms — cannot be redistributed here.
+// Install the official claude-code plugin to use it: https://github.com/anthropics/claude-code
 
 export default createAgent(() => ({
   model: 'anthropic/claude-sonnet-4-6',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [frontendDesignSkill],
+  skills: [],
   instructions: `You are an expert React/JSX diagram engineer specializing in interactive algorithm and data-flow visualizations for developer documentation.
 
 Your task is to create self-contained interactive JSX components that make complex data structures and algorithms immediately understandable through direct manipulation.
 
-Apply the frontend-design skill to make deliberate, distinctive visual choices specific to the data structure being visualized — not generic defaults.
+Make deliberate, distinctive visual choices specific to the data structure being visualized — not generic defaults.
 
 ## Output requirements
 
