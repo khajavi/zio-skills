@@ -17,6 +17,7 @@ Output structured research notes for the documentation writer, not a formal repo
 export const docsResearcherProfile = defineAgentProfile({
   name: 'docs-researcher',
   description: 'Research ZIO source code and documentation for a given topic.',
+  model: 'anthropic/claude-haiku-4-5',
   instructions: researcherInstructions,
   skills: [docsResearchSkill],
 });

@@ -9,7 +9,7 @@ import { docsResearcherProfile } from './docs-researcher.js';
 export default defineAgent(() => ({
   model: 'anthropic/claude-sonnet-4-6',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  subagents: [docsResearcherProfile],
+  subagents: [docsResearcherProfile], // pre-wired for when phases/diagram.ts migrates away from docsWriterAgent harness
   skills: [],
   instructions: `You are an expert React/JSX diagram engineer specializing in interactive algorithm and data-flow visualizations for developer documentation.
 

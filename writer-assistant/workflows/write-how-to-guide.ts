@@ -93,8 +93,10 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Initialize writer session (used for research delegation and all writer phases)
-    let session: any = await harness.session('docs-write-how-to-guide');
+    const writerPhases = ['write', 'verify', 'integrate', 'review', 'style'];
+    const needsSession =
+      !skipPhases.includes('research') || writerPhases.some((p) => !skipPhases.includes(p));
+    let session: any = needsSession ? await harness.session('docs-write-how-to-guide') : null;
 
     // Phase 1: Research (delegated to docs-researcher subagent)
     let researchResult = '';
@@ -397,7 +399,7 @@ Report final status and any updates made.`;
           console.log(`[Phase 7] Found ${currentErrors.length} error(s), starting fix loop`);
 
           if (!session) {
-            session = await harness.session('fix-website-build-errors');
+            session = await harness.session('docs-write-how-to-guide');
           }
 
           let round = 0;
