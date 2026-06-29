@@ -26,6 +26,7 @@ writer-assistant/
 ├── workflows/                    # Workflow orchestrators
 │   ├── crossref.ts              # Cross-reference linking workflow (6 modes)
 │   ├── write-data-type-ref.ts   # API reference documentation generation (7-8 phases)
+│   ├── write-how-to-guide.ts    # How-to guide documentation generation (7-8 phases)
 │   ├── write-module-ref.ts      # Module reference documentation generation (7-8 phases)
 │   ├── write-tutorial.ts        # Tutorial documentation generation (7-8 phases)
 │   ├── write-examples.ts        # Companion Scala example generation (standalone)
@@ -286,7 +287,55 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 - Complete runnable example
 - Self-contained example files
 
-### 3.4. Write Module Reference Workflow (`workflows/write-module-ref.ts`)
+### 3.4. Write How-To Guide Workflow (`workflows/write-how-to-guide.ts`)
+
+**Purpose:** Create goal-oriented guides that help readers accomplish a specific, concrete task using the library — not tutorials (no learning objectives) and not reference pages (no exhaustive API coverage).
+
+**Phases:**
+
+1. **Research Phase** — Gather information about the topic from source code, tests, examples (focus: `'guide'` — configuration options, decision points, integration patterns)
+2. **Write Phase** — Generate how-to guide following the 8-section structure with goal-oriented, imperative prose
+3. _(optional)_ **Examples Phase** — Create companion Scala sub-module (activated by `examples` payload field)
+4. **Verify Phase** — Check structure compliance, compile mdoc examples to zero errors, verify Problem section has "before" code, run how-to guide CHECKLIST.md
+5. **Integrate Phase** — Update sidebars.js under "Guides" category, docs/index.md, cross-references from related reference pages
+6. **Review Phase** — Critic→fixer loop for content completeness and accuracy (max 5 rounds)
+7. **Style Phase** — Mechanical + LLM prose style validation and fixing
+8. **Build Verification Phase** — Run docs build; on failure, spawns writer agent to fix errors and retries up to 3 rounds; skip gracefully if no build system detected
+
+Any phase can be skipped via `skipPhases: string[]`.
+
+**Input:**
+
+```json
+{
+  "projectRoot": "/path/to/project",
+  "outputPath": "docs/guides/handle-errors-with-zio.md",
+  "topic": "How to handle errors with ZIO",
+  "examples": { "moduleName": "zio-example-error-handling" },
+  "skipPhases": ["research", "write"]
+}
+```
+
+**8-Section Structure:**
+
+1. **Introduction** — 1 paragraph: what the reader will accomplish, why useful, approach
+2. **The Problem** — Concrete pain point + why it matters + "before" code showing the problem
+3. **Prerequisites** — sbt dependency, base imports, assumed knowledge
+4. **The Core Model** — Domain types in `mdoc:silent`, brief rationale
+5. **Step-by-step sections** (3-6) — One concept per section: intro → code → result
+6. **Putting It Together** — Complete copy-paste runnable example
+7. **Running the Examples** — git clone + sbt runMain commands
+8. **Going Further** (optional) — Links to reference pages, variations, related guides
+
+**Key differences from `write-tutorial.ts`:**
+
+- `focus: 'guide'` in research phase (maps configuration options and decision points, not beginner patterns)
+- Goal-oriented, imperative prose ("Define a Schema", "Create a codec") vs. warm tutorial style
+- Problem section is mandatory and must include a "before" code example
+- Verify phase checks how-to-guide CHECKLIST.md (not tutorial's 38-item checklist)
+- Sidebar placement under "Guides" category; cross-references added from related reference pages
+
+### 3.5. Write Module Reference Workflow (`workflows/write-module-ref.ts`)
 
 **Purpose:** Generate comprehensive reference documentation for a module — a cohesive set of related data types that work together as a system.
 
@@ -322,7 +371,7 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 
 **Output:** Markdown file(s) with module narrative, type-relationship diagram, per-type API coverage, and integration examples.
 
-### 3.5. Write Examples Workflow (`workflows/write-examples.ts`)
+### 3.6. Write Examples Workflow (`workflows/write-examples.ts`)
 
 **Purpose:** Generate companion Scala example sub-modules for any documentation article. Runs standalone or is invoked as Phase 2.5 by `write-data-type-ref` and `write-tutorial` when `examples` payload is present.
 
@@ -363,7 +412,7 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 
 **Shared Phase:** The core logic lives in `workflows/phases/examples.ts` (`runExamplesPhase`), which accepts an optional `session` parameter. When called from `write-data-type-ref` or `write-tutorial`, the existing writer session is reused — no extra agent spawn.
 
-### 3.5. Check Website Workflow (`workflows/check-website.ts`)
+### 3.7. Check Website Workflow (`workflows/check-website.ts`)
 
 **Purpose:** Verify the full documentation website builds successfully. No agent — pure shell. Read-only; suitable as a standalone CI validation step.
 
@@ -373,7 +422,7 @@ Any phase can be skipped via `skipPhases: string[]` — useful for re-running on
 
 Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphinx and for ZIO projects runs the full pipeline (`sbt docs/mdoc → yarn install → yarn build`).
 
-### 3.6. Preview Website Workflow (`workflows/preview-website.ts`)
+### 3.8. Preview Website Workflow (`workflows/preview-website.ts`)
 
 **Purpose:** Start a live documentation dev server in the background and return once ready.
 
@@ -396,7 +445,7 @@ Delegates to `lib/build-runner.ts` which auto-detects Docusaurus / MkDocs / Sphi
 
 The server keeps running after the workflow exits. Stop it with `kill <pid>`.
 
-### 3.8. Fix Website Workflow (`workflows/fix-website.ts`)
+### 3.9. Fix Website Workflow (`workflows/fix-website.ts`)
 
 **Purpose:** Build the documentation website and automatically fix errors. Mirrors `fix-mdoc` pattern. Uses `docsWriterAgent` session for fixes; loops up to `maxRounds` (default 3).
 
@@ -409,7 +458,7 @@ The server keeps running after the workflow exits. Stop it with `kill <pid>`.
 1. **Initial Check** — Run `runBuild(docsDir)`; return early if already passing
 2. **Fix Loop** (up to `maxRounds`) — Prompt writer agent with error list → agent reads/fixes files → rebuild → re-check errors
 
-### 3.9. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
+### 3.10. Extract Metadata Workflow (`workflows/extract-metadata.ts`)
 
 **Purpose:** Extract or generate metadata (title, description, keywords) for documentation pages.
 
@@ -432,7 +481,7 @@ keywords: ['keyword1', 'keyword2']
 ---
 ```
 
-### 3.10. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
+### 3.11. Fix Writing Style Workflow (`workflows/fix-writing-style.ts`)
 
 **Purpose:** Validate and fix documentation for style compliance.
 
@@ -451,7 +500,7 @@ keywords: ['keyword1', 'keyword2']
 
 **Output:** Updated .md file with style improvements + build verification result.
 
-### 3.9. Check mdoc Workflow (`workflows/check-mdoc.ts`)
+### 3.12. Check mdoc Workflow (`workflows/check-mdoc.ts`)
 
 **Purpose:** Compile and validate mdoc code blocks in documentation files. No agent — pure `execSync`. Read-only checker; suitable as a standalone CI validation step.
 
@@ -486,7 +535,7 @@ Each error entry: `{ file, line, message, raw }`.
 - Missing paths → throws with list of unresolved entries
 - Build failure → returns `success: false` with parsed errors (does not throw)
 
-### 3.10. Fix mdoc Workflow (`workflows/fix-mdoc.ts`)
+### 3.13. Fix mdoc Workflow (`workflows/fix-mdoc.ts`)
 
 **Purpose:** Compile mdoc code blocks, and if errors are found, automatically fix them using the docs-writer agent. Loops up to `maxRounds` (default 3).
 
