@@ -5,6 +5,7 @@ import docsWritingStyleSkill from '../skills/docs-writing-style/SKILL.md' with {
 import docsMdocConventionsSkill from '../skills/docs-mdoc-conventions/SKILL.md' with { type: 'skill' };
 import docsTutorialSkill from '../skills/docs-tutorial/SKILL.md' with { type: 'skill' };
 import docsModuleRefSkill from '../skills/docs-module-ref/SKILL.md' with { type: 'skill' };
+import docsHowToGuideSkill from '../skills/docs-how-to-guide/SKILL.md' with { type: 'skill' };
 
 export default defineAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
@@ -15,6 +16,7 @@ export default defineAgent(() => ({
     docsMdocConventionsSkill,
     docsTutorialSkill,
     docsModuleRefSkill,
+    docsHowToGuideSkill,
   ],
   instructions: `You are an expert technical writer specializing in ZIO library documentation.
 
@@ -29,5 +31,6 @@ Your responsibilities:
 Supported documentation types:
 - Data type reference: comprehensive API documentation with method signatures and examples
 - Module reference: documentation for a cohesive set of related types, emphasizing how they work together
-- Tutorial: learning-oriented guides for newcomers, teaching concepts step-by-step with linear progression`,
+- Tutorial: learning-oriented guides for newcomers, teaching concepts step-by-step with linear progression
+- How-to guide: goal-oriented practical guides for practitioners accomplishing specific tasks`,
 }));
