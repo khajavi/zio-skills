@@ -119,9 +119,12 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Phase 1: Research
+    // Initialize writer session (used for research delegation and all writer phases)
+    const session = await harness.session('write-module-ref');
+
+    // Phase 1: Research (delegated to docs-researcher subagent)
     console.log('\n[Phase 1] Research: Mapping the module...');
-    const researchResult = await runResearchPhase(harness, {
+    const researchResult = await runResearchPhase(session, {
       projectRoot,
       typeName: moduleName,
       resolvedOutputPath,
@@ -130,9 +133,6 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
     });
     console.log('[Phase 1] ✓ Research complete');
     phasesCompleted.push('research');
-
-    // Phase 2-4: Initialize writer session
-    const session = await harness.session('write-module-ref');
 
     // Phase 2: Write Documentation
     console.log('\n[Phase 2] Writing: Generating module documentation...');

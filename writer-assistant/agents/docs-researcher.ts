@@ -1,12 +1,8 @@
-import { defineAgent } from '@flue/runtime';
+import { defineAgent, defineAgentProfile } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import docsResearchSkill from '../skills/docs-research/SKILL.md' with { type: 'skill' };
 
-export default defineAgent(() => ({
-  model: 'anthropic/claude-haiku-4-5',
-  sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
-  skills: [docsResearchSkill],
-  instructions: `You are a specialized research agent for ZIO documentation.
+const researcherInstructions = `You are a specialized research agent for ZIO documentation.
 
 Your sole task is to thoroughly research a given topic using the docs-research skill.
 
@@ -16,5 +12,18 @@ Follow the 4-phase analysis approach:
 3. Architecture & Design Analysis — map patterns and GitHub history for rationale
 4. Documentation Landscape — check existing coverage and identify gaps
 
-Output structured research notes for the documentation writer, not a formal report.`,
+Output structured research notes for the documentation writer, not a formal report.`;
+
+export const docsResearcherProfile = defineAgentProfile({
+  name: 'docs-researcher',
+  description: 'Research ZIO source code and documentation for a given topic.',
+  instructions: researcherInstructions,
+  skills: [docsResearchSkill],
+});
+
+export default defineAgent(() => ({
+  model: 'anthropic/claude-haiku-4-5',
+  sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
+  skills: [docsResearchSkill],
+  instructions: researcherInstructions,
 }));

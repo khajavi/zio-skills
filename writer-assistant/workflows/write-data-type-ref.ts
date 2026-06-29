@@ -86,9 +86,12 @@ async function writeDataTypeRefRun({ harness, input }: { harness: any; input: an
     // Set environment variable for agents' sandbox cwd
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Phase 1: Research (in separate researcher agent)
+    // Initialize writer session (used for research delegation and all writer phases)
+    const session = await harness.session('docs-write-data-type-ref');
+
+    // Phase 1: Research (delegated to docs-researcher subagent)
     console.log('\n[Phase 1] Research: Understanding the data type...');
-    const researchResult = await runResearchPhase(harness, {
+    const researchResult = await runResearchPhase(session, {
       projectRoot,
       typeName,
       resolvedOutputPath,
@@ -98,9 +101,6 @@ async function writeDataTypeRefRun({ harness, input }: { harness: any; input: an
     });
     console.log('[Phase 1] ✓ Research complete');
     phasesCompleted.push('research');
-
-    // Phase 2-4: Initialize writer session
-    const session = await harness.session('docs-write-data-type-ref');
 
     // Phase 2: Write Documentation
     console.log('\n[Phase 2] Writing: Generating documentation...');

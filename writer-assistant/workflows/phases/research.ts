@@ -1,7 +1,3 @@
-// TODO: This phase needs docsResearcherAgent — a different agent from the calling workflow's primary.
-// Migration: accept FlueHarness for docsResearcherAgent once multi-agent pattern is resolved.
-import docsResearcherAgent from '../../agents/docs-researcher.js';
-
 export type ResearchFocus =
   | 'data-type-ref'
   | 'tutorial'
@@ -20,14 +16,11 @@ export interface ResearchConfig {
 }
 
 /**
- * Run the research phase for a documentation topic in a dedicated researcher agent
- * Creates its own harness to isolate research context from the writer
- * Delegates to the docs-research skill for comprehensive research guidance
- * The skill covers: source discovery, code flow analysis, architecture analysis, and documentation landscape
- * The focus parameter customizes what insights to emphasize in the research output
+ * Run the research phase by delegating to the docs-researcher subagent.
+ * The session must belong to an agent that declares docsResearcherProfile as a subagent.
  */
 export async function runResearchPhase(
-  harness: any, // TODO: should be FlueHarness for docsResearcherAgent once multi-agent migrated
+  session: any,
   config: ResearchConfig
 ): Promise<string> {
   const { projectRoot, typeName, resolvedOutputPath, sourceDirs, dataTypeInfo, focus } = config;
@@ -70,12 +63,7 @@ Output: Structured research notes (not a formal report) that prepare the documen
   // Set environment variable for agent's sandbox cwd
   process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-  // TODO: harness here is the calling workflow's primary agent harness, NOT docsResearcherAgent.
-  // This will use the wrong agent until multi-agent migration is complete.
-  // Proper fix: accept a dedicated FlueHarness for docsResearcherAgent.
-  void docsResearcherAgent; // suppress unused import warning
-  const session = await harness.session('docs-researcher');
-  const result = await session.prompt(prompt);
+  const result = await session.task(prompt, { agent: 'docs-researcher' });
   return result.text || String(result);
 }
 

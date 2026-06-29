@@ -57,11 +57,12 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Phase 1: Research
-    // TODO: runResearchPhase uses docsResearcherAgent (different agent) — needs migration.
-    // Migrate to: separate workflow via invoke(), or pass harness if researcher becomes primary.
+    // Initialize primary session (used for research delegation)
+    const session = await harness.session('design-diagram');
+
+    // Phase 1: Research (delegated to docs-researcher subagent)
     console.log('\n[Phase 1] Research: Understanding the data type...');
-    const researchResult = await runResearchPhase(harness, {
+    const researchResult = await runResearchPhase(session, {
       projectRoot,
       typeName,
       resolvedOutputPath,

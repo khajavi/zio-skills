@@ -1,5 +1,6 @@
 import { defineAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
+import { docsResearcherProfile } from './docs-researcher.js';
 
 // frontend-design skill: https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md
 // Licensed under Anthropic's Commercial Terms — cannot be redistributed here.
@@ -8,6 +9,7 @@ import { local } from '@flue/runtime/node';
 export default defineAgent(() => ({
   model: 'anthropic/claude-sonnet-4-6',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
+  subagents: [docsResearcherProfile],
   skills: [],
   instructions: `You are an expert React/JSX diagram engineer specializing in interactive algorithm and data-flow visualizations for developer documentation.
 

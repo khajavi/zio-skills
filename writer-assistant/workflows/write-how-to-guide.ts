@@ -93,14 +93,17 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Phase 1: Research
+    // Initialize writer session (used for research delegation and all writer phases)
+    let session: any = await harness.session('docs-write-how-to-guide');
+
+    // Phase 1: Research (delegated to docs-researcher subagent)
     let researchResult = '';
     if (skipPhases.includes('research')) {
       console.log('\n[Phase 1] ⏭ Research skipped');
       phasesCompleted.push('research');
     } else {
       console.log('\n[Phase 1] Research: Understanding the topic...');
-      researchResult = await runResearchPhase(harness, {
+      researchResult = await runResearchPhase(session, {
         projectRoot,
         typeName: topic,
         resolvedOutputPath,
@@ -109,14 +112,6 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
       });
       console.log('[Phase 1] ✓ Research complete');
       phasesCompleted.push('research');
-    }
-
-    // Phase 2-6: Initialize writer session only if needed
-    const writerPhases = ['write', 'verify', 'integrate', 'review', 'style'];
-    const needsWriterSession = writerPhases.some((p) => !skipPhases.includes(p));
-    let session: any = null;
-    if (needsWriterSession) {
-      session = await harness.session('docs-write-how-to-guide');
     }
 
     // Phase 2: Write Guide
