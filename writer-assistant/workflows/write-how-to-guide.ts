@@ -146,9 +146,12 @@ Write the complete markdown file and save it to the specified output path.`;
 
     // Phase 2.5: Examples (optional)
     const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
-      projectRoot, topic, resolvedOutputPath,
+      projectRoot,
+      topic,
+      resolvedOutputPath,
       docType: 'how-to-guide',
-      skipPhases, phasesCompleted,
+      skipPhases,
+      phasesCompleted,
     });
 
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
@@ -161,7 +164,13 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking guide and code...');
-      await runVerifyPhase(session!, { projectRoot, changedFiles, topic, resolvedOutputPath, docType: 'how-to-guide' });
+      await runVerifyPhase(session!, {
+        projectRoot,
+        changedFiles,
+        topic,
+        resolvedOutputPath,
+        docType: 'how-to-guide',
+      });
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }
@@ -227,14 +236,21 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, { projectRoot, outputFileName, topic, docType: 'how-to-guide' });
+      await runIntegratePhase(session!, {
+        projectRoot,
+        outputFileName,
+        topic,
+        docType: 'how-to-guide',
+      });
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }
 
     // Phase 7: Build Verification with auto-fix loop
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir, projectRoot, skipPhases,
+      docsDir,
+      projectRoot,
+      skipPhases,
       sessionName: 'docs-write-how-to-guide',
     });
     phasesCompleted.push('verifyBuild');

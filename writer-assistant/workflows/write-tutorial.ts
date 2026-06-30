@@ -133,9 +133,12 @@ Write the complete markdown file and save it to the output path above.`;
 
     // Phase 2.5: Examples (optional — only when `examples` payload provided)
     const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
-      projectRoot, topic, resolvedOutputPath,
+      projectRoot,
+      topic,
+      resolvedOutputPath,
       docType: 'tutorial',
-      skipPhases, phasesCompleted,
+      skipPhases,
+      phasesCompleted,
     });
 
     // Detect all changed/new markdown files since Phase 2 started
@@ -149,7 +152,13 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-      await runVerifyPhase(session!, { projectRoot, changedFiles, topic, resolvedOutputPath, docType: 'tutorial' });
+      await runVerifyPhase(session!, {
+        projectRoot,
+        changedFiles,
+        topic,
+        resolvedOutputPath,
+        docType: 'tutorial',
+      });
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }
@@ -215,14 +224,21 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, { projectRoot, outputFileName, topic, docType: 'tutorial' });
+      await runIntegratePhase(session!, {
+        projectRoot,
+        outputFileName,
+        topic,
+        docType: 'tutorial',
+      });
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }
 
     // Phase 7: Build Verification with auto-fix loop
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir, projectRoot, skipPhases,
+      docsDir,
+      projectRoot,
+      skipPhases,
       sessionName: 'docs-write-tutorial',
     });
     phasesCompleted.push('verifyBuild');

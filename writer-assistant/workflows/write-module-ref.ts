@@ -235,7 +235,13 @@ Write the complete documentation file(s) and save them to the specified output p
 
     // Phase 3: Verify
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    await runVerifyPhase(session, { projectRoot, changedFiles, topic: moduleName, resolvedOutputPath, docType: 'module-ref' });
+    await runVerifyPhase(session, {
+      projectRoot,
+      changedFiles,
+      topic: moduleName,
+      resolvedOutputPath,
+      docType: 'module-ref',
+    });
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
@@ -274,13 +280,20 @@ Write the complete documentation file(s) and save them to the specified output p
 
     // Phase 6: Integrate
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-    await runIntegratePhase(session, { projectRoot, outputFileName: toKebabCase(moduleName), topic: moduleName, docType: 'module-ref' });
+    await runIntegratePhase(session, {
+      projectRoot,
+      outputFileName: toKebabCase(moduleName),
+      topic: moduleName,
+      docType: 'module-ref',
+    });
     console.log('[Phase 6] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir, projectRoot, skipPhases: [],
+      docsDir,
+      projectRoot,
+      skipPhases: [],
       sessionName: 'write-module-ref',
     });
     phasesCompleted.push('verifyBuild');

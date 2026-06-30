@@ -19,10 +19,7 @@ export interface ResearchConfig {
  * Run the research phase by delegating to the docs-researcher subagent.
  * The session must belong to an agent that declares docsResearcherProfile as a subagent.
  */
-export async function runResearchPhase(
-  session: any,
-  config: ResearchConfig
-): Promise<string> {
+export async function runResearchPhase(session: any, config: ResearchConfig): Promise<string> {
   const { projectRoot, typeName, resolvedOutputPath, sourceDirs, dataTypeInfo, focus } = config;
 
   const sourceDirList = sourceDirs.map((dir, i) => `[${i + 1}] ${dir}`).join('\n  ');

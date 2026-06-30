@@ -192,7 +192,13 @@ Write the complete markdown file and save it to the specified output path.`;
 
     // Phase 3: Verify
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    await runVerifyPhase(session, { projectRoot, changedFiles, topic: typeName, resolvedOutputPath, docType: 'data-type-ref' });
+    await runVerifyPhase(session, {
+      projectRoot,
+      changedFiles,
+      topic: typeName,
+      resolvedOutputPath,
+      docType: 'data-type-ref',
+    });
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
@@ -231,13 +237,20 @@ Write the complete markdown file and save it to the specified output path.`;
 
     // Phase 6: Integrate
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-    await runIntegratePhase(session, { projectRoot, outputFileName, topic: typeName, docType: 'data-type-ref' });
+    await runIntegratePhase(session, {
+      projectRoot,
+      outputFileName,
+      topic: typeName,
+      docType: 'data-type-ref',
+    });
     console.log('[Phase 6] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir, projectRoot, skipPhases: [],
+      docsDir,
+      projectRoot,
+      skipPhases: [],
       sessionName: 'docs-write-data-type-ref',
     });
     phasesCompleted.push('verifyBuild');

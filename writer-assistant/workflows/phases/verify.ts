@@ -119,17 +119,29 @@ function buildReport(docType: string): string {
 
 function docTypeName(docType: string): string {
   switch (docType) {
-    case 'tutorial': return 'Tutorial';
-    case 'how-to-guide': return 'How-To Guide';
-    case 'data-type-ref': return 'Documentation';
-    case 'module-ref': return 'Documentation';
-    default: return 'Documentation';
+    case 'tutorial':
+      return 'Tutorial';
+    case 'how-to-guide':
+      return 'How-To Guide';
+    case 'data-type-ref':
+      return 'Documentation';
+    case 'module-ref':
+      return 'Documentation';
+    default:
+      return 'Documentation';
   }
 }
 
-export async function verifyBuild(docsDir: string): Promise<{ success: boolean; buildSystem: string; durationMs: number; output: string }> {
+export async function verifyBuild(
+  docsDir: string
+): Promise<{ success: boolean; buildSystem: string; durationMs: number; output: string }> {
   const result = await runBuild(docsDir);
-  return { success: result.success, buildSystem: result.buildSystem, durationMs: result.durationMs, output: result.output };
+  return {
+    success: result.success,
+    buildSystem: result.buildSystem,
+    durationMs: result.durationMs,
+    output: result.output,
+  };
 }
 
 export async function runVerifyPhase(

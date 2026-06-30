@@ -29,7 +29,9 @@ export async function runBuildVerifyPhase(
     return { success: true, buildSystem: 'skipped', durationMs: 0, skipped: true, rounds: 0 };
   }
 
-  console.log(`\n[Phase 7] Build Verification: Verifying documentation builds (max ${maxRounds} fix rounds)...`);
+  console.log(
+    `\n[Phase 7] Build Verification: Verifying documentation builds (max ${maxRounds} fix rounds)...`
+  );
   const buildStartMs = Date.now();
   let buildSystem = 'unknown';
 
@@ -53,7 +55,13 @@ export async function runBuildVerifyPhase(
         console.log(`[Phase 7] sbt check: ${checkSuccess ? '✓ PASSED' : '✗ FAILED'}`);
       }
 
-      return { success: checkSuccess, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
+      return {
+        success: checkSuccess,
+        buildSystem,
+        durationMs: Date.now() - buildStartMs,
+        skipped: false,
+        rounds: 0,
+      };
     }
 
     let currentErrors = parseBuildErrors(initialBuild.output);
@@ -82,7 +90,9 @@ export async function runBuildVerifyPhase(
     }
 
     const docsBuildSuccess = currentErrors.length === 0;
-    console.log(`[Phase 7] ${docsBuildSuccess ? '✓' : '⚠'} Build verification complete (${round} fix round(s))`);
+    console.log(
+      `[Phase 7] ${docsBuildSuccess ? '✓' : '⚠'} Build verification complete (${round} fix round(s))`
+    );
 
     // Run sbt check as final lint gate for Scala projects
     let checkSuccess = true;
@@ -99,14 +109,32 @@ export async function runBuildVerifyPhase(
     }
 
     const success = docsBuildSuccess && checkSuccess;
-    return { success, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: round };
+    return {
+      success,
+      buildSystem,
+      durationMs: Date.now() - buildStartMs,
+      skipped: false,
+      rounds: round,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('No supported documentation build system detected')) {
       console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-      return { success: true, buildSystem: 'none', durationMs: Date.now() - buildStartMs, skipped: true, rounds: 0 };
+      return {
+        success: true,
+        buildSystem: 'none',
+        durationMs: Date.now() - buildStartMs,
+        skipped: true,
+        rounds: 0,
+      };
     }
     console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
-    return { success: false, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
+    return {
+      success: false,
+      buildSystem,
+      durationMs: Date.now() - buildStartMs,
+      skipped: false,
+      rounds: 0,
+    };
   }
 }
