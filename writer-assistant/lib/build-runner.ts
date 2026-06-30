@@ -404,6 +404,36 @@ export async function runPreview(docsDir: string): Promise<PreviewResult> {
   };
 }
 
+export function parseBuildErrors(output: string): string[] {
+  const errors: string[] = [];
+  for (const line of output.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    if (
+      t.includes('[info]') ||
+      t.includes('[success]') ||
+      t.includes('download') ||
+      t.includes('Downloading') ||
+      t.includes('yarn add') ||
+      t.includes('npm notice') ||
+      t.match(/^\d+%|Working/)
+    )
+      continue;
+    if (
+      t.toLowerCase().includes('error:') ||
+      t.toLowerCase().includes('[error]') ||
+      t.toLowerCase().includes('failed') ||
+      t.toLowerCase().includes('error ts') ||
+      t.includes('ERROR -') ||
+      t.includes('broken link') ||
+      t.includes('✖')
+    ) {
+      errors.push(line);
+    }
+  }
+  return errors;
+}
+
 /**
  * Auto-detect build system and run build.
  * @param runMdoc - For Scala/ZIO projects, whether to run `sbt docs/mdoc` before building. Default: false.

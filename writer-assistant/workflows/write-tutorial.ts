@@ -12,41 +12,11 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { verifyBuild } from './phases/verify.js';
-import { runExamplesPhase } from './phases/examples.js';
-import { runBuild } from '../lib/build-runner.js';
+import { runBuildVerifyPhase } from './phases/build-verify.js';
+import { runIntegratePhase } from './phases/integrate.js';
+import { runExamplesSubPhase } from './phases/examples.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
-
-function parseBuildErrors(output: string): string[] {
-  const errors: string[] = [];
-  for (const line of output.split('\n')) {
-    const t = line.trim();
-    if (!t) continue;
-    if (
-      t.includes('[info]') ||
-      t.includes('[success]') ||
-      t.includes('download') ||
-      t.includes('Downloading') ||
-      t.includes('yarn add') ||
-      t.includes('npm notice') ||
-      t.match(/^\d+%|Working/)
-    )
-      continue;
-    if (
-      t.toLowerCase().includes('error:') ||
-      t.toLowerCase().includes('[error]') ||
-      t.toLowerCase().includes('failed') ||
-      t.toLowerCase().includes('error ts') ||
-      t.includes('ERROR -') ||
-      t.includes('broken link') ||
-      t.includes('✖')
-    ) {
-      errors.push(line);
-    }
-  }
-  return errors;
-}
 
 export default defineWorkflow({
   agent: docsWriterAgent,
@@ -162,30 +132,11 @@ Write the complete markdown file and save it to the output path above.`;
     }
 
     // Phase 2.5: Examples (optional — only when `examples` payload provided)
-    let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
-    if (examplesPayload) {
-      if (skipPhases.includes('examples')) {
-        console.log('\n[Phase 2.5] ⏭ Examples skipped');
-        phasesCompleted.push('examples');
-      } else {
-        console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
-        examplesResult = await runExamplesPhase(harness, {
-          projectRoot,
-          moduleName: examplesPayload.moduleName,
-          packageName: examplesPayload.packageName,
-          parentModule: examplesPayload.parentModule,
-          topic,
-          docType: 'tutorial',
-          outputDocPath: resolvedOutputPath,
-          session: session!, // reuse the writer session
-        });
-        console.log(
-          `[Phase 2.5] ${examplesResult.success ? '✓' : '⚠'} Examples phase complete ` +
-            `(${examplesResult.exampleFiles.length} files, compile: ${examplesResult.compileSuccess ? '✓' : '✗'}, run: ${examplesResult.runSuccess ? '✓' : '✗'})`
-        );
-        phasesCompleted.push('examples');
-      }
-    }
+    const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
+      projectRoot, topic, resolvedOutputPath,
+      docType: 'tutorial',
+      skipPhases, phasesCompleted,
+    });
 
     // Detect all changed/new markdown files since Phase 2 started
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
@@ -252,37 +203,7 @@ Report:
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-      const integratePrompt = `**Phase 4: Format and Integrate**
-
-Finalize the tutorial for ${topic} and integrate it into the docs structure.
-
-**Integration steps:**
-
-1. **Format Scala code**
-   - Run: sbt scalafmtAll
-   - Ensure all generated Scala files are properly formatted
-
-2. **Run lint checks**
-   - Run: sbt check
-   - Verify all lint checks pass
-
-3. **Update sidebars.js** (if it exists)
-   - Add entry for ${outputFileName} under the "Guides" category (not "Reference")
-   - Ensure proper nesting and alphabetical ordering
-   - The entry should link to docs/guides/${outputFileName}.md
-
-4. **Update docs/index.md** (if it exists)
-   - Add cross-reference to the new tutorial
-   - Link to: guides/${outputFileName}
-
-5. **Update related documentation**
-   - Check if other reference pages or how-to guides should link to this tutorial
-   - Add reciprocal cross-references where appropriate
-   - Tutorials should link from "Where to Go Next" to related how-to guides
-
-Report final status and any updates made.`;
-
-      await session!.prompt(integratePrompt);
+      await runIntegratePhase(session!, { projectRoot, outputFileName, topic, docType: 'tutorial' });
       console.log('[Phase 4] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }
@@ -345,90 +266,10 @@ Report final status and any updates made.`;
     }
 
     // Phase 7: Build Verification with auto-fix loop
-    const MAX_BUILD_FIX_ROUNDS = 3;
-    console.log(
-      `\n[Phase 7] Build Verification: Verifying documentation builds (max ${MAX_BUILD_FIX_ROUNDS} fix rounds)...`
-    );
-    let buildVerifyResult = {
-      success: false,
-      buildSystem: 'unknown',
-      durationMs: 0,
-      skipped: false,
-      rounds: 0,
-    };
-    const buildStartMs = Date.now();
-
-    try {
-      const initialBuild = await runBuild(docsDir);
-      buildVerifyResult.buildSystem = initialBuild.buildSystem;
-
-      if (initialBuild.success && parseBuildErrors(initialBuild.output).length === 0) {
-        console.log(`[Phase 7] ✓ Build passed on first attempt (${initialBuild.buildSystem})`);
-        buildVerifyResult = {
-          success: true,
-          buildSystem: initialBuild.buildSystem,
-          durationMs: Date.now() - buildStartMs,
-          skipped: false,
-          rounds: 0,
-        };
-      } else {
-        let currentErrors = parseBuildErrors(initialBuild.output);
-        console.log(`[Phase 7] Found ${currentErrors.length} error(s), starting fix loop`);
-
-        if (!session) {
-          session = await harness.session('docs-write-tutorial');
-        }
-
-        let round = 0;
-        for (round = 1; round <= MAX_BUILD_FIX_ROUNDS; round++) {
-          if (currentErrors.length === 0) break;
-
-          console.log(
-            `[Phase 7] Fix attempt ${round}/${MAX_BUILD_FIX_ROUNDS} (${currentErrors.length} error(s))`
-          );
-          const errorList = currentErrors.map((e) => `  ${e}`).join('\n');
-          await session.prompt(
-            `Fix the following documentation website build errors in ${projectRoot}.\n\nErrors:\n${errorList}\n\nFor each error: read the file, identify the root cause (broken link, missing file, wrong path), fix it. If a link target doesn't exist, either correct the path or remove the link. Report each fix applied.`
-          );
-
-          const reBuild = await runBuild(docsDir);
-          currentErrors = parseBuildErrors(reBuild.output);
-          buildVerifyResult.buildSystem = reBuild.buildSystem;
-
-          if (currentErrors.length === 0) {
-            console.log(`[Phase 7] ✓ All errors fixed after ${round} round(s)`);
-            break;
-          }
-          console.log(`[Phase 7] Still ${currentErrors.length} error(s) after round ${round}`);
-        }
-
-        buildVerifyResult = {
-          success: currentErrors.length === 0,
-          buildSystem: buildVerifyResult.buildSystem,
-          durationMs: Date.now() - buildStartMs,
-          skipped: false,
-          rounds: round,
-        };
-        console.log(
-          `[Phase 7] ${buildVerifyResult.success ? '✓' : '⚠'} Build verification complete (${buildVerifyResult.rounds} fix round(s))`
-        );
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('No supported documentation build system detected')) {
-        console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-        buildVerifyResult = {
-          success: true,
-          buildSystem: 'none',
-          durationMs: Date.now() - buildStartMs,
-          skipped: true,
-          rounds: 0,
-        };
-      } else {
-        console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
-        buildVerifyResult.durationMs = Date.now() - buildStartMs;
-      }
-    }
+    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
+      docsDir, projectRoot, skipPhases,
+      sessionName: 'docs-write-tutorial',
+    });
     phasesCompleted.push('verifyBuild');
 
     // Build final result — base 7 phases + optional examples phase

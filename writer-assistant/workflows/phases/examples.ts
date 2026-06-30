@@ -450,3 +450,45 @@ Add the section after the "What You've Learned" section and before the "Where to
     durationMs,
   };
 }
+
+export async function runExamplesSubPhase(
+  harness: any,
+  session: any,
+  examplesPayload: { moduleName: string; packageName?: string; parentModule?: string } | undefined,
+  options: {
+    projectRoot: string;
+    topic: string;
+    resolvedOutputPath: string;
+    docType: DocType;
+    skipPhases: string[];
+    phasesCompleted: string[];
+  }
+): Promise<ExamplesPhaseResult | null> {
+  if (!examplesPayload) return null;
+
+  const { projectRoot, topic, resolvedOutputPath, docType, skipPhases, phasesCompleted } = options;
+
+  if (skipPhases.includes('examples')) {
+    console.log('\n[Phase 2.5] ⏭ Examples skipped');
+    phasesCompleted.push('examples');
+    return null;
+  }
+
+  console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
+  const result = await runExamplesPhase(harness, {
+    projectRoot,
+    moduleName: examplesPayload.moduleName,
+    packageName: examplesPayload.packageName,
+    parentModule: examplesPayload.parentModule,
+    topic,
+    docType,
+    outputDocPath: resolvedOutputPath,
+    session: session ?? undefined,
+  });
+  console.log(
+    `[Phase 2.5] ${result.success ? '✓' : '⚠'} Examples phase complete ` +
+      `(${result.exampleFiles.length} files, compile: ${result.compileSuccess ? '✓' : '✗'}, run: ${result.runSuccess ? '✓' : '✗'})`
+  );
+  phasesCompleted.push('examples');
+  return result;
+}
