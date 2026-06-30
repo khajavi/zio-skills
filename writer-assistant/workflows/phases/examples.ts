@@ -385,14 +385,14 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
     console.log('[examples] Run: skipped (compile failed)');
   }
 
-  // Phase D: Lint — stage from module dir, run formatter/checker from root
+  // Phase D: Format — apply scalafmt to all Scala files after generation
+  // sbt check (project-wide lint gate) runs later in Phase 7 (build-verify)
   runShell('git', ['add', moduleDir], projectRoot);
-  const fmtResult = runSbt('fmtChanged', projectRoot);
-  const checkResult = runSbt('check', projectRoot);
-  const lintSuccess = checkResult.exitCode === 0;
-  const lintOutput = fmtResult.output + '\n' + checkResult.output;
+  const fmtResult = runSbt('scalafmtAll', projectRoot);
+  const lintSuccess = fmtResult.exitCode === 0;
+  const lintOutput = fmtResult.output;
 
-  console.log(`[examples] Lint: ${lintSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+  console.log(`[examples] Format: ${lintSuccess ? '✓ PASSED' : '✗ FAILED'}`);
 
   // Phase E: Document — embed examples in article (optional)
   let documentationAdded = false;
@@ -449,4 +449,46 @@ Add the section after the "What You've Learned" section and before the "Where to
     documentationAdded,
     durationMs,
   };
+}
+
+export async function runExamplesSubPhase(
+  harness: any,
+  session: any,
+  examplesPayload: { moduleName: string; packageName?: string; parentModule?: string } | undefined,
+  options: {
+    projectRoot: string;
+    topic: string;
+    resolvedOutputPath: string;
+    docType: DocType;
+    skipPhases: string[];
+    phasesCompleted: string[];
+  }
+): Promise<ExamplesPhaseResult | null> {
+  if (!examplesPayload) return null;
+
+  const { projectRoot, topic, resolvedOutputPath, docType, skipPhases, phasesCompleted } = options;
+
+  if (skipPhases.includes('examples')) {
+    console.log('\n[Phase 2.5] ⏭ Examples skipped');
+    phasesCompleted.push('examples');
+    return null;
+  }
+
+  console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
+  const result = await runExamplesPhase(harness, {
+    projectRoot,
+    moduleName: examplesPayload.moduleName,
+    packageName: examplesPayload.packageName,
+    parentModule: examplesPayload.parentModule,
+    topic,
+    docType,
+    outputDocPath: resolvedOutputPath,
+    session: session ?? undefined,
+  });
+  console.log(
+    `[Phase 2.5] ${result.success ? '✓' : '⚠'} Examples phase complete ` +
+      `(${result.exampleFiles.length} files, compile: ${result.compileSuccess ? '✓' : '✗'}, run: ${result.runSuccess ? '✓' : '✗'})`
+  );
+  phasesCompleted.push('examples');
+  return result;
 }

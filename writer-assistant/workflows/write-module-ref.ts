@@ -13,10 +13,11 @@ import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { verifyBuild } from './phases/verify.js';
+import { runVerifyPhase } from './phases/verify.js';
+import { runIntegratePhase } from './phases/integrate.js';
+import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
-import { createRunMdoc } from '../tools/run_mdoc.js';
 
 export type { DocType };
 
@@ -119,9 +120,12 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
-    // Phase 1: Research
+    // Initialize writer session (used for research delegation and all writer phases)
+    const session = await harness.session('write-module-ref');
+
+    // Phase 1: Research (delegated to docs-researcher subagent)
     console.log('\n[Phase 1] Research: Mapping the module...');
-    const researchResult = await runResearchPhase(harness, {
+    const researchResult = await runResearchPhase(session, {
       projectRoot,
       typeName: moduleName,
       resolvedOutputPath,
@@ -130,9 +134,6 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
     });
     console.log('[Phase 1] ✓ Research complete');
     phasesCompleted.push('research');
-
-    // Phase 2-4: Initialize writer session
-    const session = await harness.session('write-module-ref');
 
     // Phase 2: Write Documentation
     console.log('\n[Phase 2] Writing: Generating module documentation...');
@@ -233,92 +234,27 @@ Write the complete documentation file(s) and save them to the specified output p
     changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
-    console.log('\n[Phase 3] Verifying: Checking mdoc compilation...');
-    const changedFilesStr =
-      changedFiles.length > 0
-        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
-        : '\n\n**Note:** No additional markdown files were changed. Compile all output files.';
-
-    const verifyPrompt = `**Phase 3: Verify Documentation**
-
-Verify the documentation you just wrote for the \`${moduleName}\` module at ${resolvedOutputPath}
-
-**Verification steps:**
-
-1. **Check method coverage**
-   - Extract the list of all public methods from each core type's source
-   - Verify every method is documented
-   - Note total method count and coverage percentage
-
-2. **Compile with run_mdoc**${changedFilesStr}
-   - **CRITICAL: Use ONLY the run_mdoc tool for compilation** (do not use bash/sbt directly)
-   - Call run_mdoc with paths: ${JSON.stringify(changedFiles)}
-   - If run_mdoc returns errors, fix the markdown and call it again
-   - Iterate until all code blocks compile with zero errors
-   - Record final mdoc error count (must be 0)
-
-3. **Check documentation compliance**
-   - Verify no blank lines between consecutive code blocks
-   - Check "How They Work Together" section has ASCII diagram
-   - Ensure method signatures are in plain scala blocks (no mdoc)
-   - Verify examples are in mdoc:reset blocks
-
-Report:
-- Method coverage percentage per type
-- Final mdoc error count
-- Any fixes applied
-- Status: success/partial/failed`;
-
-    await session.prompt(verifyPrompt, {
-      tools: [createRunMdoc(projectRoot)],
+    console.log('\n[Phase 3] Verifying: Checking documentation and code...');
+    await runVerifyPhase(session, {
+      projectRoot,
+      changedFiles,
+      topic: moduleName,
+      resolvedOutputPath,
+      docType: 'module-ref',
     });
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
-    // Phase 4: Format and Integrate
-    console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-    const integratePrompt = `**Phase 4: Format and Integrate**
-
-Finalize the documentation for the \`${moduleName}\` module and integrate it into the docs structure.
-
-**Integration steps:**
-
-1. **Format Scala code**
-   - Run: sbt scalafmtAll
-   - Ensure all generated Scala files are properly formatted
-
-2. **Run lint checks**
-   - Run: sbt check
-   - Verify all lint checks pass
-
-3. **Update sidebars.js** (if it exists)
-   - **Flat structure:** Add \`{ type: "doc", id: "reference/${toKebabCase(moduleName)}" }\` entry
-   - **Hierarchical structure:** Add a category entry with link to index and items for each type page
-
-4. **Update docs/index.md** (if it exists)
-   - Add link to the new module documentation under "Reference Documentation"
-
-5. **Update related documentation**
-   - Check if other reference pages should link to this module
-   - Add reciprocal cross-references
-
-Report final status and any updates made.`;
-
-    await session.prompt(integratePrompt);
-    console.log('[Phase 4] ✓ Integration complete');
-    phasesCompleted.push('integrate');
-
-    // Phase 5: Review and Fix
-    console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+    // Phase 4: Review and Fix
+    console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
     const reviewResult = await runReviewPhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName: moduleName,
-      session,
       sourceFiles: sourceDirs,
     });
     console.log(
-      `[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
+      `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
     );
     if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
       console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
@@ -326,16 +262,15 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('review');
 
-    // Phase 6: Style Validation
-    console.log('\n[Phase 6] Validating: Checking prose style...');
+    // Phase 5: Style Validation
+    console.log('\n[Phase 5] Validating: Checking prose style...');
     const styleResult = await runStylePhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName: moduleName,
-      session,
     });
     console.log(
-      `[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+      `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
     );
     if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
       console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
@@ -343,29 +278,24 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('style');
 
-    // Phase 7: Verify Build
-    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
-    let buildVerifyResult = {
-      success: false,
-      buildSystem: 'unknown',
-      durationMs: 0,
-      skipped: false,
-    };
-    try {
-      const buildResult = await verifyBuild(docsDir);
-      buildVerifyResult = { ...buildResult, skipped: false };
-      console.log(
-        `[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`
-      );
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('No supported documentation build system detected')) {
-        console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
-      } else {
-        console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
-      }
-    }
+    // Phase 6: Integrate
+    console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
+    await runIntegratePhase(session, {
+      projectRoot,
+      outputFileName: toKebabCase(moduleName),
+      topic: moduleName,
+      docType: 'module-ref',
+    });
+    console.log('[Phase 6] ✓ Integration complete');
+    phasesCompleted.push('integrate');
+
+    // Phase 7: Build Verification with auto-fix loop
+    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
+      docsDir,
+      projectRoot,
+      skipPhases: [],
+      sessionName: 'write-module-ref',
+    });
     phasesCompleted.push('verifyBuild');
 
     const expectedPhases = 7 + (examplesPayload ? 1 : 0) + (diagramPayload ? 1 : 0);

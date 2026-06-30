@@ -6,10 +6,12 @@ import docsMdocConventionsSkill from '../skills/docs-mdoc-conventions/SKILL.md' 
 import docsTutorialSkill from '../skills/docs-tutorial/SKILL.md' with { type: 'skill' };
 import docsModuleRefSkill from '../skills/docs-module-ref/SKILL.md' with { type: 'skill' };
 import docsHowToGuideSkill from '../skills/docs-how-to-guide/SKILL.md' with { type: 'skill' };
+import { docsResearcherProfile } from './docs-researcher.js';
 
 export default defineAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
+  subagents: [docsResearcherProfile],
   skills: [
     docsDataTypeRefSkill,
     docsWritingStyleSkill,

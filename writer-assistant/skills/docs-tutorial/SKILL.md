@@ -32,3 +32,4 @@ A tutorial is **learning-oriented** — it builds mental models for newcomers en
 ## Quality Gate
 
 Before submitting, work through **[CHECKLIST.md](./CHECKLIST.md)** — 38 items across Content Quality, Technical Accuracy, Companion Examples, Running the Examples, and Style and Integration.
+
