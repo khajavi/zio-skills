@@ -166,18 +166,7 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     }
 
-    // Phase 4: Format and Integrate
-    if (skipPhases.includes('integrate')) {
-      console.log('\n[Phase 4] ⏭ Integrate skipped');
-      phasesCompleted.push('integrate');
-    } else {
-      console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-      await runIntegratePhase(session!, { projectRoot, outputFileName, topic, docType: 'how-to-guide' });
-      console.log('[Phase 4] ✓ Integration complete');
-      phasesCompleted.push('integrate');
-    }
-
-    // Phase 5: Review and Fix
+    // Phase 4: Review and Fix
     let reviewResult = {
       approved: true,
       rounds: 0,
@@ -185,10 +174,10 @@ Write the complete markdown file and save it to the specified output path.`;
       unresolvedIssues: [] as string[],
     };
     if (skipPhases.includes('review')) {
-      console.log('\n[Phase 5] ⏭ Review skipped');
+      console.log('\n[Phase 4] ⏭ Review skipped');
       phasesCompleted.push('review');
     } else {
-      console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+      console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
       reviewResult = await runReviewPhase(harness, {
         outputPath: resolvedOutputPath,
         projectRoot,
@@ -197,7 +186,7 @@ Write the complete markdown file and save it to the specified output path.`;
         sourceFiles: sourceDirs,
       });
       console.log(
-        `[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
+        `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
       );
       if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
         console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
@@ -206,7 +195,7 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('review');
     }
 
-    // Phase 6: Style Validation
+    // Phase 5: Style Validation
     let styleResult = {
       passed: true,
       rounds: 0,
@@ -214,10 +203,10 @@ Write the complete markdown file and save it to the specified output path.`;
       unresolvedViolations: [] as string[],
     };
     if (skipPhases.includes('style')) {
-      console.log('\n[Phase 6] ⏭ Style skipped');
+      console.log('\n[Phase 5] ⏭ Style skipped');
       phasesCompleted.push('style');
     } else {
-      console.log('\n[Phase 6] Validating: Checking prose style...');
+      console.log('\n[Phase 5] Validating: Checking prose style...');
       styleResult = await runStylePhase(harness, {
         outputPath: resolvedOutputPath,
         projectRoot,
@@ -225,13 +214,24 @@ Write the complete markdown file and save it to the specified output path.`;
         session: session!,
       });
       console.log(
-        `[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+        `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
       );
       if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
         console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
         styleResult.unresolvedViolations.forEach((violation) => console.log(`    - ${violation}`));
       }
       phasesCompleted.push('style');
+    }
+
+    // Phase 6: Integrate
+    if (skipPhases.includes('integrate')) {
+      console.log('\n[Phase 6] ⏭ Integrate skipped');
+      phasesCompleted.push('integrate');
+    } else {
+      console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
+      await runIntegratePhase(session!, { projectRoot, outputFileName, topic, docType: 'how-to-guide' });
+      console.log('[Phase 6] ✓ Integration complete');
+      phasesCompleted.push('integrate');
     }
 
     // Phase 7: Build Verification with auto-fix loop

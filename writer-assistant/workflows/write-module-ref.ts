@@ -239,14 +239,8 @@ Write the complete documentation file(s) and save them to the specified output p
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
-    // Phase 4: Format and Integrate
-    console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-    await runIntegratePhase(session, { projectRoot, outputFileName: toKebabCase(moduleName), topic: moduleName, docType: 'module-ref' });
-    console.log('[Phase 4] ✓ Integration complete');
-    phasesCompleted.push('integrate');
-
-    // Phase 5: Review and Fix
-    console.log('\n[Phase 5] Reviewing: Critique and fix loop...');
+    // Phase 4: Review and Fix
+    console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
     const reviewResult = await runReviewPhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
@@ -255,7 +249,7 @@ Write the complete documentation file(s) and save them to the specified output p
       sourceFiles: sourceDirs,
     });
     console.log(
-      `[Phase 5] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
+      `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
     );
     if (!reviewResult.approved && reviewResult.unresolvedIssues.length > 0) {
       console.log(`  Unresolved issues (${reviewResult.unresolvedIssues.length}):`);
@@ -263,8 +257,8 @@ Write the complete documentation file(s) and save them to the specified output p
     }
     phasesCompleted.push('review');
 
-    // Phase 6: Style Validation
-    console.log('\n[Phase 6] Validating: Checking prose style...');
+    // Phase 5: Style Validation
+    console.log('\n[Phase 5] Validating: Checking prose style...');
     const styleResult = await runStylePhase(harness, {
       outputPath: resolvedOutputPath,
       projectRoot,
@@ -272,13 +266,19 @@ Write the complete documentation file(s) and save them to the specified output p
       session,
     });
     console.log(
-      `[Phase 6] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
+      `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
     );
     if (!styleResult.passed && styleResult.unresolvedViolations.length > 0) {
       console.log(`  Unresolved violations (${styleResult.unresolvedViolations.length}):`);
       styleResult.unresolvedViolations.forEach((violation) => console.log(`    - ${violation}`));
     }
     phasesCompleted.push('style');
+
+    // Phase 6: Integrate
+    console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
+    await runIntegratePhase(session, { projectRoot, outputFileName: toKebabCase(moduleName), topic: moduleName, docType: 'module-ref' });
+    console.log('[Phase 6] ✓ Integration complete');
+    phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
