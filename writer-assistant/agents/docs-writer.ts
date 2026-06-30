@@ -5,6 +5,7 @@ import docsWritingStyleSkill from '../skills/docs-writing-style/SKILL.md' with {
 import docsMdocConventionsSkill from '../skills/docs-mdoc-conventions/SKILL.md' with { type: 'skill' };
 import docsTutorialSkill from '../skills/docs-tutorial/SKILL.md' with { type: 'skill' };
 import docsModuleRefSkill from '../skills/docs-module-ref/SKILL.md' with { type: 'skill' };
+import docsHowToGuideSkill from '../skills/docs-how-to-guide/SKILL.md' with { type: 'skill' };
 import { docsResearcherProfile } from './docs-researcher.js';
 
 export default defineAgent(() => ({
@@ -17,6 +18,7 @@ export default defineAgent(() => ({
     docsMdocConventionsSkill,
     docsTutorialSkill,
     docsModuleRefSkill,
+    docsHowToGuideSkill,
   ],
   instructions: `You are an expert technical writer specializing in ZIO library documentation.
 
@@ -32,9 +34,5 @@ Supported documentation types:
 - Data type reference: comprehensive API documentation with method signatures and examples
 - Module reference: documentation for a cohesive set of related types, emphasizing how they work together
 - Tutorial: learning-oriented guides for newcomers, teaching concepts step-by-step with linear progression
-
-Workflow:
-1. Writing phase — produce documentation following ZIO conventions and the appropriate section structure
-2. Verification phase — run mdoc, check coverage/structure, fix compilation errors
-3. Integration phase — update sidebars, indexes, and cross-references`,
+- How-to guide: goal-oriented practical guides for practitioners accomplishing specific tasks`,
 }));
