@@ -4,23 +4,47 @@ export async function runIntegratePhase(
     projectRoot: string;
     outputFileName: string;
     topic: string;
-    docType: 'tutorial' | 'how-to-guide';
+    docType: 'tutorial' | 'how-to-guide' | 'data-type-ref' | 'module-ref';
   }
 ): Promise<void> {
   const { projectRoot, outputFileName, topic, docType } = options;
 
-  const sidebarNote =
-    docType === 'tutorial'
-      ? `Add entry for ${outputFileName} under the "Guides" category (not "Reference")`
-      : `Add entry for ${outputFileName} under the "Guides" category (not "Reference" or "Tutorials") — create the "Guides" category if it doesn't exist`;
+  const isRef = docType === 'data-type-ref' || docType === 'module-ref';
+  const linkPrefix = isRef ? 'reference' : 'guides';
 
-  const crossRefNote =
-    docType === 'tutorial'
-      ? `Check if other reference pages or how-to guides should link to this tutorial
+  let sidebarNote: string;
+  switch (docType) {
+    case 'tutorial':
+      sidebarNote = `Add entry for ${outputFileName} under the "Guides" category (not "Reference")`;
+      break;
+    case 'how-to-guide':
+      sidebarNote = `Add entry for ${outputFileName} under the "Guides" category (not "Reference" or "Tutorials") — create the "Guides" category if it doesn't exist`;
+      break;
+    case 'data-type-ref':
+      sidebarNote = `Add \`{ type: "doc", id: "reference/${outputFileName}" }\` under the "Reference" category — ensure proper alphabetical ordering`;
+      break;
+    case 'module-ref':
+      sidebarNote = `Flat structure: add \`{ type: "doc", id: "reference/${outputFileName}" }\` under the "Reference" category\n   - Hierarchical structure: add a category entry with link to index and items for each type page`;
+      break;
+  }
+
+  let crossRefNote: string;
+  switch (docType) {
+    case 'tutorial':
+      crossRefNote = `Check if other reference pages or how-to guides should link to this tutorial
    - Add reciprocal cross-references where appropriate
-   - Tutorials should link from "Where to Go Next" to related how-to guides`
-      : `Check if reference pages for types used in this guide should link back to the guide
+   - Tutorials should link from "Where to Go Next" to related how-to guides`;
+      break;
+    case 'how-to-guide':
+      crossRefNote = `Check if reference pages for types used in this guide should link back to the guide
    - Add reciprocal cross-references where appropriate (e.g., if the guide covers Schema, add a "See also" link from docs/reference/schema.md)`;
+      break;
+    case 'data-type-ref':
+    case 'module-ref':
+      crossRefNote = `Check if other reference pages should link to ${topic}
+   - Add reciprocal cross-references where appropriate`;
+      break;
+  }
 
   const integratePrompt = `**Phase 4: Format and Integrate**
 
@@ -38,12 +62,10 @@ Finalize the ${docType} for ${topic} and integrate it into the docs structure.
 
 3. **Update sidebars.js** (if it exists)
    - ${sidebarNote}
-   - Ensure proper nesting and alphabetical ordering
-   - The entry should link to docs/guides/${outputFileName}.md
 
 4. **Update docs/index.md** (if it exists)
    - Add cross-reference to the new ${docType}
-   - Link to: guides/${outputFileName}
+   - Link to: ${linkPrefix}/${outputFileName}
 
 5. **Update related documentation**
    - ${crossRefNote}

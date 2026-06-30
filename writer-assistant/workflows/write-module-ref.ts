@@ -13,7 +13,9 @@ import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { runVerifyPhase, verifyBuild } from './phases/verify.js';
+import { runVerifyPhase } from './phases/verify.js';
+import { runIntegratePhase } from './phases/integrate.js';
+import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
 
@@ -239,34 +241,7 @@ Write the complete documentation file(s) and save them to the specified output p
 
     // Phase 4: Format and Integrate
     console.log('\n[Phase 4] Integrating: Finalizing documentation...');
-    const integratePrompt = `**Phase 4: Format and Integrate**
-
-Finalize the documentation for the \`${moduleName}\` module and integrate it into the docs structure.
-
-**Integration steps:**
-
-1. **Format Scala code**
-   - Run: sbt scalafmtAll
-   - Ensure all generated Scala files are properly formatted
-
-2. **Run lint checks**
-   - Run: sbt check
-   - Verify all lint checks pass
-
-3. **Update sidebars.js** (if it exists)
-   - **Flat structure:** Add \`{ type: "doc", id: "reference/${toKebabCase(moduleName)}" }\` entry
-   - **Hierarchical structure:** Add a category entry with link to index and items for each type page
-
-4. **Update docs/index.md** (if it exists)
-   - Add link to the new module documentation under "Reference Documentation"
-
-5. **Update related documentation**
-   - Check if other reference pages should link to this module
-   - Add reciprocal cross-references
-
-Report final status and any updates made.`;
-
-    await session.prompt(integratePrompt);
+    await runIntegratePhase(session, { projectRoot, outputFileName: toKebabCase(moduleName), topic: moduleName, docType: 'module-ref' });
     console.log('[Phase 4] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
@@ -305,29 +280,11 @@ Report final status and any updates made.`;
     }
     phasesCompleted.push('style');
 
-    // Phase 7: Verify Build
-    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
-    let buildVerifyResult = {
-      success: false,
-      buildSystem: 'unknown',
-      durationMs: 0,
-      skipped: false,
-    };
-    try {
-      const buildResult = await verifyBuild(docsDir);
-      buildVerifyResult = { ...buildResult, skipped: false };
-      console.log(
-        `[Phase 7] ${buildResult.success ? '✓' : '⚠'} Build verification complete (${buildResult.buildSystem}, ${buildResult.durationMs}ms)`
-      );
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('No supported documentation build system detected')) {
-        console.log('[Phase 7] ⚠ No documentation build system detected, skipping');
-        buildVerifyResult = { success: true, buildSystem: 'none', durationMs: 0, skipped: true };
-      } else {
-        console.log(`[Phase 7] ⚠ Build verification failed: ${msg}`);
-      }
-    }
+    // Phase 7: Build Verification with auto-fix loop
+    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
+      docsDir, projectRoot, skipPhases: [],
+      sessionName: 'write-module-ref',
+    });
     phasesCompleted.push('verifyBuild');
 
     const expectedPhases = 7 + (examplesPayload ? 1 : 0) + (diagramPayload ? 1 : 0);
