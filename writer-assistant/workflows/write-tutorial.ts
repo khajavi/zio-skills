@@ -156,8 +156,7 @@ Based on the research findings above, now write a comprehensive tutorial for lea
   - description: one sentence, ≤150 characters, describes what the tutorial teaches
   - keywords: 3-7 meaningful phrases (1-3 words each), e.g. feature names, patterns, learning outcomes
 - Follow the exact 7-section structure provided in the docs-tutorial skill
-- Every code example MUST use mdoc syntax
-- No blank lines between consecutive code blocks
+- Follow the docs-mdoc-conventions skill for all code block modifiers and formatting rules
 - Include explanatory paragraphs between code block groups
 - Tutorial must follow a strict linear path (no branching, no "alternatively")
 
@@ -179,7 +178,6 @@ ${section5Instruction}
 - Show intermediate output when meaningful
 - Every section must have code
 - No pseudo-code or fake error messages
-- Use \`mdoc\` for output-producing examples, \`mdoc:compile-only\` for complete final example
 
 Write the complete markdown file and save it to the specified output path.`;
 
