@@ -1,6 +1,7 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { runBuild } from '../../lib/build-runner.js';
-import { parseBuildErrors } from '../../lib/build-runner.js';
+import { spawnSync } from 'node:child_process';
+import { runBuild, parseBuildErrors } from '../../lib/build-runner.js';
 
 export interface BuildVerifyResult {
   success: boolean;
@@ -38,7 +39,21 @@ export async function runBuildVerifyPhase(
 
     if (initialBuild.success && parseBuildErrors(initialBuild.output).length === 0) {
       console.log(`[Phase 7] ✓ Build passed on first attempt (${buildSystem})`);
-      return { success: true, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
+
+      let checkSuccess = true;
+      if (fs.existsSync(path.join(projectRoot, 'build.sbt'))) {
+        console.log('[Phase 7] Running sbt check...');
+        const checkResult = spawnSync('sbt', ['check'], {
+          cwd: projectRoot,
+          encoding: 'utf-8',
+          timeout: 300_000,
+          shell: false,
+        });
+        checkSuccess = (checkResult.status ?? 1) === 0;
+        console.log(`[Phase 7] sbt check: ${checkSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+      }
+
+      return { success: checkSuccess, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: 0 };
     }
 
     let currentErrors = parseBuildErrors(initialBuild.output);
@@ -66,8 +81,24 @@ export async function runBuildVerifyPhase(
       console.log(`[Phase 7] Still ${currentErrors.length} error(s) after round ${round}`);
     }
 
-    const success = currentErrors.length === 0;
-    console.log(`[Phase 7] ${success ? '✓' : '⚠'} Build verification complete (${round} fix round(s))`);
+    const docsBuildSuccess = currentErrors.length === 0;
+    console.log(`[Phase 7] ${docsBuildSuccess ? '✓' : '⚠'} Build verification complete (${round} fix round(s))`);
+
+    // Run sbt check as final lint gate for Scala projects
+    let checkSuccess = true;
+    if (docsBuildSuccess && fs.existsSync(path.join(projectRoot, 'build.sbt'))) {
+      console.log('[Phase 7] Running sbt check...');
+      const checkResult = spawnSync('sbt', ['check'], {
+        cwd: projectRoot,
+        encoding: 'utf-8',
+        timeout: 300_000,
+        shell: false,
+      });
+      checkSuccess = (checkResult.status ?? 1) === 0;
+      console.log(`[Phase 7] sbt check: ${checkSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+    }
+
+    const success = docsBuildSuccess && checkSuccess;
     return { success, buildSystem, durationMs: Date.now() - buildStartMs, skipped: false, rounds: round };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

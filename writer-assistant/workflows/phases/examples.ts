@@ -385,14 +385,14 @@ Final line: "✓ All examples run successfully" or "✗ <N> example(s) failed"`;
     console.log('[examples] Run: skipped (compile failed)');
   }
 
-  // Phase D: Lint — stage from module dir, run formatter/checker from root
+  // Phase D: Format — apply scalafmt to all Scala files after generation
+  // sbt check (project-wide lint gate) runs later in Phase 7 (build-verify)
   runShell('git', ['add', moduleDir], projectRoot);
-  const fmtResult = runSbt('fmtChanged', projectRoot);
-  const checkResult = runSbt('check', projectRoot);
-  const lintSuccess = checkResult.exitCode === 0;
-  const lintOutput = fmtResult.output + '\n' + checkResult.output;
+  const fmtResult = runSbt('scalafmtAll', projectRoot);
+  const lintSuccess = fmtResult.exitCode === 0;
+  const lintOutput = fmtResult.output;
 
-  console.log(`[examples] Lint: ${lintSuccess ? '✓ PASSED' : '✗ FAILED'}`);
+  console.log(`[examples] Format: ${lintSuccess ? '✓ PASSED' : '✗ FAILED'}`);
 
   // Phase E: Document — embed examples in article (optional)
   let documentationAdded = false;
