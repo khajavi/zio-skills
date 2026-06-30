@@ -13,10 +13,9 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { verifyBuild } from './phases/verify.js';
+import { runVerifyPhase, verifyBuild } from './phases/verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
-import { createRunMdoc } from '../tools/run_mdoc.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 
 export default defineWorkflow({
@@ -192,46 +191,7 @@ Write the complete markdown file and save it to the specified output path.`;
 
     // Phase 3: Verify
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    const changedFilesStr =
-      changedFiles.length > 0
-        ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
-        : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
-
-    const verifyPrompt = `**Phase 3: Verify Documentation**
-
-Verify the documentation you just wrote for ${typeName} at ${resolvedOutputPath}
-
-**Verification steps:**
-
-1. **Check method coverage**
-   - Extract the list of all public methods from the source
-   - Verify that each method documented in the file has an explanation
-   - Note the total method count and coverage percentage
-
-2. **Compile with run_mdoc**${changedFilesStr}
-   - **CRITICAL: Use ONLY the run_mdoc tool for compilation** (do not use bash/sbt directly)
-   - The run_mdoc tool provides structured error parsing and proper error handling
-   - Call run_mdoc with paths: ${JSON.stringify(changedFiles)}
-   - If run_mdoc returns errors, fix the markdown and call it again
-   - Iterate until all code blocks compile with zero errors
-   - Record the final mdoc error count (should be 0)
-
-3. **Check documentation compliance**
-   - Verify no blank lines between consecutive code blocks
-   - Check that each section follows the required structure
-   - Ensure method signatures are in plain scala blocks (no mdoc)
-   - Verify examples are in mdoc:reset blocks
-
-Report:
-- Method coverage percentage
-- Final mdoc error count
-- Any fixes applied
-- Status: success/partial/failed`;
-
-    const verifyResult = await session.prompt(verifyPrompt, {
-      tools: [createRunMdoc(projectRoot)],
-    });
-
+    await runVerifyPhase(session, { projectRoot, changedFiles, topic: typeName, resolvedOutputPath, docType: 'data-type-ref' });
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 

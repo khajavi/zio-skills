@@ -11,7 +11,7 @@ import { runStylePhase } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runExamplesSubPhase } from './phases/examples.js';
-import { createRunMdoc } from '../tools/run_mdoc.js';
+import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 
 export default defineWorkflow({
@@ -161,52 +161,7 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking guide and code...');
-      const changedFilesStr =
-        changedFiles.length > 0
-          ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
-          : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
-
-      const verifyPrompt = `**Phase 3: Verify How-To Guide**
-
-Verify the how-to guide you just wrote for ${topic} at ${resolvedOutputPath}
-
-**Verification steps:**
-
-1. **Verify structure compliance**
-   - Check that all required sections are present: Introduction, The Problem, Prerequisites, The Core Model, step-by-step sections, Putting It Together, Running the Examples
-   - Confirm The Problem section includes: concrete problem statement + why it matters + a "before" code example
-   - Verify each step-by-step section covers exactly one concept with at least one code example
-   - Confirm "Putting It Together" is a complete, copy-paste runnable example
-   - Check that no section is pure prose — every section must have at least one code block
-
-2. **Compile with run_mdoc**${changedFilesStr}
-   - **CRITICAL: Use ONLY the run_mdoc tool for compilation** (do not use bash/sbt directly)
-   - Call run_mdoc with paths: ${JSON.stringify(changedFiles)}
-   - If run_mdoc returns errors, fix the markdown and call it again
-   - Iterate until all code blocks compile with zero errors
-
-3. **Check how-to guide style**
-   - Verify prose is direct and imperative (not warm/tutorial-style)
-   - Check that there is no conceptual preamble before The Problem section
-   - Ensure intermediate results are shown after major steps
-   - Verify no blank lines between consecutive code blocks
-   - Confirm the output file is under docs/guides/ (not docs/reference/ or docs/tutorials/)
-
-4. **Review CHECKLIST.md**
-   - Use the checklist in the docs-how-to-guide skill to self-verify all items
-   - Focus on Content Quality, Technical Accuracy, and Companion Examples sections
-   - Fix any violations found before reporting complete
-
-Report:
-- Structure compliance status
-- Final mdoc error count (should be 0)
-- CHECKLIST status
-- Any fixes applied`;
-
-      await session!.prompt(verifyPrompt, {
-        tools: [createRunMdoc(projectRoot)],
-      });
-
+      await runVerifyPhase(session!, { projectRoot, changedFiles, topic, resolvedOutputPath, docType: 'how-to-guide' });
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }

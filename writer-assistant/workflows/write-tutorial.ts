@@ -15,7 +15,7 @@ import { runStylePhase } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runExamplesSubPhase } from './phases/examples.js';
-import { createRunMdoc } from '../tools/run_mdoc.js';
+import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 
 export default defineWorkflow({
@@ -149,50 +149,7 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-      const changedFilesStr =
-        changedFiles.length > 0
-          ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
-          : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
-
-      const verifyPrompt = `**Phase 3: Verify Tutorial**
-
-Verify the tutorial you just wrote for ${topic} at ${resolvedOutputPath}
-
-**Verification steps:**
-
-1. **Verify structure compliance**
-   - Check that all 7 sections are present and in correct order
-   - Verify section headings use numbered format (## 1. Topic, ## 2. Topic, etc.)
-   - Ensure Introduction has Learning Objectives
-   - Confirm "What You've Learned" mirrors Learning Objectives
-   - Check that "Where to Go Next" links to how-to guides
-
-2. **Compile with run_mdoc**${changedFilesStr}
-   - **CRITICAL: Use ONLY the run_mdoc tool for compilation** (do not use bash/sbt directly)
-   - The run_mdoc tool provides structured error parsing
-   - Call run_mdoc with paths: ${JSON.stringify(changedFiles)}
-   - If run_mdoc returns errors, fix the markdown and call it again
-   - Iterate until all code blocks compile with zero errors
-
-3. **Check line-by-line annotations**
-   - Verify every code block is followed by bullet-point line-by-line explanation
-   - Check that intermediate results are shown after major steps
-   - Ensure no blank lines between consecutive code blocks
-
-4. **Review CHECKLIST.md**
-   - Use the checklist in the docs-tutorial skill to self-verify all 38 items
-   - Focus on Content Quality, Technical Accuracy, and Style sections
-
-Report:
-- Structure compliance status
-- Final mdoc error count (should be 0)
-- Any fixes applied
-- CHECKLIST status`;
-
-      await session!.prompt(verifyPrompt, {
-        tools: [createRunMdoc(projectRoot)],
-      });
-
+      await runVerifyPhase(session!, { projectRoot, changedFiles, topic, resolvedOutputPath, docType: 'tutorial' });
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }
