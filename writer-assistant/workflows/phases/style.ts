@@ -8,8 +8,6 @@ export interface StyleConfig {
   outputPath: string; // absolute path to the written .md file
   projectRoot: string;
   typeName: string;
-  session: any; // AgentSession reused from writer for fixes
-  init?: any; // TODO: was FlueContext['init'] — now accepts harness or undefined
   maxRounds?: number; // check+fix passes (default 1)
 }
 
@@ -118,8 +116,9 @@ export async function runStylePhase(
   harness: any, // TODO: was FlueContext['init'] — passes harness for LLM style checker
   config: StyleConfig
 ): Promise<StyleResult> {
-  const { outputPath, projectRoot, typeName, session, init: initForAgent } = config;
+  const { outputPath, projectRoot, typeName } = config;
   const maxRounds = config.maxRounds ?? DEFAULT_MAX_ROUNDS;
+  const fixerSession = await harness.session('docs-style-fixer');
 
   const result: StyleResult = {
     passed: false,
@@ -162,14 +161,14 @@ export async function runStylePhase(
     console.log(`  [Mechanical] Found ${mechanicalLines.length} violation(s)`);
     logRuleCounts(countByRule(mechanicalLines));
 
-    // Phase B: LLM-based judgment check (if harness is available)
+    // Phase B: LLM-based judgment check
     let llmLines: string[] = [];
 
-    if (initForAgent) {
-      try {
-        // TODO: docsStyleCheckerAgent is a different agent — harness here is the calling workflow's primary.
+    try {
+      {
+        // TODO: docsStyleCheckerAgent is a different agent — currently using primary harness.
         void docsStyleCheckerAgent;
-        const checkerSession = await initForAgent.session(`docs-style-checker-round-${round}`);
+        const checkerSession = await harness.session(`docs-style-checker-round-${round}`);
 
         const checkerPrompt = `Review the documentation file for prose style rule violations:
 
@@ -198,9 +197,9 @@ Then output:
         llmLines = extractViolationLines(checkerText);
         console.log(`  [LLM Review] Found ${llmLines.length} violation(s)`);
         logRuleCounts(countByRule(llmLines));
-      } catch (error) {
-        console.log(`  [LLM Review] Skipped (${error instanceof Error ? error.message : 'error'})`);
       }
+    } catch (error) {
+      console.log(`  [LLM Review] Skipped (${error instanceof Error ? error.message : 'error'})`);
     }
 
     // Combine both layers, drop violations the fixer already reported as unfixable
@@ -255,7 +254,7 @@ Process:
 
 Better to skip a fix than introduce new problems.`;
 
-    const fixerResult = await session.prompt(fixerPrompt);
+    const fixerResult = await fixerSession.prompt(fixerPrompt);
     const fixerText = fixerResult.text || String(fixerResult);
 
     // Parse fixer report (per-location)

@@ -122,6 +122,8 @@ Place the file in `docs/guides/` directory (same location as how-to guides):
 ---
 id: <kebab-case-id>
 title: "<Tutorial Title>"
+description: "<One sentence, ≤150 characters, describing what the tutorial teaches>"
+keywords: [<3-7 meaningful phrases, 1-3 words each, e.g. feature names, patterns, learning outcomes>]
 ---
 ```
 
