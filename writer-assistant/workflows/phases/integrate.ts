@@ -46,28 +46,20 @@ export async function runIntegratePhase(
       break;
   }
 
-  const integratePrompt = `**Phase 4: Format and Integrate**
+  const integratePrompt = `**Phase 4: Integrate**
 
-Finalize the ${docType} for ${topic} and integrate it into the docs structure.
+Integrate the ${docType} for ${topic} into the docs structure.
 
 **Integration steps:**
 
-1. **Format Scala code**
-   - Run: sbt scalafmtAll
-   - Ensure all generated Scala files are properly formatted
-
-2. **Run lint checks**
-   - Run: sbt check
-   - Verify all lint checks pass
-
-3. **Update sidebars.js** (if it exists)
+1. **Update sidebars.js** (if it exists)
    - ${sidebarNote}
 
-4. **Update docs/index.md** (if it exists)
+2. **Update docs/index.md** (if it exists)
    - Add cross-reference to the new ${docType}
    - Link to: ${linkPrefix}/${outputFileName}
 
-5. **Update related documentation**
+3. **Update related documentation**
    - ${crossRefNote}
 
 Report final status and any updates made.`;
