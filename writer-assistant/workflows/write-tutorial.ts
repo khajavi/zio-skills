@@ -137,6 +137,9 @@ async function writeTutorialRun({ harness, input }: { harness: any; input: any }
     } else {
       console.log('\n[Phase 2] Writing: Generating tutorial...');
       phase2StartTime = Date.now();
+      const section5Instruction = examplesPayload
+        ? `5. Running the Examples — DO NOT write this section. It will be inserted automatically after companion Scala example files are generated in the next step.`
+        : `5. Running the Examples (### per example: narrative + mdoc:embed source in <details> + "Observe X:" + bash run command)`;
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -163,7 +166,7 @@ Based on the research findings above, now write a comprehensive tutorial for lea
 2. Background / Big Picture (optional, no code)
 3. Concept sections (3-6 sections, one concept each)
 4. Putting It Together (complete runnable example)
-5. Running the Examples (### per example: narrative + mdoc:embed source in <details> + "Observe X:" + bash run command)
+${section5Instruction}
 6. What You've Learned (recap of objectives)
 7. Where to Go Next (links to how-to guides and reference pages)
 
