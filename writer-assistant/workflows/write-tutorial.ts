@@ -137,9 +137,9 @@ async function writeTutorialRun({ harness, input }: { harness: any; input: any }
     } else {
       console.log('\n[Phase 2] Writing: Generating tutorial...');
       phase2StartTime = Date.now();
-      const section5Instruction = examplesPayload
-        ? `5. Running the Examples — DO NOT write this section. It will be inserted automatically after companion Scala example files are generated in the next step.`
-        : `5. Running the Examples (### per example: narrative + mdoc:embed source in <details> + "Observe X:" + bash run command)`;
+      const section5Override = examplesPayload
+        ? `\n- **Skip section 5 (Running the Examples)**: Do NOT write this section. It will be inserted automatically after companion Scala example files are generated.`
+        : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -147,39 +147,16 @@ ${researchResult}
 
 **Phase 2: Write Tutorial Documentation**
 
-Based on the research findings above, now write a comprehensive tutorial for learning about ${topic}.
+Write a comprehensive tutorial for learning about ${topic}.
 
-**Requirements:**
+Follow the docs-tutorial skill for section structure, writing style, mdoc conventions, and all other authoring rules.
+
+**Workflow-specific requirements:**
 - Output file path: ${resolvedOutputPath}
-- File must be in docs/guides/ directory
-- File must have proper frontmatter with id, title, description, and keywords
-  - description: one sentence, ≤150 characters, describes what the tutorial teaches
-  - keywords: 3-7 meaningful phrases (1-3 words each), e.g. feature names, patterns, learning outcomes
-- Follow the exact 7-section structure provided in the docs-tutorial skill
-- Follow the docs-mdoc-conventions skill for all code block modifiers and formatting rules
-- Include explanatory paragraphs between code block groups
-- Tutorial must follow a strict linear path (no branching, no "alternatively")
+- Frontmatter \`description\`: one sentence, ≤150 characters
+- Frontmatter \`keywords\`: 3-7 meaningful phrases (1-3 words each)${section5Override}
 
-**Section structure (in order):**
-1. Introduction (with Learning Objectives and section outline)
-2. Background / Big Picture (optional, no code)
-3. Concept sections (3-6 sections, one concept each)
-4. Putting It Together (complete runnable example)
-${section5Instruction}
-6. What You've Learned (recap of objectives)
-7. Where to Go Next (links to how-to guides and reference pages)
-
-**Writing guidance:**
-- Use the docs-tutorial skill for detailed conventions
-- Use warm, welcoming tone: "Welcome", "Let's", "notice that"
-- Use present tense: "we learn", "we see", "we observe"
-- Address learner directly: "you now understand", "you can now do"
-- Line-by-line annotation after each code block
-- Show intermediate output when meaningful
-- Every section must have code
-- No pseudo-code or fake error messages
-
-Write the complete markdown file and save it to the specified output path.`;
+Write the complete markdown file and save it to the output path above.`;
 
       await session!.prompt(writePrompt);
       console.log('[Phase 2] ✓ Tutorial written');
