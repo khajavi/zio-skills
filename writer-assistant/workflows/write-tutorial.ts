@@ -152,9 +152,7 @@ Write a comprehensive tutorial for learning about ${topic}.
 Follow the docs-tutorial skill for section structure, writing style, mdoc conventions, and all other authoring rules.
 
 **Workflow-specific requirements:**
-- Output file path: ${resolvedOutputPath}
-- Frontmatter \`description\`: one sentence, ≤150 characters
-- Frontmatter \`keywords\`: 3-7 meaningful phrases (1-3 words each)${section5Override}
+- Output file path: ${resolvedOutputPath}${section5Override}
 
 Write the complete markdown file and save it to the output path above.`;
 
