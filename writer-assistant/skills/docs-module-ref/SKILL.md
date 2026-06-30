@@ -17,9 +17,9 @@ A module reference documents a **cohesive set of related data types that work to
 
 ## Structure Rule
 
-| Module shape | Structure |
-|---|---|
-| ≤ 4 core types, or types always used together | **Flat** — single file at `docs/reference/<module-name>.md` |
+| Module shape                                               | Structure                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| ≤ 4 core types, or types always used together              | **Flat** — single file at `docs/reference/<module-name>.md`                    |
 | ≥ 5 core types, OR ≥ 3 types with rich self-contained APIs | **Hierarchical** — `docs/reference/<module-name>/index.md` + one page per type |
 
 Decide before writing. State which structure and why.
