@@ -182,7 +182,6 @@ Write the complete markdown file and save it to the specified output path.`;
         outputPath: resolvedOutputPath,
         projectRoot,
         typeName: topic,
-        session: session!,
         sourceFiles: sourceDirs,
       });
       console.log(
@@ -211,7 +210,6 @@ Write the complete markdown file and save it to the specified output path.`;
         outputPath: resolvedOutputPath,
         projectRoot,
         typeName: topic,
-        session: session!,
       });
       console.log(
         `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`

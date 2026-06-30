@@ -245,7 +245,6 @@ Write the complete documentation file(s) and save them to the specified output p
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName: moduleName,
-      session,
       sourceFiles: sourceDirs,
     });
     console.log(
@@ -263,7 +262,6 @@ Write the complete documentation file(s) and save them to the specified output p
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName: moduleName,
-      session,
     });
     console.log(
       `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`

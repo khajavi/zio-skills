@@ -202,7 +202,6 @@ Write the complete markdown file and save it to the specified output path.`;
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName,
-      session, // reuse writer session for fixes
       sourceFiles: sourceDirs,
     });
     console.log(
@@ -220,7 +219,6 @@ Write the complete markdown file and save it to the specified output path.`;
       outputPath: resolvedOutputPath,
       projectRoot,
       typeName,
-      session, // reuse writer session for fixes
     });
     console.log(
       `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`

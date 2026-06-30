@@ -6,7 +6,6 @@ export interface ReviewConfig {
   outputPath: string; // absolute path to the written .md file
   projectRoot: string;
   typeName: string;
-  session: any; // AgentSession reused from writer for fixes
   sourceFiles?: string[];
   relatedDocs?: string[];
 }
@@ -29,7 +28,7 @@ export async function runReviewPhase(
   harness: any, // TODO: should be FlueHarness for docsReviewerAgent once multi-agent migrated
   config: ReviewConfig
 ): Promise<ReviewResult> {
-  const { outputPath, projectRoot, typeName, session, sourceFiles = [], relatedDocs = [] } = config;
+  const { outputPath, projectRoot, typeName, sourceFiles = [], relatedDocs = [] } = config;
 
   const result: ReviewResult = {
     approved: false,
@@ -46,11 +45,12 @@ export async function runReviewPhase(
     };
   }
 
+  const fixerSession = await harness.session('docs-review-fixer');
   const unresolvable = new Set<string>();
 
   for (let round = 1; round <= MAX_ROUNDS; round++) {
     result.rounds = round;
-    console.log(`\n[Phase 5] Round ${round}/${MAX_ROUNDS}: Spawning critic...`);
+    console.log(`\n[review] Round ${round}/${MAX_ROUNDS}: Spawning critic...`);
 
     // TODO: docsReviewerAgent is a different agent — harness here is the calling workflow's primary.
     void docsReviewerAgent;
@@ -221,7 +221,7 @@ ${previousFeedbackSection}
 
 Focus on quality over quantity. Better to skip a fix than introduce new problems.`;
 
-    const fixerResult = await session.prompt(fixerPrompt);
+    const fixerResult = await fixerSession.prompt(fixerPrompt);
     const fixerText = fixerResult.text || String(fixerResult);
 
     // Parse fixer report: track which specific issues were fixed vs couldn't be fixed

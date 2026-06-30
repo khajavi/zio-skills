@@ -38,18 +38,12 @@ async function fixWritingStyleRun({ harness, input }: { harness: any; input: any
   const phasesCompleted: string[] = [];
 
   try {
-    const session = await harness.session('fix-writing-style');
-
     // Run style validation and fixing
     console.log('\n[Phase 1] Style Validation: Checking and fixing prose style...');
-    // TODO: runStylePhase uses init to spawn docsStyleCheckerAgent (different agent).
-    // Flue 1.0 removed multi-agent init; migrate style checker to Actions or invoke().
     const styleResult = await runStylePhase(harness, {
       outputPath: filePath,
       projectRoot: path.dirname(filePath),
       typeName,
-      session,
-      init: harness, // placeholder — style phase needs migration
     });
 
     console.log(
