@@ -4,6 +4,19 @@ import { spawnSync } from 'node:child_process';
 
 export type DocType = 'data-type-ref' | 'tutorial' | 'how-to-guide' | 'module-ref';
 
+function detectExamplesAggregator(projectRoot: string): string | null {
+  const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const buildSbt = path.join(projectRoot, entry.name, 'build.sbt');
+    if (fs.existsSync(buildSbt)) {
+      const content = fs.readFileSync(buildSbt, 'utf-8');
+      if (content.includes('RootProject')) return entry.name;
+    }
+  }
+  return null;
+}
+
 export interface RunExamplesOptions {
   projectRoot: string;
   moduleName: string;
@@ -119,10 +132,11 @@ export async function runExamplesPhase(
   } = options;
 
   const packageName = inputPackageName ?? moduleName.replace(/-/g, '');
-  const moduleDir = parentModule
-    ? path.join(projectRoot, parentModule, moduleName)
+  const resolvedParentModule = parentModule ?? detectExamplesAggregator(projectRoot) ?? undefined;
+  const moduleDir = resolvedParentModule
+    ? path.join(projectRoot, resolvedParentModule, moduleName)
     : path.join(projectRoot, moduleName);
-  const packageDir = path.join(moduleDir, 'src', 'main', 'scala', packageName);
+  const packageDir = path.join(moduleDir, 'src', 'main', 'scala', ...packageName.split('.'));
   const exampleFileNames = getExampleFileNames(docType); // null for tutorial/how-to-guide
   const exampleFilePaths = exampleFileNames
     ? exampleFileNames.map((f) => path.join(packageDir, f))
@@ -133,7 +147,7 @@ export async function runExamplesPhase(
   console.log(`[examples] Creating ${docType} examples for: ${topic}`);
   console.log(`  moduleName:   ${moduleName}`);
   console.log(`  packageName:  ${packageName}`);
-  if (parentModule) console.log(`  parentModule: ${parentModule}`);
+  if (resolvedParentModule) console.log(`  parentModule: ${resolvedParentModule}`);
 
   let session = existingSession;
   if (!session) {
@@ -141,14 +155,16 @@ export async function runExamplesPhase(
   }
 
   // Phase A: Setup — create directory structure and wire sbt build files
-  const parentBuildSbt = parentModule ? path.join(projectRoot, parentModule, 'build.sbt') : null;
+  const parentBuildSbt = resolvedParentModule
+    ? path.join(projectRoot, resolvedParentModule, 'build.sbt')
+    : null;
   const parentExists = parentBuildSbt ? fs.existsSync(parentBuildSbt) : false;
 
-  const setupPrompt = parentModule
+  const setupPrompt = resolvedParentModule
     ? `Set up a new self-contained Scala example sub-module for documenting: ${topic}
 
 Project root:  ${projectRoot}
-Parent module: ${parentModule}   (dir: ${path.join(projectRoot, parentModule)})
+Parent module: ${resolvedParentModule}   (dir: ${path.join(projectRoot, resolvedParentModule)})
 Module name:   ${moduleName}     (dir: ${moduleDir})
 Package name:  ${packageName}
 
@@ -176,15 +192,15 @@ Steps:
    Add the following line to ${parentBuildSbt}:
        lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))`
           : `The parent aggregator does NOT exist yet. Create it:
-   a. mkdir -p "${path.join(projectRoot, parentModule)}"
+   a. mkdir -p "${path.join(projectRoot, resolvedParentModule!)}"
    b. Create ${parentBuildSbt} with:
           lazy val ${toCamelCase(moduleName)} = RootProject(file("${moduleName}"))
    c. In ${path.join(projectRoot, 'build.sbt')}:
       - Add the lazy val declaration (near the end, before root project definitions):
-            lazy val ${toCamelCase(parentModule)} = RootProject(file("${parentModule}"))
+            lazy val ${toCamelCase(resolvedParentModule!)} = RootProject(file("${resolvedParentModule}"))
       - Find the root project definition (the \`lazy val root = project.in(file("."))\` block)
-        and add \`${toCamelCase(parentModule)}\` to its \`.aggregate(...)\` call.
-        Example: if root has \`.aggregate(root213)\`, change it to \`.aggregate(root213, ${toCamelCase(parentModule)})\`.
+        and add \`${toCamelCase(resolvedParentModule!)}\` to its \`.aggregate(...)\` call.
+        Example: if root has \`.aggregate(root213)\`, change it to \`.aggregate(root213, ${toCamelCase(resolvedParentModule!)})\`.
         If the root project has no \`.aggregate(...)\` call yet, add one.`
       }
 
@@ -305,8 +321,8 @@ Write all files now.`;
 
   // Phase C: Compile — one agent-assisted retry on failure
   // Self-contained sub-modules compile from their own directory; flat modules compile from root.
-  const compileCwd = parentModule ? moduleDir : projectRoot;
-  const compileTarget = parentModule ? 'compile' : `${moduleName}/compile`;
+  const compileCwd = resolvedParentModule ? moduleDir : projectRoot;
+  const compileTarget = resolvedParentModule ? 'compile' : `${moduleName}/compile`;
 
   let compileResult = runSbt(compileTarget, compileCwd);
   let compileSuccess = compileResult.exitCode === 0;
@@ -333,7 +349,7 @@ Report: ✓ Fixed <file> or Could not fix <file> (reason)`);
 
   if (compileSuccess && createdFiles.length > 0) {
     const runCwd = compileCwd;
-    const runCmdNote = parentModule
+    const runCmdNote = resolvedParentModule
       ? `sbt "runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`
       : `sbt "${moduleName}/runMain ${packageName}.<ClassName>"  (run from: ${runCwd})`;
 

@@ -265,6 +265,8 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 ```
 
+**Ordering rule:** Write the full document body first, then check whether any `<Tabs>` elements are present. Add the imports only after confirming the document uses tabs. If no `<Tabs>` elements exist, omit the imports entirely.
+
 ### Tab structure
 
 ````mdx
