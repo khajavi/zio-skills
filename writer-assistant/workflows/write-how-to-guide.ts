@@ -13,6 +13,7 @@ import { runIntegratePhase } from './phases/integrate.js';
 import { runExamplesSubPhase } from './phases/examples.js';
 import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: docsWriterAgent,
@@ -20,7 +21,7 @@ export default defineWorkflow({
   run: writeHowToGuideRun as (ctx: any) => any,
 });
 
-async function writeHowToGuideRun({ harness, input }: { harness: any; input: any }) {
+async function writeHowToGuideRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     outputPath,
@@ -61,6 +62,10 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
   const docsDir = path.join(projectRoot, 'docs');
   const phasesCompleted: string[] = [];
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'docs-write-how-to-guide' });
+  harness = tracker.harness;
+
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
@@ -70,6 +75,7 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
     let session: any = needsSession ? await harness.session('docs-write-how-to-guide') : null;
 
     // Phase 1: Research (delegated to docs-researcher subagent)
+    tracker.beginPhase('research');
     let researchResult = '';
     if (skipPhases.includes('research')) {
       console.log('\n[Phase 1] ⏭ Research skipped');
@@ -88,6 +94,7 @@ async function writeHowToGuideRun({ harness, input }: { harness: any; input: any
     }
 
     // Phase 2: Write Guide
+    tracker.beginPhase('write');
     let phase2StartTime = Date.now();
     if (skipPhases.includes('write')) {
       console.log('\n[Phase 2] ⏭ Write skipped');
@@ -145,6 +152,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 2.5: Examples (optional)
+    tracker.beginPhase('examples');
     const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
       projectRoot,
       topic,
@@ -159,6 +167,7 @@ Write the complete markdown file and save it to the specified output path.`;
     changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
+    tracker.beginPhase('verify');
     if (skipPhases.includes('verify')) {
       console.log('\n[Phase 3] ⏭ Verify skipped');
       phasesCompleted.push('verify');
@@ -176,6 +185,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 4: Review and Fix
+    tracker.beginPhase('review');
     let reviewResult = {
       approved: true,
       rounds: 0,
@@ -204,6 +214,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 5: Style Validation
+    tracker.beginPhase('style');
     let styleResult = {
       passed: true,
       rounds: 0,
@@ -231,6 +242,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 6: Integrate
+    tracker.beginPhase('integrate');
     if (skipPhases.includes('integrate')) {
       console.log('\n[Phase 6] ⏭ Integrate skipped');
       phasesCompleted.push('integrate');
@@ -247,6 +259,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 7: Build Verification with auto-fix loop
+    tracker.beginPhase('verifyBuild');
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
       docsDir,
       projectRoot,
@@ -267,7 +280,23 @@ Write the complete markdown file and save it to the specified output path.`;
     console.log(`  Output file: ${resolvedOutputPath}`);
     console.log(`  File exists: ${fs.existsSync(resolvedOutputPath)}`);
 
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       topic,
       outputPath,
       resolvedOutputPath,
@@ -310,7 +339,24 @@ Write the complete markdown file and save it to the specified output path.`;
     console.error(
       `[docs-write-how-to-guide] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       topic,
       outputPath,
       resolvedOutputPath,

@@ -4,6 +4,11 @@ import * as fs from 'node:fs';
 import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
+import {
+  createRunSummaryTracker,
+  formatSummaryReport,
+  type RunSummary,
+} from './utils/run-summary.js';
 
 export type { DocType };
 
@@ -20,6 +25,7 @@ export interface WriteExamplesResult {
   lintOutput: string;
   documentationAdded: boolean;
   durationMs: number;
+  summary?: RunSummary;
 }
 
 export default defineWorkflow({
@@ -28,7 +34,7 @@ export default defineWorkflow({
   run: writeExamplesRun as (ctx: any) => any,
 });
 
-async function writeExamplesRun({ harness, input }: { harness: any; input: any }) {
+async function writeExamplesRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const { projectRoot, moduleName, topic, docType, outputDocPath, packageName, parentModule } =
     input as {
       projectRoot: string;
@@ -56,6 +62,11 @@ async function writeExamplesRun({ harness, input }: { harness: any; input: any }
   console.log(`[write-examples] parentModule:  ${parentModule ?? '(flat — root level)'}`);
   console.log(`[write-examples] outputDocPath: ${outputDocPath ?? '(not provided)'}`);
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'write-examples' });
+  harness = tracker.harness;
+  tracker.beginPhase('examples');
+
   const result = await runExamplesPhase(harness, {
     projectRoot,
     moduleName,
@@ -76,5 +87,20 @@ async function writeExamplesRun({ harness, input }: { harness: any; input: any }
   console.log(`  Lint:      ${lintSuccess ? '✓' : '✗'}`);
   console.log(`  Docs:      ${documentationAdded ? '✓' : '—'}`);
 
-  return result satisfies WriteExamplesResult;
+  const summary = tracker.finish();
+  console.log(formatSummaryReport(summary));
+  log.info('Run summary', {
+    wallClockMs: summary.wallClockMs,
+    totalTokens: summary.totals.totalTokens,
+    inputTokens: summary.totals.input,
+    outputTokens: summary.totals.output,
+    costUsd: summary.totals.costUsd,
+    phases: summary.phases.map((p) => ({
+      name: p.name,
+      durationMs: p.durationMs,
+      costUsd: p.costUsd,
+    })),
+  });
+
+  return { ...result, summary } satisfies WriteExamplesResult;
 }

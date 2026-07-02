@@ -259,7 +259,7 @@ Persist state
 
 Any phase can be skipped via `skipPhases: string[]` — useful for re-running only the build phase after a partial failure without repeating expensive earlier phases.
 
-**Run summary:** The workflow wraps its harness with `createRunSummaryTracker` (`workflows/utils/run-summary.ts`), which taps every session's `prompt`/`skill`/`task` calls to accumulate Flue's per-call `usage` (tokens + real dollar cost) into per-phase and per-model buckets. At the end of the run (success or failure) it prints a formatted report, logs the totals as structured attributes via the Action context's `log`, and returns the data in the result's `summary` field. The tracker is workflow-agnostic — other workflows adopt it by wrapping their harness, marking phases with `beginPhase(name)`, and calling `finish()` before returning.
+**Run summary:** The workflow wraps its harness with `createRunSummaryTracker` (`workflows/utils/run-summary.ts`), which taps every session's `prompt`/`skill`/`task` calls to accumulate Flue's per-call `usage` (tokens + real dollar cost) into per-phase and per-model buckets. At the end of the run (success or failure) it prints a formatted report, logs the totals as structured attributes via the Action context's `log`, and returns the data in the result's `summary` field. All LLM-backed workflows in this repo follow the same pattern (wrap harness, mark phases with `beginPhase(name)`, call `finish()` before returning); deterministic script workflows without LLM sessions (`check-mdoc`, `check-website`, `preview-website`, `report-method-coverage`) are the only exceptions.
 
 **Input:**
 

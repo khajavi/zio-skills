@@ -6,6 +6,7 @@ import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { runStylePhase } from './phases/style.js';
 import { verifyBuild } from './phases/verify.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 function inferDocsDir(filePath: string): string | null {
   const parts = filePath.split(path.sep);
@@ -20,7 +21,7 @@ export default defineWorkflow({
   run: fixWritingStyleRun as (ctx: any) => any,
 });
 
-async function fixWritingStyleRun({ harness, input }: { harness: any; input: any }) {
+async function fixWritingStyleRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const { filePath, typeName: typeNameInput } = input as {
     filePath: string;
     typeName?: string;
@@ -37,8 +38,31 @@ async function fixWritingStyleRun({ harness, input }: { harness: any; input: any
 
   const phasesCompleted: string[] = [];
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'fix-writing-style' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   try {
     // Run style validation and fixing
+    tracker.beginPhase('style');
     console.log('\n[Phase 1] Style Validation: Checking and fixing prose style...');
     const styleResult = await runStylePhase(harness, {
       outputPath: filePath,
@@ -56,6 +80,7 @@ async function fixWritingStyleRun({ harness, input }: { harness: any; input: any
     phasesCompleted.push('style');
 
     // Phase 2: Verify Build
+    tracker.beginPhase('verifyBuild');
     console.log('\n[Phase 2] Build Verification: Verifying documentation builds...');
     let buildVerifyResult = {
       success: false,
@@ -93,7 +118,10 @@ async function fixWritingStyleRun({ harness, input }: { harness: any; input: any
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  File: ${filePath}`);
 
+    const summary = reportSummary();
+
     return {
+      summary,
       filePath,
       typeName,
       success,
@@ -115,7 +143,9 @@ async function fixWritingStyleRun({ harness, input }: { harness: any; input: any
     console.error(
       `[fix-writing-style] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+    const summary = reportSummary();
     return {
+      summary,
       filePath,
       typeName,
       success: false,

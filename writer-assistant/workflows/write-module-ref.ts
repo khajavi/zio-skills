@@ -18,10 +18,16 @@ import { runIntegratePhase } from './phases/integrate.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
+import {
+  createRunSummaryTracker,
+  formatSummaryReport,
+  type RunSummary,
+} from './utils/run-summary.js';
 
 export type { DocType };
 
 export interface WriteModuleRefResult {
+  summary: RunSummary;
   moduleName: string;
   outputPath: string;
   resolvedOutputPath: string;
@@ -71,7 +77,7 @@ export default defineWorkflow({
   run: writeModuleRefRun as (ctx: any) => any,
 });
 
-async function writeModuleRefRun({ harness, input }: { harness: any; input: any }) {
+async function writeModuleRefRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     moduleName,
@@ -117,6 +123,10 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
 
   const phasesCompleted: string[] = [];
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'write-module-ref' });
+  harness = tracker.harness;
+
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
@@ -124,6 +134,7 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
     const session = await harness.session('write-module-ref');
 
     // Phase 1: Research (delegated to docs-researcher subagent)
+    tracker.beginPhase('research');
     console.log('\n[Phase 1] Research: Mapping the module...');
     const researchResult = await runResearchPhase(session, {
       projectRoot,
@@ -136,6 +147,7 @@ async function writeModuleRefRun({ harness, input }: { harness: any; input: any 
     phasesCompleted.push('research');
 
     // Phase 2: Write Documentation
+    tracker.beginPhase('write');
     console.log('\n[Phase 2] Writing: Generating module documentation...');
     const phase2StartTime = Date.now();
 
@@ -182,6 +194,7 @@ Write the complete documentation file(s) and save them to the specified output p
     phasesCompleted.push('write');
 
     // Phase 2.5: Examples (optional)
+    tracker.beginPhase('examples');
     let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
     if (examplesPayload) {
       console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
@@ -203,6 +216,7 @@ Write the complete documentation file(s) and save them to the specified output p
     }
 
     // Phase 2.6: Diagram (optional)
+    tracker.beginPhase('diagram');
     let diagramResult: Awaited<ReturnType<typeof runDiagramPhase>> | null = null;
     if (diagramPayload) {
       console.log('\n[Phase 2.6] Diagram: Generating interactive JSX diagram...');
@@ -234,6 +248,7 @@ Write the complete documentation file(s) and save them to the specified output p
     changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
+    tracker.beginPhase('verify');
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
     await runVerifyPhase(session, {
       projectRoot,
@@ -246,6 +261,7 @@ Write the complete documentation file(s) and save them to the specified output p
     phasesCompleted.push('verify');
 
     // Phase 4: Review and Fix
+    tracker.beginPhase('review');
     console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
     const reviewResult = await runReviewPhase(harness, {
       outputPath: resolvedOutputPath,
@@ -263,6 +279,7 @@ Write the complete documentation file(s) and save them to the specified output p
     phasesCompleted.push('review');
 
     // Phase 5: Style Validation
+    tracker.beginPhase('style');
     console.log('\n[Phase 5] Validating: Checking prose style...');
     const styleResult = await runStylePhase(harness, {
       outputPath: resolvedOutputPath,
@@ -279,6 +296,7 @@ Write the complete documentation file(s) and save them to the specified output p
     phasesCompleted.push('style');
 
     // Phase 6: Integrate
+    tracker.beginPhase('integrate');
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
     await runIntegratePhase(session, {
       projectRoot,
@@ -290,6 +308,7 @@ Write the complete documentation file(s) and save them to the specified output p
     phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
+    tracker.beginPhase('verifyBuild');
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
       docsDir,
       projectRoot,
@@ -304,7 +323,23 @@ Write the complete documentation file(s) and save them to the specified output p
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Output: ${resolvedOutputPath}`);
 
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       moduleName,
       outputPath,
       resolvedOutputPath,
@@ -354,7 +389,24 @@ Write the complete documentation file(s) and save them to the specified output p
     console.error(
       `[write-module-ref] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       moduleName,
       outputPath,
       resolvedOutputPath,

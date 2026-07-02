@@ -308,7 +308,7 @@ npx flue run write-tutorial --target node --input '{
 - Warm, welcoming tone
 - 38-item checklist verification in Phase 3
 
-**Run summary report:** At the end of every run (success or failure), the workflow prints a summary of token consumption, real dollar cost (from Flue's per-call `usage.cost`), and wall-clock time, broken down per phase and per model. The same data is returned in the result's `summary` field and logged as structured attributes (`log.info('Run summary', {...})`) so it appears in the workflow run history.
+**Run summary report:** At the end of every run (success or failure), the workflow prints a summary of token consumption, real dollar cost (from Flue's per-call `usage.cost`), and wall-clock time, broken down per phase and per model. The same data is returned in the result's `summary` field and logged as structured attributes (`log.info('Run summary', {...})`) so it appears in the workflow run history. All LLM-backed workflows in this repo emit this report (`write-tutorial`, `write-module-ref`, `write-data-type-ref`, `write-how-to-guide`, `write-examples`, `document-pr`, `organize-types`, `design-diagram`, `extract-metadata`, `crossref`, `fix-mdoc`, `fix-website`, `fix-writing-style`, `integrate`, `reduce-redundancy`, `coding-agent`); deterministic script workflows (`check-mdoc`, `check-website`, `preview-website`, `report-method-coverage`) do not, since they make no LLM calls.
 
 ```
 ──────────────────────────────────────────────────────────────────────────────

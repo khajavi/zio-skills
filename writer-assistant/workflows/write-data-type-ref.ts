@@ -18,6 +18,7 @@ import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: docsWriterAgent,
@@ -25,7 +26,15 @@ export default defineWorkflow({
   run: writeDataTypeRefRun as (ctx: any) => any,
 });
 
-async function writeDataTypeRefRun({ harness, input }: { harness: any; input: any }) {
+async function writeDataTypeRefRun({
+  harness,
+  input,
+  log,
+}: {
+  harness: any;
+  input: any;
+  log: any;
+}) {
   const {
     projectRoot,
     outputPath,
@@ -82,6 +91,10 @@ async function writeDataTypeRefRun({ harness, input }: { harness: any; input: an
   let mdocErrors = 0;
   let methodsCovered = 0;
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'docs-write-data-type-ref' });
+  harness = tracker.harness;
+
   try {
     // Set environment variable for agents' sandbox cwd
     process.env.FLUE_PROJECT_ROOT = projectRoot;
@@ -90,6 +103,7 @@ async function writeDataTypeRefRun({ harness, input }: { harness: any; input: an
     const session = await harness.session('docs-write-data-type-ref');
 
     // Phase 1: Research (delegated to docs-researcher subagent)
+    tracker.beginPhase('research');
     console.log('\n[Phase 1] Research: Understanding the data type...');
     const researchResult = await runResearchPhase(session, {
       projectRoot,
@@ -103,6 +117,7 @@ async function writeDataTypeRefRun({ harness, input }: { harness: any; input: an
     phasesCompleted.push('research');
 
     // Phase 2: Write Documentation
+    tracker.beginPhase('write');
     console.log('\n[Phase 2] Writing: Generating documentation...');
     const phase2StartTime = Date.now();
     const writePrompt = `**Research Findings (from research phase):**
@@ -139,6 +154,7 @@ Write the complete markdown file and save it to the specified output path.`;
     phasesCompleted.push('write');
 
     // Phase 2.5: Examples (optional — only when `examples` payload provided)
+    tracker.beginPhase('examples');
     let examplesResult: Awaited<ReturnType<typeof runExamplesPhase>> | null = null;
     if (examplesPayload) {
       console.log('\n[Phase 2.5] Examples: Generating companion Scala examples...');
@@ -160,6 +176,7 @@ Write the complete markdown file and save it to the specified output path.`;
     }
 
     // Phase 2.6: Diagram (optional — only when `diagram` payload provided)
+    tracker.beginPhase('diagram');
     let diagramResult: Awaited<ReturnType<typeof runDiagramPhase>> | null = null;
     if (diagramPayload) {
       console.log('\n[Phase 2.6] Diagram: Generating interactive JSX diagram...');
@@ -191,6 +208,7 @@ Write the complete markdown file and save it to the specified output path.`;
     changedFiles.forEach((file) => console.log(`  - ${file}`));
 
     // Phase 3: Verify
+    tracker.beginPhase('verify');
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
     await runVerifyPhase(session, {
       projectRoot,
@@ -203,6 +221,7 @@ Write the complete markdown file and save it to the specified output path.`;
     phasesCompleted.push('verify');
 
     // Phase 4: Review and Fix
+    tracker.beginPhase('review');
     console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
     const reviewResult = await runReviewPhase(harness, {
       outputPath: resolvedOutputPath,
@@ -220,6 +239,7 @@ Write the complete markdown file and save it to the specified output path.`;
     phasesCompleted.push('review');
 
     // Phase 5: Style Validation
+    tracker.beginPhase('style');
     console.log('\n[Phase 5] Validating: Checking prose style...');
     const styleResult = await runStylePhase(harness, {
       outputPath: resolvedOutputPath,
@@ -236,6 +256,7 @@ Write the complete markdown file and save it to the specified output path.`;
     phasesCompleted.push('style');
 
     // Phase 6: Integrate
+    tracker.beginPhase('integrate');
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
     await runIntegratePhase(session, {
       projectRoot,
@@ -247,6 +268,7 @@ Write the complete markdown file and save it to the specified output path.`;
     phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
+    tracker.beginPhase('verifyBuild');
     const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
       docsDir,
       projectRoot,
@@ -263,7 +285,23 @@ Write the complete markdown file and save it to the specified output path.`;
     console.log(`  Output file: ${resolvedOutputPath}`);
     console.log(`  File exists: ${fs.existsSync(resolvedOutputPath)}`);
 
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       typeName,
       outputPath,
       resolvedOutputPath,
@@ -313,7 +351,24 @@ Write the complete markdown file and save it to the specified output path.`;
     console.error(
       `[docs-write-data-type-ref] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+
     return {
+      summary,
       typeName,
       outputPath,
       resolvedOutputPath,
