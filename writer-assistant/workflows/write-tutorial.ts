@@ -126,7 +126,10 @@ ${researchResult}
 
 Write a comprehensive tutorial for learning about ${topic}.
 
-Follow the docs-tutorial skill for section structure, writing style, mdoc conventions, and all other authoring rules.
+Follow the 
+  - "docs-tutorial" skill for tutorial structure, 
+  - "docs-writing-style" skill for prose style,
+  - "docs-mdoc-conventions" skill for markdown conventions
 
 **Workflow-specific requirements:**
 - Output file path: ${resolvedOutputPath}${section5Override}
