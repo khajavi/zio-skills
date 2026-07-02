@@ -308,6 +308,27 @@ npx flue run write-tutorial --target node --input '{
 - Warm, welcoming tone
 - 38-item checklist verification in Phase 3
 
+**Run summary report:** At the end of every run (success or failure), the workflow prints a summary of token consumption, real dollar cost (from Flue's per-call `usage.cost`), and wall-clock time, broken down per phase and per model. The same data is returned in the result's `summary` field and logged as structured attributes (`log.info('Run summary', {...})`) so it appears in the workflow run history.
+
+```
+──────────────────────────────────────────────────────────────────────────────
+Run summary: docs-write-tutorial
+Wall clock: 24m 12s   (2026-07-02T10:00:00.000Z → 2026-07-02T10:24:12.000Z)
+
+Phase          Time       Calls   In tok      Out tok     Cache r/w     Cost
+research       3m 40s     1       12,345      8,900       45k / 12k     $0.31
+write          6m 05s     1       22,001      15,400      88k / 20k     $0.74
+...
+verifyBuild    2m 21s     1       4,100       1,200       30k / 2k      $0.11
+──────────────────────────────────────────────────────────────────────────────
+TOTAL          24m 12s    14      91,203      52,610      410k / 61k    $2.31
+
+Model: anthropic/claude-sonnet-5 — 14 call(s), 614,813 tokens, $2.31
+──────────────────────────────────────────────────────────────────────────────
+```
+
+The tracker lives in `workflows/utils/run-summary.ts` and is reusable: any workflow can adopt it by wrapping its harness with `createRunSummaryTracker`, calling `beginPhase(name)` before each phase, and calling `finish()` + `formatSummaryReport()` before returning.
+
 ### Organize Types
 
 Group related data types into logical sidebar categories. Two modes: manual (specify types and category) or automatic (scan all types, propose groupings by confidence).

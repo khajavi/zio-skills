@@ -57,6 +57,7 @@ writer-assistant/
 │       ├── metadata-utilities.ts # Extract/manage metadata
 │       ├── confidence.ts        # Confidence threshold checking
 │       ├── cost.ts              # Token cost estimation
+│       ├── run-summary.ts       # Per-run token/cost/time summary tracker + report
 │       ├── yaml.ts              # YAML frontmatter manipulation
 │       ├── mdoc-runner.ts       # Shared mdoc utilities (expand, resolve, run, parse)
 │       └── sidebar-parser.ts    # Docusaurus sidebar parsing
@@ -257,6 +258,8 @@ Persist state
 8. **Build Verification Phase** — Run docs build (Docusaurus/MkDocs/Sphinx); on failure, spawns writer agent to fix errors and retries up to 3 rounds; skip gracefully if no build system detected
 
 Any phase can be skipped via `skipPhases: string[]` — useful for re-running only the build phase after a partial failure without repeating expensive earlier phases.
+
+**Run summary:** The workflow wraps its harness with `createRunSummaryTracker` (`workflows/utils/run-summary.ts`), which taps every session's `prompt`/`skill`/`task` calls to accumulate Flue's per-call `usage` (tokens + real dollar cost) into per-phase and per-model buckets. At the end of the run (success or failure) it prints a formatted report, logs the totals as structured attributes via the Action context's `log`, and returns the data in the result's `summary` field. The tracker is workflow-agnostic — other workflows adopt it by wrapping their harness, marking phases with `beginPhase(name)`, and calling `finish()` before returning.
 
 **Input:**
 
