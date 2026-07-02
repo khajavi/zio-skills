@@ -8,6 +8,7 @@ import { loadConfig } from '../lib/config-loader.js';
 import { parseFrontmatter } from '../lib/markdown-parser.js';
 import { hasCompleteMetadata } from '../lib/metadata-extractor-utils.js';
 import { extractMetadata } from './utils/metadata-utilities.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 /**
  * Recursively walk docs directory and return list of markdown/mdx files.
@@ -139,7 +140,7 @@ export default defineWorkflow({
   run: extractMetadataRun as (ctx: any) => any,
 });
 
-async function extractMetadataRun({ harness, input }: { harness: any; input: any }) {
+async function extractMetadataRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     docsDir,
     mode = 'missing',
@@ -154,11 +155,34 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
 
   if (!docsDir) throw new Error('input.docsDir is required');
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'extract-metadata' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   const session = await harness.session('extract-metadata');
 
   const config = loadConfig(docsDir);
 
   // Collect files to process
+  tracker.beginPhase('collectFiles');
   let files: string[] = [];
 
   if (targetFile) {
@@ -171,7 +195,7 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
       realTarget = fs.realpathSync(normalizedTarget);
     } catch {
       console.error(`[extract-metadata] Target file not accessible: ${targetFile}`);
-      return { processed: 0, skipped: 0, errors: 1 };
+      return { processed: 0, skipped: 0, errors: 1, summary: reportSummary() };
     }
 
     let realDocsDir: string;
@@ -179,19 +203,19 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
       realDocsDir = fs.realpathSync(docsDir);
     } catch {
       console.error(`[extract-metadata] Docs directory not accessible: ${docsDir}`);
-      return { processed: 0, skipped: 0, errors: 1 };
+      return { processed: 0, skipped: 0, errors: 1, summary: reportSummary() };
     }
 
     // Verify file is within docs directory
     if (!realTarget.startsWith(realDocsDir + path.sep) && realTarget !== realDocsDir) {
       console.error(`[extract-metadata] Target file is outside docsDir: ${targetFile}`);
-      return { processed: 0, skipped: 0, errors: 1 };
+      return { processed: 0, skipped: 0, errors: 1, summary: reportSummary() };
     }
 
     // Verify it's a markdown file
     if (!/\.(md|mdx)$/.test(realTarget)) {
       console.error(`[extract-metadata] Target file is not markdown: ${targetFile}`);
-      return { processed: 0, skipped: 0, errors: 1 };
+      return { processed: 0, skipped: 0, errors: 1, summary: reportSummary() };
     }
 
     files = [realTarget];
@@ -201,7 +225,7 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
     files = walkDir(targetDir, docsDir, config.excludePatterns);
     if (files.length === 0) {
       console.error(`[extract-metadata] No markdown files found in directory: ${targetDir}`);
-      return { processed: 0, skipped: 0, errors: 1 };
+      return { processed: 0, skipped: 0, errors: 1, summary: reportSummary() };
     }
     console.log(`[extract-metadata] Found ${files.length} markdown files in ${targetDir}`);
   } else {
@@ -212,10 +236,11 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
 
   if (files.length === 0) {
     console.log('[extract-metadata] No files to process');
-    return { processed: 0, skipped: 0, errors: 0 };
+    return { processed: 0, skipped: 0, errors: 0, summary: reportSummary() };
   }
 
   // Process files
+  tracker.beginPhase('processFiles');
   let processed = 0;
   let skipped = 0;
   let errors = 0;
@@ -281,5 +306,5 @@ async function extractMetadataRun({ harness, input }: { harness: any; input: any
     `\n[extract-metadata] Complete. Processed: ${processed}/${total}, Skipped: ${skipped}, Errors: ${errors}`
   );
 
-  return { processed, skipped, errors };
+  return { processed, skipped, errors, summary: reportSummary() };
 }

@@ -10,6 +10,7 @@ import {
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
 import { runDiagramPhase } from './phases/diagram.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: docsWriterAgent,
@@ -17,7 +18,7 @@ export default defineWorkflow({
   run: designDiagramRun as (ctx: any) => any,
 });
 
-async function designDiagramRun({ harness, input }: { harness: any; input: any }) {
+async function designDiagramRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     dataTypePath,
@@ -54,6 +55,28 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
 
   const phasesCompleted: string[] = [];
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'design-diagram' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
@@ -61,6 +84,7 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
     const session = await harness.session('design-diagram');
 
     // Phase 1: Research (delegated to docs-researcher subagent)
+    tracker.beginPhase('research');
     console.log('\n[Phase 1] Research: Understanding the data type...');
     const researchResult = await runResearchPhase(session, {
       projectRoot,
@@ -74,6 +98,7 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
     phasesCompleted.push('research');
 
     // Phase 2: Design diagram
+    tracker.beginPhase('diagram');
     console.log('\n[Phase 2] Design: Generating interactive JSX diagram...');
 
     // If an article will be patched, initialize a writer session for the patch step
@@ -110,7 +135,10 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
     console.log(`\n[design-diagram] ${success ? '✓ SUCCESS' : '⚠ PARTIAL'}`);
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
 
+    const summary = reportSummary();
+
     return {
+      summary,
       typeName,
       outputPath,
       resolvedOutputPath,
@@ -125,7 +153,9 @@ async function designDiagramRun({ harness, input }: { harness: any; input: any }
     console.error(
       `[design-diagram] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+    const summary = reportSummary();
     return {
+      summary,
       typeName,
       outputPath,
       resolvedOutputPath,

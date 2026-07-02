@@ -1,19 +1,3 @@
----
-providers:
-  anthropic:
-    apiKey: ${ANTHROPIC_API_KEY}
----
-
-# Development Rules
-
-## Code
-
-- TypeScript strict mode
-- `const`/`let` only, no `var`
-- camelCase variables, snake_case files
-- Named exports only
-- No `any`, no comments unless WHY non-obvious
-
 ## Structure
 
 ```
@@ -25,84 +9,12 @@ skills/    → SKILL.md (LLM instructions)
 tests/     → Vitest tests
 ```
 
-## Imports
-
-```typescript
-import fs from 'node:fs';
-import { func } from '../lib/module.js';
-```
-
-Node modules use `node:`. Named exports only.
-
-## Functions
-
-- Pure in `lib/` — no I/O
-- Immutable — return new objects
-- Explicit types
-- Throw on error (don't return null)
-- One responsibility
-
-## State
-
-- Load → Process → Save (atomic)
-- Never mutate state
-- Validate with Valibot
-- Stored in `.crossref-state/`
-
-## Paths
-
-- Always `realpathSync()` symlinks
-- Check resolved path within boundary
-- Never trust user paths
-
-## Logging
-
-```
-[workflow-name] ✓ Processed: Title (1/42) | Applied: 3
-[workflow-name] Error: ...
-```
-
 ## Running Workflows
 
-### Foreground (Interactive)
-
 ```bash
 npm run build
 export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
 npx flue run crossref --target node --input '{...}'
-```
-
-### Background (Non-blocking)
-
-For long-running workflows (autopilot, verify-and-fix), run in background:
-
-**nohup (simple):**
-
-```bash
-nohup npx flue run crossref --target node \
-  --input '{"docsDir":"/path/to/docs","mode":"autopilot"}' > workflow.log 2>&1 &
-```
-
-**screen (persistent):**
-
-```bash
-screen -S my-workflow
-npm run build
-export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
-npx flue run crossref --target node --input '{...}'
-# Ctrl+A then D to detach
-# screen -r my-workflow to reattach
-```
-
-**Claude Code background execution:**
-Use the `run_in_background: true` parameter in Bash tool calls.
-
-### Monitoring
-
-```bash
-tail -f workflow.log           # nohup logs
-screen -r my-workflow          # reattach screen session
-ps aux | grep flue             # find process
 ```
 
 ## Formatting
@@ -147,22 +59,3 @@ flue docs                  List all documentation pages
 flue docs read <path>      Print a documentation page as markdown
 flue docs search <query>   Search the documentation (JSON results)
 ```
-
-## Agents
-
-- Skill-driven (behavior in `skills/*/SKILL.md`)
-- Minimal tools
-- Validate LLM output before use
-
-## Markdown
-
-- Protect code blocks, inline code, frontmatter
-- Safe phrase matching (word boundaries)
-- Preserve original casing
-
-## Security
-
-- Validate all paths (symlink + boundary)
-- Never hardcode secrets
-- Never execute LLM output
-- Escape shell arguments

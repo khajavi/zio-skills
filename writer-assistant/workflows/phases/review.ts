@@ -17,7 +17,7 @@ export interface ReviewResult {
   unresolvedIssues: string[];
 }
 
-const MAX_ROUNDS = 5;
+const MAX_ROUNDS = 1;
 
 /**
  * Run the review phase: critic → fix loop until approved or max rounds

@@ -12,6 +12,7 @@ import { reindex } from './phases/reindex.js';
 import { processBatch } from './phases/process.js';
 import { report } from './phases/report.js';
 import { verifyBuild } from './phases/verify.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: pageLinkerAgent,
@@ -19,7 +20,7 @@ export default defineWorkflow({
   run: crossrefRun as (ctx: any) => any,
 });
 
-async function crossrefRun({ harness, input }: { harness: any; input: any }) {
+async function crossrefRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const projectRoot = (input as any).projectRoot || path.dirname((input as any).docsDir);
   const docsDir = (input as any).docsDir || path.join(projectRoot, 'docs');
 
@@ -43,19 +44,45 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
 
   if (!projectRoot) throw new Error('input.projectRoot is required (or legacy docsDir)');
 
+  // Track this run's token usage, cost, and per-phase timing. This is separate
+  // from (and does not replace) the persistent cross-run accounting in
+  // state.tokens, which accumulates across runs.
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'crossref' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   const session = await harness.session('crossref');
 
   let state = (await loadState(docsDir)) ?? emptyState(docsDir);
 
   if (mode === 'reindex') {
+    tracker.beginPhase('reindex');
     state = await reindex(docsDir, state, session);
-    return { indexed: state.index.length };
+    return { indexed: state.index.length, summary: reportSummary() };
   }
 
   if (mode === 'step') {
+    tracker.beginPhase('step');
     if (state.index.length === 0) {
       console.log('[crossref] No index found. Run reindex first.');
-      return { done: false };
+      return { done: false, summary: reportSummary() };
     }
     const config = loadConfig(docsDir);
     const result = await processBatch(
@@ -68,13 +95,14 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
       targetDir
     );
     if (result.done) console.log('[crossref] All pages processed.');
-    return result;
+    return { ...result, summary: reportSummary() };
   }
 
   if (mode === 'autopilot') {
+    tracker.beginPhase('autopilot');
     if (state.index.length === 0) {
       console.log('[crossref] No index found. Run reindex first.');
-      return { done: false };
+      return { done: false, summary: reportSummary() };
     }
     const config = loadConfig(docsDir);
     let totalProcessed = 0;
@@ -99,24 +127,27 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
     console.log(
       `  Total tokens — in: ${state.tokens.inputTotal.toLocaleString()}  out: ${state.tokens.outputTotal.toLocaleString()}  (~$${state.tokens.runningCost.toFixed(2)})`
     );
-    return { done: true, totalProcessed };
+    return { done: true, totalProcessed, summary: reportSummary() };
   }
 
   if (mode === 'report') {
+    tracker.beginPhase('report');
     const config = loadConfig(docsDir);
     const threshold = config.confidenceThreshold;
-    return report(state, threshold);
+    return { ...report(state, threshold), summary: reportSummary() };
   }
 
   if (mode === 'verify') {
+    tracker.beginPhase('verify');
     const result = await verifyBuild(docsDir);
     console.log(
       `[crossref] ${result.success ? '✓' : '✗'} ${result.buildSystem} build ${result.success ? 'passed' : 'failed'} in ${result.durationMs}ms`
     );
-    return result;
+    return { ...result, summary: reportSummary() };
   }
 
   if (mode === 'verify-and-fix') {
+    tracker.beginPhase('verifyAndFix');
     console.log(`[crossref] Starting verify-and-fix loop (max ${maxRetries} retries)`);
     let attempt = 0;
 
@@ -142,14 +173,19 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
               `You are working in the project directory: ${projectRoot}\n\nWhen using bash, execute commands in the project directory: ${projectRoot}\n\nTask: ${verificationPrompt}`
             );
             console.log(`[crossref] Verification check completed.`);
-            return { success: true, attempts: attempt, verificationResult };
+            return {
+              success: true,
+              attempts: attempt,
+              verificationResult,
+              summary: reportSummary(),
+            };
           } catch (error) {
             console.log(`[crossref] Verification check failed:`, error);
             // Fall through to normal fix process
           }
         }
 
-        return { success: true, attempts: attempt };
+        return { success: true, attempts: attempt, summary: reportSummary() };
       }
 
       // Phase 2: Extract errors
@@ -172,6 +208,7 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
           attempts: attempt,
           errors: buildErrors,
           message: 'Unable to auto-fix',
+          summary: reportSummary(),
         };
       }
 
@@ -183,6 +220,7 @@ async function crossrefRun({ harness, input }: { harness: any; input: any }) {
       success: false,
       attempts: maxRetries,
       message: 'Max retries exceeded',
+      summary: reportSummary(),
     };
   }
 

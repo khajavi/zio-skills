@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { runBuild } from '../lib/build-runner.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 function parseBuildErrors(output: string): string[] {
   const errors: string[] = [];
@@ -41,7 +42,7 @@ export default defineWorkflow({
   run: organizeTypesRun as (ctx: any) => any,
 });
 
-async function organizeTypesRun({ harness, input }: { harness: any; input: any }) {
+async function organizeTypesRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     types,
@@ -97,6 +98,28 @@ async function organizeTypesRun({ harness, input }: { harness: any; input: any }
     console.log(`  Min confidence: ${minConfidence}`);
   }
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'organize-types' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   try {
     process.env.FLUE_PROJECT_ROOT = projectRoot;
 
@@ -109,6 +132,7 @@ async function organizeTypesRun({ harness, input }: { harness: any; input: any }
     }
 
     // Phase 1: Prepare — validate types (manual) or scan all docs (auto)
+    tracker.beginPhase('prepare');
     if (skipPhases.includes('prepare')) {
       console.log('\n[Phase 1] ⏭ Prepare skipped');
       phasesCompleted.push('prepare');
@@ -164,6 +188,7 @@ This analysis guides Phase 2.`;
     }
 
     // Phase 2: Organize — create index.md files and update sidebars.js
+    tracker.beginPhase('organize');
     if (skipPhases.includes('organize')) {
       console.log('\n[Phase 2] ⏭ Organize skipped');
       phasesCompleted.push('organize');
@@ -291,6 +316,7 @@ Apply all approved changes now.`;
     }
 
     // Phase 3: Verify sidebars.js syntax
+    tracker.beginPhase('verify');
     if (skipPhases.includes('verify')) {
       console.log('\n[Phase 3] ⏭ Verify skipped');
       phasesCompleted.push('verify');
@@ -321,6 +347,7 @@ Report: final syntax status, any fixes applied, and the remaining error if still
     }
 
     // Phase 4: Build Verification with auto-fix loop
+    tracker.beginPhase('verifyBuild');
     const MAX_BUILD_FIX_ROUNDS = 3;
     let buildVerifyResult = {
       success: false,
@@ -426,7 +453,10 @@ Report: final syntax status, any fixes applied, and the remaining error if still
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  Project root: ${projectRoot}`);
 
+    const summary = reportSummary();
+
     return {
+      summary,
       projectRoot,
       mode,
       status: success ? 'success' : 'partial',
@@ -444,7 +474,9 @@ Report: final syntax status, any fixes applied, and the remaining error if still
     console.error(
       `[organize-types] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+    const summary = reportSummary();
     return {
+      summary,
       projectRoot,
       mode,
       status: 'failed',

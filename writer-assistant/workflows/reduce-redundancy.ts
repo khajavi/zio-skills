@@ -6,6 +6,7 @@ import { defineWorkflow } from '@flue/runtime';
 import docsRedundancyFixerAgent from '../agents/docs-redundancy-fixer.js';
 import { runReduceRedundancyPhase } from './phases/reduce-redundancy.js';
 import { verifyBuild } from './phases/verify.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 function inferDocsDir(filePath: string): string | null {
   const parts = filePath.split(path.sep);
@@ -20,7 +21,15 @@ export default defineWorkflow({
   run: reduceRedundancyRun as (ctx: any) => any,
 });
 
-async function reduceRedundancyRun({ harness, input }: { harness: any; input: any }) {
+async function reduceRedundancyRun({
+  harness,
+  input,
+  log,
+}: {
+  harness: any;
+  input: any;
+  log: any;
+}) {
   const {
     filePath,
     typeName: typeNameInput,
@@ -41,8 +50,31 @@ async function reduceRedundancyRun({ harness, input }: { harness: any; input: an
 
   const phasesCompleted: string[] = [];
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'reduce-redundancy' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   try {
     // Phase 1: Scan and fix redundancies
+    tracker.beginPhase('reduceRedundancy');
     console.log('\n[Phase 1] Redundancy Reduction: Scanning and fixing...');
     const redundancyResult = await runReduceRedundancyPhase(harness, {
       outputPath: filePath,
@@ -63,6 +95,7 @@ async function reduceRedundancyRun({ harness, input }: { harness: any; input: an
     phasesCompleted.push('reduceRedundancy');
 
     // Phase 2: Verify build (optional — skipped if no docs build system detected)
+    tracker.beginPhase('verifyBuild');
     console.log('\n[Phase 2] Build Verification: Verifying documentation builds...');
     let buildVerifyResult = {
       success: false,
@@ -102,7 +135,10 @@ async function reduceRedundancyRun({ harness, input }: { harness: any; input: an
     console.log(`  Phases completed: ${phasesCompleted.join(', ')}`);
     console.log(`  File: ${filePath}`);
 
+    const summary = reportSummary();
+
     return {
+      summary,
       filePath,
       typeName,
       success,
@@ -125,7 +161,9 @@ async function reduceRedundancyRun({ harness, input }: { harness: any; input: an
     console.error(
       `[reduce-redundancy] Error: ${error instanceof Error ? error.message : String(error)}`
     );
+    const summary = reportSummary();
     return {
+      summary,
       filePath,
       typeName,
       success: false,

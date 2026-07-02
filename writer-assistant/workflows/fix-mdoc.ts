@@ -11,6 +11,11 @@ import {
   runMdocCommand,
   parseMdocErrors,
 } from './utils/mdoc-runner.js';
+import {
+  createRunSummaryTracker,
+  formatSummaryReport,
+  type RunSummary,
+} from './utils/run-summary.js';
 
 export interface FixMdocResult {
   success: boolean;
@@ -19,6 +24,7 @@ export interface FixMdocResult {
   errors: MdocError[];
   durationMs: number;
   resolvedPaths: string[];
+  summary?: RunSummary;
 }
 
 const DEFAULT_MAX_ROUNDS = 3;
@@ -29,7 +35,7 @@ export default defineWorkflow({
   run: fixMdocRun as (ctx: any) => any,
 });
 
-async function fixMdocRun({ harness, input }: { harness: any; input: any }) {
+async function fixMdocRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     paths: rawPaths,
@@ -64,11 +70,34 @@ async function fixMdocRun({ harness, input }: { harness: any; input: any }) {
   }
   console.log(`  Command: ${command}`);
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'fix-mdoc' });
+  harness = tracker.harness;
+
+  const reportSummary = (): RunSummary => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   const startMs = Date.now();
   let round = 0;
   let currentErrors: MdocError[] = [];
 
   // Phase 1: Initial check
+  tracker.beginPhase('initialCheck');
   console.log('\n[fix-mdoc] Phase 1: Initial check');
   let result = runMdocCommand(command, projectRoot);
   currentErrors = parseMdocErrors(result.stdout + result.stderr);
@@ -77,6 +106,7 @@ async function fixMdocRun({ harness, input }: { harness: any; input: any }) {
   if (initialSuccess) {
     console.log('[fix-mdoc] ✓ No errors found, documentation compiles successfully');
     const durationMs = Date.now() - startMs;
+    const summary = reportSummary();
     return {
       success: true,
       rounds: 0,
@@ -84,6 +114,7 @@ async function fixMdocRun({ harness, input }: { harness: any; input: any }) {
       errors: [],
       durationMs,
       resolvedPaths,
+      summary,
     } satisfies FixMdocResult;
   }
 
@@ -92,6 +123,7 @@ async function fixMdocRun({ harness, input }: { harness: any; input: any }) {
   const session = await harness.session('fix-mdoc-fixer');
 
   // Phase 2+: Fix loop
+  tracker.beginPhase('fixLoop');
   for (round = 1; round <= maxRounds; round++) {
     console.log(`\n[fix-mdoc] Phase ${round + 1}: Fix attempt ${round}/${maxRounds}`);
 
@@ -154,6 +186,8 @@ Focus on fixing the actual compilation errors, not cosmetic issues.`;
     });
   }
 
+  const summary = reportSummary();
+
   return {
     success: finalSuccess,
     rounds: round,
@@ -161,5 +195,6 @@ Focus on fixing the actual compilation errors, not cosmetic issues.`;
     errors: currentErrors,
     durationMs,
     resolvedPaths,
+    summary,
   } satisfies FixMdocResult;
 }

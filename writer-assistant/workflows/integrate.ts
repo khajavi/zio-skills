@@ -12,6 +12,7 @@ import { reindex } from './phases/reindex.js';
 import { processBatch } from './phases/process.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 import { createBuildWebsite } from '../tools/build_website.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: docsIntegratorAgent,
@@ -19,7 +20,7 @@ export default defineWorkflow({
   run: integrateRun as (ctx: any) => any,
 });
 
-async function integrateRun({ harness, input }: { harness: any; input: any }) {
+async function integrateRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const { projectRoot, docPath } = input as {
     projectRoot: string;
     docPath: string; // path to the new doc, relative to projectRoot (e.g. "docs/reference/chunk.md")
@@ -33,7 +34,12 @@ async function integrateRun({ harness, input }: { harness: any; input: any }) {
 
   console.log(`[integrate] Integrating: ${docPath}`);
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'integrate' });
+  harness = tracker.harness;
+
   // Phase 1: Wire into site (sidebars.js, index.md, mdoc + build verification)
+  tracker.beginPhase('siteIntegration');
   console.log('\n[integrate] Phase 1: Site integration (sidebar, index, compilation gate)');
   process.env.FLUE_PROJECT_ROOT = projectRoot;
 
@@ -59,6 +65,7 @@ Do not proceed to the next step until the current one succeeds.`;
   console.log('\n[integrate] Phase 1 complete.');
 
   // Phase 2: Cross-reference — find inbound link candidates for the new page
+  tracker.beginPhase('crossReferencing');
   console.log('\n[integrate] Phase 2: Cross-referencing (find inbound See Also candidates)');
 
   // TODO: pageLinkerAgent is a different agent — can't use harness.session() here.
@@ -77,7 +84,23 @@ Do not proceed to the next step until the current one succeeds.`;
     `\n[integrate] Phase 2 complete. Cross-ref: processed=${result.processed}, remaining=${result.remaining}`
   );
 
+  const summary = tracker.finish();
+  console.log(formatSummaryReport(summary));
+  log.info('Run summary', {
+    wallClockMs: summary.wallClockMs,
+    totalTokens: summary.totals.totalTokens,
+    inputTokens: summary.totals.input,
+    outputTokens: summary.totals.output,
+    costUsd: summary.totals.costUsd,
+    phases: summary.phases.map((p) => ({
+      name: p.name,
+      durationMs: p.durationMs,
+      costUsd: p.costUsd,
+    })),
+  });
+
   return {
+    summary,
     docPath,
     phases: {
       integration: 'complete',

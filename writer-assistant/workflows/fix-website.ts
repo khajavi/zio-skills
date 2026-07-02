@@ -5,6 +5,11 @@ import * as path from 'node:path';
 import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { runBuild } from '../lib/build-runner.js';
+import {
+  createRunSummaryTracker,
+  formatSummaryReport,
+  type RunSummary,
+} from './utils/run-summary.js';
 
 export interface FixWebsiteResult {
   success: boolean;
@@ -14,6 +19,7 @@ export interface FixWebsiteResult {
   durationMs: number;
   buildSystem: string;
   buildCwd: string;
+  summary?: RunSummary;
 }
 
 const DEFAULT_MAX_ROUNDS = 3;
@@ -67,7 +73,7 @@ export default defineWorkflow({
   run: fixWebsiteRun as (ctx: any) => any,
 });
 
-async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
+async function fixWebsiteRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     docsDir: inputDocsDir,
@@ -96,6 +102,28 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
   console.log(`  Project root: ${projectRoot}`);
   console.log(`  Docs directory: ${docsDir}`);
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'fix-website' });
+  harness = tracker.harness;
+
+  const reportSummary = (): RunSummary => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   const startMs = Date.now();
   let round = 0;
   let currentErrors: string[] = [];
@@ -103,6 +131,7 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
   let buildCwd = docsDir;
 
   // Phase 1: Initial check
+  tracker.beginPhase('initialCheck');
   console.log('\n[fix-website] Phase 1: Initial check');
   try {
     const buildResult = await runBuild(docsDir);
@@ -113,6 +142,7 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
     if (buildResult.success && currentErrors.length === 0) {
       console.log('[fix-website] ✓ Build successful, no errors found');
       const durationMs = Date.now() - startMs;
+      const summary = reportSummary();
       return {
         success: true,
         rounds: 0,
@@ -121,6 +151,7 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
         durationMs,
         buildSystem,
         buildCwd,
+        summary,
       } satisfies FixWebsiteResult;
     }
 
@@ -129,6 +160,7 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const durationMs = Date.now() - startMs;
     console.error(`[fix-website] Initial build failed: ${errorMsg}`);
+    const summary = reportSummary();
     return {
       success: false,
       rounds: 0,
@@ -137,12 +169,14 @@ async function fixWebsiteRun({ harness, input }: { harness: any; input: any }) {
       durationMs,
       buildSystem,
       buildCwd,
+      summary,
     };
   }
 
   const session = await harness.session('fix-website-fixer');
 
   // Phase 2+: Fix loop
+  tracker.beginPhase('fixLoop');
   for (round = 1; round <= maxRounds; round++) {
     console.log(`\n[fix-website] Phase ${round + 1}: Fix attempt ${round}/${maxRounds}`);
 
@@ -210,6 +244,8 @@ Focus on fixing the actual build errors. Be pragmatic—if a link is broken, fix
     }
   }
 
+  const summary = reportSummary();
+
   return {
     success: finalSuccess,
     rounds: round,
@@ -218,5 +254,6 @@ Focus on fixing the actual build errors. Be pragmatic—if a link is broken, fix
     durationMs,
     buildSystem,
     buildCwd,
+    summary,
   } satisfies FixWebsiteResult;
 }

@@ -5,3 +5,4 @@ node_modules
 coverage
 *.lock
 flake.lock
+CLAUDE.md

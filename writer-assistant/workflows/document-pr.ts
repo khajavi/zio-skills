@@ -6,6 +6,7 @@ import docsWriterAgent from '../agents/docs-writer.js';
 import { createRunMdoc } from '../tools/run_mdoc.js';
 import { createBuildWebsite } from '../tools/build_website.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
+import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
 export default defineWorkflow({
   agent: docsWriterAgent,
@@ -13,7 +14,7 @@ export default defineWorkflow({
   run: documentPrRun as (ctx: any) => any,
 });
 
-async function documentPrRun({ harness, input }: { harness: any; input: any }) {
+async function documentPrRun({ harness, input, log }: { harness: any; input: any; log: any }) {
   const {
     projectRoot,
     prNumber,
@@ -57,8 +58,31 @@ async function documentPrRun({ harness, input }: { harness: any; input: any }) {
 
   process.env.FLUE_PROJECT_ROOT = projectRoot;
 
+  // Track token usage, cost, and per-phase timing across every session in this run
+  const tracker = createRunSummaryTracker(harness, { workflowName: 'document-pr' });
+  harness = tracker.harness;
+
+  const reportSummary = () => {
+    const summary = tracker.finish();
+    console.log(formatSummaryReport(summary));
+    log.info('Run summary', {
+      wallClockMs: summary.wallClockMs,
+      totalTokens: summary.totals.totalTokens,
+      inputTokens: summary.totals.input,
+      outputTokens: summary.totals.output,
+      costUsd: summary.totals.costUsd,
+      phases: summary.phases.map((p) => ({
+        name: p.name,
+        durationMs: p.durationMs,
+        costUsd: p.costUsd,
+      })),
+    });
+    return summary;
+  };
+
   try {
     // Phase 1: Collect PR Data
+    tracker.beginPhase('collect');
     if (skipPhases.includes('collect')) {
       console.log('\n[Phase 1] ⏭ Collect skipped');
       if (!prData) {
@@ -107,6 +131,7 @@ Return a structured summary with:
     // Phase 2: Decide doc type
     // Phase 3: Write documentation
     // Single writer session across both phases so the agent retains decision context.
+    tracker.beginPhase('decide');
     const writerPhases = ['decide', 'write'];
     const needsWriterSession = writerPhases.some((p) => !skipPhases.includes(p));
     let writerSession: any = null;
@@ -172,6 +197,7 @@ REASONING: <2-3 sentences>`);
       phasesCompleted.push('decide');
     }
 
+    tracker.beginPhase('write');
     if (skipPhases.includes('write')) {
       console.log('\n[Phase 3] ⏭ Write skipped');
       phasesCompleted.push('write');
@@ -267,6 +293,7 @@ Edit the existing page file.`;
     }
 
     // Phase 4: Integrate — only for new pages
+    tracker.beginPhase('integrate');
     if (skipPhases.includes('integrate')) {
       console.log('\n[Phase 4] ⏭ Integrate skipped');
       phasesCompleted.push('integrate');
@@ -299,6 +326,7 @@ Do not proceed to the next step until the current one succeeds.`,
     }
 
     // Phase 5: Verify Lint — only if write actually ran and Scala files may have been touched
+    tracker.beginPhase('lint');
     if (skipPhases.includes('lint')) {
       console.log('\n[Phase 5] ⏭ Lint skipped');
       phasesCompleted.push('lint');
@@ -355,7 +383,10 @@ Reply with one of:
 
     console.log(`\n[document-pr] Done. Phases: ${phasesCompleted.join(' → ')}`);
 
+    const summary = reportSummary();
+
     return {
+      summary,
       prNumber: prStr,
       decision,
       outputPath,
@@ -366,7 +397,9 @@ Reply with one of:
     };
   } catch (error) {
     console.error(`\n[document-pr] ✗ Failed in phase ${phasesCompleted.length + 1}`);
+    const summary = reportSummary();
     return {
+      summary,
       prNumber: prStr,
       decision,
       outputPath,

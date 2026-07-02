@@ -18,6 +18,7 @@ Before modifying any SKILL.md file or adding a new skill:
 ## For Humans
 
 Contributing skills is welcome. Open a PR with:
+
 - A new `skills/<library>-<feature>/SKILL.md` file
 - A brief description of what it teaches
 - References to working examples in the relevant ZIO library repo
