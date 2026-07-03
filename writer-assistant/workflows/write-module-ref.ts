@@ -12,7 +12,7 @@ import {
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
-import { runStylePhase } from './phases/style.js';
+import { extractStyleResult } from './phases/style.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
@@ -278,11 +278,14 @@ Write the complete documentation file(s) and save them to the specified output p
     // Phase 5: Style Validation
     tracker.beginPhase('style');
     console.log('\n[Phase 5] Validating: Checking prose style...');
-    const styleResult = await runStylePhase(harness, {
-      outputPath: resolvedOutputPath,
-      projectRoot,
-      typeName: moduleName,
-    });
+    const stylePromptResult = await session.prompt(
+      `**Phase 5: Validate module-ref style**\n\nCall the \`style_docs\` action to check and fix prose style violations in the module-ref you just wrote.`
+    );
+    const stylePromptText =
+      typeof stylePromptResult === 'string'
+        ? stylePromptResult
+        : String((stylePromptResult as any)?.text ?? '');
+    const styleResult = extractStyleResult(stylePromptText);
     console.log(
       `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
     );

@@ -20,6 +20,43 @@ export interface StyleResult {
 
 const DEFAULT_MAX_ROUNDS = 1;
 
+export const DEFAULT_STYLE_RESULT: StyleResult = {
+  passed: true,
+  rounds: 0,
+  violations: {},
+  unresolvedViolations: [],
+};
+
+/**
+ * Extract the `STYLE_RESULT` JSON block from the model's response after invoking the
+ * `style_docs` action. Falls back to `DEFAULT_STYLE_RESULT` (with a warning logged)
+ * when the block is missing or malformed.
+ */
+export function extractStyleResult(text: string): StyleResult {
+  try {
+    const match = text.match(/STYLE_RESULT\s*```(?:json)?\s*([\s\S]*?)```/);
+    if (!match) {
+      console.warn('[style] Could not find STYLE_RESULT block in model response; using default');
+      return { ...DEFAULT_STYLE_RESULT };
+    }
+    const parsed = JSON.parse(match[1]);
+    return {
+      passed: Boolean(parsed.passed),
+      rounds: Number(parsed.rounds) || 0,
+      violations:
+        typeof parsed.violations === 'object' && parsed.violations ? parsed.violations : {},
+      unresolvedViolations: Array.isArray(parsed.unresolvedViolations)
+        ? parsed.unresolvedViolations
+        : [],
+    };
+  } catch (error) {
+    console.warn(
+      `[style] Failed to parse STYLE_RESULT block: ${error instanceof Error ? error.message : String(error)}; using default`
+    );
+    return { ...DEFAULT_STYLE_RESULT };
+  }
+}
+
 // Find check-docs-style.sh in writer-assistant skills directory
 // Try multiple possible locations since Flue bundles code
 function resolveCheckStyleScript(): string {

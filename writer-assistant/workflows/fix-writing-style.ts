@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
-import { runStylePhase } from './phases/style.js';
+import { extractStyleResult } from './phases/style.js';
 import { verifyBuild } from './phases/verify.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -64,11 +64,15 @@ async function fixWritingStyleRun({ harness, input, log }: { harness: any; input
     // Run style validation and fixing
     tracker.beginPhase('style');
     console.log('\n[Phase 1] Style Validation: Checking and fixing prose style...');
-    const styleResult = await runStylePhase(harness, {
-      outputPath: filePath,
-      projectRoot: path.dirname(filePath),
-      typeName,
-    });
+    const session = await harness.session('fix-writing-style');
+    const stylePromptResult = await session.prompt(
+      `**Phase 1: Validate style**\n\nCall the \`style_docs\` action to check and fix prose style violations in ${filePath}.`
+    );
+    const stylePromptText =
+      typeof stylePromptResult === 'string'
+        ? stylePromptResult
+        : String((stylePromptResult as any)?.text ?? '');
+    const styleResult = extractStyleResult(stylePromptText);
 
     console.log(
       `[Phase 1] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`

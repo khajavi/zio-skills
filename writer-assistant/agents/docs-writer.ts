@@ -10,12 +10,13 @@ import { docsResearcherProfile } from './docs-researcher.js';
 import { writeExamplesAction } from '../actions/write-examples.js';
 import { verifyDocsAction } from '../actions/verify-docs.js';
 import { reviewDocsAction } from '../actions/review-docs.js';
+import { styleDocsAction } from '../actions/style-docs.js';
 
 export default defineAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
   subagents: [docsResearcherProfile],
-  actions: [writeExamplesAction, verifyDocsAction, reviewDocsAction],
+  actions: [writeExamplesAction, verifyDocsAction, reviewDocsAction, styleDocsAction],
   skills: [
     docsDataTypeRefSkill,
     docsWritingStyleSkill,

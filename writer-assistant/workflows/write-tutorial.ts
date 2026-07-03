@@ -11,7 +11,7 @@ import {
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
-import { runStylePhase } from './phases/style.js';
+import { extractStyleResult } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
@@ -227,11 +227,14 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('style');
     } else {
       console.log('\n[Phase 5] Validating: Checking prose style...');
-      styleResult = await runStylePhase(harness, {
-        outputPath: resolvedOutputPath,
-        projectRoot,
-        typeName: topic,
-      });
+      const stylePromptResult = await session!.prompt(
+        `**Phase 5: Validate tutorial style**\n\nCall the \`style_docs\` action to check and fix prose style violations in the tutorial you just wrote.`
+      );
+      const stylePromptText =
+        typeof stylePromptResult === 'string'
+          ? stylePromptResult
+          : String((stylePromptResult as any)?.text ?? '');
+      styleResult = extractStyleResult(stylePromptText);
       console.log(
         `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
       );
