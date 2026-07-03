@@ -113,6 +113,27 @@ async function writeTutorialRun({ harness, input, log }: { harness: any; input: 
     } else {
       console.log('\n[Phase 2] Writing: Generating tutorial...');
       phase2StartTime = Date.now();
+      const examplesActive = examplesPayload && !skipPhases.includes('examples');
+      const completeExampleOverride = examplesActive
+        ? (() => {
+            const packageName =
+              examplesPayload.packageName ?? examplesPayload.moduleName.replace(/-/g, '');
+            const packageDir = path.join(
+              projectRoot,
+              examplesPayload.parentModule ?? '',
+              examplesPayload.moduleName,
+              'src',
+              'main',
+              'scala',
+              ...packageName.split('.')
+            );
+            const embedPath = `${examplesPayload.moduleName}/src/main/scala/${packageName}/CompleteExample.scala`;
+            return `\n- **Section 4 (Putting It Together)**: Do NOT paste the complete example as an inline code block. Instead: (1) run \`mkdir -p ${packageDir}\`, (2) write the complete, self-contained example code directly to ${path.join(packageDir, 'CompleteExample.scala')} (package \`${packageName}\`, wrapped in \`@main\`/\`object extends App\` per the naming convention used for companion examples), (3) embed it in the section with:
+  \`\`\`scala mdoc:embed:${embedPath}:show-line-numbers
+  \`\`\`
+  Do this before calling \`write_examples\` below — that action will detect the file already exists and compile/run it alongside the other generated examples without overwriting it.`;
+          })()
+        : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -131,7 +152,7 @@ Follow the
 - Output file path: ${resolvedOutputPath}
 - Examples requested: ${examplesPayload ? JSON.stringify(examplesPayload) : 'none'}
 - Skipped phases: ${JSON.stringify(skipPhases)}
-- **Section 5 (Running the Examples)**: If examples were requested above and "examples" is not in the skipped phases, do NOT write this section by hand — after saving the markdown file, call the \`write_examples\` action to generate, compile, run, format, and embed the companion Scala examples; it inserts section 5 itself. Otherwise, omit section 5 entirely.
+- **Section 5 (Running the Examples)**: If examples were requested above and "examples" is not in the skipped phases, do NOT write this section by hand — after saving the markdown file, call the \`write_examples\` action to generate, compile, run, format, and embed the companion Scala examples; it inserts section 5 itself. Otherwise, omit section 5 entirely.${completeExampleOverride}
 
 Write the complete markdown file and save it to the output path above.`;
 

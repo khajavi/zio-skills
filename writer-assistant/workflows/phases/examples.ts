@@ -224,6 +224,8 @@ Report: "✓ Setup complete" or describe issues.`;
 
   // Phase B: Generate Scala example files
   const hasDoc = !exampleFileNames && outputDocPath && fs.existsSync(outputDocPath);
+  const completeExamplePath = path.join(packageDir, 'CompleteExample.scala');
+  const completeExampleExists = hasDoc && fs.existsSync(completeExamplePath);
 
   const fileList = exampleFileNames
     ? exampleFileNames.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
@@ -241,18 +243,29 @@ Derive one file per concept section:
 - For each "## N. Section Title": create Example<N><SectionTitlePascalCase>.scala
   Example: "## 1. Creating a Mux" → Example1CreatingAMux.scala
   Example: "## 3. The Stream Lifecycle" → Example3StreamLifecycle.scala
-- For "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number)
 
-The code in each file must demonstrate the same concept as the corresponding article section,
-using the same API calls and patterns shown in that section's code examples.
-
+Each file's core logic must be copied **verbatim** (character-for-character) from that section's
+inline mdoc code block — do not re-derive, paraphrase, or "demonstrate the same concept" with
+different code. Add only: the package declaration, imports, and an @main/object-extends-App
+wrapper. Where the inline block relied on mdoc's automatic value echoing (no explicit println),
+wrap the copied expressions in println(...) so the standalone run produces visible output — this
+is mechanical wrapping, not new logic. After writing each file, re-read the corresponding section
+and confirm the copied logic is unchanged; report any section where a verbatim copy wasn't
+possible (e.g. the section had no complete code block) and why.
+${
+  completeExampleExists
+    ? `\nCompleteExample.scala already exists at ${completeExamplePath} (written directly while drafting "Putting It Together"). Do NOT recreate or overwrite it — leave it as-is; it will be compiled and run along with the other files below.`
+    : `\nFor "## Putting It Together" (or equivalent final/synthesis section): create CompleteExample.scala (no number), copied verbatim from that section the same way.`
+}
 `
     : '';
 
   const fileCount = exampleFileNames
     ? exampleFileNames.length
     : hasDoc
-      ? 'one per concept section'
+      ? completeExampleExists
+        ? 'one per concept section (CompleteExample.scala already exists — skip it)'
+        : 'one per concept section'
       : '3-4';
 
   const generatePrompt = `${articleReadingPreamble}Create ${fileCount} Scala example files for: ${topic}
@@ -301,7 +314,7 @@ object <ObjectName> extends App {
 Requirements:
 - Real, runnable ZIO code (no pseudocode or TODO stubs)
 - All imports at the top of each file
-- CompleteExample.scala: most comprehensive end-to-end demonstration
+${completeExampleExists ? '- Do not touch CompleteExample.scala — it already exists' : '- CompleteExample.scala: most comprehensive end-to-end demonstration'}
 - Each file independently runnable
 
 Write all files now.`;
@@ -436,7 +449,7 @@ Start with intro paragraph: "All examples in this tutorial have corresponding ru
 
 For each example below, add a ### subsection with:
 1. A 1-2 sentence narrative explaining what this example demonstrates.
-2. The source embedded with this block:
+2. The source embedded with this block (SKIP this step for CompleteExample.scala if it's already embedded earlier in "Putting It Together" — do not embed the same file's source twice in one document; still include steps 1, 3, 4 for it):
 ${createdFiles.map((f) => embedBlock(moduleName, packageName, path.basename(f, '.scala'))).join('\n')}
 3. One "Observe X:" sentence (ends with colon) describing what to watch in the output.
 4. A bash code block: sbt "${moduleName}/runMain ${packageName}.<ClassName>"

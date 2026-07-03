@@ -102,6 +102,27 @@ async function writeHowToGuideRun({ harness, input, log }: { harness: any; input
     } else {
       console.log('\n[Phase 2] Writing: Generating how-to guide...');
       phase2StartTime = Date.now();
+      const examplesActive = examplesPayload && !skipPhases.includes('examples');
+      const completeExampleOverride = examplesActive
+        ? (() => {
+            const packageName =
+              examplesPayload.packageName ?? examplesPayload.moduleName.replace(/-/g, '');
+            const packageDir = path.join(
+              projectRoot,
+              examplesPayload.parentModule ?? '',
+              examplesPayload.moduleName,
+              'src',
+              'main',
+              'scala',
+              ...packageName.split('.')
+            );
+            const embedPath = `${examplesPayload.moduleName}/src/main/scala/${packageName}/CompleteExample.scala`;
+            return `\n- **Section 6 (Putting It Together)**: Do NOT paste the complete example as an inline code block. Instead: (1) run \`mkdir -p ${packageDir}\`, (2) write the complete, self-contained example code directly to ${path.join(packageDir, 'CompleteExample.scala')} (package \`${packageName}\`, wrapped in \`@main\`/\`object extends App\` per the naming convention used for companion examples), (3) embed it in the section with:
+  \`\`\`scala mdoc:embed:${embedPath}:show-line-numbers
+  \`\`\`
+  The companion-examples generation step that follows this write phase will detect the file already exists and compile/run it alongside the other generated examples without overwriting it.`;
+          })()
+        : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -142,7 +163,7 @@ Based on the research findings above, now write a comprehensive how-to guide for
 - Show intermediate results (printed output, types) after major steps
 - The Problem section MUST include a short code example showing the painful/boilerplate approach
 - Each step-by-step section covers exactly one concept — split if two things are happening
-- "Putting It Together" should be copy-paste runnable
+- "Putting It Together" should be copy-paste runnable${completeExampleOverride}
 
 Write the complete markdown file and save it to the specified output path.`;
 
