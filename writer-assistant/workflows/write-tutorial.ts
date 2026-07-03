@@ -197,7 +197,7 @@ Write the complete markdown file and save it to the output path above.`;
     } else {
       console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
       const reviewPromptResult = await session!.prompt(
-        `**Phase 4: Review and fix tutorial**\n\nCall the \`review_docs\` action to run the critic/fix loop on the tutorial you just wrote. Report its result as a fenced json block titled REVIEW_RESULT, e.g.:\nREVIEW_RESULT\n\`\`\`json\n{ "approved": true, "rounds": 1, "findingsFixed": {"HIGH":0,"MEDIUM":0,"LOW":0}, "unresolvedIssues": [] }\n\`\`\``
+        `**Phase 4: Review and fix tutorial**\n\nCall the \`review_docs\` action to run the critic/fix loop on the tutorial you just wrote.`
       );
       const reviewPromptText =
         typeof reviewPromptResult === 'string'
