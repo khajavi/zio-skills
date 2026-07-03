@@ -14,7 +14,6 @@ import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
-import { runExamplesSubPhase } from './phases/examples.js';
 import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
@@ -114,9 +113,6 @@ async function writeTutorialRun({ harness, input, log }: { harness: any; input: 
     } else {
       console.log('\n[Phase 2] Writing: Generating tutorial...');
       phase2StartTime = Date.now();
-      const section5Override = examplesPayload
-        ? `\n- **Skip section 5 (Running the Examples)**: Do NOT write this section. It will be inserted automatically after companion Scala example files are generated.`
-        : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -126,13 +122,16 @@ ${researchResult}
 
 Write a comprehensive tutorial for learning about ${topic}.
 
-Follow the 
-  - "docs-tutorial" skill for tutorial structure, 
+Follow the
+  - "docs-tutorial" skill for tutorial structure,
   - "docs-writing-style" skill for prose style,
   - "docs-mdoc-conventions" skill for markdown conventions
 
 **Workflow-specific requirements:**
-- Output file path: ${resolvedOutputPath}${section5Override}
+- Output file path: ${resolvedOutputPath}
+- Examples requested: ${examplesPayload ? JSON.stringify(examplesPayload) : 'none'}
+- Skipped phases: ${JSON.stringify(skipPhases)}
+- **Section 5 (Running the Examples)**: If examples were requested above and "examples" is not in the skipped phases, do NOT write this section by hand — after saving the markdown file, call the \`write_examples\` action to generate, compile, run, format, and embed the companion Scala examples; it inserts section 5 itself. Otherwise, omit section 5 entirely.
 
 Write the complete markdown file and save it to the output path above.`;
 
@@ -141,16 +140,9 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('write');
     }
 
-    // Phase 2.5: Examples (optional — only when `examples` payload provided)
-    tracker.beginPhase('examples');
-    const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
-      projectRoot,
-      topic,
-      resolvedOutputPath,
-      docType: 'tutorial',
-      skipPhases,
-      phasesCompleted,
-    });
+    // The write_examples action (called by the model during Phase 2, if requested) runs and
+    // embeds its own results directly into the document — no structured result to capture here.
+    const examplesResult: any = null;
 
     // Detect all changed/new markdown files since Phase 2 started
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
@@ -259,8 +251,8 @@ Write the complete markdown file and save it to the output path above.`;
     });
     phasesCompleted.push('verifyBuild');
 
-    // Build final result — base 7 phases + optional examples phase
-    const expectedPhases = 7 + (examplesPayload ? 1 : 0);
+    // Build final result — 7 phases (examples generation is now inline within "write")
+    const expectedPhases = 7;
     const success =
       phasesCompleted.length === expectedPhases &&
       buildVerifyResult.success &&
