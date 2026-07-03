@@ -11,7 +11,6 @@ import { runStylePhase } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runExamplesSubPhase } from './phases/examples.js';
-import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -194,13 +193,9 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking guide and code...');
-      await runVerifyPhase(session!, {
-        projectRoot,
-        changedFiles,
-        topic,
-        resolvedOutputPath,
-        docType: 'how-to-guide',
-      });
+      await session!.prompt(
+        `**Phase 3: Verify how-to-guide**\n\nCall the \`verify_docs\` action to verify the how-to-guide you just wrote.`
+      );
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }

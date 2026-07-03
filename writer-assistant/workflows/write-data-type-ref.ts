@@ -12,7 +12,6 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { runVerifyPhase } from './phases/verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase } from './phases/examples.js';
@@ -210,13 +209,9 @@ Write the complete markdown file and save it to the specified output path.`;
     // Phase 3: Verify
     tracker.beginPhase('verify');
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    await runVerifyPhase(session, {
-      projectRoot,
-      changedFiles,
-      topic: typeName,
-      resolvedOutputPath,
-      docType: 'data-type-ref',
-    });
+    await session.prompt(
+      `**Phase 3: Verify data-type-ref**\n\nCall the \`verify_docs\` action to verify the data-type-ref you just wrote.`
+    );
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 

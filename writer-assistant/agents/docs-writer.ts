@@ -8,12 +8,13 @@ import docsModuleRefSkill from '../skills/docs-module-ref/SKILL.md' with { type:
 import docsHowToGuideSkill from '../skills/docs-how-to-guide/SKILL.md' with { type: 'skill' };
 import { docsResearcherProfile } from './docs-researcher.js';
 import { writeExamplesAction } from '../actions/write-examples.js';
+import { verifyDocsAction } from '../actions/verify-docs.js';
 
 export default defineAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
   sandbox: local({ cwd: process.env.FLUE_PROJECT_ROOT || process.cwd() }),
   subagents: [docsResearcherProfile],
-  actions: [writeExamplesAction],
+  actions: [writeExamplesAction, verifyDocsAction],
   skills: [
     docsDataTypeRefSkill,
     docsWritingStyleSkill,

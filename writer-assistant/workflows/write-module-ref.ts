@@ -13,7 +13,6 @@ import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { runResearchPhase } from './phases/research.js';
 import { runReviewPhase } from './phases/review.js';
 import { runStylePhase } from './phases/style.js';
-import { runVerifyPhase } from './phases/verify.js';
 import { runIntegratePhase } from './phases/integrate.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
@@ -250,13 +249,9 @@ Write the complete documentation file(s) and save them to the specified output p
     // Phase 3: Verify
     tracker.beginPhase('verify');
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    await runVerifyPhase(session, {
-      projectRoot,
-      changedFiles,
-      topic: moduleName,
-      resolvedOutputPath,
-      docType: 'module-ref',
-    });
+    await session.prompt(
+      `**Phase 3: Verify module-ref**\n\nCall the \`verify_docs\` action to verify the module-ref you just wrote.`
+    );
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
