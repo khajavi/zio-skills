@@ -19,6 +19,44 @@ export interface ReviewResult {
 
 const MAX_ROUNDS = 1;
 
+export const DEFAULT_REVIEW_RESULT: ReviewResult = {
+  approved: true,
+  rounds: 0,
+  findingsFixed: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+  unresolvedIssues: [],
+};
+
+/**
+ * Extract the `REVIEW_RESULT` JSON block that the model is instructed to report after
+ * invoking the `review_docs` action (see workflows' Phase 4 prompts). Falls back to
+ * `DEFAULT_REVIEW_RESULT` (with a warning logged) when the block is missing or malformed.
+ */
+export function extractReviewResult(text: string): ReviewResult {
+  try {
+    const match = text.match(/REVIEW_RESULT\s*```(?:json)?\s*([\s\S]*?)```/);
+    if (!match) {
+      console.warn('[review] Could not find REVIEW_RESULT block in model response; using default');
+      return { ...DEFAULT_REVIEW_RESULT };
+    }
+    const parsed = JSON.parse(match[1]);
+    return {
+      approved: Boolean(parsed.approved),
+      rounds: Number(parsed.rounds) || 0,
+      findingsFixed: {
+        HIGH: Number(parsed.findingsFixed?.HIGH) || 0,
+        MEDIUM: Number(parsed.findingsFixed?.MEDIUM) || 0,
+        LOW: Number(parsed.findingsFixed?.LOW) || 0,
+      },
+      unresolvedIssues: Array.isArray(parsed.unresolvedIssues) ? parsed.unresolvedIssues : [],
+    };
+  } catch (error) {
+    console.warn(
+      `[review] Failed to parse REVIEW_RESULT block: ${error instanceof Error ? error.message : String(error)}; using default`
+    );
+    return { ...DEFAULT_REVIEW_RESULT };
+  }
+}
+
 /**
  * Run the review phase: critic → fix loop until approved or max rounds
  * Uses a fresh critic agent each round, reuses the writer session for fixes
