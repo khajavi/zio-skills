@@ -13,7 +13,6 @@ import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
-import { runIntegratePhase } from './phases/integrate.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -54,9 +53,6 @@ async function writeTutorialRun({ harness, input, log }: { harness: any; input: 
 
   // Infer possible source directories from project root
   const sourceDirs = inferSourceDirs(projectRoot);
-
-  // Extract tutorial name from output path (e.g., docs/guides/getting-started.md -> getting-started)
-  const outputFileName = path.basename(outputPath, '.md');
 
   console.log(`[docs-write-tutorial] Starting tutorial documentation generation`);
   console.log(`  Topic: ${topic}`);
@@ -252,12 +248,9 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, {
-        projectRoot,
-        outputFileName,
-        topic,
-        docType: 'tutorial',
-      });
+      await session!.prompt(
+        `**Phase 6: Integrate tutorial**\n\nCall the \`integrate_docs\` action to wire the tutorial you just wrote into the docs structure.`
+      );
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }

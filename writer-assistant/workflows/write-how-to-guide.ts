@@ -9,7 +9,6 @@ import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
-import { runIntegratePhase } from './phases/integrate.js';
 import { runExamplesSubPhase } from './phases/examples.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
@@ -46,7 +45,6 @@ async function writeHowToGuideRun({ harness, input, log }: { harness: any; input
 
   const resolvedOutputPath = validatePathsAndResolve(projectRoot, outputPath);
   const sourceDirs = inferSourceDirs(projectRoot);
-  const outputFileName = path.basename(outputPath, '.md');
 
   console.log(`[docs-write-how-to-guide] Starting how-to guide generation`);
   console.log(`  Topic: ${topic}`);
@@ -269,12 +267,9 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, {
-        projectRoot,
-        outputFileName,
-        topic,
-        docType: 'how-to-guide',
-      });
+      await session!.prompt(
+        `**Phase 6: Integrate how-to-guide**\n\nCall the \`integrate_docs\` action to wire the how-to-guide you just wrote into the docs structure.`
+      );
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }

@@ -12,7 +12,6 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
-import { runIntegratePhase } from './phases/integrate.js';
 import { runBuildVerifyPhase } from './phases/build-verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
@@ -258,12 +257,9 @@ Write the complete markdown file and save it to the specified output path.`;
     // Phase 6: Integrate
     tracker.beginPhase('integrate');
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-    await runIntegratePhase(session, {
-      projectRoot,
-      outputFileName,
-      topic: typeName,
-      docType: 'data-type-ref',
-    });
+    await session.prompt(
+      `**Phase 6: Integrate data-type-ref**\n\nCall the \`integrate_docs\` action to wire the data-type-ref you just wrote into the docs structure.`
+    );
     console.log('[Phase 6] ✓ Integration complete');
     phasesCompleted.push('integrate');
 

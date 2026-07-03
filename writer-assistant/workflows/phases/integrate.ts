@@ -1,13 +1,9 @@
-export async function runIntegratePhase(
-  session: any,
-  options: {
-    projectRoot: string;
-    outputFileName: string;
-    topic: string;
-    docType: 'tutorial' | 'how-to-guide' | 'data-type-ref' | 'module-ref';
-  }
-): Promise<void> {
-  const { projectRoot, outputFileName, topic, docType } = options;
+export function buildIntegratePrompt(options: {
+  outputFileName: string;
+  topic: string;
+  docType: 'tutorial' | 'how-to-guide' | 'data-type-ref' | 'module-ref';
+}): string {
+  const { outputFileName, topic, docType } = options;
 
   const isRef = docType === 'data-type-ref' || docType === 'module-ref';
   const linkPrefix = isRef ? 'reference' : 'guides';
@@ -46,7 +42,7 @@ export async function runIntegratePhase(
       break;
   }
 
-  const integratePrompt = `**Phase 4: Integrate**
+  return `**Phase 4: Integrate**
 
 Integrate the ${docType} for ${topic} into the docs structure.
 
@@ -63,6 +59,4 @@ Integrate the ${docType} for ${topic} into the docs structure.
    - ${crossRefNote}
 
 Report final status and any updates made.`;
-
-  await session.prompt(integratePrompt);
 }
