@@ -9,7 +9,7 @@ import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { runExamplesPhase, type DocType } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
 import {
@@ -301,12 +301,15 @@ Write the complete documentation file(s) and save them to the specified output p
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases: [],
-      sessionName: 'write-module-ref',
-    });
+    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+    const buildPromptResult = await session.prompt(
+      `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the module-ref you just wrote.`
+    );
+    const buildPromptText =
+      typeof buildPromptResult === 'string'
+        ? buildPromptResult
+        : String((buildPromptResult as any)?.text ?? '');
+    const buildVerifyResult = extractBuildVerifyResult(buildPromptText);
     phasesCompleted.push('verifyBuild');
 
     const expectedPhases = 7 + (examplesPayload ? 1 : 0) + (diagramPayload ? 1 : 0);

@@ -12,7 +12,7 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
@@ -265,12 +265,15 @@ Write the complete markdown file and save it to the specified output path.`;
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases: [],
-      sessionName: 'docs-write-data-type-ref',
-    });
+    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+    const buildPromptResult = await session.prompt(
+      `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the data-type-ref you just wrote.`
+    );
+    const buildPromptText =
+      typeof buildPromptResult === 'string'
+        ? buildPromptResult
+        : String((buildPromptResult as any)?.text ?? '');
+    const buildVerifyResult = extractBuildVerifyResult(buildPromptText);
     phasesCompleted.push('verifyBuild');
 
     // Build final result — base 7 phases + optional examples and diagram phases

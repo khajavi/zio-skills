@@ -12,7 +12,7 @@ import {
 import { runResearchPhase } from './phases/research.js';
 import { extractReviewResult } from './phases/review.js';
 import { extractStyleResult } from './phases/style.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -257,12 +257,27 @@ Write the complete markdown file and save it to the output path above.`;
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases,
-      sessionName: 'docs-write-tutorial',
-    });
+    let buildVerifyResult;
+    if (skipPhases.includes('verifyBuild')) {
+      console.log('\n[Phase 7] ⏭ Build verification skipped');
+      buildVerifyResult = {
+        success: true,
+        buildSystem: 'skipped',
+        durationMs: 0,
+        skipped: true,
+        rounds: 0,
+      };
+    } else {
+      console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+      const buildPromptResult = await session!.prompt(
+        `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the tutorial you just wrote.`
+      );
+      const buildPromptText =
+        typeof buildPromptResult === 'string'
+          ? buildPromptResult
+          : String((buildPromptResult as any)?.text ?? '');
+      buildVerifyResult = extractBuildVerifyResult(buildPromptText);
+    }
     phasesCompleted.push('verifyBuild');
 
     // Build final result — 7 phases (examples generation is now inline within "write")

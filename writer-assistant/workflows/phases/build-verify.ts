@@ -11,6 +11,44 @@ export interface BuildVerifyResult {
   rounds: number;
 }
 
+export const DEFAULT_BUILD_VERIFY_RESULT: BuildVerifyResult = {
+  success: true,
+  buildSystem: 'unknown',
+  durationMs: 0,
+  skipped: false,
+  rounds: 0,
+};
+
+/**
+ * Extract the `BUILD_VERIFY_RESULT` JSON block from the model's response after invoking the
+ * `build_verify_docs` action. Falls back to `DEFAULT_BUILD_VERIFY_RESULT` (with a warning
+ * logged) when the block is missing or malformed.
+ */
+export function extractBuildVerifyResult(text: string): BuildVerifyResult {
+  try {
+    const match = text.match(/BUILD_VERIFY_RESULT\s*```(?:json)?\s*([\s\S]*?)```/);
+    if (!match) {
+      console.warn(
+        '[build-verify] Could not find BUILD_VERIFY_RESULT block in model response; using default'
+      );
+      return { ...DEFAULT_BUILD_VERIFY_RESULT };
+    }
+    const parsed = JSON.parse(match[1]);
+    return {
+      success: Boolean(parsed.success),
+      buildSystem: typeof parsed.buildSystem === 'string' ? parsed.buildSystem : 'unknown',
+      durationMs: Number(parsed.durationMs) || 0,
+      skipped: Boolean(parsed.skipped),
+      rounds: Number(parsed.rounds) || 0,
+    };
+  } catch (error) {
+    console.warn(
+      `[build-verify] Failed to parse BUILD_VERIFY_RESULT block: ${error instanceof Error ? error.message : String(error)}; using default`
+    );
+    return { ...DEFAULT_BUILD_VERIFY_RESULT };
+  }
+}
+
 export async function runBuildVerifyPhase(
   harness: any,
   session: any,

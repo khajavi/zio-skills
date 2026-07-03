@@ -12,6 +12,7 @@ import { verifyDocsAction } from '../actions/verify-docs.js';
 import { reviewDocsAction } from '../actions/review-docs.js';
 import { styleDocsAction } from '../actions/style-docs.js';
 import { integrateDocsAction } from '../actions/integrate-docs.js';
+import { buildVerifyDocsAction } from '../actions/build-verify-docs.js';
 
 export default defineAgent(() => ({
   model: 'anthropic/claude-haiku-4-5',
@@ -23,6 +24,7 @@ export default defineAgent(() => ({
     reviewDocsAction,
     styleDocsAction,
     integrateDocsAction,
+    buildVerifyDocsAction,
   ],
   skills: [
     docsDataTypeRefSkill,
