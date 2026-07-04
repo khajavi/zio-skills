@@ -5,23 +5,33 @@ import { trackTokenUsage } from '../shared/token-usage.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
- * runs. The agent resolves its repo checkout from ZIO_REPO_PATH (set per run);
- * this workflow just hands it the topic and returns the produced file path.
+ * runs. Takes the library checkout (`projectPath`) and the `topic`. The agent
+ * resolves its sandbox cwd from ZIO_REPO_PATH, so the run sets that from
+ * projectPath before opening a session.
  */
 export const route: WorkflowRouteHandler = async (_c, next) => next();
 
 export default defineWorkflow({
   agent: tutorialWriter,
   input: v.object({
+    projectPath: v.pipe(
+      v.string(),
+      v.description('Absolute path to the ZIO library checkout to document'),
+    ),
     topic: v.pipe(v.string(), v.description('Tutorial title or topic description')),
   }),
   output: v.object({ path: v.string(), summary: v.string() }),
   async run({ harness, input, log }) {
+    // The agent initializer reads ZIO_REPO_PATH to set its sandbox cwd. Set it
+    // from projectPath before the session initializes the agent.
+    process.env.ZIO_REPO_PATH = input.projectPath;
+
     const usage = trackTokenUsage();
     try {
       const session = await harness.session();
       const { data } = await session.prompt(
         `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
+          `The library checkout (repo root) is at ${input.projectPath}. ` +
           `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
           `Report the final tutorial file path and a one-line summary.`,
         {
