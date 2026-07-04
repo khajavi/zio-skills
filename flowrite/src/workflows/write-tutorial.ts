@@ -40,7 +40,13 @@ export default defineWorkflow({
       );
       return data;
     } finally {
-      log.info('write-tutorial token consumption', usage.stop());
+      const t = usage.stop();
+      log.info(
+        `write-tutorial token consumption: ${t.totalTokens} tokens ` +
+          `(in ${t.input}, out ${t.output}, cacheRead ${t.cacheRead}, cacheWrite ${t.cacheWrite}) ` +
+          `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
+        t,
+      );
     }
   },
 });
