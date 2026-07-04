@@ -6,7 +6,7 @@ import { trackTokenUsage } from '../shared/token-usage.ts';
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
  * runs. Takes the library checkout (`projectPath`) and the `topic`. The agent
- * resolves its sandbox cwd from ZIO_REPO_PATH, so the run sets that from
+ * resolves its sandbox cwd from REPO_PATH, so the run sets that from
  * projectPath before opening a session.
  */
 export const route: WorkflowRouteHandler = async (_c, next) => next();
@@ -22,9 +22,9 @@ export default defineWorkflow({
   }),
   output: v.object({ path: v.string(), summary: v.string() }),
   async run({ harness, input, log }) {
-    // The agent initializer reads ZIO_REPO_PATH to set its sandbox cwd. Set it
+    // The agent initializer reads REPO_PATH to set its sandbox cwd. Set it
     // from projectPath before the session initializes the agent.
-    process.env.ZIO_REPO_PATH = input.projectPath;
+    process.env.REPO_PATH = input.projectPath;
 
     const usage = trackTokenUsage();
     try {

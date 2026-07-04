@@ -32,7 +32,7 @@ export const route: AgentRouteHandler = async (_c, next) => next();
 
 export default defineAgent(({ id }) => {
   // id = tutorial topic slug; it selects the checked-out library repo to work in.
-  const cwd = process.env.ZIO_REPO_PATH ?? `/srv/zio-repos/${id}`;
+  const cwd = process.env.REPO_PATH ?? `/srv/zio-repos/${id}`;
 
   return {
     profile: docsAuthorBase,
