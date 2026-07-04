@@ -1,4 +1,3 @@
-import { createRunMdoc } from '../../tools/run_mdoc.js';
 import { runBuild } from '../../lib/build-runner.js';
 
 function buildStructureCheck(docType: string): string {
@@ -144,24 +143,20 @@ export async function verifyBuild(
   };
 }
 
-export async function runVerifyPhase(
-  session: any,
-  options: {
-    projectRoot: string;
-    changedFiles: string[];
-    topic: string;
-    resolvedOutputPath: string;
-    docType: 'tutorial' | 'how-to-guide' | 'data-type-ref' | 'module-ref';
-  }
-): Promise<void> {
-  const { projectRoot, changedFiles, topic, resolvedOutputPath, docType } = options;
+export function buildVerifyPrompt(options: {
+  changedFiles: string[];
+  topic: string;
+  resolvedOutputPath: string;
+  docType: 'tutorial' | 'how-to-guide' | 'data-type-ref' | 'module-ref';
+}): string {
+  const { changedFiles, topic, resolvedOutputPath, docType } = options;
 
   const changedFilesStr =
     changedFiles.length > 0
       ? `\n\n**Files to compile with mdoc** (detected as new/changed):\n${changedFiles.map((f) => `- ${f}`).join('\n')}`
       : '\n\n**Note:** No additional markdown files were changed. Compile the main output file only.';
 
-  const verifyPrompt = `**Phase 3: Verify ${docTypeName(docType)}**
+  return `**Phase 3: Verify ${docTypeName(docType)}**
 
 Verify the ${docType} you just wrote for ${topic} at ${resolvedOutputPath}
 
@@ -180,8 +175,4 @@ ${buildStyleCheck(docType)}
 ${buildChecklistStep(docType)}
 
 ${buildReport(docType)}`;
-
-  await session.prompt(verifyPrompt, {
-    tools: [createRunMdoc(projectRoot)],
-  });
 }

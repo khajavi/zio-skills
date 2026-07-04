@@ -6,12 +6,10 @@ import { defineWorkflow } from '@flue/runtime';
 import docsWriterAgent from '../agents/docs-writer.js';
 import { validatePathsAndResolve, inferSourceDirs } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
-import { runReviewPhase } from './phases/review.js';
-import { runStylePhase } from './phases/style.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
-import { runIntegratePhase } from './phases/integrate.js';
+import { extractReviewResult } from './phases/review.js';
+import { extractStyleResult } from './phases/style.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { runExamplesSubPhase } from './phases/examples.js';
-import { runVerifyPhase } from './phases/verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -47,7 +45,6 @@ async function writeHowToGuideRun({ harness, input, log }: { harness: any; input
 
   const resolvedOutputPath = validatePathsAndResolve(projectRoot, outputPath);
   const sourceDirs = inferSourceDirs(projectRoot);
-  const outputFileName = path.basename(outputPath, '.md');
 
   console.log(`[docs-write-how-to-guide] Starting how-to guide generation`);
   console.log(`  Topic: ${topic}`);
@@ -102,6 +99,27 @@ async function writeHowToGuideRun({ harness, input, log }: { harness: any; input
     } else {
       console.log('\n[Phase 2] Writing: Generating how-to guide...');
       phase2StartTime = Date.now();
+      const examplesActive = examplesPayload && !skipPhases.includes('examples');
+      const completeExampleOverride = examplesActive
+        ? (() => {
+            const packageName =
+              examplesPayload.packageName ?? examplesPayload.moduleName.replace(/-/g, '');
+            const packageDir = path.join(
+              projectRoot,
+              examplesPayload.parentModule ?? '',
+              examplesPayload.moduleName,
+              'src',
+              'main',
+              'scala',
+              ...packageName.split('.')
+            );
+            const embedPath = `${examplesPayload.moduleName}/src/main/scala/${packageName}/CompleteExample.scala`;
+            return `\n- **Section 6 (Putting It Together)**: Do NOT paste the complete example as an inline code block. Instead: (1) run \`mkdir -p ${packageDir}\`, (2) write the complete, self-contained example code directly to ${path.join(packageDir, 'CompleteExample.scala')} (package \`${packageName}\`, wrapped in \`@main\`/\`object extends App\` per the naming convention used for companion examples), (3) embed it in the section with:
+  \`\`\`scala mdoc:embed:${embedPath}:show-line-numbers
+  \`\`\`
+  The companion-examples generation step that follows this write phase will detect the file already exists and compile/run it alongside the other generated examples without overwriting it.`;
+          })()
+        : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
 
@@ -142,7 +160,7 @@ Based on the research findings above, now write a comprehensive how-to guide for
 - Show intermediate results (printed output, types) after major steps
 - The Problem section MUST include a short code example showing the painful/boilerplate approach
 - Each step-by-step section covers exactly one concept — split if two things are happening
-- "Putting It Together" should be copy-paste runnable
+- "Putting It Together" should be copy-paste runnable${completeExampleOverride}
 
 Write the complete markdown file and save it to the specified output path.`;
 
@@ -173,13 +191,9 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking guide and code...');
-      await runVerifyPhase(session!, {
-        projectRoot,
-        changedFiles,
-        topic,
-        resolvedOutputPath,
-        docType: 'how-to-guide',
-      });
+      await session!.prompt(
+        `**Phase 3: Verify how-to-guide**\n\nCall the \`verify_docs\` action to verify the how-to-guide you just wrote.`
+      );
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }
@@ -197,12 +211,14 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('review');
     } else {
       console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
-      reviewResult = await runReviewPhase(harness, {
-        outputPath: resolvedOutputPath,
-        projectRoot,
-        typeName: topic,
-        sourceFiles: sourceDirs,
-      });
+      const reviewPromptResult = await session!.prompt(
+        `**Phase 4: Review and fix how-to-guide**\n\nCall the \`review_docs\` action to run the critic/fix loop on the how-to-guide you just wrote.`
+      );
+      const reviewPromptText =
+        typeof reviewPromptResult === 'string'
+          ? reviewPromptResult
+          : String((reviewPromptResult as any)?.text ?? '');
+      reviewResult = extractReviewResult(reviewPromptText);
       console.log(
         `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
       );
@@ -226,11 +242,14 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('style');
     } else {
       console.log('\n[Phase 5] Validating: Checking prose style...');
-      styleResult = await runStylePhase(harness, {
-        outputPath: resolvedOutputPath,
-        projectRoot,
-        typeName: topic,
-      });
+      const stylePromptResult = await session!.prompt(
+        `**Phase 5: Validate how-to-guide style**\n\nCall the \`style_docs\` action to check and fix prose style violations in the how-to-guide you just wrote.`
+      );
+      const stylePromptText =
+        typeof stylePromptResult === 'string'
+          ? stylePromptResult
+          : String((stylePromptResult as any)?.text ?? '');
+      styleResult = extractStyleResult(stylePromptText);
       console.log(
         `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
       );
@@ -248,24 +267,36 @@ Write the complete markdown file and save it to the specified output path.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, {
-        projectRoot,
-        outputFileName,
-        topic,
-        docType: 'how-to-guide',
-      });
+      await session!.prompt(
+        `**Phase 6: Integrate how-to-guide**\n\nCall the \`integrate_docs\` action to wire the how-to-guide you just wrote into the docs structure.`
+      );
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases,
-      sessionName: 'docs-write-how-to-guide',
-    });
+    let buildVerifyResult;
+    if (skipPhases.includes('verifyBuild')) {
+      console.log('\n[Phase 7] ⏭ Build verification skipped');
+      buildVerifyResult = {
+        success: true,
+        buildSystem: 'skipped',
+        durationMs: 0,
+        skipped: true,
+        rounds: 0,
+      };
+    } else {
+      console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+      const buildPromptResult = await session!.prompt(
+        `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the how-to-guide you just wrote.`
+      );
+      const buildPromptText =
+        typeof buildPromptResult === 'string'
+          ? buildPromptResult
+          : String((buildPromptResult as any)?.text ?? '');
+      buildVerifyResult = extractBuildVerifyResult(buildPromptText);
+    }
     phasesCompleted.push('verifyBuild');
 
     const expectedPhases = 7 + (examplesPayload ? 1 : 0);

@@ -23,7 +23,7 @@ A how-to guide is **goal-oriented** — it helps practitioners accomplish a spec
 2. **The Problem** — concrete problem statement + why it matters + "before" code showing the pain point
 3. **Prerequisites** — sbt dependency, base imports in `mdoc:silent`, assumed knowledge
 4. **The Core Model** — domain types in `mdoc:silent`, brief explanation of design choices
-5. **Step-by-step sections** (3–6) — one new concept each: 1–3 sentence intro → code → result
-6. **Putting It Together** — complete copy-paste runnable example combining all steps
-7. **Running the Examples** — git clone + sbt runMain per example
+5. **Step-by-step sections** (3–6) — one new concept each: 1–3 sentence intro → code → result. When companion examples are requested, each section's code block stays an inline `mdoc` block (auto-rendered output is required here — `mdoc:embed` cannot show it), but the corresponding companion `.scala` file must copy that code **verbatim**, not re-derive it from the prose.
+6. **Putting It Together** — complete copy-paste runnable example combining all steps. When companion examples are requested, do not paste this code inline — write it directly to `CompleteExample.scala` and embed it with `mdoc:embed` (output rendering isn't needed here, so embedding the file directly eliminates the duplication entirely).
+7. **Running the Examples** — git clone + sbt runMain per example. `CompleteExample.scala` is already embedded in "Putting It Together" — do not embed its source a second time here; give it narrative + observe note + run command only.
 8. **Going Further** (optional) — links to reference pages, related guides, variations

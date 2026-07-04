@@ -10,11 +10,9 @@ import {
   inferSourceDirs,
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
-import { runReviewPhase } from './phases/review.js';
-import { runStylePhase } from './phases/style.js';
-import { runVerifyPhase } from './phases/verify.js';
-import { runIntegratePhase } from './phases/integrate.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
+import { extractReviewResult } from './phases/review.js';
+import { extractStyleResult } from './phases/style.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { runExamplesPhase } from './phases/examples.js';
 import { runDiagramPhase } from './phases/diagram.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
@@ -210,25 +208,23 @@ Write the complete markdown file and save it to the specified output path.`;
     // Phase 3: Verify
     tracker.beginPhase('verify');
     console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-    await runVerifyPhase(session, {
-      projectRoot,
-      changedFiles,
-      topic: typeName,
-      resolvedOutputPath,
-      docType: 'data-type-ref',
-    });
+    await session.prompt(
+      `**Phase 3: Verify data-type-ref**\n\nCall the \`verify_docs\` action to verify the data-type-ref you just wrote.`
+    );
     console.log('[Phase 3] ✓ Verification complete');
     phasesCompleted.push('verify');
 
     // Phase 4: Review and Fix
     tracker.beginPhase('review');
     console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
-    const reviewResult = await runReviewPhase(harness, {
-      outputPath: resolvedOutputPath,
-      projectRoot,
-      typeName,
-      sourceFiles: sourceDirs,
-    });
+    const reviewPromptResult = await session.prompt(
+      `**Phase 4: Review and fix data-type-ref**\n\nCall the \`review_docs\` action to run the critic/fix loop on the data-type-ref you just wrote.`
+    );
+    const reviewPromptText =
+      typeof reviewPromptResult === 'string'
+        ? reviewPromptResult
+        : String((reviewPromptResult as any)?.text ?? '');
+    const reviewResult = extractReviewResult(reviewPromptText);
     console.log(
       `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
     );
@@ -241,11 +237,14 @@ Write the complete markdown file and save it to the specified output path.`;
     // Phase 5: Style Validation
     tracker.beginPhase('style');
     console.log('\n[Phase 5] Validating: Checking prose style...');
-    const styleResult = await runStylePhase(harness, {
-      outputPath: resolvedOutputPath,
-      projectRoot,
-      typeName,
-    });
+    const stylePromptResult = await session.prompt(
+      `**Phase 5: Validate data-type-ref style**\n\nCall the \`style_docs\` action to check and fix prose style violations in the data-type-ref you just wrote.`
+    );
+    const stylePromptText =
+      typeof stylePromptResult === 'string'
+        ? stylePromptResult
+        : String((stylePromptResult as any)?.text ?? '');
+    const styleResult = extractStyleResult(stylePromptText);
     console.log(
       `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
     );
@@ -258,23 +257,23 @@ Write the complete markdown file and save it to the specified output path.`;
     // Phase 6: Integrate
     tracker.beginPhase('integrate');
     console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-    await runIntegratePhase(session, {
-      projectRoot,
-      outputFileName,
-      topic: typeName,
-      docType: 'data-type-ref',
-    });
+    await session.prompt(
+      `**Phase 6: Integrate data-type-ref**\n\nCall the \`integrate_docs\` action to wire the data-type-ref you just wrote into the docs structure.`
+    );
     console.log('[Phase 6] ✓ Integration complete');
     phasesCompleted.push('integrate');
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases: [],
-      sessionName: 'docs-write-data-type-ref',
-    });
+    console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+    const buildPromptResult = await session.prompt(
+      `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the data-type-ref you just wrote.`
+    );
+    const buildPromptText =
+      typeof buildPromptResult === 'string'
+        ? buildPromptResult
+        : String((buildPromptResult as any)?.text ?? '');
+    const buildVerifyResult = extractBuildVerifyResult(buildPromptText);
     phasesCompleted.push('verifyBuild');
 
     // Build final result — base 7 phases + optional examples and diagram phases

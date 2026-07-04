@@ -23,9 +23,9 @@ A tutorial is **learning-oriented** — it builds mental models for newcomers en
 
 1. **Introduction** — who it's for, learning objectives, section outline
 2. **Background / Big Picture** (optional) — conceptual framing, no code
-3. **Concept sections** (3–6) — one concept each, code + annotation + output
-4. **Putting It Together** — complete runnable example combining all concepts
-5. **Running the Examples** — one `###` per example: narrative, embedded source, observe note, run command
+3. **Concept sections** (3–6) — one concept each, code + annotation + output. When companion examples are requested, each section's code block stays an inline `mdoc` block (auto-rendered output is required here — `mdoc:embed` cannot show it), but the corresponding companion `.scala` file must copy that code **verbatim**, not re-derive it from the prose.
+4. **Putting It Together** — complete runnable example combining all concepts. When companion examples are requested, do not paste this code inline — write it directly to `CompleteExample.scala` and embed it with `mdoc:embed` (output rendering isn't needed here, so embedding the file directly eliminates the duplication entirely).
+5. **Running the Examples** — one `###` per example: narrative, embedded source, observe note, run command. `CompleteExample.scala` is already embedded in "Putting It Together" — do not embed its source a second time here; give it narrative + observe note + run command only.
 6. **What You've Learned** — bullet recap mirroring learning objectives
 7. **Where to Go Next** — links to how-to guides and reference pages
 

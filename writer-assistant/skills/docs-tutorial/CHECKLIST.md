@@ -37,12 +37,14 @@ After writing, verify every item on this checklist:
 - [ ] Each example file has a scaladoc with tutorial title, concept name, description, and `sbt runMain` command
 - [ ] Each example file includes `println` output showing meaningful results
 - [ ] All examples compile successfully (`sbt "schema-examples/compile"`)
+- [ ] Each concept-section example file's core logic is copied verbatim from that section's inline code block, not independently rewritten
+- [ ] `CompleteExample.scala`'s code matches "Putting It Together" exactly — it's embedded there via `mdoc:embed`, not pasted inline
 
 ## Running the Examples Section
 
 - [ ] The tutorial includes a "Running the Examples" section after "Putting It Together"
 - [ ] Each example has a `###` subsection with a narrative description (1–2 sentences)
-- [ ] Each subsection has a `<details>` block with `mdoc:embed` showing the source
+- [ ] Each subsection has a `<details>` block with `mdoc:embed` showing the source — except `CompleteExample.scala`, which is already embedded in "Putting It Together" and must not be embedded a second time here
 - [ ] Each subsection has an "Observe X:" sentence followed by a `bash` run command
 
 ## Style and Integration

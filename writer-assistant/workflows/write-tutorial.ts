@@ -10,12 +10,9 @@ import {
   inferSourceDirs,
 } from '../lib/scala-source-discovery.js';
 import { runResearchPhase } from './phases/research.js';
-import { runReviewPhase } from './phases/review.js';
-import { runStylePhase } from './phases/style.js';
-import { runBuildVerifyPhase } from './phases/build-verify.js';
-import { runIntegratePhase } from './phases/integrate.js';
-import { runExamplesSubPhase } from './phases/examples.js';
-import { runVerifyPhase } from './phases/verify.js';
+import { extractReviewResult } from './phases/review.js';
+import { extractStyleResult } from './phases/style.js';
+import { extractBuildVerifyResult } from './phases/build-verify.js';
 import { findRecentlyModifiedMarkdownFiles } from '../lib/markdown-utils.js';
 import { createRunSummaryTracker, formatSummaryReport } from './utils/run-summary.js';
 
@@ -56,9 +53,6 @@ async function writeTutorialRun({ harness, input, log }: { harness: any; input: 
 
   // Infer possible source directories from project root
   const sourceDirs = inferSourceDirs(projectRoot);
-
-  // Extract tutorial name from output path (e.g., docs/guides/getting-started.md -> getting-started)
-  const outputFileName = path.basename(outputPath, '.md');
 
   console.log(`[docs-write-tutorial] Starting tutorial documentation generation`);
   console.log(`  Topic: ${topic}`);
@@ -114,8 +108,26 @@ async function writeTutorialRun({ harness, input, log }: { harness: any; input: 
     } else {
       console.log('\n[Phase 2] Writing: Generating tutorial...');
       phase2StartTime = Date.now();
-      const section5Override = examplesPayload
-        ? `\n- **Skip section 5 (Running the Examples)**: Do NOT write this section. It will be inserted automatically after companion Scala example files are generated.`
+      const examplesActive = examplesPayload && !skipPhases.includes('examples');
+      const completeExampleOverride = examplesActive
+        ? (() => {
+            const packageName =
+              examplesPayload.packageName ?? examplesPayload.moduleName.replace(/-/g, '');
+            const packageDir = path.join(
+              projectRoot,
+              examplesPayload.parentModule ?? '',
+              examplesPayload.moduleName,
+              'src',
+              'main',
+              'scala',
+              ...packageName.split('.')
+            );
+            const embedPath = `${examplesPayload.moduleName}/src/main/scala/${packageName}/CompleteExample.scala`;
+            return `\n- **Section 4 (Putting It Together)**: Do NOT paste the complete example as an inline code block. Instead: (1) run \`mkdir -p ${packageDir}\`, (2) write the complete, self-contained example code directly to ${path.join(packageDir, 'CompleteExample.scala')} (package \`${packageName}\`, wrapped in \`@main\`/\`object extends App\` per the naming convention used for companion examples), (3) embed it in the section with:
+  \`\`\`scala mdoc:embed:${embedPath}:show-line-numbers
+  \`\`\`
+  Do this before calling \`write_examples\` below — that action will detect the file already exists and compile/run it alongside the other generated examples without overwriting it.`;
+          })()
         : '';
       const writePrompt = `**Research Findings (from research phase):**
 ${researchResult}
@@ -126,10 +138,16 @@ ${researchResult}
 
 Write a comprehensive tutorial for learning about ${topic}.
 
-Follow the docs-tutorial skill for section structure, writing style, mdoc conventions, and all other authoring rules.
+Follow the
+  - "docs-tutorial" skill for tutorial structure,
+  - "docs-writing-style" skill for prose style,
+  - "docs-mdoc-conventions" skill for markdown conventions
 
 **Workflow-specific requirements:**
-- Output file path: ${resolvedOutputPath}${section5Override}
+- Output file path: ${resolvedOutputPath}
+- Examples requested: ${examplesPayload ? JSON.stringify(examplesPayload) : 'none'}
+- Skipped phases: ${JSON.stringify(skipPhases)}
+- **Section 5 (Running the Examples)**: If examples were requested above and "examples" is not in the skipped phases, do NOT write this section by hand — after saving the markdown file, call the \`write_examples\` action to generate, compile, run, format, and embed the companion Scala examples; it inserts section 5 itself. Otherwise, omit section 5 entirely.${completeExampleOverride}
 
 Write the complete markdown file and save it to the output path above.`;
 
@@ -138,16 +156,9 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('write');
     }
 
-    // Phase 2.5: Examples (optional — only when `examples` payload provided)
-    tracker.beginPhase('examples');
-    const examplesResult = await runExamplesSubPhase(harness, session, examplesPayload, {
-      projectRoot,
-      topic,
-      resolvedOutputPath,
-      docType: 'tutorial',
-      skipPhases,
-      phasesCompleted,
-    });
+    // The write_examples action (called by the model during Phase 2, if requested) runs and
+    // embeds its own results directly into the document — no structured result to capture here.
+    const examplesResult: any = null;
 
     // Detect all changed/new markdown files since Phase 2 started
     const changedFiles = findRecentlyModifiedMarkdownFiles(projectRoot, docsDir, phase2StartTime);
@@ -161,13 +172,9 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('verify');
     } else {
       console.log('\n[Phase 3] Verifying: Checking documentation and code...');
-      await runVerifyPhase(session!, {
-        projectRoot,
-        changedFiles,
-        topic,
-        resolvedOutputPath,
-        docType: 'tutorial',
-      });
+      await session!.prompt(
+        `**Phase 3: Verify tutorial**\n\nCall the \`verify_docs\` action to verify the tutorial you just wrote.`
+      );
       console.log('[Phase 3] ✓ Verification complete');
       phasesCompleted.push('verify');
     }
@@ -185,12 +192,14 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('review');
     } else {
       console.log('\n[Phase 4] Reviewing: Critique and fix loop...');
-      reviewResult = await runReviewPhase(harness, {
-        outputPath: resolvedOutputPath,
-        projectRoot,
-        typeName: topic,
-        sourceFiles: sourceDirs,
-      });
+      const reviewPromptResult = await session!.prompt(
+        `**Phase 4: Review and fix tutorial**\n\nCall the \`review_docs\` action to run the critic/fix loop on the tutorial you just wrote.`
+      );
+      const reviewPromptText =
+        typeof reviewPromptResult === 'string'
+          ? reviewPromptResult
+          : String((reviewPromptResult as any)?.text ?? '');
+      reviewResult = extractReviewResult(reviewPromptText);
       console.log(
         `[Phase 4] ${reviewResult.approved ? '✓' : '⚠'} Review complete (${reviewResult.rounds} round(s))`
       );
@@ -214,11 +223,14 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('style');
     } else {
       console.log('\n[Phase 5] Validating: Checking prose style...');
-      styleResult = await runStylePhase(harness, {
-        outputPath: resolvedOutputPath,
-        projectRoot,
-        typeName: topic,
-      });
+      const stylePromptResult = await session!.prompt(
+        `**Phase 5: Validate tutorial style**\n\nCall the \`style_docs\` action to check and fix prose style violations in the tutorial you just wrote.`
+      );
+      const stylePromptText =
+        typeof stylePromptResult === 'string'
+          ? stylePromptResult
+          : String((stylePromptResult as any)?.text ?? '');
+      styleResult = extractStyleResult(stylePromptText);
       console.log(
         `[Phase 5] ${styleResult.passed ? '✓' : '⚠'} Style validation complete (${styleResult.rounds} round(s))`
       );
@@ -236,28 +248,40 @@ Write the complete markdown file and save it to the output path above.`;
       phasesCompleted.push('integrate');
     } else {
       console.log('\n[Phase 6] Integrating: Wiring into docs structure...');
-      await runIntegratePhase(session!, {
-        projectRoot,
-        outputFileName,
-        topic,
-        docType: 'tutorial',
-      });
+      await session!.prompt(
+        `**Phase 6: Integrate tutorial**\n\nCall the \`integrate_docs\` action to wire the tutorial you just wrote into the docs structure.`
+      );
       console.log('[Phase 6] ✓ Integration complete');
       phasesCompleted.push('integrate');
     }
 
     // Phase 7: Build Verification with auto-fix loop
     tracker.beginPhase('verifyBuild');
-    const buildVerifyResult = await runBuildVerifyPhase(harness, session, {
-      docsDir,
-      projectRoot,
-      skipPhases,
-      sessionName: 'docs-write-tutorial',
-    });
+    let buildVerifyResult;
+    if (skipPhases.includes('verifyBuild')) {
+      console.log('\n[Phase 7] ⏭ Build verification skipped');
+      buildVerifyResult = {
+        success: true,
+        buildSystem: 'skipped',
+        durationMs: 0,
+        skipped: true,
+        rounds: 0,
+      };
+    } else {
+      console.log('\n[Phase 7] Build Verification: Verifying documentation builds...');
+      const buildPromptResult = await session!.prompt(
+        `**Phase 7: Build verification**\n\nCall the \`build_verify_docs\` action to build the documentation site and fix any build errors for the tutorial you just wrote.`
+      );
+      const buildPromptText =
+        typeof buildPromptResult === 'string'
+          ? buildPromptResult
+          : String((buildPromptResult as any)?.text ?? '');
+      buildVerifyResult = extractBuildVerifyResult(buildPromptText);
+    }
     phasesCompleted.push('verifyBuild');
 
-    // Build final result — base 7 phases + optional examples phase
-    const expectedPhases = 7 + (examplesPayload ? 1 : 0);
+    // Build final result — 7 phases (examples generation is now inline within "write")
+    const expectedPhases = 7;
     const success =
       phasesCompleted.length === expectedPhases &&
       buildVerifyResult.success &&
