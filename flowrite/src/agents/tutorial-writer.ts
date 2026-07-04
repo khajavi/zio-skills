@@ -23,6 +23,7 @@ import { docsIntegrator } from '../profiles/docs-integrator.ts';
 
 // tools (bounded sbt/git contracts, bound to the instance's repo path)
 import { createSbtTools } from '../tools/sbt-tools.ts';
+import { TIERS } from '../shared/models.ts';
 
 export const description =
   'Writes learning-oriented ZIO library tutorials with compile-verified companion examples.';
@@ -36,6 +37,7 @@ export default defineAgent(({ id }) => {
 
   return {
     profile: docsAuthorBase,
+    thinkingLevel: TIERS.writer.thinkingLevel,
     instructions,
     sandbox: local(),
     cwd,
