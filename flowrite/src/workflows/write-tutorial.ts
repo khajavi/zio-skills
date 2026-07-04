@@ -1,6 +1,7 @@
-import { defineWorkflow, observe, type FlueEvent, type WorkflowRouteHandler } from '@flue/runtime';
+import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
+import { trackTokenUsage } from '../shared/token-usage.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
@@ -16,23 +17,7 @@ export default defineWorkflow({
   }),
   output: v.object({ path: v.string(), summary: v.string() }),
   async run({ harness, input, log }) {
-    // Accumulate token/cost across the whole run by summing leaf `turn` events.
-    // Per the observability guide, sum model-turn leaves — never operation or
-    // compaction roll-ups, whose values overlap.
-    const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: 0, turns: 0 };
-    const unsubscribe = observe((event: FlueEvent) => {
-      if (event.type !== 'turn') return;
-      const u = event.response.usage;
-      if (!u) return;
-      usage.input += u.input;
-      usage.output += u.output;
-      usage.cacheRead += u.cacheRead;
-      usage.cacheWrite += u.cacheWrite;
-      usage.totalTokens += u.totalTokens;
-      usage.cost += u.cost.total;
-      usage.turns += 1;
-    });
-
+    const usage = trackTokenUsage();
     try {
       const session = await harness.session();
       const { data } = await session.prompt(
@@ -43,10 +28,9 @@ export default defineWorkflow({
           result: v.object({ path: v.string(), summary: v.string() }),
         },
       );
-      log.info('write-tutorial token consumption', usage);
       return data;
     } finally {
-      unsubscribe();
+      log.info('write-tutorial token consumption', usage.stop());
     }
   },
 });
