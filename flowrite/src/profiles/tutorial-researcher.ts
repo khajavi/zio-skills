@@ -1,4 +1,5 @@
 import { defineAgentProfile } from '@flue/runtime';
+import { TIERS } from '../shared/models.ts';
 
 /**
  * Deep source-research specialist. Runs read-only over the library checkout in
@@ -7,6 +8,7 @@ import { defineAgentProfile } from '@flue/runtime';
  */
 export const tutorialResearcher = defineAgentProfile({
   name: 'tutorial_researcher',
+  ...TIERS.researcher,
   description:
     'Researches a ZIO topic across source, tests, examples, and GitHub history; returns structured research answers. Use before designing a tutorial.',
   instructions: [

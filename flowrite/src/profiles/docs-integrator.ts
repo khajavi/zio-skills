@@ -1,4 +1,5 @@
 import { defineAgentProfile } from '@flue/runtime';
+import { TIERS } from '../shared/models.ts';
 
 /**
  * Docs-site integration specialist. Wires a finished tutorial into the
@@ -7,6 +8,7 @@ import { defineAgentProfile } from '@flue/runtime';
  */
 export const docsIntegrator = defineAgentProfile({
   name: 'docs_integrator',
+  ...TIERS.integrator,
   description:
     'Integrates a finished tutorial into the Docusaurus site: sidebars.js, index.md, cross-references, and build verification. Use after mdoc passes.',
   instructions: [

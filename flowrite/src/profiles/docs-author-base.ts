@@ -1,5 +1,6 @@
 import { defineAgentProfile } from '@flue/runtime';
 import writingStyle from '../skills/writing-style/SKILL.md' with { type: 'skill' };
+import { TIERS } from '../shared/models.ts';
 
 /**
  * Reusable baseline for ZIO documentation-authoring agents. Supplies the shared
@@ -9,7 +10,7 @@ import writingStyle from '../skills/writing-style/SKILL.md' with { type: 'skill'
 export const docsAuthorBase = defineAgentProfile({
   name: 'docs_author_base',
   description: 'Shared baseline for ZIO documentation authoring agents.',
-  model: 'anthropic/claude-sonnet-4-6',
+  ...TIERS.writer,
   instructions: 'You author ZIO library documentation. Follow the writing-style skill for all prose.',
   skills: [writingStyle],
 });

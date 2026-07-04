@@ -1,4 +1,5 @@
 import { defineAgentProfile } from '@flue/runtime';
+import { TIERS } from '../shared/models.ts';
 
 /**
  * Companion-examples specialist. Creates one runnable example per tutorial
@@ -7,6 +8,7 @@ import { defineAgentProfile } from '@flue/runtime';
  */
 export const examplesBuilder = defineAgentProfile({
   name: 'examples_builder',
+  ...TIERS.examples,
   description:
     'Creates and compiles companion example files for a tutorial (one per concept + a complete example). Use after the tutorial draft exists.',
   instructions: [

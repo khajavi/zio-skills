@@ -36,7 +36,6 @@ export default defineAgent(({ id }) => {
 
   return {
     profile: docsAuthorBase,
-    thinkingLevel: 'high',
     instructions,
     sandbox: local(),
     cwd,
