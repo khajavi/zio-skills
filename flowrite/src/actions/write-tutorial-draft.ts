@@ -30,6 +30,8 @@ export const writeTutorialDraft = defineAction({
         `---`,
         `id: ${input.id}`,
         `title: "<a warm, specific tutorial title>"`,
+        `description: "<50-150 characters describing the page purpose>"`,
+        `keywords: ["<3-7 keywords>"]`,
         `---`,
         ``,
         `Topic: ${input.topic}`,
