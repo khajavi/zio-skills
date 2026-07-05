@@ -19,10 +19,9 @@ echo "flue log: $log"
 input=$(printf '{"projectPath":"%s","topic":"%s"}' "$fixture_root" "$topic")
 
 (cd "$flowrite_root" && ./node_modules/.bin/flue run write-tutorial --env .env.testing --input "$input") \
-  > "$log" 2>&1
-status=$?
+  2>&1 | tee "$log"
+status="${PIPESTATUS[0]}"
 
-cat "$log"
 bash scripts/archive-docs.sh "$log"
 rm -f "$log"
 exit "$status"
