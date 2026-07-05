@@ -14,6 +14,7 @@ flowrite_root="$(cd ../.. && pwd)"
 
 topic="${1:?usage: run-tutorial.sh <topic>}"
 log="$(mktemp)"
+echo "flue log: $log"
 
 input=$(printf '{"projectPath":"%s","topic":"%s"}' "$fixture_root" "$topic")
 
