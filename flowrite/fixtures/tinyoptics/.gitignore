@@ -3,5 +3,4 @@ target/
 .metals/
 .bloop/
 .idea/
-archive/
 .remember/

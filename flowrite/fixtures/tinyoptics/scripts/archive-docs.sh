@@ -5,9 +5,10 @@
 #
 # Captures ALL changes vs committed HEAD (docs, src/main/scala/examples/*,
 # build.sbt, project/plugins.sbt, sidebars.js, EXAMPLES_SUMMARY.md, ...) as one
-# patch under archive/write-tutorial-turn<N>/, copies all generated/changed files
-# as readable files under files/, then restores the working tree. Ignored paths
-# (website/ node_modules & .docusaurus, archive/, .remember/) are left untouched.
+# patch under ../tinyoptics-archive/write-tutorial-turn<N>/, copies all
+# generated/changed files as readable files under files/, then restores the
+# working tree. Ignored paths (website/ node_modules & .docusaurus, .remember/)
+# are left untouched.
 #
 # Usage: bash scripts/archive-docs.sh
 set -euo pipefail
@@ -15,16 +16,20 @@ set -euo pipefail
 # Fixture root = parent of this script's directory.
 cd "$(dirname "$0")/.."
 
+# Archive lives one level up, alongside the fixture (not inside it).
+archive_root="../tinyoptics-archive"
+mkdir -p "$archive_root"
+
 # Next turn number.
 n=1
-while [ -e "archive/write-tutorial-turn$n" ]; do
+while [ -e "$archive_root/write-tutorial-turn$n" ]; do
   n=$((n + 1))
 done
-dest="archive/write-tutorial-turn$n"
+dest="$archive_root/write-tutorial-turn$n"
 mkdir -p "$dest"
 
 # 1. Whole-fixture patch vs HEAD. `add -N` makes untracked files show in the diff;
-#    .gitignore keeps node_modules/.docusaurus/archive/.remember out.
+#    .gitignore keeps node_modules/.docusaurus/.remember out.
 git add -N -- .
 git diff HEAD -- . > "$dest/changes.patch"
 git reset -q -- .
@@ -37,7 +42,7 @@ fi
 
 # 2. Copy every generated/changed file (untracked + modified) as readable files
 #    under files/, mirroring the fixture tree. .gitignore keeps node_modules,
-#    .docusaurus, archive/ and .remember/ out of both lists.
+#    .docusaurus and .remember/ out of both lists.
 file_count=0
 list="$(mktemp)"
 {
@@ -56,7 +61,7 @@ rm -f "$list"
 # 3. Reset the fixture to committed baseline (stash-like).
 git reset -q -- .
 git checkout -- .
-git clean -fdq -e archive -- .
+git clean -fdq -- .
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
 echo "archived turn $n: $changed file(s) changed, $file_count copied to $dest/files/"
