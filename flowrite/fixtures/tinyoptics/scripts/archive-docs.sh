@@ -5,16 +5,15 @@
 #
 # Captures ALL changes vs committed HEAD (docs, src/main/scala/examples/*,
 # build.sbt, project/plugins.sbt, sidebars.js, EXAMPLES_SUMMARY.md, ...) as one
-# patch under archive/write-tutorial-turn<N>/, copies generated guide markdown as
-# readable files, then restores the working tree. Ignored paths (website/
-# node_modules & .docusaurus, archive/, .remember/) are left untouched.
+# patch under archive/write-tutorial-turn<N>/, copies all generated/changed files
+# as readable files under files/, then restores the working tree. Ignored paths
+# (website/ node_modules & .docusaurus, archive/, .remember/) are left untouched.
 #
 # Usage: bash scripts/archive-docs.sh
 set -euo pipefail
 
 # Fixture root = parent of this script's directory.
 cd "$(dirname "$0")/.."
-fixture_root="$(pwd)"
 
 # Next turn number.
 n=1
@@ -36,14 +35,23 @@ if [ ! -s "$dest/changes.patch" ]; then
   exit 0
 fi
 
-# 2. Copy generated (untracked) doc markdown as readable files alongside the patch.
-doc_count=0
+# 2. Copy every generated/changed file (untracked + modified) as readable files
+#    under files/, mirroring the fixture tree. .gitignore keeps node_modules,
+#    .docusaurus, archive/ and .remember/ out of both lists.
+file_count=0
+list="$(mktemp)"
+{
+  git ls-files --others --exclude-standard -- .   # new untracked files
+  git diff --relative --name-only HEAD -- .        # modified tracked files
+} | sort -u > "$list"
 while IFS= read -r f; do
   [ -z "$f" ] && continue
-  mkdir -p "$dest/$(dirname "$f")"
-  cp "$f" "$dest/$f"
-  doc_count=$((doc_count + 1))
-done < <(git ls-files --others --exclude-standard -- docs)
+  [ -f "$f" ] || continue
+  mkdir -p "$dest/files/$(dirname "$f")"
+  cp "$f" "$dest/files/$f"
+  file_count=$((file_count + 1))
+done < "$list"
+rm -f "$list"
 
 # 3. Reset the fixture to committed baseline (stash-like).
 git reset -q -- .
@@ -51,5 +59,5 @@ git checkout -- .
 git clean -fdq -e archive -- .
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
-echo "archived turn $n: $changed file(s) changed, $doc_count generated doc(s) copied -> $dest"
+echo "archived turn $n: $changed file(s) changed, $file_count copied to $dest/files/"
 echo "fixture reset to HEAD. replay with: git apply $dest/changes.patch"
