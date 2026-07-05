@@ -30,7 +30,20 @@ export const writeTutorialDraft = defineAction({
     const session = await harness.session();
     // Delegates to the tutorial_drafter subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const response = await session.task(
+    // Uses a result schema (not response.text) so the model returns content
+    // through the structured channel instead of a chat reply — that channel
+    // doesn't carry the "narrate, then fence the deliverable" habit that
+    // corrupted the written file with a stray preamble/code fence.
+    const contentSchema = v.object({
+      content: v.pipe(
+        v.string(),
+        v.description(
+          'The complete raw markdown file — starts with the frontmatter --- on the ' +
+            'very first line. No prose before it, no surrounding code fence.',
+        ),
+      ),
+    });
+    const { data } = await session.task(
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
         ``,
@@ -41,6 +54,7 @@ export const writeTutorialDraft = defineAction({
         `description: "<50-150 characters describing the page purpose>"`,
         `keywords: ["<3-7 keywords>"]`,
         `---`,
+        `content must start with the '---' above as its literal first characters.`,
         ``,
         `Topic: ${input.topic}`,
         ``,
@@ -51,10 +65,10 @@ export const writeTutorialDraft = defineAction({
         `Structure to follow exactly:`,
         input.structure,
       ].join('\n'),
-      { agent: 'tutorial_drafter' },
+      { agent: 'tutorial_drafter', result: contentSchema },
     );
 
-    await harness.fs.writeFile(path, response.text);
-    return { path, content: response.text };
+    await harness.fs.writeFile(path, data.content);
+    return { path, content: data.content };
   },
 });

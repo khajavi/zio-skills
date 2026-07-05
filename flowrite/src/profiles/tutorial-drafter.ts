@@ -22,6 +22,6 @@ export const tutorialDrafter = defineAgentProfile({
     'Rules: one concept per section; explain the concept before its code;',
     'annotate every code block line-by-line; show intermediate output; warm tone;',
     'never branch. End with "What You\'ve Learned" and "Where to Go Next".',
-    'Output ONLY the markdown file content, nothing else — no surrounding code fence, no commentary.',
+    'content is the raw file, not a chat reply: starts with \'---\', no preamble, no surrounding fence.',
   ].join('\n'),
 });
