@@ -3,7 +3,7 @@
 # run-tutorial.sh — run write-tutorial against this fixture, then archive
 # whatever it produced (docs/examples/build changes) plus the full flue log,
 # and reset the fixture back to baseline. One command for local testing;
-# archives even on a failed run so the log is never lost.
+# archives even on a failed or interrupted run so the log is never lost.
 #
 # Usage: bash scripts/run-tutorial.sh "<topic>"
 set -uo pipefail
@@ -18,9 +18,38 @@ echo "flue log: $log"
 
 input=$(printf '{"projectPath":"%s","topic":"%s"}' "$fixture_root" "$topic")
 
-(cd "$flowrite_root" && ./node_modules/.bin/flue run write-tutorial --env .env.testing --input "$input") \
-  2>&1 | tee "$log"
-status="${PIPESTATUS[0]}"
+# `exec` replaces this subshell with flue itself, so $! below is flue's real
+# PID (not a wrapper) — kill "$flue_pid" hits the actual node process.
+(cd "$flowrite_root" && exec ./node_modules/.bin/flue run write-tutorial --env .env.testing --input "$input") \
+  > "$log" 2>&1 &
+flue_pid=$!
+
+tail -n +1 -f "$log" &
+tail_pid=$!
+
+cleanup() {
+  echo ""
+  echo "interrupted — killing run and archiving whatever it produced..."
+  kill "$tail_pid" 2>/dev/null
+  if kill -0 "$flue_pid" 2>/dev/null; then
+    kill -TERM "$flue_pid" 2>/dev/null
+    sleep 1
+    kill -0 "$flue_pid" 2>/dev/null && kill -KILL "$flue_pid" 2>/dev/null
+  fi
+  # flue spawns sbt/java as its own children, not this script's — a killed
+  # flue process does not reliably take them down with it (seen in practice).
+  pkill -f "flue.mjs run write-tutorial" 2>/dev/null
+  pkill -f "sbt-launch" 2>/dev/null
+  bash scripts/archive-docs.sh "$log"
+  rm -f "$log"
+  exit 130
+}
+trap cleanup INT TERM
+
+wait "$flue_pid"
+status=$?
+kill "$tail_pid" 2>/dev/null
+wait "$tail_pid" 2>/dev/null
 
 bash scripts/archive-docs.sh "$log"
 rm -f "$log"
