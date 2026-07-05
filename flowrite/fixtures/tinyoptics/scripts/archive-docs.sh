@@ -10,8 +10,12 @@
 # working tree. Ignored paths (website/ node_modules & .docusaurus, .remember/)
 # are left untouched.
 #
-# Usage: bash scripts/archive-docs.sh
+# Usage: bash scripts/archive-docs.sh [flue-run-log-file]
+#   If a log file path is given (and exists), it's copied into the archived
+#   turn as flue.log — even on a failed/partial run with no file changes.
 set -euo pipefail
+
+log_file="${1:-}"
 
 # Fixture root = parent of this script's directory.
 cd "$(dirname "$0")/.."
@@ -28,6 +32,10 @@ done
 dest="$archive_root/write-tutorial-turn$n"
 mkdir -p "$dest"
 
+if [ -n "$log_file" ] && [ -f "$log_file" ]; then
+  cp "$log_file" "$dest/flue.log"
+fi
+
 # 1. Whole-fixture patch vs HEAD. `add -N` makes untracked files show in the diff;
 #    .gitignore keeps node_modules/.docusaurus/.remember out.
 git add -N -- .
@@ -35,8 +43,13 @@ git diff HEAD -- . > "$dest/changes.patch"
 git reset -q -- .
 
 if [ ! -s "$dest/changes.patch" ]; then
-  rm -rf "$dest"
-  echo "no changes to archive; fixture already at baseline"
+  rm -f "$dest/changes.patch"
+  if [ -e "$dest/flue.log" ]; then
+    echo "no file changes; log saved to $dest/flue.log"
+  else
+    rm -rf "$dest"
+    echo "no changes to archive; fixture already at baseline"
+  fi
   exit 0
 fi
 
@@ -64,5 +77,7 @@ git checkout -- .
 git clean -fdq -- .
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
-echo "archived turn $n: $changed file(s) changed, $file_count copied to $dest/files/"
+log_note=""
+[ -e "$dest/flue.log" ] && log_note=", log saved to $dest/flue.log"
+echo "archived turn $n: $changed file(s) changed, $file_count copied to $dest/files/$log_note"
 echo "fixture reset to HEAD. replay with: git apply $dest/changes.patch"
