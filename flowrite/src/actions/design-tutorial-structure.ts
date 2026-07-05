@@ -36,20 +36,19 @@ export const designTutorialStructure = defineAction({
   async run({ harness, input, log }) {
     log.info(`Designing tutorial structure for: ${input.topic}`);
     const session = await harness.session();
-    const { data } = await session.prompt(
+    // Delegates to the tutorial_designer subagent (no actions/subagents of its
+    // own) rather than reopening a session on the calling agent — that agent's
+    // own design_tutorial_structure action would otherwise be visible to the
+    // nested session, letting it call itself and recurse until the delegation
+    // depth limit is hit.
+    const { data } = await session.task(
       [
         `Design a learning-oriented tutorial structure for "${input.topic}".`,
-        `Follow the tutorial-structure skill's template and section-design rules.`,
         ``,
         `Research answers:`,
         input.researchAnswers,
-        ``,
-        `Produce 3-6 strictly linear sections, one new concept each, ordered by dependency`,
-        `(simplest "hello world" first, then one layer of complexity per section).`,
-        `State 3-5 learning objectives, the prerequisites, a show-moment per section,`,
-        `and the single aha moment. No branching.`,
       ].join('\n'),
-      { result: structureSchema },
+      { agent: 'tutorial_designer', result: structureSchema },
     );
     return data;
   },

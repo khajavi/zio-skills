@@ -20,11 +20,11 @@ export const writeTutorialDraft = defineAction({
     log.info(`Writing tutorial draft: ${path}`);
 
     const session = await harness.session();
-    const response = await session.prompt(
+    // Delegates to the tutorial_drafter subagent — see design-tutorial-structure.ts
+    // for why bare harness.session() on the calling agent is unsafe here.
+    const response = await session.task(
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
-        `Load and follow the writing-style skill (prose, Scala 2.13 default, @VERSION@)`,
-        `and the mdoc-conventions skill (mdoc modifiers, admonitions).`,
         ``,
         `Frontmatter must be:`,
         `---`,
@@ -37,12 +37,8 @@ export const writeTutorialDraft = defineAction({
         `Topic: ${input.topic}`,
         `Structure to follow exactly:`,
         input.structure,
-        ``,
-        `Rules: one concept per section; explain the concept before its code;`,
-        `annotate every code block line-by-line; show intermediate output; warm tone;`,
-        `never branch. End with "What You've Learned" and "Where to Go Next".`,
-        `Output ONLY the markdown file content, nothing else.`,
       ].join('\n'),
+      { agent: 'tutorial_drafter' },
     );
 
     await harness.fs.writeFile(path, response.text);

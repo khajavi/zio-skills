@@ -28,17 +28,13 @@ export const reviewAgainstChecklist = defineAction({
     const content = await harness.fs.readFile(input.path);
 
     const session = await harness.session();
-    const { data } = await session.prompt(
-      [
-        `Load the tutorial-checklist skill.`,
-        `Evaluate the tutorial below against every checklist item.`,
-        `Return each item with pass/fail; when failing, give a specific, actionable issue.`,
-        `Set passed=true only if every item passes.`,
-        ``,
-        `--- TUTORIAL (${input.path}) ---`,
-        content,
-      ].join('\n'),
-      { result: reviewSchema },
+    // Delegates to the tutorial_reviewer subagent — see design-tutorial-structure.ts
+    // for why bare harness.session() on the calling agent is unsafe here.
+    const { data } = await session.task(
+      [`Evaluate the tutorial below against every checklist item.`, ``, `--- TUTORIAL (${input.path}) ---`, content].join(
+        '\n',
+      ),
+      { agent: 'tutorial_reviewer', result: reviewSchema },
     );
     return data;
   },
