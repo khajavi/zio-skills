@@ -26,7 +26,10 @@ differs. Do not mechanically follow steps that no longer fit.
 3. **Design the structure.** Call the `design_tutorial_structure` action with the
    research answers to get an ordered section plan. Load the `tutorial-structure`
    skill for the template and section-design rules.
-4. **Write.** Call `write_tutorial_draft`. Load `writing-style` (prose, Scala
+4. **Write.** Call `write_tutorial_draft` with BOTH the structure from step 3
+   AND the full research answers from step 2 — never with structure alone; the
+   structure says what to cover, the research answers ground every import,
+   signature, and example in reality. Load `writing-style` (prose, Scala
    version rules) and `mdoc-conventions` (mdoc modifiers, admonitions) skills.
    One concept per section; concept-before-code; annotate every block; show
    output; never branch; limit scope aggressively.
