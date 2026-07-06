@@ -27,7 +27,7 @@ import { tutorialDrafter } from '../profiles/tutorial-drafter.ts';
 import { tutorialReviewer } from '../profiles/tutorial-reviewer.ts';
 
 // tools (bounded sbt/git contracts, bound to the instance's repo path)
-import { createSbtTools } from '../tools/sbt-tools.ts';
+import { createRepoTools } from '../tools/repo-tools.ts';
 import { TIERS } from '../shared/models.ts';
 
 export const description =
@@ -53,7 +53,7 @@ export default defineAgent(({ id }) => {
     cwd,
     skills: [mdocConventions, tutorialStructure, tutorialChecklist],
     actions: [designTutorialStructure, writeTutorialDraft, reviewAgainstChecklist],
-    tools: createSbtTools(cwd),
+    tools: createRepoTools(cwd),
     subagents: [
       tutorialResearcher,
       examplesBuilder,

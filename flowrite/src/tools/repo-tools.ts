@@ -32,7 +32,7 @@ const errorLines = (output: string): string[] =>
  * Build the sbt/git tools bound to one library checkout. Called from the agent
  * initializer with the instance's `cwd` so each tool operates on that repo.
  */
-export function createSbtTools(repoPath: string) {
+export function createRepoTools(repoPath: string) {
   const mdocCompile = defineTool({
     name: 'mdoc_compile',
     description:

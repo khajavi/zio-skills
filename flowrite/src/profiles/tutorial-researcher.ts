@@ -1,6 +1,6 @@
 import { defineAgentProfile } from '@flue/runtime';
 import { TIERS } from '../shared/models.ts';
-import { createGhQueryTool } from '../tools/sbt-tools.ts';
+import { createGhQueryTool } from '../tools/repo-tools.ts';
 
 // REPO_PATH is required before `flue run` starts (see tutorial-writer.ts's own cwd check).
 const ghQuery = createGhQueryTool(process.env.REPO_PATH!);
