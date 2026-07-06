@@ -1,5 +1,6 @@
 import { defineAgentProfile } from '@flue/runtime';
 import tutorialStructure from '../skills/tutorial-structure/SKILL.md' with { type: 'skill' };
+import { TIERS } from '../shared/models.ts';
 
 /**
  * Narrow, single-purpose profile for `design_tutorial_structure`. Deliberately
@@ -10,6 +11,7 @@ import tutorialStructure from '../skills/tutorial-structure/SKILL.md' with { typ
  */
 export const tutorialDesigner = defineAgentProfile({
   name: 'tutorial_designer',
+  ...TIERS.designer,
   description: 'Turns deep-research answers into a validated, linear tutorial section plan.',
   skills: [tutorialStructure],
   instructions: [

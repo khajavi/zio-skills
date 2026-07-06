@@ -13,7 +13,10 @@ interface Tier {
 const effort = (value: string | undefined, fallback: ThinkingLevel): ThinkingLevel =>
   (value as ThinkingLevel) ?? fallback;
 
-export const TIERS: Record<'writer' | 'researcher' | 'examples' | 'integrator', Tier> = {
+export const TIERS: Record<
+  'writer' | 'researcher' | 'examples' | 'integrator' | 'designer' | 'reviewer',
+  Tier
+> = {
   writer: {
     model: process.env.WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.WRITER_EFFORT, 'high'),
@@ -29,5 +32,13 @@ export const TIERS: Record<'writer' | 'researcher' | 'examples' | 'integrator', 
   integrator: {
     model: process.env.INTEGRATOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.INTEGRATOR_EFFORT, 'medium'),
+  },
+  designer: {
+    model: process.env.DESIGNER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.DESIGNER_EFFORT, 'medium'),
+  },
+  reviewer: {
+    model: process.env.REVIEWER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.REVIEWER_EFFORT, 'low'),
   },
 };
