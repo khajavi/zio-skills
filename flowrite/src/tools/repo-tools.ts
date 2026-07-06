@@ -29,11 +29,11 @@ const errorLines = (output: string): string[] =>
   output.split('\n').filter((line) => line.includes('[error]'));
 
 /**
- * Build the sbt/git tools bound to one library checkout. Called from the agent
- * initializer with the instance's `cwd` so each tool operates on that repo.
+ * Compile ONE documentation markdown file through mdoc. Always scoped with --in so it
+ * never recompiles all docs (~90s). Returns any [error] lines.
  */
-export function createRepoTools(repoPath: string) {
-  const mdocCompile = defineTool({
+export function createMdocCompileTool(repoPath: string) {
+  return defineTool({
     name: 'mdoc_compile',
     description:
       'Compile ONE documentation markdown file through mdoc. Always scoped with --in so it never recompiles all docs (~90s). Returns any [error] lines.',
@@ -50,8 +50,11 @@ export function createRepoTools(repoPath: string) {
       return { ok: res.ok && errors.length === 0, errors };
     },
   });
+}
 
-  const compileExamples = defineTool({
+/** Compile a companion-examples sbt module, e.g. schema-examples. */
+export function createCompileExamplesTool(repoPath: string) {
+  return defineTool({
     name: 'compile_examples',
     description: 'Compile a companion-examples sbt module, e.g. schema-examples.',
     input: v.object({ module: v.string() }),
@@ -61,8 +64,11 @@ export function createRepoTools(repoPath: string) {
       return { ok: res.ok, errors: errorLines(res.output) };
     },
   });
+}
 
-  const runExample = defineTool({
+/** Run one example main class to capture its printed output for the tutorial. */
+export function createRunExampleTool(repoPath: string) {
+  return defineTool({
     name: 'run_example',
     description: 'Run one example main class to capture its printed output for the tutorial.',
     input: v.object({ module: v.string(), mainClass: v.string() }),
@@ -72,8 +78,19 @@ export function createRepoTools(repoPath: string) {
       return { ok: res.ok, output: res.output };
     },
   });
+}
 
-  return [mdocCompile, compileExamples, runExample, createGhQueryTool(repoPath)];
+/**
+ * Build the full sbt/git tool set bound to one library checkout. Called from the agent
+ * initializer with the instance's `cwd` so each tool operates on that repo.
+ */
+export function createRepoTools(repoPath: string) {
+  return [
+    createMdocCompileTool(repoPath),
+    createCompileExamplesTool(repoPath),
+    createRunExampleTool(repoPath),
+    createGhQueryTool(repoPath),
+  ];
 }
 
 /**
