@@ -1,16 +1,22 @@
 import { defineAgentProfile } from '@flue/runtime';
 import { TIERS } from '../shared/models.ts';
+import { createGhQueryTool } from '../tools/sbt-tools.ts';
+
+// REPO_PATH is required before `flue run` starts (see tutorial-writer.ts's own cwd check).
+const ghQuery = createGhQueryTool(process.env.REPO_PATH!);
 
 /**
  * Deep source-research specialist. Runs read-only over the library checkout in
- * the parent's sandbox (glob/grep/read via built-in shell, plus `gh`) and returns
- * structured answers the tutorial designer needs. It does not write files.
+ * the parent's sandbox (glob/grep/read via built-in shell), plus `gh_query` for
+ * GitHub history. Returns structured answers the tutorial designer needs. It
+ * does not write files.
  */
 export const tutorialResearcher = defineAgentProfile({
   name: 'tutorial_researcher',
   ...TIERS.researcher,
   description:
     'Researches a ZIO topic across source, tests, examples, and GitHub history; returns structured research answers. Use before designing a tutorial.',
+  tools: [ghQuery],
   instructions: [
     'You research a ZIO library topic so a tutorial author can write accurately. Read-only: never edit files.',
     '',
@@ -20,7 +26,7 @@ export const tutorialResearcher = defineAgentProfile({
     '2. Read test suites (**/src/test/scala/) for idiomatic construction, composition, and edge cases.',
     '3. Trace supporting types: grep imports in tests for the dependency graph; note derived vs manual instances.',
     '4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.',
-    '5. GitHub history: use `gh search commits|issues|prs` and `gh issue/pr view --comments` for design rationale.',
+    '5. GitHub history: use the gh_query tool (not bash) for commits/issues/PRs design rationale.',
     '',
     'Return concise, structured answers covering: the ONE concept taught; prerequisites; what the learner',
     'can do afterward; each core type in one sentence and its role; the dependency/composition order;',

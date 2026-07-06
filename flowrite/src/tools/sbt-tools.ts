@@ -73,7 +73,16 @@ export function createSbtTools(repoPath: string) {
     },
   });
 
-  const ghQuery = defineTool({
+  return [mdocCompile, compileExamples, runExample, createGhQueryTool(repoPath)];
+}
+
+/**
+ * Search the library's GitHub history (commits, issues, PRs) via `sbt gh-query`.
+ * Exported standalone so read-only profiles (e.g. tutorial_researcher) can take
+ * just this tool without pulling in the write-verification sbt tools.
+ */
+export function createGhQueryTool(repoPath: string) {
+  return defineTool({
     name: 'gh_query',
     description:
       'Search the library GitHub history (commits, issues, PRs) for design rationale via sbt gh-query.',
@@ -84,6 +93,4 @@ export function createSbtTools(repoPath: string) {
       return { output: res.output };
     },
   });
-
-  return [mdocCompile, compileExamples, runExample, ghQuery];
 }
