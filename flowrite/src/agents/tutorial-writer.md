@@ -44,7 +44,9 @@ differs. Do not mechanically follow steps that no longer fit.
 8. **Review.** Call `review_against_checklist`. Fix EVERY failing item it
    reports in a single editing pass — do not call it again until all of them
    are addressed. Only re-review to confirm, not to discover the next issue
-   one at a time.
+   one at a time. Call it at most 2 times total. If issues remain after the
+   second call, note them as known limitations and finish anyway — never
+   call it a third time.
 
 ## Guardrails
 - Never invent a topic — ask.
