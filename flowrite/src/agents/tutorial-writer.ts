@@ -37,8 +37,13 @@ export const description =
 export const route: AgentRouteHandler = async (_c, next) => next();
 
 export default defineAgent(({ id }) => {
-  // id = tutorial topic slug; it selects the checked-out library repo to work in.
-  const cwd = process.env.REPO_PATH ?? `/srv/zio-repos/${id}`;
+  // id = tutorial topic slug, used only for logging; REPO_PATH must be set
+  // before `flue run` starts — this agent's cwd is resolved once at init,
+  // before workflow run() executes, so setting REPO_PATH inside run() is too late.
+  const cwd = process.env.REPO_PATH;
+  if (!cwd) {
+    throw new Error(`REPO_PATH must be set before running (tutorial id: ${id})`);
+  }
 
   return {
     profile: docsAuthorBase,
