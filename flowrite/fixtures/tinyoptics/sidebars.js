@@ -11,7 +11,7 @@ module.exports = {
       items: [
         {
           type: 'doc',
-          id: 'guides',
+          id: 'guides/index',
           label: 'Guides Overview',
         },
       ],

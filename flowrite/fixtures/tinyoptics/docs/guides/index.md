@@ -1,5 +1,4 @@
 ---
-id: guides
 title: Learning Guides
 ---
 
