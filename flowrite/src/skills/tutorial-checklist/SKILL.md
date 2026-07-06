@@ -32,28 +32,12 @@ Verify every item. The tutorial is not done until all pass.
 - No deprecated methods or outdated patterns.
 - `sbt "docs/mdoc --in docs/guides/<id>.md"` reports zero `[error]` lines (mandatory before done).
 
-## Companion Examples
+## Review Cadence
 
-- A package directory exists under the `<library>-examples` module.
-- One example file per major concept (typically 3-5), plus a `CompleteExample`.
-- Each example file is self-contained, compiles and runs independently, with complete imports.
-- Each file has a scaladoc with tutorial title, concept name, description, and `sbt runMain` command.
-- Each file prints meaningful output.
-- All examples compile (`sbt "<module>/compile"`).
-
-## Running the Examples Section
-
-- Present after "Putting It Together".
-- Includes `git clone https://github.com/zio/<repo>.git` and `cd <repo>`.
-- Lists every example object with its `sbt "<module>/runMain ..."` command.
-- Includes `sbt "<module>/compile"` as an alternative.
-
-## Style and Integration
-
-- Frontmatter `id` matches the filename.
-- The tutorial is in `docs/guides/` (with the how-to guides).
-- Added to `sidebars.js` under the "Guides" category.
-- Linked from `docs/index.md`.
-- Related reference pages link back to this tutorial.
-- Writing style followed (warm tone, present tense, "we"/"you", concise, no emojis).
-- Admonitions used sparingly, only for genuinely important callouts.
+- Fix EVERY failing item in a single editing pass — do not call this checklist
+  again until all of them are addressed.
+- Only re-review to confirm the fixes, not to discover the next issue one at
+  a time.
+- Call this checklist at most 2 times total. If issues remain after the
+  second call, note them as known limitations and finish anyway — never call
+  it a third time.

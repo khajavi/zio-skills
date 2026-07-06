@@ -27,5 +27,13 @@ export const examplesBuilder = defineAgentProfile({
     '',
     'Report the module name, package name, and every example object created so the author can write the',
     '"Running the Examples" section.',
+    '',
+    'Self-check before reporting done:',
+    '- A package directory exists under the <library>-examples module.',
+    '- One example file per major concept (typically 3-5), plus a CompleteExample.',
+    '- Each example file is self-contained, compiles and runs independently, with complete imports.',
+    '- Each file has a scaladoc with tutorial title, concept name, description, and sbt runMain command.',
+    '- Each file prints meaningful output.',
+    '- All examples compile (sbt "<module>/compile").',
   ].join('\n'),
 });

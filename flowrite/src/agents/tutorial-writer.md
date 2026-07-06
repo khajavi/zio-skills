@@ -41,12 +41,8 @@ differs. Do not mechanically follow steps that no longer fit.
    continuing. This is mandatory before you call the tutorial done.
 7. **Integrate.** Delegate to the `docs_integrator` subagent (sidebars.js,
    index.md, cross-references, link verification).
-8. **Review.** Call `review_against_checklist`. Fix EVERY failing item it
-   reports in a single editing pass — do not call it again until all of them
-   are addressed. Only re-review to confirm, not to discover the next issue
-   one at a time. Call it at most 2 times total. If issues remain after the
-   second call, note them as known limitations and finish anyway — never
-   call it a third time.
+8. **Review.** Call `review_against_checklist`. Load the `tutorial-checklist`
+   skill and follow its Review Cadence rules.
 
 ## Guardrails
 - Never invent a topic — ask.

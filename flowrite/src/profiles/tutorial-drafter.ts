@@ -21,7 +21,11 @@ export const tutorialDrafter = defineAgentProfile({
     'real fact — copy it exactly.',
     'Rules: one concept per section; explain the concept before its code;',
     'annotate every code block line-by-line; show intermediate output; warm tone;',
-    'never branch. End with "What You\'ve Learned" and "Where to Go Next".',
+    'never branch. Include a "Running the Examples" section after "Putting It Together":',
+    'present after "Putting It Together"; includes `git clone https://github.com/zio/<repo>.git`',
+    'and `cd <repo>`; lists every example object with its `sbt "<module>/runMain ..."` command;',
+    'includes `sbt "<module>/compile"` as an alternative.',
+    'End with "What You\'ve Learned" and "Where to Go Next".',
     'content is the raw file, not a chat reply: starts with \'---\', no preamble, no surrounding fence.',
   ].join('\n'),
 });
