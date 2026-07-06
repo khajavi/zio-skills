@@ -1,7 +1,12 @@
 import { observe, type FlueEvent } from '@flue/runtime';
+import { designTutorialStructure } from '../actions/design-tutorial-structure.ts';
+import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
+import { reviewAgainstChecklist } from '../actions/review-against-checklist.ts';
 
 /** This agent's own actions — exposed to the model as tools but delegate their real work. */
-const ACTION_NAMES = new Set(['design_tutorial_structure', 'write_tutorial_draft', 'review_against_checklist']);
+const ACTION_NAMES = new Set(
+  [designTutorialStructure, writeTutorialDraft, reviewAgainstChecklist].map((a) => a.name),
+);
 
 export type ComponentCategory = 'action' | 'subagent' | 'tool' | 'skill' | 'agent';
 
