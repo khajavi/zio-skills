@@ -2,6 +2,7 @@ import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
 import { trackTokenUsage } from '../shared/token-usage.ts';
+import { trackComponentUsage } from '../shared/component-usage.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
@@ -27,6 +28,7 @@ export default defineWorkflow({
     process.env.REPO_PATH = input.projectPath;
 
     const usage = trackTokenUsage();
+    const components = trackComponentUsage();
     try {
       const session = await harness.session();
       const { data } = await session.prompt(
@@ -47,6 +49,7 @@ export default defineWorkflow({
           `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
         t,
       );
+      log.info('write-tutorial component usage', { components: components.stop() });
     }
   },
 });
