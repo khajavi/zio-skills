@@ -41,8 +41,10 @@ differs. Do not mechanically follow steps that no longer fit.
    continuing. This is mandatory before you call the tutorial done.
 7. **Integrate.** Delegate to the `docs_integrator` subagent (sidebars.js,
    index.md, cross-references, link verification).
-8. **Review.** Call `review_against_checklist`; load the `tutorial-checklist`
-   skill. Resolve every failed item, then report the tutorial complete.
+8. **Review.** Call `review_against_checklist`. Fix EVERY failing item it
+   reports in a single editing pass — do not call it again until all of them
+   are addressed. Only re-review to confirm, not to discover the next issue
+   one at a time.
 
 ## Guardrails
 - Never invent a topic — ask.
