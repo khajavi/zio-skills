@@ -42,18 +42,19 @@ A **Lens** is a composable pair of get and set functions that focus on a single 
 
 **Example:**
 
-```scala mdoc:reset-object
+```scala mdoc
 import optics._
 
-case class Person(name: String, age: Int)
+case class Address(street: String, city: String)
+case class Person(name: String, age: Int, address: Address)
 
 val ageLens = Lens[Person, Int](
   get = _.age,
   set = newAge => p => p.copy(age = newAge)
 )
 
-val alice = Person("Alice", 30)
-val updated = ageLens.set(31)(alice)
+val alice = Person("Alice", 30, Address("Main St", "Boston"))
+val olderAlice = ageLens.set(31)(alice)
 ```
 
 ---
@@ -81,9 +82,7 @@ A **Prism** extends the Lens pattern to handle optional values or sum types (sea
 
 **Example:**
 
-```scala mdoc:reset-object
-import optics._
-
+```scala mdoc
 sealed trait Result
 case class Success(value: String) extends Result
 case class Failure(error: String) extends Result
@@ -96,11 +95,11 @@ val successPrism = Prism[Result, String](
   reverseGet = v => Success(v)
 )
 
-val result: Result = Success("OK")
-val updated = successPrism.modify(_ + "!")(result)
+val okResult: Result = Success("OK")
+val excited = successPrism.modify(_ + "!")(okResult)
 
-val failed: Result = Failure("Error")
-val unchanged = successPrism.modify(_ + "!")(failed)
+val failedResult: Result = Failure("Error")
+val unchanged = successPrism.modify(_ + "!")(failedResult)
 ```
 
 ---
@@ -131,12 +130,7 @@ An **Optional** is a composition of a Lens and a Prism, focusing on a part that 
 
 All optic types support composition via `.andThen()`:
 
-```scala mdoc:reset-object
-import optics._
-
-case class Address(street: String, city: String)
-case class Person(name: String, address: Address)
-
+```scala mdoc
 val addressLens: Lens[Person, Address] = Lens(_.address, a => p => p.copy(address = a))
 val cityLens: Lens[Address, String] = Lens(_.city, c => a => a.copy(city = c))
 val composedLens: Lens[Person, String] =
@@ -188,22 +182,18 @@ val composedPrism: Prism[Event, String] =
 
 ### Creating a Lens for a Case Class Field
 
-```scala mdoc:reset-object
-import optics._
-
-case class Address(street: String, city: String)
-
-val cityLens = Lens[Address, String](
-  get = _.city,
-  set = newCity => addr => addr.copy(city = newCity)
+```scala mdoc
+val streetLens: Lens[Address, String] = Lens(
+  get = _.street,
+  set = newStreet => addr => addr.copy(street = newStreet)
 )
+
+streetLens.get(alice.address)
 ```
 
 ### Creating a Prism for a Sealed Trait Case
 
-```scala mdoc:reset-object
-import optics._
-
+```scala mdoc
 sealed trait Message
 case class Text(content: String) extends Message
 case class Image(url: String) extends Message
@@ -216,20 +206,9 @@ val textPrism = Prism[Message, String](
 
 ### Composing Through Multiple Levels
 
-```scala mdoc:reset-object
-import optics._
-
-case class Address(street: String, city: String)
-case class Person(name: String, address: Address)
-
-val personAddressLens = Lens[Person, Address](_.address, a => p => p.copy(address = a))
-val addressCityLens = Lens[Address, String](_.city, c => a => a.copy(city = c))
-
-val personCityLens: Lens[Person, String] =
-  personAddressLens.andThen(addressCityLens)
-
-val person = Person("Alice", Address("Main St", "Boston"))
-val updated = personCityLens.set("New York")(person)
+```scala mdoc
+val bob = Person("Bob", 42, Address("Elm St", "Boston"))
+val relocated = composedLens.set("New York")(bob)
 ```
 
 ---
