@@ -7,3 +7,12 @@ lazy val root = (project in file("."))
     name := "tinyoptics",
     scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked"),
   )
+
+lazy val docs = (project in file("mdocs"))
+  .enablePlugins(MdocPlugin)
+  .settings(
+    name := "tinyoptics-docs",
+    mdocIn := file("mdocs"),
+    mdocOut := file("docs"),
+  )
+  .dependsOn(root)

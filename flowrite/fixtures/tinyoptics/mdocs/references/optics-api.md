@@ -42,7 +42,7 @@ A **Lens** is a composable pair of get and set functions that focus on a single 
 
 **Example:**
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 case class Person(name: String, age: Int)
@@ -51,12 +51,9 @@ val ageLens = Lens[Person, Int](
   get = _.age,
   set = newAge => p => p.copy(age = newAge)
 )
-// ageLens: Lens[Person, Int] = Lens(get = <function1>, set = <function1>)
 
 val alice = Person("Alice", 30)
-// alice: Person = Person(name = "Alice", age = 30)
 val updated = ageLens.set(31)(alice)
-// updated: Person = Person(name = "Alice", age = 31)
 ```
 
 ---
@@ -84,7 +81,7 @@ A **Prism** extends the Lens pattern to handle optional values or sum types (sea
 
 **Example:**
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 sealed trait Result
@@ -98,20 +95,12 @@ val successPrism = Prism[Result, String](
   },
   reverseGet = v => Success(v)
 )
-// successPrism: Prism[Result, String] = Prism(
-//   getOption = <function1>,
-//   reverseGet = <function1>
-// )
 
 val result: Result = Success("OK")
-// result: Result = Success(value = "OK")
 val updated = successPrism.modify(_ + "!")(result)
-// updated: Result = Success(value = "OK!")
 
 val failed: Result = Failure("Error")
-// failed: Result = Failure(error = "Error")
 val unchanged = successPrism.modify(_ + "!")(failed)
-// unchanged: Result = Failure(error = "Error")
 ```
 
 ---
@@ -142,46 +131,28 @@ An **Optional** is a composition of a Lens and a Prism, focusing on a part that 
 
 All optic types support composition via `.andThen()`:
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 case class Address(street: String, city: String)
 case class Person(name: String, address: Address)
 
 val addressLens: Lens[Person, Address] = Lens(_.address, a => p => p.copy(address = a))
-// addressLens: Lens[Person, Address] = Lens(
-//   get = <function1>,
-//   set = <function1>
-// )
 val cityLens: Lens[Address, String] = Lens(_.city, c => a => a.copy(city = c))
-// cityLens: Lens[Address, String] = Lens(get = <function1>, set = <function1>)
 val composedLens: Lens[Person, String] =
   addressLens.andThen(cityLens)
-// composedLens: Lens[Person, String] = Lens(
-//   get = optics.Lens$$Lambda/0x00007a3ef93bb7b8@1139f7a3,
-//   set = optics.Lens$$Lambda/0x00007a3ef93bbb88@5251aa45
-// )
 
 sealed trait Shape
 case class Circle(radius: Double) extends Shape
 case class Item(shape: Shape)
 
 val shapeLens: Lens[Item, Shape] = Lens(_.shape, s => i => i.copy(shape = s))
-// shapeLens: Lens[Item, Shape] = Lens(get = <function1>, set = <function1>)
 val circlePrism: Prism[Shape, Double] = Prism(
   { case Circle(r) => Some(r); case _ => None },
   Circle(_)
 )
-// circlePrism: Prism[Shape, Double] = Prism(
-//   getOption = <function1>,
-//   reverseGet = <function1>
-// )
 val composedOptional: Optional[Item, Double] =
   shapeLens.andThen(circlePrism)
-// composedOptional: Optional[Item, Double] = Optional(
-//   getOption = optics.Lens$$Lambda/0x00007a3ef93c2420@342f9656,
-//   set = optics.Lens$$Lambda/0x00007a3ef93c27f0@3fc3fe4
-// )
 
 sealed trait Event
 sealed trait Target
@@ -192,24 +163,12 @@ val clickedPrism: Prism[Event, Target] = Prism(
   { case Clicked(t) => Some(t); case _ => None },
   Clicked(_)
 )
-// clickedPrism: Prism[Event, Target] = Prism(
-//   getOption = <function1>,
-//   reverseGet = <function1>
-// )
 val buttonPrism: Prism[Target, String] = Prism(
   { case Button(id) => Some(id); case _ => None },
   Button(_)
 )
-// buttonPrism: Prism[Target, String] = Prism(
-//   getOption = <function1>,
-//   reverseGet = <function1>
-// )
 val composedPrism: Prism[Event, String] =
   clickedPrism.andThen(buttonPrism)
-// composedPrism: Prism[Event, String] = Prism(
-//   getOption = optics.Prism$$Lambda/0x00007a3ef93c2bc0@632f37b,
-//   reverseGet = optics.Prism$$Lambda/0x00007a3ef93c2f90@a1b7cbd
-// )
 ```
 
 **Composition Table:**
@@ -229,7 +188,7 @@ val composedPrism: Prism[Event, String] =
 
 ### Creating a Lens for a Case Class Field
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 case class Address(street: String, city: String)
@@ -238,12 +197,11 @@ val cityLens = Lens[Address, String](
   get = _.city,
   set = newCity => addr => addr.copy(city = newCity)
 )
-// cityLens: Lens[Address, String] = Lens(get = <function1>, set = <function1>)
 ```
 
 ### Creating a Prism for a Sealed Trait Case
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 sealed trait Message
@@ -254,48 +212,24 @@ val textPrism = Prism[Message, String](
   getOption = { case Text(c) => Some(c); case _ => None },
   reverseGet = Text(_)
 )
-// textPrism: Prism[Message, String] = Prism(
-//   getOption = <function1>,
-//   reverseGet = <function1>
-// )
 ```
 
 ### Composing Through Multiple Levels
 
-```scala
+```scala mdoc:reset-object
 import optics._
 
 case class Address(street: String, city: String)
 case class Person(name: String, address: Address)
 
 val personAddressLens = Lens[Person, Address](_.address, a => p => p.copy(address = a))
-// personAddressLens: Lens[Person, Address] = Lens(
-//   get = <function1>,
-//   set = <function1>
-// )
 val addressCityLens = Lens[Address, String](_.city, c => a => a.copy(city = c))
-// addressCityLens: Lens[Address, String] = Lens(
-//   get = <function1>,
-//   set = <function1>
-// )
 
 val personCityLens: Lens[Person, String] =
   personAddressLens.andThen(addressCityLens)
-// personCityLens: Lens[Person, String] = Lens(
-//   get = optics.Lens$$Lambda/0x00007a3ef93bb7b8@3614835f,
-//   set = optics.Lens$$Lambda/0x00007a3ef93bbb88@6394eca6
-// )
 
 val person = Person("Alice", Address("Main St", "Boston"))
-// person: Person = Person(
-//   name = "Alice",
-//   address = Address(street = "Main St", city = "Boston")
-// )
 val updated = personCityLens.set("New York")(person)
-// updated: Person = Person(
-//   name = "Alice",
-//   address = Address(street = "Main St", city = "New York")
-// )
 ```
 
 ---
