@@ -25,6 +25,8 @@ export default defineAgent(() => ({
 }));
 ```
 
+Always prefer declarative context over imperative code. The model + instructions + tools + skills + sandbox is the agent's "mind". The code is just a wrapper.
+
 ## Flue Framework Reference
 
 Flue docs ship with the npm packages. Read them directly — do not rely on training data for Flue API signatures.
