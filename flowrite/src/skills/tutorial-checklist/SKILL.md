@@ -26,9 +26,6 @@ Verify every item. The tutorial is not done until all pass.
 ## Technical Accuracy
 
 - All method signatures and type names match the actual source code.
-- All code examples use correct mdoc modifiers and would compile.
-- Imports are complete and correct in every code block.
-- The sbt dependency (if mentioned) is correct and uses `@VERSION@`.
 - No deprecated methods or outdated patterns.
 - `sbt "docs/mdoc --in docs/guides/<id>.md"` reports zero `[error]` lines (mandatory before done).
 
