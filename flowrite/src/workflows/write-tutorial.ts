@@ -49,12 +49,19 @@ export default defineWorkflow({
       v.description('Absolute path to the ZIO library checkout to document'),
     ),
     topic: v.pipe(v.string(), v.description('Tutorial title or topic description')),
+    skipPhases: v.optional(
+      v.pipe(
+        v.array(v.picklist(['write-examples', 'integrate', 'review'])),
+        v.description('Phases to skip, e.g. ["write-examples", "integrate", "review"]'),
+      ),
+    ),
   }),
   output: v.object({ path: v.string(), summary: v.string() }),
   async run({ harness, input, log }) {
     // The agent initializer reads REPO_PATH to set its sandbox cwd. Set it
     // from projectPath before the session initializes the agent.
     process.env.REPO_PATH = input.projectPath;
+    process.env.SKIP_PHASES = JSON.stringify(input.skipPhases ?? []);
 
     const usage = trackTokenUsage();
     const components = trackComponentUsage();

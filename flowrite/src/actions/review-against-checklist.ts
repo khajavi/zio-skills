@@ -1,5 +1,6 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
+import { isPhaseSkipped } from '../shared/skip-phases.ts';
 
 const reviewSchema = v.object({
   passed: v.pipe(v.boolean(), v.description('true only when every checklist item passes')),
@@ -38,6 +39,11 @@ export const reviewAgainstChecklist = defineAction({
   }),
   output: reviewSchema,
   async run({ harness, input, log }) {
+    if (isPhaseSkipped('review')) {
+      log.info('Skipping review (skipPhases)');
+      return { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] };
+    }
+
     const calls = ++reviewCallCount;
 
     if (calls > MAX_REVIEW_CALLS) {

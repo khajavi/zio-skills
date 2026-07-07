@@ -34,15 +34,13 @@ differs. Do not mechanically follow steps that no longer fit.
    Scala version rules) and `mdoc-conventions` (mdoc modifiers, admonitions)
    skills. One concept per section; concept-before-code; annotate every block;
    show output; never branch; limit scope aggressively.
-5. **Companion examples.** Delegate to the `examples_builder` subagent; verify
-   with `compile_examples` and `run_example` (examples must print meaningful
-   output).
+5. **Companion examples.** Call `write_companion_examples` with the tutorial
+   path.
 6. **Verify mdoc.** Run `mdoc_compile` on the tutorial file (and any other docs
    files you touched, in the same call). It always scopes each file with
    `--in`/`--out` — never recompile all docs. Fix every `[error]` before
    continuing. This is mandatory before you call the tutorial done.
-7. **Integrate.** Delegate to the `docs_integrator` subagent (sidebars.js,
-   index.md, cross-references, link verification).
+7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_against_checklist`. Load the `tutorial-checklist`
    skill and follow its Review Cadence rules.
 
