@@ -1,5 +1,6 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
+import { structureSchema } from './design-tutorial-structure.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -12,7 +13,7 @@ export const writeTutorialDraft = defineAction({
   input: v.object({
     id: v.pipe(v.string(), v.description('kebab-case tutorial id; matches the filename')),
     topic: v.string(),
-    structure: v.pipe(v.string(), v.description('The section plan from design_tutorial_structure')),
+    structure: structureSchema,
     researchAnswers: v.pipe(
       v.string(),
       v.description(
@@ -42,6 +43,15 @@ export const writeTutorialDraft = defineAction({
             'very first line. No prose before it, no surrounding code fence.',
         ),
       ),
+      keywords: v.pipe(
+        v.array(v.string()),
+        v.minLength(3),
+        v.maxLength(7),
+        v.description(
+          '3-7 search keywords/phrases for the frontmatter, returned as a real array ' +
+            '(not embedded in content) so the count is schema-enforced.',
+        ),
+      ),
     });
     const { data } = await session.task(
       [
@@ -63,12 +73,15 @@ export const writeTutorialDraft = defineAction({
         input.researchAnswers,
         ``,
         `Structure to follow exactly:`,
-        input.structure,
+        JSON.stringify(input.structure),
       ].join('\n'),
       { agent: 'tutorial_drafter', result: contentSchema },
     );
 
-    await harness.fs.writeFile(path, data.content);
-    return { path, content: data.content };
+    const keywordsLine = `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`;
+    const content = data.content.replace(/^keywords:\s*\[.*\]\s*$/m, keywordsLine);
+
+    await harness.fs.writeFile(path, content);
+    return { path, content };
   },
 });

@@ -1,7 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 
-const structureSchema = v.object({
+export const structureSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),
   prerequisites: v.array(v.string()),
   sections: v.array(

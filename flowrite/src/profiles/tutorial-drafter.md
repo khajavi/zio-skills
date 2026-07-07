@@ -15,3 +15,6 @@ Rules:
    includes `sbt "<module>/compile"` as an alternative.
 4. End with "What You've Learned" and "Where to Go Next".
 5. Content is the raw file, not a chat reply: starts with '---', no preamble, no surrounding fence.
+6. Before linking to another doc page, verify it exists (`find docs -name '*.md'`) and use its
+   real relative path from `docs/guides/<id>.md`. Never invent a page — mention it in prose
+   instead, unlinked.
