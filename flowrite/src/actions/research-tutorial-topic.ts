@@ -1,5 +1,6 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
+import { commitRevision, readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 
 export const researchSchema = v.object({
   concept: v.pipe(v.string(), v.description('The ONE concept this tutorial should teach')),
@@ -62,6 +63,19 @@ export const researchTutorialTopic = defineAction({
   }),
   output: researchSchema,
   async run({ harness, input, log }) {
+    const repoPath = process.env.REPO_PATH!;
+    const revision = await commitRevision(repoPath);
+    if (revision) {
+      const cached = readResearchCache(repoPath, input.topic, revision);
+      if (cached) {
+        const parsed = v.safeParse(researchSchema, cached);
+        if (parsed.success) {
+          log.info(`Research cache hit for "${input.topic}" at ${revision.slice(0, 12)}`);
+          return parsed.output;
+        }
+      }
+    }
+
     log.info(`Researching tutorial topic: ${input.topic}`);
     const session = await harness.session();
     // Delegates to the tutorial_researcher subagent — see design-tutorial-structure.ts
@@ -71,6 +85,7 @@ export const researchTutorialTopic = defineAction({
         `accurately from real source, tests, and examples.`,
       { agent: 'tutorial_researcher', result: researchSchema },
     );
+    if (revision) writeResearchCache(repoPath, input.topic, revision, data);
     return data;
   },
 });
