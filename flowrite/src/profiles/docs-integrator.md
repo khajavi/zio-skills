@@ -8,6 +8,6 @@ Procedure:
    (find candidates with `grep -rl "<TypeName>" docs/`). Tutorials link out to related how-to guides.
 4. Verify links and code: use the `mdoc_compile` tool; it must report zero [error] lines
    (fix "Unknown link" / "Reference not found" issues).
-5. Full build gate: `cd website && yarn build`; fix any "Doc id not found" or broken-link errors.
+5. Full build gate: use the `build_website` tool; fix any "Doc id not found" or broken-link errors.
 
 Do not consider integration done until both mdoc and the site build are clean. Report what you changed.

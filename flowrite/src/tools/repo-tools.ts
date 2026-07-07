@@ -2,8 +2,17 @@ import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
+
+/** Pick the package manager a JS project actually uses, from its lockfile. Defaults to npm. */
+function detectPackageManager(dir: string): 'pnpm' | 'yarn' | 'npm' {
+  if (existsSync(path.join(dir, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (existsSync(path.join(dir, 'yarn.lock'))) return 'yarn';
+  return 'npm';
+}
 
 /**
  * Run one sbt command inside `repoPath`. A single command string is passed as a
@@ -76,6 +85,37 @@ export function createRunExampleTool(repoPath: string) {
     async run({ input, signal }) {
       const res = await runSbt(`${input.module}/runMain ${input.mainClass}`, repoPath, signal);
       return { ok: res.ok, output: res.output };
+    },
+  });
+}
+
+/**
+ * Run the Docusaurus site's production build (in `website/`) to catch broken links
+ * and doc-id errors. Detects pnpm/yarn/npm from the lockfile present in `website/`
+ * rather than assuming one — the tinyoptics fixture itself uses pnpm, not yarn.
+ */
+export function createBuildWebsiteTool(repoPath: string) {
+  return defineTool({
+    name: 'build_website',
+    description:
+      "Run the Docusaurus site's production build (website/) to catch broken links and doc-id errors. Detects pnpm/yarn/npm from the lockfile.",
+    input: v.object({}),
+    output: v.object({ ok: v.boolean(), output: v.string() }),
+    async run({ signal }) {
+      const dir = path.join(repoPath, 'website');
+      const pm = detectPackageManager(dir);
+      const args = pm === 'npm' ? ['run', 'build'] : ['build'];
+      try {
+        const { stdout, stderr } = await execFileAsync(pm, args, {
+          cwd: dir,
+          signal,
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        return { ok: true, output: `${stdout}\n${stderr}` };
+      } catch (err) {
+        const e = err as { stdout?: string; stderr?: string; message?: string };
+        return { ok: false, output: [e.stdout, e.stderr, e.message].filter(Boolean).join('\n') };
+      }
     },
   });
 }

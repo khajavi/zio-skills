@@ -1,10 +1,11 @@
 import { defineAgentProfile } from '@flue/runtime';
 import { TIERS } from '../shared/models.ts';
-import { createMdocCompileTool } from '../tools/repo-tools.ts';
+import { createMdocCompileTool, createBuildWebsiteTool } from '../tools/repo-tools.ts';
 import instructions from './docs-integrator.md' with { type: 'markdown' };
 
 // REPO_PATH is required before `flue run` starts (see tutorial-writer.ts's own cwd check).
 const mdocCompile = createMdocCompileTool(process.env.REPO_PATH!);
+const buildWebsite = createBuildWebsiteTool(process.env.REPO_PATH!);
 
 /**
  * Docs-site integration specialist. Wires a finished tutorial into the
@@ -16,6 +17,6 @@ export const docsIntegrator = defineAgentProfile({
   ...TIERS.integrator,
   description:
     'Integrates a finished tutorial into the Docusaurus site: sidebars.js, index.md, cross-references, and build verification. Use after mdoc passes.',
-  tools: [mdocCompile],
+  tools: [mdocCompile, buildWebsite],
   instructions,
 });
