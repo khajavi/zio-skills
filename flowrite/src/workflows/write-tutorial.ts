@@ -34,7 +34,7 @@ export default defineWorkflow({
       const { data } = await session.prompt(
         `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
           `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
+          `Run the flow (research → design → write → examples → mdoc verify → integrate). ` + // TEMP: review phase disabled
           `Report the final tutorial file path and a one-line summary.`,
         {
           result: v.object({ path: v.string(), summary: v.string() }),
@@ -49,7 +49,7 @@ export default defineWorkflow({
           `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
         t,
       );
-      log.info('write-tutorial component usage', { components: components.stop() });
+      log.info(`write-tutorial component usage: ${JSON.stringify(components.stop())}`);
     }
   },
 });
