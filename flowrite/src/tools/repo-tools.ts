@@ -38,23 +38,38 @@ const errorLines = (output: string): string[] =>
   output.split('\n').filter((line) => line.includes('[error]'));
 
 /**
- * Compile ONE documentation markdown file through mdoc. Always scoped with --in so it
- * never recompiles all docs (~90s). Returns any [error] lines.
+ * Compile one or more documentation markdown files through mdoc. Always scoped
+ * with --in (one pair per file) so it never recompiles all docs (~90s).
+ * Returns any [error] lines.
  */
 export function createMdocCompileTool(repoPath: string) {
   return defineTool({
     name: 'mdoc_compile',
     description:
-      'Compile ONE documentation markdown file through mdoc. Always scoped with --in so it never recompiles all docs (~90s). Returns any [error] lines.',
+      'Compile one or more documentation markdown files through mdoc, each scoped with --in/--out ' +
+      'so it never recompiles all docs (~90s). Returns any [error] lines.',
     input: v.object({
-      file: v.pipe(
-        v.string(),
-        v.description('Path under the repo, e.g. docs/guides/scope.md'),
+      files: v.pipe(
+        v.array(
+          v.object({
+            in: v.pipe(v.string(), v.description('Source path under docs/, e.g. docs/guides/scope.md')),
+            out: v.optional(
+              v.pipe(
+                v.string(),
+                v.description('Output path, e.g. website/docs/guides/scope.md. Omit to use the project mdocOut default.'),
+              ),
+            ),
+          }),
+        ),
+        v.minLength(1),
       ),
     }),
     output: v.object({ ok: v.boolean(), errors: v.array(v.string()) }),
     async run({ input, signal }) {
-      const res = await runSbt(`docs/mdoc --in ${input.file}`, repoPath, signal);
+      const args = input.files
+        .map((f) => (f.out ? `--in ${f.in} --out ${f.out}` : `--in ${f.in}`))
+        .join(' ');
+      const res = await runSbt(`docs/mdoc ${args}`, repoPath, signal);
       const errors = errorLines(res.output);
       return { ok: res.ok && errors.length === 0, errors };
     },
