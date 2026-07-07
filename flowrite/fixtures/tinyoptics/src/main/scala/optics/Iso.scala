@@ -1,9 +1,8 @@
 package optics
 
 /**
- * An `Iso` (isomorphism) is a lossless, reversible conversion between two types
- * `S` and `A`. It witnesses that `S` and `A` carry exactly the same information,
- * just in different shapes — every `S` maps to an `A` and back with no loss.
+ * An `Iso` (isomorphism) is a lossless, reversible conversion between two types `S` and `A`. It witnesses that `S` and
+ * `A` carry exactly the same information, just in different shapes — every `S` maps to an `A` and back with no loss.
  *
  * A lawful `Iso` satisfies `from(to(s)) == s` and `to(from(a)) == a`.
  *
@@ -16,8 +15,10 @@ package optics
  * metersIso.from(3.0)         // Meters(3.0)
  * }}}
  *
- * @param to   convert an `S` into its equivalent `A`
- * @param from rebuild the `S` from an `A`
+ * @param to
+ *   convert an `S` into its equivalent `A`
+ * @param from
+ *   rebuild the `S` from an `A`
  */
 final case class Iso[S, A](to: S => A, from: A => S) {
 
@@ -28,8 +29,7 @@ final case class Iso[S, A](to: S => A, from: A => S) {
   def modify(f: A => A): S => S = s => from(f(to(s)))
 
   /** Compose with another `Iso` to look one level deeper. */
-  def andThen[B](that: Iso[A, B]): Iso[S, B] =
-    Iso(s => that.to(to(s)), b => from(that.from(b)))
+  def andThen[B](that: Iso[A, B]): Iso[S, B] = Iso(s => that.to(to(s)), b => from(that.from(b)))
 
   /** View this `Iso` as a `Lens`; `set` simply replaces the focus. */
   def asLens: Lens[S, A] = Lens(to, a => _ => from(a))
