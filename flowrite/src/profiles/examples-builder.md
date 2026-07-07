@@ -9,7 +9,9 @@ Procedure:
    a 1-2 sentence description, and its `sbt "<module>/runMain <pkg>.<Object>"` command.
    Scala 2.13: `object <Name> extends App`. Print meaningful output.
 4. Compile with the `compile_examples` tool and fix every failure.
-5. Format: `git add` the new files, then `sbt fmtChanged`; verify with `sbt check` (zero violations).
+5. Lint the project with whatever proper linting tools it actually uses (usually scalafmt and
+   scalafix) — check its build.sbt and CI workflow for the exact commands/aliases, then run them
+   and fix everything they report until clean.
 
 Report the module name, package name, and every example object created so the author can write the
 "Running the Examples" section.
