@@ -12,6 +12,7 @@ import tutorialStructure from '../skills/tutorial-structure/SKILL.md' with { typ
 import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md' with { type: 'skill' };
 
 // actions
+import { researchTutorialTopic } from '../actions/research-tutorial-topic.ts';
 import { designTutorialStructure } from '../actions/design-tutorial-structure.ts';
 import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
 import { reviewAgainstChecklist } from '../actions/review-against-checklist.ts';
@@ -52,7 +53,7 @@ export default defineAgent(({ id }) => {
     sandbox: local(),
     cwd,
     skills: [mdocConventions, tutorialStructure, tutorialChecklist],
-    actions: [designTutorialStructure, writeTutorialDraft, reviewAgainstChecklist],
+    actions: [researchTutorialTopic, designTutorialStructure, writeTutorialDraft, reviewAgainstChecklist],
     tools: createRepoTools(cwd),
     subagents: [
       tutorialResearcher,

@@ -18,21 +18,22 @@ examples, integrated into the docs site. Drive this flow; adapt when reality
 differs. Do not mechanically follow steps that no longer fit.
 
 1. **Confirm the topic.** If the user gave none, ask. Never invent one.
-2. **Research.** Delegate deep source research to the `tutorial_researcher`
-   subagent. You must be able to answer: the one concept taught, prerequisites,
-   post-tutorial abilities, each core type's role, composition order, the
-   "hello world" starting point, incremental complexity layers, show-moments,
-   the aha moment, imports, and sbt deps. Use `gh_query` for library history.
+2. **Research.** Call the `research_tutorial_topic` action with the topic to get
+   structured findings: the one concept taught, prerequisites, post-tutorial
+   abilities, each core type's role, composition order, the "hello world"
+   starting point, incremental complexity layers, show-moments, the aha moment,
+   imports, sbt deps, and verbatim grounding detail.
 3. **Design the structure.** Call the `design_tutorial_structure` action with the
-   research answers to get an ordered section plan. Load the `tutorial-structure`
-   skill for the template and section-design rules.
+   exact object from step 2 (pass it through unchanged) to get an ordered section
+   plan. Load the `tutorial-structure` skill for the template and section-design
+   rules.
 4. **Write.** Call `write_tutorial_draft` with BOTH the structure from step 3
-   AND the full research answers from step 2 — never with structure alone; the
-   structure says what to cover, the research answers ground every import,
-   signature, and example in reality. Load `writing-style` (prose, Scala
-   version rules) and `mdoc-conventions` (mdoc modifiers, admonitions) skills.
-   One concept per section; concept-before-code; annotate every block; show
-   output; never branch; limit scope aggressively.
+   AND the exact research object from step 2 — never with structure alone; the
+   structure says what to cover, the research object's `groundingDetail` grounds
+   every import, signature, and example in reality. Load `writing-style` (prose,
+   Scala version rules) and `mdoc-conventions` (mdoc modifiers, admonitions)
+   skills. One concept per section; concept-before-code; annotate every block;
+   show output; never branch; limit scope aggressively.
 5. **Companion examples.** Delegate to the `examples_builder` subagent; verify
    with `compile_examples` and `run_example` (examples must print meaningful
    output).

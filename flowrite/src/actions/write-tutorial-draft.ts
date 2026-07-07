@@ -1,6 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
+import { researchSchema } from './research-tutorial-topic.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -14,14 +15,7 @@ export const writeTutorialDraft = defineAction({
     id: v.pipe(v.string(), v.description('kebab-case tutorial id; matches the filename')),
     topic: v.string(),
     structure: structureSchema,
-    researchAnswers: v.pipe(
-      v.string(),
-      v.description(
-        'The full, unmodified research answers from tutorial_researcher. Ground every ' +
-          'import, type signature, method name, and code example in this — never use ' +
-          'general Scala/ZIO/library knowledge for a fact that could instead come from here.',
-      ),
-    ),
+    researchAnswers: researchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, input, log }) {
@@ -69,8 +63,9 @@ export const writeTutorialDraft = defineAction({
         `Topic: ${input.topic}`,
         ``,
         `Research answers (ground every fact in this — imports, signatures, real`,
-        `examples; never substitute general knowledge):`,
-        input.researchAnswers,
+        `examples; never substitute general knowledge; groundingDetail carries the`,
+        `verbatim code/signatures to copy exactly):`,
+        JSON.stringify(input.researchAnswers),
         ``,
         `Structure to follow exactly:`,
         JSON.stringify(input.structure),

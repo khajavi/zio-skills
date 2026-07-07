@@ -1,5 +1,6 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
+import { researchSchema } from './research-tutorial-topic.ts';
 
 export const structureSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),
@@ -27,10 +28,7 @@ export const designTutorialStructure = defineAction({
   description: 'Turn deep-research answers into a validated, linear tutorial section plan.',
   input: v.object({
     topic: v.string(),
-    researchAnswers: v.pipe(
-      v.string(),
-      v.description('The researcher subagent answers to the tutorial research questions'),
-    ),
+    researchAnswers: researchSchema,
   }),
   output: structureSchema,
   async run({ harness, input, log }) {
@@ -46,7 +44,7 @@ export const designTutorialStructure = defineAction({
         `Design a learning-oriented tutorial structure for "${input.topic}".`,
         ``,
         `Research answers:`,
-        input.researchAnswers,
+        JSON.stringify(input.researchAnswers),
       ].join('\n'),
       { agent: 'tutorial_designer', result: structureSchema },
     );
