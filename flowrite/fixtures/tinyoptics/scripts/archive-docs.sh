@@ -5,10 +5,15 @@
 #
 # Captures ALL changes vs committed HEAD (docs, src/main/scala/examples/*,
 # build.sbt, project/plugins.sbt, sidebars.js, EXAMPLES_SUMMARY.md, ...) as one
-# patch under ../tinyoptics-archive/write-tutorial-turn<N>/, copies all
-# generated/changed files as readable files under files/, then restores the
-# working tree. Ignored paths (website/ node_modules & .docusaurus, .remember/)
-# are left untouched.
+# patch under ../tinyoptics-archive/write-tutorial-turn<N>/changes.patch, AND
+# writes two full, standalone, runnable project copies alongside it:
+#   tinyoptics-base/  — committed HEAD, unmodified (what the run started from)
+#   tinyoptics-final/ — HEAD + this run's changes merged (what the run produced)
+# Both are complete trees (tracked + untracked, .gitignore-respecting) — cd
+# into either and run sbt directly. A diff-only copy would be missing
+# unchanged baseline files like project/plugins.sbt and can't build.
+# Then restores the working tree. Ignored paths (website/ node_modules &
+# .docusaurus, .remember/) are left untouched.
 #
 # Usage: bash scripts/archive-docs.sh [flue-run-log-file]
 #   If a log file path is given (and exists), it's copied into the archived
@@ -53,31 +58,42 @@ if [ ! -s "$dest/changes.patch" ]; then
   exit 0
 fi
 
-# 2. Copy every generated/changed file (untracked + modified) as readable files
-#    under files/, mirroring the fixture tree. .gitignore keeps node_modules,
-#    .docusaurus and .remember/ out of both lists.
-file_count=0
-list="$(mktemp)"
-{
-  git ls-files --others --exclude-standard -- .   # new untracked files
-  git diff --relative --name-only HEAD -- .        # modified tracked files
-} | sort -u > "$list"
-while IFS= read -r f; do
-  [ -z "$f" ] && continue
-  [ -f "$f" ] || continue
-  mkdir -p "$dest/files/$(dirname "$f")"
-  cp "$f" "$dest/files/$f"
-  file_count=$((file_count + 1))
-done < "$list"
-rm -f "$list"
+# Copy every file in the current working tree (tracked + untracked,
+# .gitignore-respecting) into $2, mirroring the fixture tree.
+copy_tree() {
+  local into="$1"
+  local count=0
+  local list
+  list="$(mktemp)"
+  {
+    git ls-files -- .                              # tracked files
+    git ls-files --others --exclude-standard -- .  # untracked files
+  } | sort -u > "$list"
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    [ -f "$f" ] || continue
+    mkdir -p "$into/$(dirname "$f")"
+    cp "$f" "$into/$f"
+    count=$((count + 1))
+  done < "$list"
+  rm -f "$list"
+  echo "$count"
+}
 
-# 3. Reset the fixture to committed baseline (stash-like).
+# 2. Copy the final tree (baseline + this run's changes still merged in) before
+#    resetting anything.
+final_count="$(copy_tree "$dest/tinyoptics-final")"
+
+# 3. Reset the fixture to committed baseline (stash-like), then copy that
+#    clean baseline tree too, for side-by-side comparison and a from-scratch
+#    runnable project.
 git reset -q -- .
 git checkout -- .
 git clean -fdq -- .
+base_count="$(copy_tree "$dest/tinyoptics-base")"
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
 log_note=""
 [ -e "$dest/flue.log" ] && log_note=", log saved to $dest/flue.log"
-echo "archived turn $n: $changed file(s) changed, $file_count copied to $dest/files/$log_note"
-echo "fixture reset to HEAD. replay with: git apply $dest/changes.patch"
+echo "archived turn $n: $changed file(s) changed. $base_count file(s) in $dest/tinyoptics-base/, $final_count file(s) in $dest/tinyoptics-final/$log_note"
+echo "fixture reset to HEAD. Both copies are standalone runnable projects (cd in, run sbt). Or replay the diff onto this fixture: git apply $dest/changes.patch"
