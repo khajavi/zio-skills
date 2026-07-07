@@ -34,7 +34,7 @@ export default defineWorkflow({
       const { data } = await session.prompt(
         `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
           `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the flow (research → design → write → examples → mdoc verify → integrate → review). ` +
+          `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
           `Report the final tutorial file path and a one-line summary.`,
         {
           result: v.object({ path: v.string(), summary: v.string() }),

@@ -27,7 +27,7 @@ Verify every item. The tutorial is not done until all pass.
 
 - All method signatures and type names match the actual source code.
 - No deprecated methods or outdated patterns.
-- `sbt "docs/mdoc --in docs/guides/<id>.md"` reports zero `[error]` lines (mandatory before done).
+- `mdoc_compile` with `in: docs/guides/<id>.md`, `out: website/docs/guides/<id>.md` reports zero `[error]` lines (mandatory before done).
 
 ## Review Cadence
 
