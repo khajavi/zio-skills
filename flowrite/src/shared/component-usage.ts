@@ -48,6 +48,10 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
  */
 export function trackComponentUsage(): ComponentUsageTracker {
   const components = new Map<string, ComponentUsage>();
+  // A delegated task's turns carry the generated `taskId` correlation field, not
+  // the subagent's own name, in `event.session` — map taskId back to the
+  // subagent name recorded at task_start so turn tokens land on the right entry.
+  const subagentByTaskId = new Map<string, string>();
 
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start') {
@@ -56,21 +60,26 @@ export function trackComponentUsage(): ComponentUsageTracker {
         : event.toolName === 'activate_skill'
           ? 'skill'
           : 'tool';
-      const name = category === 'skill' ? String((event.args as any)?.skill ?? event.args ?? 'unknown') : event.toolName;
+      const name = category === 'skill' ? String((event.args as any)?.name ?? 'unknown') : event.toolName;
       entryFor(components, category, name).calls += 1;
       return;
     }
 
     if (event.type === 'task_start') {
-      if (event.agent) entryFor(components, 'subagent', event.agent).calls += 1;
+      if (event.agent) {
+        entryFor(components, 'subagent', event.agent).calls += 1;
+        if (event.taskId) subagentByTaskId.set(event.taskId, event.agent);
+      }
       return;
     }
 
     if (event.type === 'turn') {
       const u = event.response.usage;
-      if (!u || !event.session) return;
-      const category: ComponentCategory = components.has(`subagent:${event.session}`) ? 'subagent' : 'agent';
-      const entry = entryFor(components, category, event.session);
+      if (!u) return;
+      const name = (event.taskId && subagentByTaskId.get(event.taskId)) || event.session;
+      if (!name) return;
+      const category: ComponentCategory = subagentByTaskId.has(event.taskId ?? '') ? 'subagent' : 'agent';
+      const entry = entryFor(components, category, name);
       entry.tokens += u.totalTokens;
       entry.cost += u.cost.total;
     }
