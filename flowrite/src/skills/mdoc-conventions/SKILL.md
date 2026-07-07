@@ -81,11 +81,9 @@ A common mistake to watch out for.
 
 ## Verifying
 
-Always compile a single file scoped with `--in`, never the whole docs set:
-
-```bash
-sbt mdoc --in docs/reference/<file1>.md --out website/docs/reference/<file1>.md \
-  --in docs/reference/<file2>.md --out website/docs/reference/<file2>.md (multiple input/output pairs)
-```
+Always compile scoped to the files you touched, never the whole docs set. Use the
+`mdoc_compile` tool, which takes one `--in`/`--out` pair per file (`out` is
+usually the same path prefixed with `website/`, e.g. `docs/reference/x.md` →
+`website/docs/reference/x.md`.
 
 If mdoc produces more than ~3 errors, the blocks are likely not isolated — check for a missing `:reset`/`:nest` or a name collision. Strip modifiers from the reported lines, confirm the errors clear, then re-apply one at a time, re-running after each change.
