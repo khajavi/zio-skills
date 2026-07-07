@@ -14,9 +14,14 @@ const reviewSchema = v.object({
 
 // The tutorial-checklist skill's Review Cadence rule ("call this at most 2
 // times") is prose the model can ignore. Enforce it here instead. `harness` is
-// invocation-scoped (fresh per run), so a WeakMap keyed on it counts calls
-// per run with no explicit run id and no manual cleanup.
-const reviewCallCounts = new WeakMap<object, number>();
+// fresh per action *invocation* (verified: a WeakMap keyed on it never
+// accumulated — every call read back as "1"), not per workflow run, and
+// ActionContext exposes no run/instance id to key on. This module-level
+// counter works because this repo's actual usage is one process per tutorial
+// (run-tutorial.sh execs a fresh node process each time) — it would need a
+// real per-run key if this action ever runs inside a long-lived dev server
+// handling concurrent tutorial-writer runs.
+let reviewCallCount = 0;
 const MAX_REVIEW_CALLS = 2;
 
 /**
@@ -33,8 +38,7 @@ export const reviewAgainstChecklist = defineAction({
   }),
   output: reviewSchema,
   async run({ harness, input, log }) {
-    const calls = (reviewCallCounts.get(harness) ?? 0) + 1;
-    reviewCallCounts.set(harness, calls);
+    const calls = ++reviewCallCount;
 
     if (calls > MAX_REVIEW_CALLS) {
       log.info(`review_against_checklist call ${calls} exceeds cap of ${MAX_REVIEW_CALLS} — refusing, forcing finish`);
