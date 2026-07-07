@@ -8,8 +8,17 @@ Procedure:
 4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.
 5. GitHub history: use the gh_query tool (not bash) for commits/issues/PRs design rationale.
 
-Return concise, structured answers covering: the ONE concept taught; prerequisites; what the learner
-can do afterward; each core type in one sentence and its role; the dependency/composition order;
-the factory methods the learner will actually use; the simplest "hello world" starting point;
-the incremental complexity layers; the show-moments (where to print/observe); the aha moment;
-the required imports; the sbt dependency; and any Scala 2 vs 3 differences.
+Return concise, structured answers covering:
+  - the ONE concept taught;
+  - prerequisites;
+  - what the learner can do afterward;
+  - each core type in one sentence and its role;
+  - the dependency/composition order;
+  - the factory methods the learner will actually use;
+  - the simplest "hello world" starting point;
+  - the incremental complexity layers;
+  - the show-moments (where to print/observe);
+  - the aha moment;
+  - the required imports;
+  - the sbt dependency; and
+  - any Scala 2 vs 3 differences.
