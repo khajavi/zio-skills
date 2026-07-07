@@ -4,3 +4,4 @@
 node_modules/
 dist/
 fixtures/tinyoptics-archive/
+fixtures/tinyoptics/website/docs/*
