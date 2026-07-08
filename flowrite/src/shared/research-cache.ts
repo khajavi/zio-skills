@@ -1,32 +1,20 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const execFileAsync = promisify(execFile);
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'research');
 
-/**
- * HEAD of whatever git repo contains repoPath, own or enclosing. Safe even
- * when nested — the cache key includes repoPath, so no cross-checkout
- * collision — just coarser. Null only if repoPath isn't in a git repo.
- */
-export async function commitRevision(repoPath: string): Promise<string | null> {
-  try {
-    const { stdout: head } = await execFileAsync('git', ['-C', repoPath, 'rev-parse', 'HEAD']);
-    return head.trim();
-  } catch {
-    return null;
-  }
+// Keyed only on checkout path + topic — deliberately NOT on the commit
+// revision. Same topic against the same checkout always reuses the cached
+// research, across commits and source edits. It never auto-invalidates:
+// `rm -rf .cache/research` to force a fresh re-research after the library's
+// sources meaningfully change.
+function cacheKey(repoPath: string, topic: string): string {
+  return createHash('sha256').update(`${repoPath}::${topic}`).digest('hex');
 }
 
-function cacheKey(repoPath: string, topic: string, revision: string): string {
-  return createHash('sha256').update(`${repoPath}::${topic}::${revision}`).digest('hex');
-}
-
-export function readResearchCache(repoPath: string, topic: string, revision: string): unknown | null {
-  const file = path.join(CACHE_DIR, `${cacheKey(repoPath, topic, revision)}.json`);
+export function readResearchCache(repoPath: string, topic: string): unknown | null {
+  const file = path.join(CACHE_DIR, `${cacheKey(repoPath, topic)}.json`);
   if (!existsSync(file)) return null;
   try {
     return JSON.parse(readFileSync(file, 'utf8'));
@@ -35,8 +23,8 @@ export function readResearchCache(repoPath: string, topic: string, revision: str
   }
 }
 
-export function writeResearchCache(repoPath: string, topic: string, revision: string, data: unknown): void {
+export function writeResearchCache(repoPath: string, topic: string, data: unknown): void {
   mkdirSync(CACHE_DIR, { recursive: true });
-  const file = path.join(CACHE_DIR, `${cacheKey(repoPath, topic, revision)}.json`);
+  const file = path.join(CACHE_DIR, `${cacheKey(repoPath, topic)}.json`);
   writeFileSync(file, JSON.stringify(data));
 }
