@@ -42,8 +42,9 @@ export const writeTutorialDraft = defineAction({
         v.minLength(3),
         v.maxLength(7),
         v.description(
-          '3-7 search keywords/phrases for the frontmatter, returned as a real array ' +
-            '(not embedded in content) so the count is schema-enforced.',
+          'Search keywords/phrases for the frontmatter of the document. Each item is a compound ' +
+            'phrase (1-2 words) grounded in this tutorial\'s actual terminology and its primary concepts — ' +
+            'e.g. "Error Handling", "Fiber Composition", "Software Transactional Memory", "Functional Optics"',
         ),
       ),
     });
