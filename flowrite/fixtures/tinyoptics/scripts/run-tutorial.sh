@@ -31,15 +31,19 @@ cleanup() {
   echo ""
   echo "interrupted — killing run and archiving whatever it produced..."
   kill "$tail_pid" 2>/dev/null
-  if kill -0 "$flue_pid" 2>/dev/null; then
-    kill -TERM "$flue_pid" 2>/dev/null
-    sleep 1
-    kill -0 "$flue_pid" 2>/dev/null && kill -KILL "$flue_pid" 2>/dev/null
-  fi
+  # No sleep/grace-period check here: an outer supervisor (e.g. a harness
+  # cancelling this as a background job) may escalate to a hard kill on its
+  # own short timeout, and archiving must complete before that hits — every
+  # second spent waiting for flue to exit is a second archive-docs.sh doesn't
+  # get. Fire TERM and KILL back-to-back (harmless on an already-dead pid) and
+  # archive immediately; a mid-write file is still far better than losing the
+  # whole run to an unfinished trap.
+  kill -TERM "$flue_pid" 2>/dev/null
+  kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children, not this script's — a killed
   # flue process does not reliably take them down with it (seen in practice).
-  pkill -f "flue.mjs run write-tutorial" 2>/dev/null
-  pkill -f "sbt-launch" 2>/dev/null
+  pkill -9 -f "flue.mjs run write-tutorial" 2>/dev/null
+  pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log"
   rm -f "$log"
   exit 130
