@@ -43,6 +43,11 @@ differs. Do not mechanically follow steps that no longer fit.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_against_checklist`. Load the `tutorial-checklist`
    skill and follow its Review Cadence rules.
+9. **Retrospective.** In your final result, alongside the path and summary,
+   report the real obstacles you hit this run (per phase), how you resolved
+   each, and — where you can name one — a concrete instruction/tool/schema
+   change that would prevent it next time. Report only friction you actually
+   encountered; leave it empty if the run went smoothly. Never invent obstacles.
 
 ## Guardrails
 - Never invent a topic — ask.

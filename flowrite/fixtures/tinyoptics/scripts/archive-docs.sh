@@ -19,10 +19,11 @@
 #   If a log file path is given (and exists), it's copied into the archived
 #   turn as flue.log — even on a failed/partial run with no file changes.
 #   Also parses that log's "write-tutorial token consumption" and "write-
-#   tutorial component usage" lines into token-usage.json — flue's CLI
-#   printer only ever renders the log message text, never the structured
-#   second argument passed to log.info, so this is a regex extraction of the
-#   human-readable line, not a re-read of the original object.
+#   tutorial component usage" lines into token-usage.json, and its "write-
+#   tutorial run insights" line into insights.json — flue's CLI printer only
+#   ever renders the log message text, never the structured second argument
+#   passed to log.info, so this is a regex extraction of the human-readable
+#   line, not a re-read of the original object.
 set -euo pipefail
 
 log_file="${1:-}"
@@ -71,6 +72,14 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
       '{totalTokens: $totalTokens, input: $input, output: $output, cacheRead: $cacheRead, cacheWrite: $cacheWrite, turns: $turns, cost: $cost, components: $components}' \
       > "$dest/token-usage.json"
   fi
+
+  # The agent's self-authored run retrospective (obstacles + fixes) — mine
+  # these across turns to spot recurring friction worth an instruction change.
+  insights_line="$(grep 'write-tutorial run insights:' "$dest/flue.log" | tail -1 || true)"
+  insights="${insights_line#*run insights: }"
+  if [ -n "$insights" ] && jq -e . >/dev/null 2>&1 <<<"$insights"; then
+    jq . <<<"$insights" > "$dest/insights.json"
+  fi
 fi
 
 # 1. Whole-fixture patch vs HEAD. `add -N` makes untracked files show in the diff;
@@ -83,7 +92,8 @@ if [ ! -s "$dest/changes.patch" ]; then
   rm -f "$dest/changes.patch"
   if [ -e "$dest/flue.log" ]; then
     usage_note=""
-    [ -e "$dest/token-usage.json" ] && usage_note=", usage saved to $dest/token-usage.json"
+    [ -e "$dest/token-usage.json" ] && usage_note="$usage_note, usage saved to $dest/token-usage.json"
+    [ -e "$dest/insights.json" ] && usage_note="$usage_note, insights saved to $dest/insights.json"
     echo "no file changes; log saved to $dest/flue.log$usage_note"
   else
     rm -rf "$dest"
@@ -130,5 +140,6 @@ changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
 log_note=""
 [ -e "$dest/flue.log" ] && log_note=", log saved to $dest/flue.log"
 [ -e "$dest/token-usage.json" ] && log_note="$log_note, usage saved to $dest/token-usage.json"
+[ -e "$dest/insights.json" ] && log_note="$log_note, insights saved to $dest/insights.json"
 echo "archived turn $n: $changed file(s) changed. $base_count file(s) in $dest/tinyoptics-base/, $final_count file(s) in $dest/tinyoptics-final/$log_note"
 echo "fixture reset to HEAD. Both copies are standalone runnable projects (cd in, run sbt). Or replay the diff onto this fixture: git apply $dest/changes.patch"
