@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
     name := "tinyoptics",
     scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Wunused"),
   )
+  .aggregate(examples)
 
 lazy val docs = (project in file("docs"))
   .enablePlugins(MdocPlugin)
@@ -19,3 +20,5 @@ lazy val docs = (project in file("docs"))
     mdocOut := file("website/docs"),
   )
   .dependsOn(root)
+
+lazy val examples = RootProject(file("tinyoptics-examples"))
