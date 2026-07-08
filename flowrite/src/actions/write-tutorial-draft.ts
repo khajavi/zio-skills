@@ -44,7 +44,9 @@ export const writeTutorialDraft = defineAction({
         v.description(
           'Search keywords/phrases for the frontmatter of the document. Each item is a compound ' +
             'phrase (1-2 words) grounded in this tutorial\'s actual terminology and its primary concepts — ' +
-            'e.g. "Error Handling", "Fiber Composition", "Software Transactional Memory", "Functional Optics"',
+            'e.g. "Error Handling", "Fiber Composition", "Software Transactional Memory", "Functional Optics". ' +
+            'Never a single generic word on its own (e.g. "Composition", "Lens") — always pair it with a ' +
+            'qualifier specific to this tutorial.',
         ),
       ),
       body: v.pipe(
