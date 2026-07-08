@@ -20,10 +20,10 @@ function detectPackageManager(dir: string): 'pnpm' | 'yarn' | 'npm' {
  * The local() sandbox is the host, so running sbt from the tool (app code) and
  * from the agent's shell target the same filesystem.
  */
-async function runSbt(command: string, repoPath: string, signal?: AbortSignal) {
+async function runSbt(command: string, cwd: string, signal?: AbortSignal) {
   try {
     const { stdout, stderr } = await execFileAsync('sbt', [command], {
-      cwd: repoPath,
+      cwd,
       signal,
       maxBuffer: 64 * 1024 * 1024,
     });
@@ -76,29 +76,40 @@ export function createMdocCompileTool(repoPath: string) {
   });
 }
 
-/** Compile a companion-examples sbt module, e.g. schema-examples. */
+/**
+ * Compile one tutorial's example subproject. Each subproject is an INDEPENDENT
+ * sbt build (a `RootProject(file(...))` leaf), so it is not addressable by id
+ * from the repo-root shell — sbt must run inside the leaf build dir itself.
+ * `examplesDir` is that dir, relative to the repo root, e.g.
+ * `tinyoptics-examples/lens`.
+ */
 export function createCompileExamplesTool(repoPath: string) {
   return defineTool({
     name: 'compile_examples',
-    description: 'Compile a companion-examples sbt module, e.g. schema-examples.',
-    input: v.object({ module: v.string() }),
+    description:
+      "Compile one tutorial's example subproject. examplesDir = the leaf build dir relative to the repo root, e.g. tinyoptics-examples/lens (runs `sbt compile` inside it).",
+    input: v.object({ examplesDir: v.string() }),
     output: v.object({ ok: v.boolean(), errors: v.array(v.string()) }),
     async run({ input, signal }) {
-      const res = await runSbt(`${input.module}/compile`, repoPath, signal);
+      const res = await runSbt('compile', path.join(repoPath, input.examplesDir), signal);
       return { ok: res.ok, errors: errorLines(res.output) };
     },
   });
 }
 
-/** Run one example main class to capture its printed output for the tutorial. */
+/**
+ * Run one example main class to capture its printed output. Runs inside the
+ * tutorial's independent example build dir (see compile_examples).
+ */
 export function createRunExampleTool(repoPath: string) {
   return defineTool({
     name: 'run_example',
-    description: 'Run one example main class to capture its printed output for the tutorial.',
-    input: v.object({ module: v.string(), mainClass: v.string() }),
+    description:
+      "Run one example main class to capture its printed output. examplesDir = the leaf build dir relative to the repo root (e.g. tinyoptics-examples/lens); mainClass = fully-qualified object, e.g. opticsexamples.BasicLensExample.",
+    input: v.object({ examplesDir: v.string(), mainClass: v.string() }),
     output: v.object({ ok: v.boolean(), output: v.string() }),
     async run({ input, signal }) {
-      const res = await runSbt(`${input.module}/runMain ${input.mainClass}`, repoPath, signal);
+      const res = await runSbt(`runMain ${input.mainClass}`, path.join(repoPath, input.examplesDir), signal);
       return { ok: res.ok, output: res.output };
     },
   });
