@@ -5,18 +5,26 @@
 # and reset the fixture back to baseline. One command for local testing;
 # archives even on a failed or interrupted run so the log is never lost.
 #
-# Usage: bash scripts/run-tutorial.sh "<topic>"
+# Usage: bash scripts/run-tutorial.sh "<topic>" [skip-phase1,skip-phase2,...]
+#   Skip phases: write-examples, integrate, review — e.g.
+#   bash scripts/run-tutorial.sh "Lens" write-examples,integrate,review
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
 fixture_root="$(pwd)"
 flowrite_root="$(cd ../.. && pwd)"
 
-topic="${1:?usage: run-tutorial.sh <topic>}"
+topic="${1:?usage: run-tutorial.sh <topic> [skip-phase1,skip-phase2,...]}"
+skip_phases="${2:-}"
 log="$(mktemp)"
 echo "flue log: $log"
 
-input=$(printf '{"projectPath":"%s","topic":"%s"}' "$fixture_root" "$topic")
+skip_phases_json="[]"
+if [ -n "$skip_phases" ]; then
+  skip_phases_json="$(printf '%s' "$skip_phases" | tr ',' '\n' | jq -R . | jq -s .)"
+fi
+input="$(jq -n --arg projectPath "$fixture_root" --arg topic "$topic" --argjson skipPhases "$skip_phases_json" \
+  '{projectPath: $projectPath, topic: $topic, skipPhases: $skipPhases}')"
 
 # `exec` replaces this subshell with flue itself, so $! below is flue's real
 # PID (not a wrapper) — kill "$flue_pid" hits the actual node process.
