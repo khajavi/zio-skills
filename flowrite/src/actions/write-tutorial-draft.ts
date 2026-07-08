@@ -30,12 +30,12 @@ export const writeTutorialDraft = defineAction({
     // doesn't carry the "narrate, then fence the deliverable" habit that
     // corrupted the written file with a stray preamble/code fence.
     const contentSchema = v.object({
-      content: v.pipe(
+      title: v.pipe(v.string(), v.description('A warm, specific tutorial title')),
+      description: v.pipe(
         v.string(),
-        v.description(
-          'The complete raw markdown file — starts with the frontmatter --- on the ' +
-            'very first line. No prose before it, no surrounding code fence.',
-        ),
+        v.minLength(50),
+        v.maxLength(150),
+        v.description('50-150 characters describing the page purpose'),
       ),
       keywords: v.pipe(
         v.array(v.string()),
@@ -47,19 +47,17 @@ export const writeTutorialDraft = defineAction({
             'e.g. "Error Handling", "Fiber Composition", "Software Transactional Memory", "Functional Optics"',
         ),
       ),
+      body: v.pipe(
+        v.string(),
+        v.description(
+          'The tutorial body only — no frontmatter, no leading ---. Starts directly with the ' +
+            'first heading/prose. No preamble, no surrounding code fence.',
+        ),
+      ),
     });
     const { data } = await session.task(
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
-        ``,
-        `Frontmatter must be:`,
-        `---`,
-        `id: ${input.id}`,
-        `title: "<a warm, specific tutorial title>"`,
-        `description: "<50-150 characters describing the page purpose>"`,
-        `keywords: ["<3-7 keywords>"]`,
-        `---`,
-        `content must start with the '---' above as its literal first characters.`,
         ``,
         `Topic: ${input.topic}`,
         ``,
@@ -74,8 +72,15 @@ export const writeTutorialDraft = defineAction({
       { agent: 'tutorial_drafter', result: contentSchema },
     );
 
-    const keywordsLine = `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`;
-    const content = data.content.replace(/^keywords:\s*\[.*\]\s*$/m, keywordsLine);
+    const frontmatter = [
+      '---',
+      `id: ${input.id}`,
+      `title: ${JSON.stringify(data.title)}`,
+      `description: ${JSON.stringify(data.description)}`,
+      `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`,
+      '---',
+    ].join('\n');
+    const content = `${frontmatter}\n${data.body}`;
 
     await harness.fs.writeFile(path, content);
     return { path, content };
