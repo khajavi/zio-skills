@@ -18,6 +18,11 @@
 # Usage: bash scripts/archive-docs.sh [flue-run-log-file]
 #   If a log file path is given (and exists), it's copied into the archived
 #   turn as flue.log — even on a failed/partial run with no file changes.
+#   Also parses that log's "write-tutorial token consumption" and "write-
+#   tutorial component usage" lines into token-usage.json — flue's CLI
+#   printer only ever renders the log message text, never the structured
+#   second argument passed to log.info, so this is a regex extraction of the
+#   human-readable line, not a re-read of the original object.
 set -euo pipefail
 
 log_file="${1:-}"
@@ -39,6 +44,33 @@ mkdir -p "$dest"
 
 if [ -n "$log_file" ] && [ -f "$log_file" ]; then
   cp "$log_file" "$dest/flue.log"
+
+  token_line="$(grep 'write-tutorial token consumption:' "$dest/flue.log" | tail -1 || true)"
+  components_line="$(grep 'write-tutorial component usage:' "$dest/flue.log" | tail -1 || true)"
+
+  if [ -n "$token_line" ]; then
+    total="$(grep -oP '(?<=consumption: )[0-9]+' <<<"$token_line" || echo 0)"
+    in_tok="$(grep -oP '(?<=\(in )[0-9]+' <<<"$token_line" || echo 0)"
+    out_tok="$(grep -oP '(?<=out )[0-9]+' <<<"$token_line" || echo 0)"
+    cache_read="$(grep -oP '(?<=cacheRead )[0-9]+' <<<"$token_line" || echo 0)"
+    cache_write="$(grep -oP '(?<=cacheWrite )[0-9]+' <<<"$token_line" || echo 0)"
+    turns="$(grep -oP '(?<=across )[0-9]+(?= turns)' <<<"$token_line" || echo 0)"
+    cost="$(grep -oP '(?<=cost \$)[0-9.]+' <<<"$token_line" || echo 0)"
+    components="${components_line#*component usage: }"
+    [ -z "$components" ] && components='[]'
+
+    jq -n \
+      --argjson totalTokens "$total" \
+      --argjson input "$in_tok" \
+      --argjson output "$out_tok" \
+      --argjson cacheRead "$cache_read" \
+      --argjson cacheWrite "$cache_write" \
+      --argjson turns "$turns" \
+      --argjson cost "$cost" \
+      --argjson components "$components" \
+      '{totalTokens: $totalTokens, input: $input, output: $output, cacheRead: $cacheRead, cacheWrite: $cacheWrite, turns: $turns, cost: $cost, components: $components}' \
+      > "$dest/token-usage.json"
+  fi
 fi
 
 # 1. Whole-fixture patch vs HEAD. `add -N` makes untracked files show in the diff;
@@ -50,7 +82,9 @@ git reset -q -- .
 if [ ! -s "$dest/changes.patch" ]; then
   rm -f "$dest/changes.patch"
   if [ -e "$dest/flue.log" ]; then
-    echo "no file changes; log saved to $dest/flue.log"
+    usage_note=""
+    [ -e "$dest/token-usage.json" ] && usage_note=", usage saved to $dest/token-usage.json"
+    echo "no file changes; log saved to $dest/flue.log$usage_note"
   else
     rm -rf "$dest"
     echo "no changes to archive; fixture already at baseline"
@@ -95,5 +129,6 @@ base_count="$(copy_tree "$dest/tinyoptics-base")"
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
 log_note=""
 [ -e "$dest/flue.log" ] && log_note=", log saved to $dest/flue.log"
+[ -e "$dest/token-usage.json" ] && log_note="$log_note, usage saved to $dest/token-usage.json"
 echo "archived turn $n: $changed file(s) changed. $base_count file(s) in $dest/tinyoptics-base/, $final_count file(s) in $dest/tinyoptics-final/$log_note"
 echo "fixture reset to HEAD. Both copies are standalone runnable projects (cd in, run sbt). Or replay the diff onto this fixture: git apply $dest/changes.patch"
