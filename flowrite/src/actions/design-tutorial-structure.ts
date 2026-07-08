@@ -10,12 +10,21 @@ export const structureSchema = v.object({
       number: v.number(),
       title: v.pipe(v.string(), v.description('Numbered heading, e.g. "1. Creating a Scope"')),
       concept: v.pipe(v.string(), v.description('The single new concept this section teaches')),
-      showMoment: v.nullable(
-        v.pipe(v.string(), v.description('What output/result to show so the learner can verify')),
+      verifiableOutput: v.nullable(
+        v.pipe(
+          v.string(),
+          v.description(
+            'A verifiable output: a point where printed or observed output lets the learner confirm ' +
+              'the code behaved as claimed.',
+          ),
+        ),
       ),
     }),
   ),
-  ahaMoment: v.pipe(v.string(), v.description('The one key realization the learner should reach')),
+  coreInsight: v.pipe(
+    v.string(),
+    v.description('The core insight: the single realization the whole tutorial drives the learner toward.'),
+  ),
 });
 
 /**

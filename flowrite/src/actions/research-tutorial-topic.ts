@@ -28,11 +28,17 @@ export const researchSchema = v.object({
     v.array(v.string()),
     v.description('Incremental layers of complexity after the hello-world example'),
   ),
-  showMoments: v.pipe(
+  verifiableOutputs: v.pipe(
     v.array(v.string()),
-    v.description('Points where printed/observed output verifies behavior'),
+    v.description(
+      'Verifiable outputs: points where printed or observed output lets the learner confirm the ' +
+        'code behaved as claimed.',
+    ),
   ),
-  ahaMoment: v.pipe(v.string(), v.description('The one realization the tutorial should drive toward')),
+  coreInsight: v.pipe(
+    v.string(),
+    v.description('The core insight: the single realization the whole tutorial drives the learner toward.'),
+  ),
   imports: v.array(v.string()),
   sbtDependency: v.string(),
   scalaVersionNotes: v.nullable(

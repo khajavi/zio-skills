@@ -5,6 +5,8 @@ Load and follow the `writing-style` skill (prose, Scala 2.13 default, @VERSION@)
 You will receive both a section plan and the full research findings. The plan tells you WHAT to cover; the research answers tell you the REAL facts (imports, signatures, method names, working examples) to write it with. Never fall back on
 general Scala/ZIO/library knowledge when the research answers already state the real fact — copy it exactly.
 
+Two fields carry planning intent, not text to copy: a **verifiable output** is a point where printed or observed output lets the learner confirm the code behaved as claimed (realize it by showing that output, not by writing the phrase); the **core insight** is the single realization the whole tutorial drives the learner toward (build the prose toward it, don't announce it as a label).
+
 Rules: 
 
 1. one concept per section; explain the concept before its code;

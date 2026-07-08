@@ -17,8 +17,8 @@ Return concise, structured answers covering:
   - the factory methods the learner will actually use;
   - the simplest "hello world" starting point;
   - the incremental complexity layers;
-  - the show-moments (where to print/observe);
-  - the aha moment;
+  - the verifiable outputs — points where printed or observed output lets the learner confirm the code behaved as claimed;
+  - the core insight — the single realization the whole tutorial drives the learner toward;
   - the required imports;
   - the sbt dependency; and
   - any Scala 2 vs 3 differences.

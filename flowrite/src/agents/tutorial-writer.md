@@ -21,8 +21,8 @@ differs. Do not mechanically follow steps that no longer fit.
 2. **Research.** Call the `research_tutorial_topic` action with the topic to get
    structured findings: the one concept taught, prerequisites, post-tutorial
    abilities, each core type's role, composition order, the "hello world"
-   starting point, incremental complexity layers, show-moments, the aha moment,
-   imports, sbt deps, and verbatim grounding detail.
+   starting point, incremental complexity layers, verifiable outputs, the core
+   insight, imports, sbt deps, and verbatim grounding detail.
 3. **Design the structure.** Call the `design_tutorial_structure` action with the
    exact object from step 2 (pass it through unchanged) to get an ordered section
    plan. Load the `tutorial-structure` skill for the template and section-design

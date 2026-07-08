@@ -48,5 +48,5 @@ Design the section structure before writing a word. A tutorial is learning-orien
 1. **Choose a relatable domain** the learner understands without expertise (a simple config system, managing a resource).
 2. **Start with the simplest example** — 3-4 lines that demonstrate the core concept.
 3. **Build incrementally** — each section adds one layer of complexity or one supporting concept.
-4. **Plan the show-moments** — the points where you print, observe, or demonstrate behavior. These build learner confidence.
-5. **Name the aha moment** — the one realization the whole tutorial drives toward.
+4. **Plan the verifiable outputs** — points where printed or observed output lets the learner confirm the code behaved as claimed.
+5. **Name the core insight** — the single realization the whole tutorial drives the learner toward.
