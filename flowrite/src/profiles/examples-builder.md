@@ -28,15 +28,21 @@ Three levels, composed with `RootProject`:
    `.aggregate(...)` list — additively; leave existing entries untouched.
 
 3. **`<library>-examples/<tutorial-id>/build.sbt`** is an INDEPENDENT build for
-   one tutorial: its own `scalaVersion`, its own `libraryDependencies`, and
-   `src/main/scala/<pkg>/`. Depend on the library the way a real user would —
-   published coordinates (`"<org>" %% "<lib>" % "<version>"`) when the library
-   publishes them. If it does not (a local, unpublished fixture), depend on the
-   main build by source instead: `.dependsOn(ProjectRef(file("../.."), "<rootProjectId>"))`.
-   Because a `RootProject` leaf is a fully standalone sbt build, it MUST have its
-   own `<tutorial-id>/project/build.properties` pinning the sbt version (copy the
-   value from the main build's `project/build.properties`) — without it sbt does
-   not treat the dir as a build.
+   one tutorial: its own `scalaVersion`, its own `src/main/scala/<pkg>/`, and its
+   own dependencies. It MUST depend on the main library so the examples can
+   compile and run against it — do this by a source dependency on the root
+   project:
+   ```
+   lazy val <tutorial-id> = (project in file("."))
+     .dependsOn(ProjectRef(file("../.."), "root"))
+   ```
+   `../..` climbs from `<tutorial-id>/` up through `<library>-examples/` to the
+   repo root; `"root"` is the main library's root project id (use the actual id
+   from the main build.sbt if it differs). Add any other `libraryDependencies`
+   the examples need on top. Because a `RootProject` leaf is a fully standalone
+   sbt build, it MUST also have its own `<tutorial-id>/project/build.properties`
+   pinning the sbt version (copy the value from the main build's
+   `project/build.properties`) — without it sbt does not treat the dir as a build.
 
 `<tutorial-id>` is the tutorial id (e.g. `lens`). `<pkg>` is that id with hyphens
 removed, lowercased.
@@ -73,7 +79,8 @@ author can write the "Running the Examples" section.
 - `<library>-examples/build.sbt` aggregates the tutorial subproject via
   `RootProject(file("<tutorial-id>"))`.
 - `<library>-examples/<tutorial-id>/` has its OWN build.sbt (own scalaVersion +
-  own deps), its OWN `project/build.properties`, and `src/main/scala/<pkg>/`.
+  own deps) that `.dependsOn(ProjectRef(file("../.."), "root"))` on the main
+  library, its OWN `project/build.properties`, and `src/main/scala/<pkg>/`.
 - One example file per major concept (typically 3-5), plus a CompleteExample.
 - Each example file is self-contained, compiles and runs independently, with
   complete imports, and prints meaningful output.
