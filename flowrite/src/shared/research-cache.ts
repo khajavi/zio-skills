@@ -8,14 +8,9 @@ const execFileAsync = promisify(execFile);
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'research');
 
 /**
- * The HEAD of whatever git repo contains repoPath — its own dedicated repo,
- * or (e.g. the tinyoptics fixture) nested inside an enclosing one. Either way
- * this is a safe fingerprint: the cache key also includes repoPath itself, so
- * two different checkouts can never collide just because they happen to
- * share an enclosing repo's HEAD. Nested checkouts just get a coarser
- * fingerprint (invalidates on any commit anywhere in the outer repo, not
- * only to that subtree) — never an incorrect one. Returns null only when
- * repoPath isn't inside a git repo at all.
+ * HEAD of whatever git repo contains repoPath, own or enclosing. Safe even
+ * when nested — the cache key includes repoPath, so no cross-checkout
+ * collision — just coarser. Null only if repoPath isn't in a git repo.
  */
 export async function commitRevision(repoPath: string): Promise<string | null> {
   try {
