@@ -22,6 +22,7 @@ Verify every item. The tutorial is not done until all pass.
 - Warm, welcoming tone ("welcome", "let's", "notice that").
 - "Putting It Together" is a complete, self-contained, copy-paste-ready example.
 - A "Background" section, if present, explains motivation without code.
+- Conforms to the `writing-style` skill (verify against every rule it lists).
 
 ## Technical Accuracy
 
