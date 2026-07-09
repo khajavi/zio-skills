@@ -18,6 +18,15 @@ lazy val docs = (project in file("docs"))
     target := file("target/docs-project"),
     mdocIn := file("docs"),
     mdocOut := file("website/docs"),
+    // Provides the `mdoc:embed:<path>[:show-line-numbers]` StringModifier used
+    // to embed companion example sources into tutorial pages. 0.6.0 requires a
+    // scala-library newer than the root's 2.13.14, so the docs project runs on
+    // a newer compiler (binary compatible with the 2.13 root).
+    scalaVersion := "2.13.18",
+    // Docs are never scalafixed; skip semanticdb so the newer compiler needs no
+    // matching semanticdb-scalac artifact.
+    semanticdbEnabled := false,
+    libraryDependencies += "dev.zio" %% "zio-sbt-source" % "0.6.0",
   )
   .dependsOn(root)
 
