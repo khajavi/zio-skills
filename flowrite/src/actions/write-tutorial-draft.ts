@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
+import { isPhaseSkipped } from '../shared/skip-phases.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -20,6 +21,15 @@ export const writeTutorialDraft = defineAction({
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, input, log }) {
     const path = `docs/guides/${input.id}.md`;
+
+    // Resume support: the tutorial already exists on disk — return it as-is so
+    // later phases get the real path/content. Fails loudly if the id does not
+    // match an existing file.
+    if (isPhaseSkipped('write')) {
+      log.info(`Skipping draft (skipPhases) — using existing ${path}`);
+      return { path, content: await harness.fs.readFile(path) };
+    }
+
     log.info(`Writing tutorial draft: ${path}`);
 
     const session = await harness.session();

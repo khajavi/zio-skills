@@ -1,6 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { researchSchema } from './research-tutorial-topic.ts';
+import { isPhaseSkipped } from '../shared/skip-phases.ts';
 
 export const structureSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),
@@ -41,6 +42,17 @@ export const designTutorialStructure = defineAction({
   }),
   output: structureSchema,
   async run({ harness, input, log }) {
+    // Resume support — see research-tutorial-topic.ts.
+    if (isPhaseSkipped('design')) {
+      log.info('Skipping design (skipPhases)');
+      return {
+        learningObjectives: [],
+        prerequisites: [],
+        sections: [],
+        coreInsight: '(skipped — phase already done)',
+      };
+    }
+
     log.info(`Designing tutorial structure for: ${input.topic}`);
     const session = await harness.session();
     // Delegates to the tutorial_designer subagent (no actions/subagents of its

@@ -1,6 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
+import { isPhaseSkipped } from '../shared/skip-phases.ts';
 
 export const researchSchema = v.object({
   concept: v.pipe(v.string(), v.description('The ONE concept this tutorial should teach')),
@@ -69,6 +70,30 @@ export const researchTutorialTopic = defineAction({
   }),
   output: researchSchema,
   async run({ harness, input, log }) {
+    // Resume support: a skipped head phase returns a marker-filled placeholder.
+    // Downstream consumers (design, write) are skipped in the same runs, so the
+    // placeholder only wires the action chain — it is never drafted from.
+    if (isPhaseSkipped('research')) {
+      log.info('Skipping research (skipPhases)');
+      const s = '(skipped — phase already done)';
+      return {
+        concept: s,
+        prerequisites: [],
+        postTutorialAbilities: [],
+        coreTypes: [],
+        compositionOrder: s,
+        factoryMethods: [],
+        helloWorld: s,
+        complexityLayers: [],
+        verifiableOutputs: [],
+        coreInsight: s,
+        imports: [],
+        sbtDependency: s,
+        scalaVersionNotes: null,
+        groundingDetail: s,
+      };
+    }
+
     const repoPath = process.env.REPO_PATH!;
     const cached = readResearchCache(repoPath, input.topic);
     if (cached) {

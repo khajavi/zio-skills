@@ -68,8 +68,11 @@ export default defineWorkflow({
     topic: v.pipe(v.string(), v.description('Tutorial title or topic description')),
     skipPhases: v.optional(
       v.pipe(
-        v.array(v.picklist(['write-examples', 'integrate', 'review'])),
-        v.description('Phases to skip, e.g. ["write-examples", "integrate", "review"]'),
+        v.array(v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review'])),
+        v.description(
+          'Phases to skip. Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
+            'e.g. ["research", "design", "write", "write-examples"] runs only integrate + review.',
+        ),
       ),
     ),
   }),
