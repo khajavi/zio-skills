@@ -15,6 +15,7 @@ Choose an mdoc modifier for every executable Scala block based on whether you ne
 - **`mdoc:silent:reset`** — Renders nothing, clears all prior scope. Use when switching to a completely different context mid-document.
 - **`mdoc`** (no qualifier) — Renders source + evaluated output, scope shared. Shows the code and its REPL-style result.
 - **`mdoc:invisible`** — Invisible block, scope shared. Rare; prefer `silent` or `compile-only`.
+- **`mdoc:embed:<path>`** — Custom modifier: replaces the block (leave its body empty) with the file at `<path>` (repo-root relative) as a titled code fence. Append `:showLineNumbers` for line numbers. Requires the docs subproject to depend on `"dev.zio" %% "zio-sbt-source"` — add it if missing.
 - **Plain `` ```scala ``** (no mdoc) — Source only, not compiled. Use for pseudocode, ASCII diagrams, type-signature illustrations, or sbt config.
 
 **Never hardcode expression output in comments** (`val x = 42 // 42`). Let `mdoc` render it.
@@ -46,7 +47,7 @@ A tutorial builds one concept on the previous, so favor a shared, accumulating s
 1. First setup block → `mdoc:silent` (imports, base types).
 2. Each concept block that has meaningful output → `mdoc` (shows the result the learner should see).
 3. Redefining a type to add a field mid-tutorial → `mdoc:silent:nest`.
-4. "Putting It Together" final block → `mdoc:compile-only` (a complete, copy-paste-ready program).
+4. "Putting It Together" final block → `mdoc:embed:<path>` pointing at the companion `CompleteExample.scala` (single source of truth; the file is compiled by the examples build).
 
 Only `:reset` when the tutorial deliberately restarts in a new domain — rare in a linear tutorial.
 
