@@ -6,7 +6,7 @@
 5. **No manual line breaks in prose**: Do not hard-wrap paragraph text at a fixed column. Write each paragraph as one continuous line.
 6. **ASCII art usage**: Use it for diagrams showing data flow, type relationships, or architecture. Readers find these very helpful for understanding how pieces fit together.
 7. **Link to related docs**: Use relative paths with the full filename including `.md` extension. Never use a bare directory name: ✅ `[Endpoint](./reference/endpoint/index.md)`, ❌ `[Endpoint](./reference/endpoint)`.
-8. **Always qualify method/constructor names**: ❌ "Call `map` to transform elements" → ✅ "Call `Chunk#map` to transform elements". ❌ "Use `.query` to add a parameter" → ✅ "Use `Endpoint#query` to add a parameter". Dot-prefixed references (`` `.method` ``) are always a violation — they imply a receiver without naming it.
+8. **Qualify method/constructor names at their first mention in the article**: the first prose reference to a method names its receiver — ✅ "Call `Chunk#map` to transform elements"; later mentions may use the bare name ("then `map` again over the result"). Dot-prefixed references (`` `.method` ``) are always a violation — they imply a receiver without naming it.
 9. **Type name alone rule**: When referring to a type (not a method), use only its name in backticks with no qualifier: "`As` derives automatically", "`List` is a sequence type", "convert to `Option`".
 10. **No duplicate markdown heading**: Do not create a markdown heading (`#`) that duplicates the frontmatter title. Start directly with `## Overview` or the first real section.
 11. **Heading hierarchy**: Use `##` for major sections, `###` for subsections, `####` for subsubsections.
