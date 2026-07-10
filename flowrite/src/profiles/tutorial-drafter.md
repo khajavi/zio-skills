@@ -10,7 +10,7 @@ Two fields carry planning intent, not text to copy: a **verifiable output** is a
 Rules: 
 
 1. one concept per section; explain the concept before its code;
-2. annotate every code block line-by-line; show intermediate output; warm tone;
+2. explain every code block; show intermediate output; warm tone;
 3. never branch. Include a "Running the Examples" section after "Putting It Together":
    present after "Putting It Together"; includes `git clone https://github.com/zio/<repo>.git`
    and `cd <repo>`; lists every example object with its `sbt "<module>/runMain ..."` command;

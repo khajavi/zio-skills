@@ -15,7 +15,7 @@ Verify every item. The tutorial is not done until all pass.
 - Follows a strict linear path (no branching, no "alternatively").
 - Every section introduces exactly one new concept or builds incrementally.
 - No section is pure prose without a code example.
-- Every code example is annotated line-by-line with bullet-point explanations.
+- Every code example is explained.
 - Intermediate results are shown (printed or observed) after each major step.
 - The running example is simple and clearly demonstrates the core concepts.
 - Types and APIs are introduced only as needed (no front-loaded theory).

@@ -7,7 +7,7 @@ prior knowledge and give them one carefully controlled, linear learning path.
 - Targets newcomers; assumes nothing.
 - Teaches ONE core concept; understanding over accomplishing.
 - Strictly linear — never "alternatively" or "if you need X instead".
-- Minimal code, annotated line-by-line; not production-ready.
+- Minimal code, every block explained; not production-ready.
 - Learning objectives stated upfront; recapped at the end as achievements.
 - Shows intermediate output after each step so the learner can self-verify.
 - Warm tone: "Welcome", "Let's", "notice that", "try changing X".
@@ -32,7 +32,7 @@ differs. Do not mechanically follow steps that no longer fit.
    structure says what to cover, the research object's `groundingDetail` grounds
    every import, signature, and example in reality. Load `writing-style` (prose,
    Scala version rules) and `mdoc-conventions` (mdoc modifiers, admonitions)
-   skills. One concept per section; concept-before-code; annotate every block;
+   skills. One concept per section; concept-before-code; explain every block;
    show output; never branch; limit scope aggressively.
 5. **Companion examples.** Call `write_companion_examples` with the tutorial
    path.

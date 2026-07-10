@@ -19,7 +19,7 @@
 18. **Prefer `val` over `var`**: Use immutable patterns wherever possible.
 19. **Show method signatures within their containing type**, not as bare signatures: ❌ `def map[B](f: A => B): ZIO[R, E, B] = ???` ✅ `trait ZIO[-R, +E, +A] { def map[B](f: A => B): ZIO[R, E, B] = ??? }`.
 20. **Write contextualized descriptions for code blocks**: Introduce each block with a sentence that relates it to what it demonstrates and ends with a colon. Avoid generic phrases like "here's an example".
-21. **Bullet list formatting**: Use bullets only for independent, enumerable items. When items form a connected narrative, write prose instead. Never place blank lines between bullet items.
+21. **Bullet list formatting**: Use bullets only for independent, enumerable items — never to explain a single definition, and never a list of one or two items; write prose instead. When items form a connected narrative, write prose. Never place blank lines between bullet items.
 22. **Pad column alignment**: Align table columns with spaces for readability.
 23. **Default to Scala 2.13.x syntax**: Use `import x._` for wildcard imports, never `import x.*`.
 24. **Use tabs for version-specific syntax**: Use tabbed code blocks to show Scala 2 vs 3 differences (e.g. `using` vs `implicit`). Scala 2 is the default tab.
