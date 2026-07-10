@@ -33,7 +33,7 @@ export const resolveReviewCommentsOutput = v.object({
       reason: v.pipe(v.string(), v.description('Why this comment could not be resolved; its marker was left in place')),
     }),
   ),
-  mdocOk: v.pipe(v.boolean(), v.description('true when mdoc_compile passed on the final article')),
+  mdocOk: v.pipe(v.boolean(), v.description('true when scoped mdoc passed on the final article')),
   summary: v.string(),
 });
 
@@ -43,7 +43,7 @@ export const resolveReviewPrompt = (articlePath: string): string =>
   `Resolve the human <!-- REVIEW --> comments embedded in the article at ${articlePath}. ` +
   `Apply each directed fix in place (document-wide when a comment states a general rule), ` +
   `strip the resolved markers, audit each general rule against existing instructions, and ` +
-  `verify the result with mdoc_compile.`;
+  `verify the result with scoped mdoc.`;
 
 /**
  * Resolve human `<!-- REVIEW ... -->` comments embedded in an article. Not

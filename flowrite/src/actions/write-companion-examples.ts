@@ -33,8 +33,8 @@ export const writeCompanionExamples = defineAction({
     const { data } = await session.task(
       `Build companion examples for the tutorial at ${input.tutorialPath}. Read the tutorial ` +
         `and copy its code blocks: one standalone runnable example per major concept, plus the ` +
-        `"## Putting It Together" example copied verbatim. Then verify with compile_examples ` +
-        `and run_example (examples must print meaningful output).`,
+        `"## Putting It Together" example copied verbatim. Then compile the examples leaf build ` +
+        `and run every example (each must print meaningful output).`,
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
     );
     return data;

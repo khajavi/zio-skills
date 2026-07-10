@@ -82,9 +82,16 @@ A common mistake to watch out for.
 
 ## Verifying
 
-Always compile scoped to the files you touched, never the whole docs set. Use the
-`mdoc_compile` tool, which takes one `--in`/`--out` pair per file (`out` is
-usually the same path prefixed with `website/`, e.g. `docs/reference/x.md` →
-`website/docs/reference/x.md`.
+Always compile scoped to the files you touched, never the whole docs set
+(unscoped `sbt docs/mdoc` recompiles every doc, minutes of sbt):
+
+```
+sbt "docs/mdoc --in <file> --out website/<file>"
+```
+
+One `--in`/`--out` pair per file; `out` is the same path prefixed with
+`website/`, e.g. `docs/reference/x.md` → `website/docs/reference/x.md`. If the
+failure output only shows a stack trace with "stack trace is suppressed; run
+'last <scope>'", run that `sbt "last <scope>"` command to get the real error.
 
 If mdoc produces more than ~3 errors, the blocks are likely not isolated — check for a missing `:reset`/`:nest` or a name collision. Strip modifiers from the reported lines, confirm the errors clear, then re-apply one at a time, re-running after each change.

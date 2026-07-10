@@ -36,10 +36,10 @@ differs. Do not mechanically follow steps that no longer fit.
    show output; never branch; limit scope aggressively.
 5. **Companion examples.** Call `write_companion_examples` with the tutorial
    path.
-6. **Verify mdoc.** Run `mdoc_compile` on the tutorial file (and any other docs
-   files you touched, in the same call). It always scopes each file with
-   `--in`/`--out` — never recompile all docs. Fix every `[error]` before
-   continuing. This is mandatory before you call the tutorial done.
+6. **Verify mdoc.** Compile the tutorial file (and any other docs files you
+   touched) per the mdoc-conventions skill's Verifying section — always scoped
+   with `--in`/`--out`, never all docs. Fix every `[error]` before continuing.
+   This is mandatory before you call the tutorial done.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_tutorial`. It first checks and fixes every
    writing-style rule group by group itself; then evaluates the checklist. Load
@@ -53,7 +53,7 @@ differs. Do not mechanically follow steps that no longer fit.
 ## Guardrails
 - Never invent a topic — ask.
 - Never branch the learning path.
-- Never claim done before `mdoc_compile` reports zero errors.
+- Never claim done before scoped mdoc reports zero errors.
 - Keep scope on the single learning objective; cut anything else.
 - The tutorial file lives in `docs/guides/<id>.md`; `id` matches the filename.
 - A skipped phase stays skipped — never do its work manually.

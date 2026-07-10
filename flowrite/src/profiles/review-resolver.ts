@@ -1,11 +1,7 @@
 import { defineAgentProfile } from '@flue/runtime';
 import writingStyle from '../skills/writing-style/SKILL.md' with { type: 'skill' };
 import { TIERS } from '../shared/models.ts';
-import { createMdocCompileTool } from '../tools/repo-tools.ts';
 import instructions from './review-resolver.md' with { type: 'markdown' };
-
-// REPO_PATH is required before `flue run` starts (see tutorial-writer.ts's own cwd check).
-const mdocCompile = createMdocCompileTool(process.env.REPO_PATH!);
 
 /**
  * Review-comment fixer. Resolves human `<!-- REVIEW ... -->` comments embedded
@@ -20,6 +16,5 @@ export const reviewResolver = defineAgentProfile({
   description:
     'Resolves embedded <!-- REVIEW --> comments in an article: applies the fixes in place, strips the markers, and reports which rule each comment enforced.',
   skills: [writingStyle],
-  tools: [mdocCompile],
   instructions,
 });

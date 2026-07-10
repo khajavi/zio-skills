@@ -31,8 +31,7 @@ import { tutorialReviewer } from '../profiles/tutorial-reviewer.ts';
 import { styleChecker } from '../profiles/style-checker.ts';
 import { styleFixer } from '../profiles/style-fixer.ts';
 
-// tools (bounded sbt/git contracts, bound to the instance's repo path)
-import { createRepoTools } from '../tools/repo-tools.ts';
+import { createGhQueryTool } from '../tools/repo-tools.ts';
 import { TIERS } from '../shared/models.ts';
 
 export const description =
@@ -65,7 +64,7 @@ export default defineAgent(({ id }) => {
       integrateTutorial,
       reviewTutorial,
     ],
-    tools: createRepoTools(cwd),
+    tools: [createGhQueryTool(cwd)],
     subagents: [
       tutorialResearcher,
       examplesBuilder,

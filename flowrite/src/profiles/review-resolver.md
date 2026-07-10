@@ -38,10 +38,9 @@ not direct.
      a ❌/✅ example pair). Do NOT edit the skill files yourself.
    Set exactly one of `existingRule`/`suggestedRule` per general comment; both
    stay null for location-scoped comments.
-6. Verify the edited article with the `mdoc_compile` tool (in = the article
-   path). Fix any error you introduced and re-verify until green. If the
-   article lives under `docs/` with a `website/docs/` mirror, pass the matching
-   `out` path.
+6. Verify the edited article: `sbt "docs/mdoc --in <article> --out website/<article>"`
+   (never unscoped `sbt docs/mdoc`). Fix any error you introduced and re-verify
+   until green.
 7. A comment you cannot resolve (contradictory, refers to content that does not
    exist) goes in `unresolved` with a reason — never guess, never delete its
    marker silently. Leave its marker in place.
@@ -54,5 +53,5 @@ not direct.
   comment).
 - Every general-rule comment carries its rule audit (existingRule XOR
   suggestedRule).
-- `mdoc_compile` reports ok on the final article.
+- Scoped mdoc compiles clean on the final article.
 - The diff contains only changes the comments directed.

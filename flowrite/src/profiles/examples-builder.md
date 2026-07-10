@@ -58,12 +58,11 @@ removed, lowercased.
    via an `mdoc:embed:<path>` block — create `CompleteExample.scala` at exactly
    that path: one complete runnable object assembling the tutorial's section
    code (same values and output).
-5. Compile with the `compile_examples` tool (examplesDir =
-   `<library>-examples/<tutorial-id>` — it runs `sbt compile` inside that leaf
-   build, since a RootProject leaf is not addressable by id from the repo root)
-   and fix every failure.
-6. Run each with `run_example` (same examplesDir, mainClass = `<pkg>.<Object>`)
-   to confirm it prints meaningful output.
+5. Compile: `cd <library>-examples/<tutorial-id> && sbt compile` — sbt must run
+   inside that leaf build, since a RootProject leaf is not addressable by id
+   from the repo root. Fix every failure.
+6. Run each: `sbt "runMain <pkg>.<Object>"` in the same leaf dir, confirming it
+   prints meaningful output. Pipe sbt output through `tail -30`.
 7. Lint the leaf with whatever tools it actually uses (usually scalafmt and
    scalafix) — check its build.sbt and CI for the exact commands/aliases, run
    them, and fix everything until clean. If lint reformats copied code, mirror
@@ -88,4 +87,4 @@ author can write the "Running the Examples" section.
   block references, assembled from the tutorial's section code.
 - Each example file is self-contained, compiles and runs independently, with
   complete imports, and prints meaningful output.
-- `compile_examples` reports ok; `run_example` prints real output for each.
+- The leaf build compiles clean; each example's `runMain` prints real output.

@@ -76,8 +76,8 @@ export default defineWorkflow({
       // examples_builder, bypassing the skip-gate and the top agent's flow.
       const { data } = await session.task(
         `Build companion examples for the tutorial at ${input.tutorialPath}. Create one runnable ` +
-          `example per major concept plus a complete integrated example, then verify with ` +
-          `compile_examples and run_example (examples must print meaningful output).`,
+          `example per major concept plus a complete integrated example, then compile the examples ` +
+          `leaf build and run every example (each must print meaningful output).`,
         { agent: 'examples_builder', result: writeCompanionExamplesOutput },
       );
       return data;

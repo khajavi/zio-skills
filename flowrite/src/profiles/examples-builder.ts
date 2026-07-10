@@ -1,11 +1,6 @@
 import { defineAgentProfile } from '@flue/runtime';
 import { TIERS } from '../shared/models.ts';
-import { createCompileExamplesTool, createRunExampleTool } from '../tools/repo-tools.ts';
 import instructions from './examples-builder.md' with { type: 'markdown' };
-
-// REPO_PATH is required before `flue run` starts (see tutorial-writer.ts's own cwd check).
-const compileExamples = createCompileExamplesTool(process.env.REPO_PATH!);
-const runExample = createRunExampleTool(process.env.REPO_PATH!);
 
 /**
  * Companion-examples specialist. Creates one runnable example per tutorial
@@ -18,6 +13,5 @@ export const examplesBuilder = defineAgentProfile({
   ...TIERS.examples,
   description:
     'Creates and compiles companion example files for a tutorial (one per concept + a complete example). Use after the tutorial draft exists.',
-  tools: [compileExamples, runExample],
   instructions,
 });
