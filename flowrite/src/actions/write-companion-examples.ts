@@ -31,9 +31,10 @@ export const writeCompanionExamples = defineAction({
     // Delegates to the examples_builder subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
     const { data } = await session.task(
-      `Build companion examples for the tutorial at ${input.tutorialPath}. Create one runnable ` +
-        `example per major concept plus a complete integrated example, then verify with ` +
-        `compile_examples and run_example (examples must print meaningful output).`,
+      `Build companion examples for the tutorial at ${input.tutorialPath}. Read the tutorial ` +
+        `and copy its code blocks: one standalone runnable example per major concept, plus the ` +
+        `"## Putting It Together" example copied verbatim. Then verify with compile_examples ` +
+        `and run_example (examples must print meaningful output).`,
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
     );
     return data;

@@ -45,22 +45,29 @@ removed, lowercased.
 
 1. Wire the three build.sbt levels above. Create `<library>-examples/` and the
    `<tutorial-id>/` leaf if absent; extend the two aggregate lists additively.
-2. In the leaf's `src/main/scala/<pkg>/`: one self-contained file per concept
-   (`Concept1Example.scala`, `Concept2Example.scala`, ...) plus
-   `CompleteExample.scala` holding the full "Putting It Together" code.
-3. Each file: package decl, complete imports, a scaladoc with the tutorial title,
-   concept name, a 1-2 sentence description, and its
-   `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command. Scala 2.13:
-   `object <Name> extends App`. Print meaningful output.
-4. Compile with the `compile_examples` tool (examplesDir =
+2. Read the tutorial FIRST — its code blocks are the ONLY source of example
+   code; never invent examples.
+3. One file per major concept in `src/main/scala/<pkg>/`, copied from that
+   concept's tutorial block(s). To make a fragment standalone add ONLY: the
+   package decl, imports/definitions from setup blocks it needs, an
+   runnable-object wrapper (if not one already), and `println`s
+   for output the tutorial renders. A short scaladoc (title, concept, its
+   `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command) may precede it.
+   Same values and output as the block; never source code from another section.
+4. The tutorial's "## Putting It Together" section embeds the complete example
+   via an `mdoc:embed:<path>` block — create `CompleteExample.scala` at exactly
+   that path: one complete runnable object assembling the tutorial's section
+   code (same values and output).
+5. Compile with the `compile_examples` tool (examplesDir =
    `<library>-examples/<tutorial-id>` — it runs `sbt compile` inside that leaf
    build, since a RootProject leaf is not addressable by id from the repo root)
    and fix every failure.
-5. Run each with `run_example` (same examplesDir, mainClass = `<pkg>.<Object>`)
+6. Run each with `run_example` (same examplesDir, mainClass = `<pkg>.<Object>`)
    to confirm it prints meaningful output.
-6. Lint the leaf with whatever tools it actually uses (usually scalafmt and
+7. Lint the leaf with whatever tools it actually uses (usually scalafmt and
    scalafix) — check its build.sbt and CI for the exact commands/aliases, run
-   them, and fix everything until clean.
+   them, and fix everything until clean. If lint reformats copied code, mirror
+   the change into the tutorial block.
 
 Report the examples build dir, the tutorial subproject id, the package name, and
 every example object with its `sbt "<tutorial-id>/runMain ..."` command so the
@@ -75,6 +82,10 @@ author can write the "Running the Examples" section.
 - `<library>-examples/<tutorial-id>/` has its OWN build.sbt (own scalaVersion +
   own deps), its OWN `project/build.properties`, and `src/main/scala/<pkg>/`.
 - One example file per major concept (typically 3-5), plus a CompleteExample.
+- Every file's code traces to tutorial blocks — nothing invented beyond
+  package/imports/wrapper/printlns.
+- `CompleteExample.scala` exists at the exact path the tutorial's `mdoc:embed`
+  block references, assembled from the tutorial's section code.
 - Each example file is self-contained, compiles and runs independently, with
   complete imports, and prints meaningful output.
 - `compile_examples` reports ok; `run_example` prints real output for each.
