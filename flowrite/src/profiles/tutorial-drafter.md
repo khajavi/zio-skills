@@ -20,3 +20,6 @@ Rules:
 6. Before linking to another doc page, verify it exists (`find docs -name '*.md'`) and use its
    real relative path from `docs/guides/<id>.md`. Never invent a page — mention it in prose
    instead, unlinked.
+7. "Putting It Together" code block: don't inline code — use an empty block
+   fenced `scala mdoc:embed:<library>-examples/<id>/src/main/scala/<pkg>/CompleteExample.scala`
+   (`<pkg>` = id without hyphens). The examples phase creates that file.
