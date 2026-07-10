@@ -41,8 +41,9 @@ differs. Do not mechanically follow steps that no longer fit.
    `--in`/`--out` — never recompile all docs. Fix every `[error]` before
    continuing. This is mandatory before you call the tutorial done.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
-8. **Review.** Call `review_against_checklist`. Load the `tutorial-checklist`
-   skill and follow its Review Cadence rules.
+8. **Review.** Call `review_tutorial`. It first checks and fixes every
+   writing-style rule group by group itself; then evaluates the checklist. Load
+   the `tutorial-checklist` skill and follow its Review Cadence rules.
 9. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema
@@ -55,3 +56,4 @@ differs. Do not mechanically follow steps that no longer fit.
 - Never claim done before `mdoc_compile` reports zero errors.
 - Keep scope on the single learning objective; cut anything else.
 - The tutorial file lives in `docs/guides/<id>.md`; `id` matches the filename.
+- A skipped phase stays skipped — never do its work manually.

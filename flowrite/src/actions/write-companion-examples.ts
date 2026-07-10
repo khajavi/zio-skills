@@ -10,7 +10,7 @@ export const writeCompanionExamplesOutput = v.object({
 /**
  * Build companion example files for a finished tutorial, then verify they
  * compile and run. Checks the skip list before ever delegating — see
- * review-against-checklist.ts for why this check must live in code, not
+ * review-tutorial.ts (action) for why this check must live in code, not
  * only as prose in tutorial-writer.md.
  */
 export const writeCompanionExamples = defineAction({

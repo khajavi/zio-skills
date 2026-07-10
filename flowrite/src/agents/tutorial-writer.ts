@@ -17,7 +17,7 @@ import { designTutorialStructure } from '../actions/design-tutorial-structure.ts
 import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
 import { integrateTutorial } from '../actions/integrate-tutorial.ts';
-import { reviewAgainstChecklist } from '../actions/review-against-checklist.ts';
+import { reviewTutorial } from '../actions/review-tutorial.ts';
 
 // subagents (agent profiles)
 import { tutorialResearcher } from '../profiles/tutorial-researcher.ts';
@@ -28,6 +28,8 @@ import { docsIntegrator } from '../profiles/docs-integrator.ts';
 import { tutorialDesigner } from '../profiles/tutorial-designer.ts';
 import { tutorialDrafter } from '../profiles/tutorial-drafter.ts';
 import { tutorialReviewer } from '../profiles/tutorial-reviewer.ts';
+import { styleChecker } from '../profiles/style-checker.ts';
+import { styleFixer } from '../profiles/style-fixer.ts';
 
 // tools (bounded sbt/git contracts, bound to the instance's repo path)
 import { createRepoTools } from '../tools/repo-tools.ts';
@@ -61,7 +63,7 @@ export default defineAgent(({ id }) => {
       writeTutorialDraft,
       writeCompanionExamples,
       integrateTutorial,
-      reviewAgainstChecklist,
+      reviewTutorial,
     ],
     tools: createRepoTools(cwd),
     subagents: [
@@ -71,6 +73,8 @@ export default defineAgent(({ id }) => {
       tutorialDesigner,
       tutorialDrafter,
       tutorialReviewer,
+      styleChecker,
+      styleFixer,
     ],
   };
 });

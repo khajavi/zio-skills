@@ -22,7 +22,7 @@ Verify every item. The tutorial is not done until all pass.
 - Warm, welcoming tone ("welcome", "let's", "notice that").
 - "Putting It Together" is a complete, self-contained, copy-paste-ready example.
 - A "Background" section, if present, explains motivation without code.
-- Conforms to the `writing-style` skill (verify against every rule it lists).
+- Writing style is checked mechanically rule-by-rule before this checklist runs — do not re-verify the `writing-style` rules here.
 
 ## Technical Accuracy
 
@@ -36,6 +36,6 @@ Verify every item. The tutorial is not done until all pass.
   again until all of them are addressed.
 - Only re-review to confirm the fixes, not to discover the next issue one at
   a time.
-- Call this checklist at most 2 times total. If issues remain after the
-  second call, note them as known limitations and finish anyway — never call
-  it a third time.
+- The review action enforces a hard call cap. When it reports the cap is
+  reached, note remaining issues as known limitations and finish anyway —
+  never keep calling it.

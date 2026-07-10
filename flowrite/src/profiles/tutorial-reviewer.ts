@@ -5,7 +5,7 @@ import { TIERS } from '../shared/models.ts';
 import instructions from './tutorial-reviewer.md' with { type: 'markdown' };
 
 /**
- * Narrow, single-purpose profile for `review_against_checklist`. No
+ * Narrow, single-purpose profile for `review_tutorial`. No
  * actions/subagents of its own — see tutorial-designer.ts for why that matters.
  */
 export const tutorialReviewer = defineAgentProfile({

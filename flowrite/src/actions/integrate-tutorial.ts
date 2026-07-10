@@ -9,7 +9,7 @@ export const integrateTutorialOutput = v.object({
 
 /**
  * Wire a finished tutorial into the Docusaurus site. Checks the skip list
- * before ever delegating — see review-against-checklist.ts for why this
+ * before ever delegating — see review-tutorial.ts (action) for why this
  * check must live in code, not only as prose in tutorial-writer.md.
  */
 export const integrateTutorial = defineAction({

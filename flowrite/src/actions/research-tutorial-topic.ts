@@ -58,7 +58,7 @@ export const researchSchema = v.object({
  * Research a ZIO topic's source, tests, examples, and GitHub history and return
  * structured findings for the design/write stages.
  * Reliability-critical: enforces the same well-formed-output guarantee as
- * design_tutorial_structure and review_against_checklist.
+ * design_tutorial_structure and review_tutorial.
  */
 export const researchTutorialTopic = defineAction({
   name: 'research_tutorial_topic',

@@ -4,7 +4,7 @@ import { designTutorialStructure } from '../actions/design-tutorial-structure.ts
 import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
 import { integrateTutorial } from '../actions/integrate-tutorial.ts';
-import { reviewAgainstChecklist } from '../actions/review-against-checklist.ts';
+import { reviewTutorial } from '../actions/review-tutorial.ts';
 
 /** This agent's own actions — exposed to the model as tools but delegate their real work. */
 const ACTION_NAMES = new Set(
@@ -14,7 +14,7 @@ const ACTION_NAMES = new Set(
     writeTutorialDraft,
     writeCompanionExamples,
     integrateTutorial,
-    reviewAgainstChecklist,
+    reviewTutorial,
   ].map((a) => a.name),
 );
 
