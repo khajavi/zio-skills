@@ -64,6 +64,14 @@ export const reviewTutorial = defineAction({
 
     log.info(`Reviewing against checklist (call ${calls}/${MAX_REVIEW_CALLS}): ${input.path}`);
 
+    // Snapshot the pre-review version (first call only) so the review phase's
+    // edits are diffable afterwards: git diff --no-index .pre-review/<file> <path>
+    if (calls === 1) {
+      const snapshotPath = `.pre-review/${input.path.split('/').pop()}`;
+      await harness.fs.writeFile(snapshotPath, await harness.fs.readFile(input.path));
+      log.info(`Pre-review snapshot saved: ${snapshotPath}`);
+    }
+
     // Style pass first: detects violations rule group by rule group and fixes
     // them via the todo-harnessed style_fixer, so the checklist review below
     // sees the corrected page. Unfixable violations surface as failing items.
