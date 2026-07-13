@@ -1,6 +1,5 @@
 import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
-import { allTodosCompleted, resetTodos, todoCreate, todoList, todoUpdate } from '../tools/todo-tools.ts';
 // Single source of truth for the 25 rules, shared with the writing-style
 // skill (its SKILL.md points here; only the SKILL.md basename itself is
 // barred from markdown imports by the build).
@@ -29,6 +28,12 @@ const RULE_GROUPS: (typeof RULES)[] = [];
 for (let i = 0; i < RULES.length; i += GROUP_SIZE) {
   RULE_GROUPS.push(RULES.slice(i, i + GROUP_SIZE));
 }
+
+// Map each rule number to its group index, so the fixer can batch a round's
+// violations by group (one fix pass per group) instead of one edit per violation.
+const RULE_TO_GROUP = new Map<number, number>();
+RULE_GROUPS.forEach((group, gi) => group.forEach((r) => RULE_TO_GROUP.set(r.n, gi)));
+const ruleGroupIndex = (rule: number): number => RULE_TO_GROUP.get(rule) ?? 0;
 
 // Detection runs once more than fixing, so the last fix pass is always verified.
 // Default 1 fix pass; override per run with MAX_FIX_ROUNDS=n.
@@ -60,10 +65,12 @@ export async function withTransientRetry<T>(log: FlueLogger, label: string, op: 
  *
  * Detection is a code-owned loop — every rule group is checked by a delegated
  * `style_checker` task each round, so coverage of all 25 rules never depends
- * on the model remembering a checklist. Fixing is one delegated `style_fixer`
- * task per round, harnessed through the todo tools (one task per violation,
- * worked one at a time); `allTodosCompleted()` gates its result, and the
- * re-detection round is the ground truth that the fixes landed.
+ * on the model remembering a checklist. Fixing is batched by rule group: one
+ * delegated `style_fixer` task per group with violations, each reading the page
+ * once and applying all of that group's fixes in a single pass. This keeps page
+ * re-reads at O(groups) instead of the O(violations) cost of fixing one at a
+ * time. The re-detection round is the ground truth that the fixes landed and
+ * the safety net that catches anything a batch skipped.
  */
 export async function runStyleLoop(
   harness: FlueHarness,
@@ -116,23 +123,32 @@ export async function runStyleLoop(
       return { passed: false, rounds: round, remaining: violations };
     }
 
-    await withTransientRetry(log, 'style_fixer', () => {
-      resetTodos(); // inside the retry so a retried fixer starts with a clean tree
-      return session.task(
-        [
-          `Fix these writing style violations in ${path}:`,
-          ``,
-          ...violations.map((x) => `- rule ${x.rule} @ line ${x.line}: ${x.problem}`),
-        ].join('\n'),
-        {
-          agent: 'style_fixer',
-          tools: [todoCreate, todoUpdate, todoList],
-          result: v.object({ summary: v.string() }),
-        },
+    // Batch the round's violations by rule group and run one fixer pass per
+    // group — each pass reads the page once and applies all its fixes together,
+    // instead of one read/edit cycle per violation. The next loop iteration's
+    // re-detection is the safety net for anything a batch skips.
+    const batches = new Map<number, Violation[]>();
+    for (const vln of violations) {
+      const gi = ruleGroupIndex(vln.rule);
+      const bucket = batches.get(gi);
+      if (bucket) bucket.push(vln);
+      else batches.set(gi, [vln]);
+    }
+    for (const [gi, groupViolations] of batches) {
+      const first = RULE_GROUPS[gi][0].n;
+      const last = RULE_GROUPS[gi][RULE_GROUPS[gi].length - 1].n;
+      await withTransientRetry(log, `style_fixer rules ${first}-${last}`, () =>
+        session.task(
+          [
+            `Fix ALL of these writing style violations in ${path} in a single pass —`,
+            `read the file once, apply every fix below, then finish:`,
+            ``,
+            ...groupViolations.map((x) => `- rule ${x.rule} @ line ${x.line}: ${x.problem}`),
+          ].join('\n'),
+          { agent: 'style_fixer', result: v.object({ summary: v.string() }) },
+        ),
       );
-    });
-    if (!allTodosCompleted()) {
-      log.info('Style fixer finished with an incomplete todo tree — re-detection will catch what was skipped');
+      log.info(`Style fix pass rules ${first}-${last}: ${groupViolations.length} violation(s)`);
     }
   }
 }
