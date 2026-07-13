@@ -6,8 +6,8 @@ import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
 import { integrateTutorial } from '../actions/integrate-tutorial.ts';
 import { reviewTutorial } from '../actions/review-tutorial.ts';
 import { researchDataType } from '../actions/research-data-type.ts';
+import { designDataTypeStructure } from '../actions/design-data-type-structure.ts';
 import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
-import { verifyDataTypeCompliance } from '../actions/verify-data-type-compliance.ts';
 import { integrateDataTypeReference } from '../actions/integrate-data-type-reference.ts';
 import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
 
@@ -21,8 +21,8 @@ const ACTION_NAMES = new Set(
     integrateTutorial,
     reviewTutorial,
     researchDataType,
+    designDataTypeStructure,
     writeDataTypeReference,
-    verifyDataTypeCompliance,
     integrateDataTypeReference,
     reviewDataTypeRef,
   ].map((a) => a.name),

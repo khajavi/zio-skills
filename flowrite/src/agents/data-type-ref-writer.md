@@ -19,31 +19,29 @@ reality differs. Do not mechanically follow steps that no longer fit.
 2. **Research.** Call `research_data_type` with the type name to get the full public
    API surface: signature, type params, constructors, predefined instances, core
    operations (with real signatures), subtypes, comparisons, imports, sbt deps,
-   and verbatim grounding detail.
-3. **Write.** Call `write_data_type_reference` with the exact research object from
-   step 2. It writes `docs/reference/<type-kebab>.md`. The reference-page template
-   and drafting rules are supplied to the drafter automatically.
-4. **Verify structure.** Call `verify_data_type_compliance` with the page path.
-   Fix any missing/misordered sections (or an opening definition that wrongly has a
-   heading) before continuing — this gate runs before the costlier steps below.
-5. **Method coverage.** Call the `check_method_coverage` tool with the type name and
-   page path. For every member it reports missing, either document it (edit the page)
-   or confirm from the real source that it is genuinely private/internal and dismiss
-   it. Re-run until coverage is complete or every remaining gap is justified.
-6. **Verify mdoc.** Compile the page per the mdoc-conventions skill's Verifying
+   per-fact `source` citations, and verbatim grounding detail.
+3. **Design.** Call `design_data_type_structure` with the exact research object from
+   step 2 to get a validated structural plan — which optional sections apply and how
+   the operations group into Core Operations categories (no single-method category).
+4. **Write.** Call `write_data_type_reference` with BOTH the structural plan from
+   step 3 AND the exact research object from step 2. It writes `docs/reference/<type-kebab>.md`.
+   The reference-page template is supplied to the drafter automatically.
+5. **Verify mdoc.** Compile the page per the mdoc-conventions skill's Verifying
    section — always scoped with `--in`/`--out`, never all docs. Fix every `[error]`
    before continuing. Mandatory before you call the page done.
-7. **Companion examples.** If the page's "Running the Examples" section embeds
+6. **Companion examples.** If the page's "Running the Examples" section embeds
    standalone example files (via `mdoc:embed`), call `write_companion_examples`
    with the page path to build and verify them. Skip if the page relies only on
    inline mdoc blocks.
-8. **Format & lint.** Run `sbt scalafmtAll` then `sbt check`; fix what they report.
-9. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
+7. **Format & lint.** Run `sbt scalafmtAll` then `sbt check`; fix what they report.
+8. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
-10. **Review.** Call `review_data_type_ref`. It first checks and fixes every
-    writing-style rule group by group; then evaluates the data-type-ref-checklist.
-    Follow the checklist's Review Cadence rules.
-11. **Retrospective.** In your final result, alongside the path and summary, report
+9. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
+   the single quality gate: it runs method coverage (is every public member documented?),
+   the writing-style loop, and the data-type-ref-checklist (structure + content + accuracy)
+   in one pass. For any member it reports missing, either document it or confirm from the
+   real source it is private/internal. Follow the checklist's Review Cadence rules.
+10. **Retrospective.** In your final result, alongside the path and summary, report
     the real obstacles you hit this run (per phase), how you resolved each, and —
     where you can name one — a concrete instruction/tool/schema change that would
     prevent it next time. Report only friction you actually encountered; never invent it.

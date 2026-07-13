@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { runStyleLoop, withTransientRetry } from '../shared/style-loop.ts';
+import { computeMethodCoverage } from '../tools/check-method-coverage.ts';
 // The data-type-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
@@ -25,15 +26,18 @@ let reviewCallCount = 0;
 const MAX_REVIEW_CALLS = Number(process.env.MAX_REVIEW_CALLS ?? 1);
 
 /**
- * Evaluate a written data type reference page against the data-type-ref-checklist
- * and report per-item pass/fail. Runs the mechanical style loop first, then the
- * checklist review. Capped at MAX_REVIEW_CALLS per run. Mirrors review-tutorial.ts.
+ * Evaluate a written data type reference page. The review phase is the single
+ * quality gate for a reference page: it runs (1) deterministic method-coverage
+ * (is every public member documented?), (2) the mechanical writing-style loop,
+ * and (3) the data-type-ref-checklist (structure + content + technical accuracy).
+ * Capped at MAX_REVIEW_CALLS per run. Mirrors review-tutorial.ts.
  */
 export const reviewDataTypeRef = defineAction({
   name: 'review_data_type_ref',
-  description: 'Evaluate a written data type reference page against the data-type-ref-checklist and report per-item pass/fail.',
+  description: 'Review a data type reference page: method coverage + writing-style + the data-type-ref-checklist; report per-item pass/fail.',
   input: v.object({
     path: v.pipe(v.string(), v.description('Path to the reference markdown, e.g. docs/reference/chunk.md')),
+    typeName: v.pipe(v.string(), v.description('The documented type, e.g. "Chunk" — used for method-coverage')),
   }),
   output: reviewSchema,
   async run({ harness, input, log }) {
@@ -68,7 +72,21 @@ export const reviewDataTypeRef = defineAction({
       log.info(`Pre-review snapshot saved: ${snapshotPath}`);
     }
 
-    // Style pass first: rule-agnostic mechanical loop over the same 25 writing-style
+    // Method coverage first (deterministic): does the page document every public
+    // member? Folded into review so coverage is one of the review phase's gates,
+    // not a separate step. Heuristic (see computeMethodCoverage), so a non-empty
+    // `missing` is a flag to check, surfaced as a review item.
+    const coverage = await computeMethodCoverage(process.env.REPO_PATH!, input.typeName, input.path);
+    const coverageItem = {
+      item: `Method coverage (${coverage.coveragePercent}%)`,
+      pass: coverage.missing.length === 0,
+      issue:
+        coverage.missing.length === 0
+          ? null
+          : `Undocumented public members (heuristic — verify against source, then document or justify): ${coverage.missing.join(', ')}. ${coverage.note}`,
+    };
+
+    // Style pass next: rule-agnostic mechanical loop over the same 25 writing-style
     // rules, so the checklist review below sees the corrected page.
     const style = await runStyleLoop(harness, input.path, log);
     const styleItems = style.passed
@@ -98,6 +116,9 @@ export const reviewDataTypeRef = defineAction({
         { agent: 'reviewer', result: reviewSchema },
       ),
     );
-    return { passed: data.passed && style.passed, items: [...styleItems, ...data.items] };
+    return {
+      passed: data.passed && style.passed && coverageItem.pass,
+      items: [coverageItem, ...styleItems, ...data.items],
+    };
   },
 });

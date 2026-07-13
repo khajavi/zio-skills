@@ -15,8 +15,8 @@ import dataTypeChecklist from '../skills/data-type-ref-checklist/SKILL.md' with 
 
 // actions
 import { researchDataType } from '../actions/research-data-type.ts';
+import { designDataTypeStructure } from '../actions/design-data-type-structure.ts';
 import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
-import { verifyDataTypeCompliance } from '../actions/verify-data-type-compliance.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
 import { integrateDataTypeReference } from '../actions/integrate-data-type-reference.ts';
 import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
@@ -25,6 +25,7 @@ import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
 // shared with tutorial-writer; the reference-page focus/schema/checklist is
 // supplied by this agent's actions at each delegation call site.
 import { researcher } from '../profiles/researcher.ts';
+import { designer } from '../profiles/designer.ts';
 import { drafter } from '../profiles/drafter.ts';
 import { reviewer } from '../profiles/reviewer.ts';
 import { examplesBuilder } from '../profiles/examples-builder.ts';
@@ -34,7 +35,6 @@ import { styleChecker } from '../profiles/style-checker.ts';
 import { styleFixer } from '../profiles/style-fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
-import { createMethodCoverageTool } from '../tools/check-method-coverage.ts';
 import { TIERS } from '../shared/models.ts';
 
 export const description =
@@ -61,15 +61,16 @@ export default defineAgent(({ id }) => {
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
     actions: [
       researchDataType,
+      designDataTypeStructure,
       writeDataTypeReference,
-      verifyDataTypeCompliance,
       writeCompanionExamples,
       integrateDataTypeReference,
       reviewDataTypeRef,
     ],
-    tools: [createGhQueryTool(cwd), createMethodCoverageTool(cwd)],
+    tools: [createGhQueryTool(cwd)],
     subagents: [
       researcher,
+      designer,
       drafter,
       reviewer,
       examplesBuilder,

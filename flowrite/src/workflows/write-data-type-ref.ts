@@ -14,16 +14,7 @@ export const route: WorkflowRouteHandler = async (_c, next) => next();
 
 const insightsSchema = v.array(
   v.object({
-    phase: v.picklist([
-      'research',
-      'write',
-      'verify-compliance',
-      'method-coverage',
-      'mdoc',
-      'examples',
-      'integrate',
-      'review',
-    ]),
+    phase: v.picklist(['research', 'design', 'write', 'mdoc', 'examples', 'integrate', 'review']),
     obstacle: v.pipe(v.string(), v.description('What actually went wrong or slowed you down this run')),
     resolution: v.pipe(v.string(), v.description('How you got past it')),
     suggestedFix: v.nullable(
@@ -65,11 +56,11 @@ export default defineWorkflow({
     typeName: v.pipe(v.string(), v.description('The data type to document, e.g. "Chunk"')),
     skipPhases: v.optional(
       v.pipe(
-        v.array(v.picklist(['research', 'write', 'verify-compliance', 'write-examples', 'integrate', 'review'])),
+        v.array(v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review'])),
         v.description(
-          'Phases to skip (only code-gated phases; mdoc verify, method coverage, and format/lint are ' +
-            'agent-driven and always run). Skipping a head-phase prefix resumes a run whose artifacts ' +
-            'already exist, e.g. ["research", "write"] runs only the verification/examples/integrate/review tail.',
+          'Phases to skip (only code-gated phases; mdoc verify and format/lint are agent-driven and ' +
+            'always run). Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
+            'e.g. ["research", "design", "write"] runs only the examples/integrate/review tail.',
         ),
       ),
     ),
@@ -86,8 +77,8 @@ export default defineWorkflow({
       const { data } = await session.prompt(
         `Write a complete, compile-verified data type reference page for: ${input.typeName}. ` +
           `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the full flow (research → write → verify compliance → method coverage → mdoc verify → ` +
-          `examples → format/lint → integrate → review). ` +
+          `Run the full flow (research → design → write → mdoc verify → examples → format/lint → ` +
+          `integrate → review; review covers method coverage + writing style + the checklist). ` +
           `Report the final page path, a one-line summary, and a run retrospective: the real obstacles ` +
           `you hit this run and how you resolved them (empty if it went smoothly — never invent friction).`,
         {

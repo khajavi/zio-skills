@@ -2,6 +2,9 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+// Injected into the generic designer's task (skills can't vary per session.task
+// call); the SKILL.md points here. Same source-of-truth split as rules.md.
+import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
 
 export const structureSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),
@@ -55,7 +58,7 @@ export const designTutorialStructure = defineAction({
 
     log.info(`Designing tutorial structure for: ${input.topic}`);
     const session = await harness.session();
-    // Delegates to the tutorial_designer subagent (no actions/subagents of its
+    // Delegates to the generic designer subagent (no actions/subagents of its
     // own) rather than reopening a session on the calling agent — that agent's
     // own design_tutorial_structure action would otherwise be visible to the
     // nested session, letting it call itself and recurse until the delegation
@@ -64,10 +67,14 @@ export const designTutorialStructure = defineAction({
       [
         `Design a learning-oriented tutorial structure for "${input.topic}".`,
         ``,
+        `Follow this tutorial-structure template exactly:`,
+        ``,
+        tutorialStructureDoc,
+        ``,
         `Research answers:`,
         JSON.stringify(input.researchAnswers),
       ].join('\n'),
-      { agent: 'tutorial_designer', result: structureSchema },
+      { agent: 'designer', result: structureSchema },
     );
     return data;
   },

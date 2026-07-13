@@ -6,11 +6,15 @@ Verify every item. The reference page is not done until all pass.
 
 - Opening definition appears immediately after the frontmatter with NO heading.
 - The opening includes a plain ```scala structural block (no method bodies) showing the type's shape.
-- A "Quick Showcase" section is present.
+- A "Quick Showcase" section is present, and its code is a **single `mdoc:reset` block** — not split
+  across multiple blocks.
 - Sections appear in the template order (definition → motivation → showcase → installation →
   construction → predefined instances → core operations → subtypes → comparisons → advanced →
   integration → running the examples).
 - Installation appears only for top-level module types; internal types omit it.
+- Each Core-Operations method is a `####` subsection under its `###` category; no category has a
+  single lone method (singletons are merged into a related category).
+- No two code blocks are adjacent — an explanatory paragraph sits between every pair.
 
 ## Coverage & Content Quality
 
@@ -18,7 +22,6 @@ Verify every item. The reference page is not done until all pass.
 - Every public method is documented under Core Operations, grouped by category.
 - Each method subsection has: a `` `Name` — description `` header, plain-language explanation,
   a plain-`scala` signature block, and an `mdoc:silent:reset`/`mdoc:reset` usage example.
-- No two code blocks are adjacent — an explanatory paragraph sits between every pair.
 - Comparison sections (if present) use padded tables.
 - "Running the Examples" (when standalone example files exist) embeds each via a
   `mdoc:embed:<path>:show-line-numbers` block inside a collapsible `<details>`.

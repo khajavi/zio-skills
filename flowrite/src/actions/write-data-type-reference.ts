@@ -1,6 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
+import { dataTypeStructureSchema } from './design-data-type-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 // The data-type-ref-structure skill's content, injected into the generic drafter's
 // task (skills can't vary per session.task call). Same single-source-of-truth
@@ -25,6 +26,7 @@ export const writeDataTypeReference = defineAction({
   name: 'write_data_type_reference',
   description: 'Write the data type reference markdown to docs/reference/<type>.md and return its path and content.',
   input: v.object({
+    structure: dataTypeStructureSchema,
     researchAnswers: dataTypeResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
@@ -77,6 +79,11 @@ export const writeDataTypeReference = defineAction({
         `Follow this data-type-ref-structure template and its drafting rules exactly:`,
         ``,
         dataTypeStructureDoc,
+        ``,
+        `Structural plan to follow exactly — the optional sections to include, the`,
+        `construction order, and the Core Operations category grouping are already`,
+        `decided; write the page to match this plan:`,
+        JSON.stringify(input.structure),
         ``,
         `Research answers (ground every fact in this — real signatures, imports, and examples;`,
         `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,

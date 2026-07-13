@@ -28,7 +28,7 @@ import { docsIntegrator } from '../profiles/docs-integrator.ts';
 // researcher/drafter/reviewer are the generic, document-kind-neutral role
 // profiles shared with data-type-ref-writer; the tutorial focus/schema/checklist
 // is supplied by the tutorial actions at the delegation call site.
-import { tutorialDesigner } from '../profiles/tutorial-designer.ts';
+import { designer } from '../profiles/designer.ts';
 import { drafter } from '../profiles/drafter.ts';
 import { reviewer } from '../profiles/reviewer.ts';
 import { reviewResolver } from '../profiles/review-resolver.ts';
@@ -73,7 +73,7 @@ export default defineAgent(({ id }) => {
       researcher,
       examplesBuilder,
       docsIntegrator,
-      tutorialDesigner,
+      designer,
       drafter,
       reviewer,
       reviewResolver,
