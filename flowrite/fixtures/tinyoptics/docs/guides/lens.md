@@ -378,5 +378,5 @@ The core insight is that a Lens is not just a getter-setter pair — it's a comp
 
 - **Learn Prisms** — explore safe branching on sealed traits and conditional pattern matching with the same compositional ease.
 - **Explore Optionals** — understand the full picture of Lens + Prism composition and how to handle absent focuses at any depth.
-- **Study the API Reference** — read the detailed [Optics API Reference](references/optics-api.md) for complete method signatures and additional operations.
+- **Study the API Reference** — read the detailed [Optics API Reference](reference/optics-api.md) for complete method signatures and additional operations.
 - **Dive into the Source** — browse `src/main/scala/optics/` to see how lenses, prisms, and optionals are implemented.

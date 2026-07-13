@@ -20,6 +20,6 @@ the write-tutorial workflow.
 
 ## Next Steps
 
-- **Explore the API** — see the [Optics API Reference](../references/optics-api.md)
+- **Explore the API** — see the [Optics API Reference](../reference/optics-api.md)
   for detailed documentation of every optic type.
 - **Read the source** — the core optics live in `src/main/scala/optics/`.
