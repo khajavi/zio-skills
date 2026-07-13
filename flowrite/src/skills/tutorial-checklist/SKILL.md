@@ -26,7 +26,8 @@ Verify every item. The tutorial is not done until all pass.
 
 ## Technical Accuracy
 
-- All method signatures and type names match the actual source code.
+- All method signatures and type names match the actual source code — `grep`/`read` the real
+  checkout to check any signature you're unsure of; never trust the tutorial's prose alone.
 - No deprecated methods or outdated patterns.
 - `sbt "docs/mdoc --in docs/guides/<id>.md --out website/docs/guides/<id>.md"` reports zero `[error]` lines (mandatory before done).
 
