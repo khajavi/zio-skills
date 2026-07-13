@@ -25,7 +25,11 @@ Design the section structure before writing a word. A tutorial is learning-orien
 4. Putting It Together
    - The complete runnable example combining all concepts
 5. Running the Examples
-   - git clone + sbt runMain per concept
+   - git clone + `cd` into the examples module dir (e.g. `<library>-examples`)
+   - Per concept: a short subsection with a collapsible `<details><summary>`
+     embedding that example's source via `mdoc:embed:<path>:show-line-numbers`
+     (same pattern as Putting It Together), followed by its
+     `sbt "<id>/runMain ..."` command
 6. What You've Learned
    - Objectives restated as achievements
 7. Where to Go Next
