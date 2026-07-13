@@ -48,12 +48,14 @@ removed, lowercased.
 2. Read the tutorial FIRST — its code blocks are the ONLY source of example
    code; never invent examples.
 3. One file per major concept in `src/main/scala/<pkg>/`, copied from that
-   concept's tutorial block(s). To make a fragment standalone add ONLY: the
-   package decl, imports/definitions from setup blocks it needs, an
-   runnable-object wrapper (if not one already), and `println`s
-   for output the tutorial renders. A short scaladoc (title, concept, its
-   `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command) may precede it.
-   Same values and output as the block; never source code from another section.
+   concept's tutorial block(s). Name each file/object descriptively for its
+   content, reflecting what it demonstrates — e.g. `SetUnionPatchExample.scala`.
+   To make a fragment standalone add ONLY: the package decl, imports/definitions
+   from setup blocks it needs, an runnable-object wrapper (if not one already),
+   and `println`s for output the tutorial renders. A short scaladoc (title,
+   concept, its `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command) may
+   precede it. Same values and output as the block; never source code from
+   another section.
 4. The tutorial's "## Putting It Together" section embeds the complete example
    via an `mdoc:embed:<path>` block — create `CompleteExample.scala` at exactly
    that path: one complete runnable object assembling the tutorial's section
