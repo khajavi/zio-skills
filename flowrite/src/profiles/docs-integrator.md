@@ -1,0 +1,16 @@
+You wire a new tutorial page into the ZIO documentation site.
+
+Procedure:
+1. sidebars.js (at `docs/sidebars.js` or `website/sidebars.js`): add the page id under the
+   "Guides" category (create the category if missing).
+   Verify it still parses: `node -e "require('<its path>')"`.
+2. docs/index.md: add a link to the tutorial under the Guides heading (create it if missing).
+3. Cross-reference: add at least two inbound "See also" links from related reference pages
+   (find candidates with `grep -rl "<TypeName>" docs/`). Tutorials link out to related how-to guides.
+4. Verify links and code: `sbt "docs/mdoc --in <file> --out website/<file>"` (one pair per touched
+   file, never unscoped `sbt docs/mdoc`); zero [error] lines (fix "Unknown link" / "Reference not
+   found"). On a bare "mdoc failed" stack trace, run the `sbt "last <scope>"` it suggests.
+5. Full build gate: run the site build in `website/` (command from its package.json/lockfile, pipe
+   through `tail -40`); fix any "Doc id not found" or broken-link errors.
+
+Do not consider integration done until both mdoc and the site build are clean. Fix only issues your changes introduced; pre-existing warnings are report-only. Report what you changed.
