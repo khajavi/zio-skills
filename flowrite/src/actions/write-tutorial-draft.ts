@@ -13,7 +13,13 @@ export const writeTutorialDraft = defineAction({
   name: 'write_tutorial_draft',
   description: 'Write the tutorial markdown to docs/guides/<id>.md and return its path and content.',
   input: v.object({
-    id: v.pipe(v.string(), v.description('kebab-case tutorial id; matches the filename')),
+    id: v.pipe(
+      v.string(),
+      v.description(
+        'kebab-case tutorial id; matches the filename. Specific to this tutorial\'s actual angle, ' +
+          'not a generic single word — e.g. "compositional-fiberref-updates", not "differ".',
+      ),
+    ),
     topic: v.string(),
     structure: structureSchema,
     researchAnswers: researchSchema,
@@ -40,7 +46,13 @@ export const writeTutorialDraft = defineAction({
     // doesn't carry the "narrate, then fence the deliverable" habit that
     // corrupted the written file with a stray preamble/code fence.
     const contentSchema = v.object({
-      title: v.pipe(v.string(), v.description('A warm, specific tutorial title')),
+      title: v.pipe(
+        v.string(),
+        v.description(
+          'A warm, specific tutorial title. A bare type name alone (e.g. "The Differ Data Type") is ' +
+            "too vague — name the concept the tutorial actually teaches.",
+        ),
+      ),
       description: v.pipe(
         v.string(),
         v.minLength(50),
