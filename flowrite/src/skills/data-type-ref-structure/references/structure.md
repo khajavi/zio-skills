@@ -46,7 +46,9 @@ Keep them in this order.
 11. Integration (if applicable) — how it connects to sibling types in the same library, with
     relative-path cross-references (e.g. [Schema](./schema.md)).
 12. Running the Examples (required when standalone example files exist)
-    - Embed each example with `SourceFile.print` (see references/embedding-examples.md). Place last.
+    - Per example, a collapsible `<details><summary>` embedding its source via
+      `mdoc:embed:<library>-examples/<pkg>/src/main/scala/<pkg>/<File>.scala:show-line-numbers`,
+      a short sentence on how to run it, and its `sbt "<pkg>/runMain ..."` command. Place last.
 ```
 
 ## Drafting Rules

@@ -33,9 +33,9 @@ export const writeCompanionExamples = defineAction({
     const { data } = await session.task(
       `Build companion examples for the documentation page at ${input.pagePath}. Read the page ` +
         `and copy its code blocks: one standalone runnable example per major concept. If the page ` +
-        `embeds a source file at a fixed path (a tutorial's "## Putting It Together" mdoc:embed, or a ` +
-        `reference page's SourceFile.print), create that file at exactly that path. Then compile the ` +
-        `examples leaf build and run every example (each must print meaningful output).`,
+        `embeds a source file at a fixed mdoc:embed:<path> (a tutorial's "## Putting It Together", or ` +
+        `a reference page's "Running the Examples" entries), create that file at exactly that path. Then ` +
+        `compile the examples leaf build and run every example (each must print meaningful output).`,
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
     );
     return data;

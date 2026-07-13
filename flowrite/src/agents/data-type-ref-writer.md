@@ -34,7 +34,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
    section — always scoped with `--in`/`--out`, never all docs. Fix every `[error]`
    before continuing. Mandatory before you call the page done.
 7. **Companion examples.** If the page's "Running the Examples" section embeds
-   standalone example files (via `SourceFile.print`), call `write_companion_examples`
+   standalone example files (via `mdoc:embed`), call `write_companion_examples`
    with the page path to build and verify them. Skip if the page relies only on
    inline mdoc blocks.
 8. **Format & lint.** Run `sbt scalafmtAll` then `sbt check`; fix what they report.

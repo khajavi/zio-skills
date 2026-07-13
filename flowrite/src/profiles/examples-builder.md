@@ -56,10 +56,10 @@ removed, lowercased.
    concept, its `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command) may
    precede it. Same values and output as the block; never source code from
    another section.
-4. If the page embeds a source file at a fixed path — a tutorial's "## Putting It
-   Together" `mdoc:embed:<path>` block, or a reference page's `SourceFile.print("<path>")`
-   in "Running the Examples" — create the file at exactly that path: a complete
-   runnable object assembling the page's section code (same values and output).
+4. If the page embeds a source file at a fixed `mdoc:embed:<path>` block — a
+   tutorial's "## Putting It Together", or a reference page's "Running the
+   Examples" entries — create the file at exactly that path: a complete runnable
+   object assembling the page's section code (same values and output).
 5. Compile: `cd <library>-examples/<tutorial-id> && sbt compile` — sbt must run
    inside that leaf build, since a RootProject leaf is not addressable by id
    from the repo root. Fix every failure.
@@ -86,8 +86,8 @@ author can write the "Running the Examples" section.
   the page embeds.
 - Every file's code traces to the page's blocks — nothing invented beyond
   package/imports/wrapper/printlns.
-- Any file the page embeds at a fixed path (`mdoc:embed` or `SourceFile.print`)
-  exists at exactly that path, assembled from the page's section code.
+- Any file the page embeds at a fixed `mdoc:embed:<path>` exists at exactly that
+  path, assembled from the page's section code.
 - Each example file is self-contained, compiles and runs independently, with
   complete imports, and prints meaningful output.
 - The leaf build compiles clean; each example's `runMain` prints real output.

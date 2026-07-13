@@ -6,7 +6,6 @@ import { isPhaseSkipped } from '../shared/skip-phases.ts';
 // task (skills can't vary per session.task call). Same single-source-of-truth
 // split as writing-style/references/rules.md; the SKILL.md points here.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
-import embeddingExamplesDoc from '../skills/data-type-ref-structure/references/embedding-examples.md' with { type: 'markdown' };
 
 /** Kebab-case a type name for the filename: "NonEmptyChunk" -> "non-empty-chunk". */
 export function toKebabCase(typeName: string): string {
@@ -78,10 +77,6 @@ export const writeDataTypeReference = defineAction({
         `Follow this data-type-ref-structure template and its drafting rules exactly:`,
         ``,
         dataTypeStructureDoc,
-        ``,
-        `For the "Running the Examples" section, follow this embedding guidance:`,
-        ``,
-        embeddingExamplesDoc,
         ``,
         `Research answers (ground every fact in this — real signatures, imports, and examples;`,
         `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
