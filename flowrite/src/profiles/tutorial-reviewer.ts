@@ -1,6 +1,5 @@
 import { defineAgentProfile } from '@flue/runtime';
 import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md' with { type: 'skill' };
-import writingStyle from '../skills/writing-style/SKILL.md' with { type: 'skill' };
 import { TIERS } from '../shared/models.ts';
 import instructions from './tutorial-reviewer.md' with { type: 'markdown' };
 
@@ -12,6 +11,6 @@ export const tutorialReviewer = defineAgentProfile({
   name: 'tutorial_reviewer',
   ...TIERS.reviewer,
   description: 'Evaluates a written tutorial against the tutorial-checklist and reports per-item pass/fail.',
-  skills: [tutorialChecklist, writingStyle],
+  skills: [tutorialChecklist],
   instructions,
 });
