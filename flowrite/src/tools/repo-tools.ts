@@ -34,7 +34,7 @@ async function runSbt(command: string, cwd: string, signal?: AbortSignal) {
 
 /**
  * Search the library's GitHub history (commits, issues, PRs) via `sbt gh-query`.
- * Exported standalone so read-only profiles (e.g. tutorial_researcher) can take
+ * Exported standalone so read-only profiles (e.g. researcher) can take
  * just this tool without pulling in the write-verification sbt tools.
  */
 export function createGhQueryTool(repoPath: string) {

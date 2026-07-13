@@ -3,6 +3,11 @@ import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+// The tutorial-structure skill's content, injected into the generic drafter's
+// task (a subagent's skills can't vary per session.task call, so the kind-specific
+// template rides in the prompt). Same single-source-of-truth split as
+// writing-style/references/rules.md; the SKILL.md points here.
+import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -39,7 +44,7 @@ export const writeTutorialDraft = defineAction({
     log.info(`Writing tutorial draft: ${path}`);
 
     const session = await harness.session();
-    // Delegates to the tutorial_drafter subagent — see design-tutorial-structure.ts
+    // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
     // Uses a result schema (not response.text) so the model returns content
     // through the structured channel instead of a chat reply — that channel
@@ -83,6 +88,10 @@ export const writeTutorialDraft = defineAction({
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
         ``,
+        `Follow this tutorial-structure template and its drafting rules exactly:`,
+        ``,
+        tutorialStructureDoc,
+        ``,
         `Topic: ${input.topic}`,
         ``,
         `Research answers (ground every fact in this — imports, signatures, real`,
@@ -90,10 +99,10 @@ export const writeTutorialDraft = defineAction({
         `verbatim code/signatures to copy exactly):`,
         JSON.stringify(input.researchAnswers),
         ``,
-        `Structure to follow exactly:`,
+        `Section plan to follow exactly:`,
         JSON.stringify(input.structure),
       ].join('\n'),
-      { agent: 'tutorial_drafter', result: contentSchema },
+      { agent: 'drafter', result: contentSchema },
     );
 
     const frontmatter = [

@@ -2,10 +2,10 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { runStyleLoop, withTransientRetry } from '../shared/style-loop.ts';
-// The tutorial-checklist skill's content, injected into the generic reviewer's
+// The data-type-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
-import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md' with { type: 'markdown' };
+import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md' with { type: 'markdown' };
 
 const reviewSchema = v.object({
   passed: v.pipe(v.boolean(), v.description('true only when every checklist item passes')),
@@ -18,30 +18,22 @@ const reviewSchema = v.object({
   ),
 });
 
-// The tutorial-checklist skill's Review Cadence call cap is prose the model
-// can ignore. Enforce it here instead. `harness` is
-// fresh per action *invocation* (verified: a WeakMap keyed on it never
-// accumulated — every call read back as "1"), not per workflow run, and
-// ActionContext exposes no run/instance id to key on. This module-level
-// counter works because this repo's actual usage is one process per tutorial
-// (run-tutorial.sh execs a fresh node process each time) — it would need a
-// real per-run key if this action ever runs inside a long-lived dev server
-// handling concurrent tutorial-writer runs.
+// Enforce the checklist's Review Cadence call cap in code — see review-tutorial.ts
+// for the full rationale (module-level counter is safe under this repo's
+// one-process-per-run usage).
 let reviewCallCount = 0;
-// Default 1 review pass; override per run with MAX_REVIEW_CALLS=n.
 const MAX_REVIEW_CALLS = Number(process.env.MAX_REVIEW_CALLS ?? 1);
 
 /**
- * Evaluate a written tutorial against the tutorial-checklist skill and report
- * per-item pass/fail. The agent resolves every failing item before finishing.
- * Capped at MAX_REVIEW_CALLS per run — further calls short-circuit without
- * delegating, forcing the agent to finish rather than review indefinitely.
+ * Evaluate a written data type reference page against the data-type-ref-checklist
+ * and report per-item pass/fail. Runs the mechanical style loop first, then the
+ * checklist review. Capped at MAX_REVIEW_CALLS per run. Mirrors review-tutorial.ts.
  */
-export const reviewTutorial = defineAction({
-  name: 'review_tutorial',
-  description: 'Evaluate a written tutorial against the tutorial-checklist and report per-item pass/fail.',
+export const reviewDataTypeRef = defineAction({
+  name: 'review_data_type_ref',
+  description: 'Evaluate a written data type reference page against the data-type-ref-checklist and report per-item pass/fail.',
   input: v.object({
-    path: v.pipe(v.string(), v.description('Path to the tutorial markdown, e.g. docs/guides/scope.md')),
+    path: v.pipe(v.string(), v.description('Path to the reference markdown, e.g. docs/reference/chunk.md')),
   }),
   output: reviewSchema,
   async run({ harness, input, log }) {
@@ -53,7 +45,7 @@ export const reviewTutorial = defineAction({
     const calls = ++reviewCallCount;
 
     if (calls > MAX_REVIEW_CALLS) {
-      log.info(`review_tutorial call ${calls} exceeds cap of ${MAX_REVIEW_CALLS} — refusing, forcing finish`);
+      log.info(`review_data_type_ref call ${calls} exceeds cap of ${MAX_REVIEW_CALLS} — refusing, forcing finish`);
       return {
         passed: true,
         items: [
@@ -69,16 +61,15 @@ export const reviewTutorial = defineAction({
     log.info(`Reviewing against checklist (call ${calls}/${MAX_REVIEW_CALLS}): ${input.path}`);
 
     // Snapshot the pre-review version (first call only) so the review phase's
-    // edits are diffable afterwards: git diff --no-index .pre-review/<file> <path>
+    // edits are diffable: git diff --no-index .pre-review/<file> <path>
     if (calls === 1) {
       const snapshotPath = `.pre-review/${input.path.split('/').pop()}`;
       await harness.fs.writeFile(snapshotPath, await harness.fs.readFile(input.path));
       log.info(`Pre-review snapshot saved: ${snapshotPath}`);
     }
 
-    // Style pass first: detects violations rule group by rule group and fixes
-    // them via the todo-harnessed style_fixer, so the checklist review below
-    // sees the corrected page. Unfixable violations surface as failing items.
+    // Style pass first: rule-agnostic mechanical loop over the same 25 writing-style
+    // rules, so the checklist review below sees the corrected page.
     const style = await runStyleLoop(harness, input.path, log);
     const styleItems = style.passed
       ? [{ item: 'Writing style (all 25 rules, checked mechanically)', pass: true, issue: null }]
@@ -97,11 +88,11 @@ export const reviewTutorial = defineAction({
     const { data } = await withTransientRetry(log, 'reviewer', () =>
       session.task(
         [
-          `Evaluate the tutorial below against every item in this checklist:`,
+          `Evaluate the data type reference page below against every item in this checklist:`,
           ``,
-          tutorialChecklistDoc,
+          dataTypeChecklistDoc,
           ``,
-          `--- TUTORIAL (${input.path}) ---`,
+          `--- REFERENCE PAGE (${input.path}) ---`,
           content,
         ].join('\n'),
         { agent: 'reviewer', result: reviewSchema },

@@ -5,8 +5,13 @@ import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
 import { integrateTutorial } from '../actions/integrate-tutorial.ts';
 import { reviewTutorial } from '../actions/review-tutorial.ts';
+import { researchDataType } from '../actions/research-data-type.ts';
+import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
+import { verifyDataTypeCompliance } from '../actions/verify-data-type-compliance.ts';
+import { integrateDataTypeReference } from '../actions/integrate-data-type-reference.ts';
+import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
 
-/** This agent's own actions — exposed to the model as tools but delegate their real work. */
+/** Every agent's own actions — exposed to the model as tools but delegate their real work. */
 const ACTION_NAMES = new Set(
   [
     researchTutorialTopic,
@@ -15,6 +20,11 @@ const ACTION_NAMES = new Set(
     writeCompanionExamples,
     integrateTutorial,
     reviewTutorial,
+    researchDataType,
+    writeDataTypeReference,
+    verifyDataTypeCompliance,
+    integrateDataTypeReference,
+    reviewDataTypeRef,
   ].map((a) => a.name),
 );
 

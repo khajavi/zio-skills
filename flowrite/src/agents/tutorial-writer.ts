@@ -20,14 +20,17 @@ import { integrateTutorial } from '../actions/integrate-tutorial.ts';
 import { reviewTutorial } from '../actions/review-tutorial.ts';
 
 // subagents (agent profiles)
-import { tutorialResearcher } from '../profiles/tutorial-researcher.ts';
+import { researcher } from '../profiles/researcher.ts';
 import { examplesBuilder } from '../profiles/examples-builder.ts';
 import { docsIntegrator } from '../profiles/docs-integrator.ts';
 // narrow, no-action profiles the design/write/review actions delegate to
-// (prevents the self-recursion hazard of harness.session() on this same agent)
+// (prevents the self-recursion hazard of harness.session() on this same agent).
+// researcher/drafter/reviewer are the generic, document-kind-neutral role
+// profiles shared with data-type-ref-writer; the tutorial focus/schema/checklist
+// is supplied by the tutorial actions at the delegation call site.
 import { tutorialDesigner } from '../profiles/tutorial-designer.ts';
-import { tutorialDrafter } from '../profiles/tutorial-drafter.ts';
-import { tutorialReviewer } from '../profiles/tutorial-reviewer.ts';
+import { drafter } from '../profiles/drafter.ts';
+import { reviewer } from '../profiles/reviewer.ts';
 import { reviewResolver } from '../profiles/review-resolver.ts';
 import { styleChecker } from '../profiles/style-checker.ts';
 import { styleFixer } from '../profiles/style-fixer.ts';
@@ -67,12 +70,12 @@ export default defineAgent(({ id }) => {
     ],
     tools: [createGhQueryTool(cwd)],
     subagents: [
-      tutorialResearcher,
+      researcher,
       examplesBuilder,
       docsIntegrator,
       tutorialDesigner,
-      tutorialDrafter,
-      tutorialReviewer,
+      drafter,
+      reviewer,
       reviewResolver,
       styleChecker,
       styleFixer,

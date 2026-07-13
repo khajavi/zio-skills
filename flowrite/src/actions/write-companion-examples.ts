@@ -8,16 +8,16 @@ export const writeCompanionExamplesOutput = v.object({
 });
 
 /**
- * Build companion example files for a finished tutorial, then verify they
- * compile and run. Checks the skip list before ever delegating — see
- * review-tutorial.ts (action) for why this check must live in code, not
- * only as prose in tutorial-writer.md.
+ * Build companion example files for a finished documentation page (tutorial or
+ * reference), then verify they compile and run. Checks the skip list before ever
+ * delegating — see review-tutorial.ts (action) for why this check must live in
+ * code, not only as prose in the agent instructions. Shared across document kinds.
  */
 export const writeCompanionExamples = defineAction({
   name: 'write_companion_examples',
-  description: 'Build companion example files for a tutorial and verify they compile and run.',
+  description: 'Build companion example files for a documentation page and verify they compile and run.',
   input: v.object({
-    tutorialPath: v.pipe(v.string(), v.description('Path to the tutorial markdown, e.g. docs/guides/scope.md')),
+    pagePath: v.pipe(v.string(), v.description('Path to the page markdown, e.g. docs/guides/scope.md or docs/reference/chunk.md')),
   }),
   output: writeCompanionExamplesOutput,
   async run({ harness, input, log }) {
@@ -26,15 +26,16 @@ export const writeCompanionExamples = defineAction({
       return { skipped: true, summary: 'Skipped by request.' };
     }
 
-    log.info(`Building companion examples for: ${input.tutorialPath}`);
+    log.info(`Building companion examples for: ${input.pagePath}`);
     const session = await harness.session();
     // Delegates to the examples_builder subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
     const { data } = await session.task(
-      `Build companion examples for the tutorial at ${input.tutorialPath}. Read the tutorial ` +
-        `and copy its code blocks: one standalone runnable example per major concept, plus the ` +
-        `"## Putting It Together" example copied verbatim. Then compile the examples leaf build ` +
-        `and run every example (each must print meaningful output).`,
+      `Build companion examples for the documentation page at ${input.pagePath}. Read the page ` +
+        `and copy its code blocks: one standalone runnable example per major concept. If the page ` +
+        `embeds a source file at a fixed path (a tutorial's "## Putting It Together" mdoc:embed, or a ` +
+        `reference page's SourceFile.print), create that file at exactly that path. Then compile the ` +
+        `examples leaf build and run every example (each must print meaningful output).`,
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
     );
     return data;
