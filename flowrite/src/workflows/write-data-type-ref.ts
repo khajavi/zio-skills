@@ -77,7 +77,7 @@ export default defineWorkflow({
       const { data } = await session.prompt(
         `Write a complete, compile-verified data type reference page for: ${input.typeName}. ` +
           `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the full flow (research → design → write → mdoc verify → examples → integrate → ` +
+          `Run the full flow (research → design → write → examples → mdoc verify → integrate → ` +
           `review; review covers method coverage + writing style + the checklist). ` +
           `Report the final page path, a one-line summary, and a run retrospective: the real obstacles ` +
           `you hit this run and how you resolved them (empty if it went smoothly — never invent friction).`,

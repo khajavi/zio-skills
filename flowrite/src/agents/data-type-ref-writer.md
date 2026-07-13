@@ -26,13 +26,15 @@ reality differs. Do not mechanically follow steps that no longer fit.
 4. **Write.** Call `write_data_type_reference` with BOTH the structural plan from
    step 3 AND the exact research object from step 2. It writes `docs/reference/<type-kebab>.md`.
    The reference-page template is supplied to the drafter automatically.
-5. **Verify mdoc.** Compile the page per the mdoc-conventions skill's Verifying
-   section — always scoped with `--in`/`--out`, never all docs. Fix every `[error]`
-   before continuing. Mandatory before you call the page done.
-6. **Companion examples.** If the page's "Running the Examples" section embeds
+5. **Companion examples.** If the page's "Running the Examples" section embeds
    standalone example files (via `mdoc:embed`), call `write_companion_examples`
    with the page path to build and verify them (the examples builder formats and
    lints the examples leaf itself). Skip if the page relies only on inline mdoc blocks.
+   Do this BEFORE mdoc verify: an `mdoc:embed:<path>` block fails unless the file it
+   embeds already exists on disk.
+6. **Verify mdoc.** Compile the page per the mdoc-conventions skill's Verifying
+   section — always scoped with `--in`/`--out`, never all docs. Fix every `[error]`
+   before continuing. Mandatory before you call the page done.
 7. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
 8. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
