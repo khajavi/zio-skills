@@ -1,6 +1,7 @@
 import { defineAgentProfile } from '@flue/runtime';
 import writingStyle from '../skills/writing-style/SKILL.md' with { type: 'skill' };
 import mdocConventions from '../skills/mdoc-conventions/SKILL.md' with { type: 'skill' };
+import tutorialStructure from '../skills/tutorial-structure/SKILL.md' with { type: 'skill' };
 import instructions from './tutorial-drafter.md' with { type: 'markdown' };
 
 /**
@@ -10,6 +11,6 @@ import instructions from './tutorial-drafter.md' with { type: 'markdown' };
 export const tutorialDrafter = defineAgentProfile({
   name: 'tutorial_drafter',
   description: 'Writes a complete learning-oriented tutorial as Docusaurus markdown from a section plan.',
-  skills: [writingStyle, mdocConventions],
+  skills: [writingStyle, mdocConventions, tutorialStructure],
   instructions,
 });
