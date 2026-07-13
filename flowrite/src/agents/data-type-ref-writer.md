@@ -31,20 +31,19 @@ reality differs. Do not mechanically follow steps that no longer fit.
    before continuing. Mandatory before you call the page done.
 6. **Companion examples.** If the page's "Running the Examples" section embeds
    standalone example files (via `mdoc:embed`), call `write_companion_examples`
-   with the page path to build and verify them. Skip if the page relies only on
-   inline mdoc blocks.
-7. **Format & lint.** Run `sbt scalafmtAll` then `sbt check`; fix what they report.
-8. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
+   with the page path to build and verify them (the examples builder formats and
+   lints the examples leaf itself). Skip if the page relies only on inline mdoc blocks.
+7. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
-9. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
+8. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
    the single quality gate: it runs method coverage (is every public member documented?),
    the writing-style loop, and the data-type-ref-checklist (structure + content + accuracy)
    in one pass. For any member it reports missing, either document it or confirm from the
    real source it is private/internal. Follow the checklist's Review Cadence rules.
-10. **Retrospective.** In your final result, alongside the path and summary, report
-    the real obstacles you hit this run (per phase), how you resolved each, and —
-    where you can name one — a concrete instruction/tool/schema change that would
-    prevent it next time. Report only friction you actually encountered; never invent it.
+9. **Retrospective.** In your final result, alongside the path and summary, report
+   the real obstacles you hit this run (per phase), how you resolved each, and —
+   where you can name one — a concrete instruction/tool/schema change that would
+   prevent it next time. Report only friction you actually encountered; never invent it.
 
 ## Guardrails
 - Never invent a type — ask.

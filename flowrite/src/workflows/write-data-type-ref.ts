@@ -58,8 +58,8 @@ export default defineWorkflow({
       v.pipe(
         v.array(v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review'])),
         v.description(
-          'Phases to skip (only code-gated phases; mdoc verify and format/lint are agent-driven and ' +
-            'always run). Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
+          'Phases to skip (only code-gated phases; mdoc verify is agent-driven and always runs). ' +
+            'Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
             'e.g. ["research", "design", "write"] runs only the examples/integrate/review tail.',
         ),
       ),
@@ -77,8 +77,8 @@ export default defineWorkflow({
       const { data } = await session.prompt(
         `Write a complete, compile-verified data type reference page for: ${input.typeName}. ` +
           `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the full flow (research → design → write → mdoc verify → examples → format/lint → ` +
-          `integrate → review; review covers method coverage + writing style + the checklist). ` +
+          `Run the full flow (research → design → write → mdoc verify → examples → integrate → ` +
+          `review; review covers method coverage + writing style + the checklist). ` +
           `Report the final page path, a one-line summary, and a run retrospective: the real obstacles ` +
           `you hit this run and how you resolved them (empty if it went smoothly — never invent friction).`,
         {
