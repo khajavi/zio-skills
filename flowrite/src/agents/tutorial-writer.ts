@@ -28,6 +28,7 @@ import { docsIntegrator } from '../profiles/docs-integrator.ts';
 import { tutorialDesigner } from '../profiles/tutorial-designer.ts';
 import { tutorialDrafter } from '../profiles/tutorial-drafter.ts';
 import { tutorialReviewer } from '../profiles/tutorial-reviewer.ts';
+import { reviewResolver } from '../profiles/review-resolver.ts';
 import { styleChecker } from '../profiles/style-checker.ts';
 import { styleFixer } from '../profiles/style-fixer.ts';
 
@@ -72,6 +73,7 @@ export default defineAgent(({ id }) => {
       tutorialDesigner,
       tutorialDrafter,
       tutorialReviewer,
+      reviewResolver,
       styleChecker,
       styleFixer,
     ],
