@@ -4,7 +4,7 @@ import instructions from './reviewer.md' with { type: 'markdown' };
 
 /**
  * Generic documentation reviewer, shared across document kinds. No
- * actions/subagents of its own — see tutorial-designer.ts for why that matters.
+ * actions/subagents of its own — see design-tutorial-structure.ts for why that matters.
  *
  * The kind-specific checklist is injected into the task prompt by the calling
  * action (skills are profile-owned and cannot vary per `session.task` call), so

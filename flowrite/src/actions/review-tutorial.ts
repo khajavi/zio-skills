@@ -77,7 +77,7 @@ export const reviewTutorial = defineAction({
     }
 
     // Style pass first: detects violations rule group by rule group and fixes
-    // them via the todo-harnessed style_fixer, so the checklist review below
+    // each group in a single style_fixer pass, so the checklist review below
     // sees the corrected page. Unfixable violations surface as failing items.
     const style = await runStyleLoop(harness, input.path, log);
     const styleItems = style.passed

@@ -6,7 +6,7 @@ import instructions from './drafter.md' with { type: 'markdown' };
 
 /**
  * Generic documentation-prose writer, shared across document kinds. No
- * actions/subagents of its own — see tutorial-designer.ts for why that matters.
+ * actions/subagents of its own — see design-tutorial-structure.ts for why that matters.
  *
  * The kind-specific structure/template is injected into the task prompt by the
  * calling action (a subagent's skills are profile-owned and cannot vary per
