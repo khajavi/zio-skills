@@ -36,10 +36,10 @@ differs. Do not mechanically follow steps that no longer fit.
    show output; never branch; limit scope aggressively.
 5. **Companion examples.** Call `write_companion_examples` with the tutorial
    path.
-6. **Verify mdoc.** Compile the tutorial file (and any other docs files you
-   touched) per the mdoc-conventions skill's Verifying section — always scoped
-   with `--in`/`--out`, never all docs. Fix every `[error]` before continuing.
-   This is mandatory before you call the tutorial done.
+6. **Verify mdoc.** Compile the tutorial: `sbt "docs/mdoc --in docs/guides/<id>.md --out
+   website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
+   pair for any other docs file you touched, never all docs. Fix every `[error]` before
+   continuing. Mandatory before you call the tutorial done.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_tutorial`. It first checks and fixes every
    writing-style rule group by group itself; then evaluates the checklist. Load

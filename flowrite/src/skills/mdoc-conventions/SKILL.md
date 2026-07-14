@@ -89,6 +89,8 @@ Always compile scoped to the files you touched, never the whole docs set
 sbt "docs/mdoc --in <file> --out website/<file>"
 ```
 
+`mdoc` is an sbt task, not a shell binary: quote the whole `docs/mdoc …` as one argument (never bare `mdoc`, never unquoted).
+
 One `--in`/`--out` pair per file; `out` is the same path prefixed with
 `website/`, e.g. `docs/reference/x.md` → `website/docs/reference/x.md`. If the
 failure output only shows a stack trace with "stack trace is suppressed; run

@@ -32,9 +32,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
    lints the examples leaf itself). Skip if the page relies only on inline mdoc blocks.
    Do this BEFORE mdoc verify: an `mdoc:embed:<path>` block fails unless the file it
    embeds already exists on disk.
-6. **Verify mdoc.** Compile the page per the mdoc-conventions skill's Verifying
-   section — always scoped with `--in`/`--out`, never all docs. Fix every `[error]`
-   before continuing. Mandatory before you call the page done.
+6. **Verify mdoc.** Compile the page: `sbt "docs/mdoc --in docs/reference/<file>.md --out
+   website/docs/reference/<file>.md"` (one quoted arg — see mdoc-conventions). Fix every
+   `[error]` before continuing. Mandatory before you call the page done.
 7. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
 8. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
