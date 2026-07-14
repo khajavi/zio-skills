@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The tutorial-structure skill's content, injected into the generic drafter's
 // task (a subagent's skills can't vary per session.task call, so the kind-specific
 // template rides in the prompt). Same single-source-of-truth split as
@@ -105,15 +106,13 @@ export const writeTutorialDraft = defineAction({
       { agent: 'drafter', result: contentSchema },
     );
 
-    const frontmatter = [
-      '---',
-      `id: ${input.id}`,
-      `title: ${JSON.stringify(data.title)}`,
-      `description: ${JSON.stringify(data.description)}`,
-      `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`,
-      '---',
-    ].join('\n');
-    const content = `${frontmatter}\n${data.body}`;
+    const frontmatter = buildFrontmatter({
+      id: input.id,
+      title: data.title,
+      description: data.description,
+      keywords: data.keywords,
+    });
+    const content = withFrontmatter(frontmatter, data.body);
 
     await harness.fs.writeFile(path, content);
     return { path, content };

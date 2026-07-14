@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
 import { dataTypeStructureSchema } from './design-data-type-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The data-type-ref-structure skill's content, injected into the generic drafter's
 // task (skills can't vary per session.task call). Same single-source-of-truth
 // split as writing-style/references/rules.md; the SKILL.md points here.
@@ -93,18 +94,13 @@ export const writeDataTypeReference = defineAction({
       { agent: 'drafter', result: contentSchema },
     );
 
-    const frontmatter = [
-      '---',
-      `id: ${id}`,
-      `title: ${JSON.stringify(data.title)}`,
-      `description: ${JSON.stringify(data.description)}`,
-      `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`,
-      '---',
-    ].join('\n');
-    // Blank line between frontmatter and body (Docusaurus/MDX convention; a body
-    // glued directly to the closing --- renders wrong). Strip any leading newlines
-    // the model added so the separation is always exactly one blank line.
-    const content = `${frontmatter}\n\n${data.body.replace(/^\n+/, '')}`;
+    const frontmatter = buildFrontmatter({
+      id,
+      title: data.title,
+      description: data.description,
+      keywords: data.keywords,
+    });
+    const content = withFrontmatter(frontmatter, data.body);
 
     await harness.fs.writeFile(path, content);
     return { path, content };
