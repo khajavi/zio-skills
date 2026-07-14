@@ -1,7 +1,7 @@
 import { type AgentRouteHandler } from '@flue/runtime';
 
 import instructions from './data-type-ref-writer.md' with { type: 'markdown' };
-import { defineDocsWriter } from './docs-writer.ts';
+import { defineDocsWriter } from '../shared/docs-writer.ts';
 
 // skills — the reference-page structure + checklist, plus mdoc conventions
 // (writing-style comes from the profile). Same skills whose reference/*.md the

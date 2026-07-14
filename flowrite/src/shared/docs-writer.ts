@@ -20,7 +20,7 @@ import { styleChecker } from '../profiles/style-checker.ts';
 import { styleFixer } from '../profiles/style-fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
-import { TIERS } from '../shared/models.ts';
+import { TIERS } from './models.ts';
 
 /**
  * Shared factory for ZIO documentation-authoring agents (tutorial-writer,

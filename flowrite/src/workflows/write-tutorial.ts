@@ -2,7 +2,7 @@ import { type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
-import { defineDocsWorkflow, skipPhasesField } from './docs-workflow.ts';
+import { defineDocsWorkflow, skipPhasesField } from '../shared/docs-workflow.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch

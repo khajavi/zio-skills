@@ -1,8 +1,8 @@
 import { defineWorkflow, type AgentDefinition } from '@flue/runtime';
 import * as v from 'valibot';
-import { trackTokenUsage } from '../shared/token-usage.ts';
-import { trackComponentUsage } from '../shared/component-usage.ts';
-import { insightsSchema } from '../shared/schemas.ts';
+import { trackTokenUsage } from './token-usage.ts';
+import { trackComponentUsage } from './component-usage.ts';
+import { insightsSchema } from './schemas.ts';
 
 /** Every write-* workflow returns the finished page path, a summary, and the run retrospective. */
 const outputSchema = v.object({ path: v.string(), summary: v.string(), insights: insightsSchema });
