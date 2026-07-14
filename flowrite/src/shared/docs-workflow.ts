@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { trackTokenUsage } from './token-usage.ts';
 import { trackComponentUsage } from './component-usage.ts';
 import { insightsSchema } from './schemas.ts';
+import { withTransientRetry } from './style-loop.ts';
 
 /** Every write-* workflow returns the finished page path, a summary, and the run retrospective. */
 const outputSchema = v.object({ path: v.string(), summary: v.string(), insights: insightsSchema });
@@ -43,7 +44,13 @@ export function defineDocsWorkflow<
       const components = trackComponentUsage();
       try {
         const session = await harness.session();
-        const { data } = await session.prompt(opts.buildPrompt(input), { result: outputSchema });
+        // This closing prompt only collects the run's summary/insights — all the
+        // real work (the written page) already happened. A transient network drop
+        // here would otherwise discard a completed, expensive run, so retry it a
+        // few times before giving up (see withTransientRetry).
+        const { data } = await withTransientRetry(log, `${opts.label} summary`, () =>
+          session.prompt(opts.buildPrompt(input), { result: outputSchema }),
+        );
         log.info(`${opts.label} run insights: ${JSON.stringify(data.insights)}`);
         return data;
       } finally {
