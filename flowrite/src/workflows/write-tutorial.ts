@@ -1,8 +1,9 @@
-import { defineWorkflow, observe, type WorkflowRouteHandler } from '@flue/runtime';
+import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
 import { trackTokenUsage } from '../shared/token-usage.ts';
 import { trackComponentUsage } from '../shared/component-usage.ts';
+import { installVerboseObserver } from '../shared/verbose-observer.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
@@ -29,34 +30,8 @@ const insightsSchema = v.array(
   }),
 );
 
-// flue's built-in CLI printer only ever renders `tool ${event.toolName}`, never
-// the call's arguments, duration, or result — so bash commands, action calls,
-// and subagent delegations (the "task" tool) are opaque in `flue run` output.
-// Opt into full detail with FLUE_VERBOSE_TOOLS=1. Subagent/action/tool calls
-// are all tool_start/tool events under the hood — one observer covers all three.
-if (process.env.FLUE_VERBOSE_TOOLS === '1') {
-  const startedAt = new Map<string, number>();
-
-  observe((event) => {
-    if (event.type === 'tool_start') {
-      startedAt.set(event.toolCallId, Date.now());
-      const kind = event.toolName === 'task' ? 'subagent-task' : 'tool';
-      console.log(`[verbose] ${kind} start ${event.toolName} args: ${JSON.stringify(event.args)}`);
-      return;
-    }
-
-    if (event.type === 'tool') {
-      const start = startedAt.get(event.toolCallId);
-      startedAt.delete(event.toolCallId);
-      const durationMs = start ? Date.now() - start : undefined;
-      const kind = event.toolName === 'task' ? 'subagent-task' : 'tool';
-      console.log(
-        `[verbose] ${kind} end ${event.toolName} durationMs=${durationMs} isError=${event.isError} ` +
-          `result: ${JSON.stringify(event.result)}`,
-      );
-    }
-  });
-}
+// FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
+installVerboseObserver();
 
 export default defineWorkflow({
   agent: tutorialWriter,
