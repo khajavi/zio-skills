@@ -42,6 +42,7 @@ Keep them in this order.
    - Predefined values (e.g. TypeId.int) grouped by category in a table or code block.
 7. Core Operations (required)
    - The primary API grouped by category (Element Access, Transformations, Combining, Querying, Conversion).
+   - Each category `###` opens with a one-line intro previewing what the category does and naming its methods, before the first method `####`.
    - One subsection per method (see Drafting Rules for the per-method shape).
 8. Subtypes / Variants (if applicable) — when to use, how to create, differing operations, conversions.
 9. Comparison Sections (if applicable) — vs Java/Scala-stdlib/theory analogues, in padded tables.
