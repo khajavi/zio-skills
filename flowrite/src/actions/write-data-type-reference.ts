@@ -101,7 +101,10 @@ export const writeDataTypeReference = defineAction({
       `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`,
       '---',
     ].join('\n');
-    const content = `${frontmatter}\n${data.body}`;
+    // Blank line between frontmatter and body (Docusaurus/MDX convention; a body
+    // glued directly to the closing --- renders wrong). Strip any leading newlines
+    // the model added so the separation is always exactly one blank line.
+    const content = `${frontmatter}\n\n${data.body.replace(/^\n+/, '')}`;
 
     await harness.fs.writeFile(path, content);
     return { path, content };
