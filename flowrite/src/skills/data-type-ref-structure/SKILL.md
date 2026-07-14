@@ -5,6 +5,7 @@ description: The section template and drafting rules for a ZIO data type referen
 
 # Data Type Reference Structure
 
-The full 12-section template and the per-method drafting rules live in `references/structure.md`
-inside this skill directory — the single source of truth, also injected verbatim into the drafter's
-task. Read that file now and follow it when writing a reference page.
+<!-- TEMP: flue can't package nested skill files, so `references/structure.md` is unreadable at runtime (read_skill_resource 404s) — https://github.com/withastro/flue/discussions/100. The template is injected into the task prompt instead. REVERT to "Read that file now" once flue supports nested skills. -->
+
+The full 12-section template and the per-method drafting rules are provided verbatim in your task
+input (single source of truth: `references/structure.md`). Follow it when writing a reference page.

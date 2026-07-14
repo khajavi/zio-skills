@@ -5,6 +5,8 @@ description: The review checklist a ZIO data type reference page must pass befor
 
 # Data Type Reference Review Checklist
 
-The full checklist lives in `references/checklist.md` inside this skill directory — the single source
-of truth, also injected verbatim into the reviewer's task. Read that file now and verify every item
+<!-- TEMP: flue can't package nested skill files, so `references/checklist.md` is unreadable at runtime (read_skill_resource 404s) — https://github.com/withastro/flue/discussions/100. The checklist is injected into the task prompt instead. REVERT to "Read that file now" once flue supports nested skills. -->
+
+The full checklist is provided verbatim in your task input (single source of truth:
+`references/checklist.md`). Verify every item
 before considering a reference page done.
