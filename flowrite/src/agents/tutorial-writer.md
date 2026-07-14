@@ -43,7 +43,9 @@ differs. Do not mechanically follow steps that no longer fit.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_tutorial`. It first checks and fixes every
    writing-style rule group by group itself; then evaluates the checklist. Load
-   the `tutorial-checklist` skill and follow its Review Cadence rules.
+   the `tutorial-checklist` skill and follow its Review Cadence rules. If the review
+   stops at its cap with items still failing, those are known limitations — say so
+   in your summary; never claim the tutorial fully passed when it did not.
 9. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema

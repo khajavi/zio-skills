@@ -41,7 +41,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
    the single quality gate: it runs method coverage (is every public member documented?),
    the writing-style loop, and the data-type-ref-checklist (structure + content + accuracy)
    in one pass. For any member it reports missing, either document it or confirm from the
-   real source it is private/internal. Follow the checklist's Review Cadence rules.
+   real source it is private/internal. Follow the checklist's Review Cadence rules. If the
+   review stops at its cap with items still failing, those are known limitations — say so in
+   your summary; never claim the page fully passed when it did not.
 9. **Retrospective.** In your final result, alongside the path and summary, report
    the real obstacles you hit this run (per phase), how you resolved each, and —
    where you can name one — a concrete instruction/tool/schema change that would

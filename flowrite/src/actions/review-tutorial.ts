@@ -28,6 +28,10 @@ const reviewSchema = v.object({
 // real per-run key if this action ever runs inside a long-lived dev server
 // handling concurrent tutorial-writer runs.
 let reviewCallCount = 0;
+// Cache the last REAL review result so the capped call returns the true
+// pass/fail + unresolved items instead of a fabricated `passed: true` (which
+// the agent misreads as a genuine pass and then reports success over a failing page).
+let lastReview: v.InferOutput<typeof reviewSchema> | null = null;
 // Default 1 review pass; override per run with MAX_REVIEW_CALLS=n.
 const MAX_REVIEW_CALLS = Number(process.env.MAX_REVIEW_CALLS ?? 1);
 
@@ -53,15 +57,24 @@ export const reviewTutorial = defineAction({
     const calls = ++reviewCallCount;
 
     if (calls > MAX_REVIEW_CALLS) {
-      log.info(`review_tutorial call ${calls} exceeds cap of ${MAX_REVIEW_CALLS} — refusing, forcing finish`);
+      // Return the last REAL result, not a fabricated pass. The cap stops
+      // re-running the review; it must not invent a `passed: true` over a page
+      // that actually failed.
+      const base = lastReview ?? { passed: true, items: [] };
+      log.info(
+        `review_tutorial call ${calls} exceeds cap of ${MAX_REVIEW_CALLS} — returning last result (passed=${base.passed}), forcing finish`,
+      );
       return {
-        passed: true,
+        passed: base.passed,
         items: [
           {
             item: 'Review cadence cap',
-            pass: true,
-            issue: `Skipped: already reviewed ${MAX_REVIEW_CALLS} times. Remaining issues, if any, are known limitations — finish now.`,
+            pass: base.passed,
+            issue: base.passed
+              ? `Reviewed ${MAX_REVIEW_CALLS}× — not re-running.`
+              : `Reviewed ${MAX_REVIEW_CALLS}× — not re-running. The failing items above are known limitations: finish now and report them in your summary; do NOT call review again.`,
           },
+          ...base.items,
         ],
       };
     }
@@ -107,6 +120,8 @@ export const reviewTutorial = defineAction({
         { agent: 'reviewer', result: reviewSchema },
       ),
     );
-    return { passed: data.passed && style.passed, items: [...styleItems, ...data.items] };
+    const result = { passed: data.passed && style.passed, items: [...styleItems, ...data.items] };
+    lastReview = result; // cache the real result for a possible capped follow-up call
+    return result;
   },
 });

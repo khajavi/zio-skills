@@ -42,4 +42,5 @@ Verify every item. The reference page is not done until all pass.
 - Fix EVERY failing item in a single editing pass — do not call this checklist again until all are addressed.
 - Only re-review to confirm the fixes, not to discover the next issue one at a time.
 - The review action enforces a hard call cap. When it reports the cap is reached, note remaining issues
-  as known limitations and finish anyway — never keep calling it.
+  as known limitations and finish anyway — never keep calling it. If those remaining items are still
+  failing, say so in the final summary; do not claim the page fully passed when it did not.

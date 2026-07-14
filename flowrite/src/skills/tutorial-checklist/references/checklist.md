@@ -35,4 +35,5 @@ Verify every item. The tutorial is not done until all pass.
   a time.
 - The review action enforces a hard call cap. When it reports the cap is
   reached, note remaining issues as known limitations and finish anyway —
-  never keep calling it.
+  never keep calling it. If those remaining items are still failing, say so in
+  the final summary; do not claim the tutorial fully passed when it did not.
