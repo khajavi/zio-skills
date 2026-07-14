@@ -7,10 +7,20 @@ import { observe } from '@flue/runtime';
  * Opt into full detail with FLUE_VERBOSE_TOOLS=1. Subagent/action/tool calls
  * are all tool_start/tool events under the hood — one observer covers all three.
  *
- * No-op unless FLUE_VERBOSE_TOOLS=1. Call once at workflow module load.
+ * No-op unless FLUE_VERBOSE_TOOLS=1. Safe to call from every workflow module:
+ * `observe()` is a global, process-wide subscription with no idempotency, and
+ * flue imports every workflow entrypoint at startup (often evaluating each more
+ * than once). Without a guard, each call adds another subscriber and every event
+ * prints once per subscriber (the 4× duplicate lines). The flag lives on
+ * globalThis so it survives repeated module evaluation — a module-level `let`
+ * would reset per instance and not dedup across them.
  */
 export function installVerboseObserver(): void {
   if (process.env.FLUE_VERBOSE_TOOLS !== '1') return;
+
+  const g = globalThis as { __flueVerboseInstalled?: boolean };
+  if (g.__flueVerboseInstalled) return;
+  g.__flueVerboseInstalled = true;
 
   const startedAt = new Map<string, number>();
 
