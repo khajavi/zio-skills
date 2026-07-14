@@ -36,7 +36,21 @@ export const dataTypeResearchSchema = v.object({
   constructors: v.array(
     v.object({
       name: v.pipe(v.string(), v.description('Companion factory / smart constructor, e.g. "Chunk.apply", "Chunk.empty"')),
-      signature: v.string(),
+      kind: v.pipe(
+        v.picklist(['primary-constructor', 'companion-factory']),
+        v.description(
+          'How the value is really built: "primary-constructor" for a case class built via its own ' +
+            'primary constructor (no explicit apply in source), "companion-factory" for a real ' +
+            'object-level method (apply/empty/from*) the source declares.',
+        ),
+      ),
+      signature: v.pipe(
+        v.string(),
+        v.description(
+          'The real declaration form: for primary-constructor, the case-class declaration ' +
+            '("final case class T[..](params)"); for companion-factory, the object method signature.',
+        ),
+      ),
       whenToUse: v.string(),
       source: sourceRef,
     }),
