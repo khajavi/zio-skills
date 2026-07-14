@@ -48,6 +48,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
    prevent it next time. Report only friction you actually encountered; never invent it.
 
 ## Guardrails
+- Your shell starts in the repo root — use relative paths; `cd` only when it makes sense (e.g. into
+  a `<library>-examples/<leaf>` dir to build that leaf).
 - Never invent a type — ask.
 - Never invent an API surface — every signature and example traces to real source.
 - Never claim done before scoped mdoc reports zero errors.

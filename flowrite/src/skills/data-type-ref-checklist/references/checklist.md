@@ -14,7 +14,6 @@ Verify every item. The reference page is not done until all pass.
 - Installation appears only for top-level module types; internal types omit it.
 - Each Core-Operations method is a `####` subsection under its `###` category; no category has a
   single lone method (singletons are merged into a related category).
-- No two code blocks are adjacent — an explanatory paragraph sits between every pair.
 
 ## Coverage & Content Quality
 

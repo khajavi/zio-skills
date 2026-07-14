@@ -51,6 +51,8 @@ differs. Do not mechanically follow steps that no longer fit.
    encountered; leave it empty if the run went smoothly. Never invent obstacles.
 
 ## Guardrails
+- Your shell starts in the repo root — use relative paths; `cd` only when it makes sense (e.g. into
+  a `<library>-examples/<leaf>` dir to build that leaf).
 - Never invent a topic — ask.
 - Never branch the learning path.
 - Never claim done before scoped mdoc reports zero errors.
