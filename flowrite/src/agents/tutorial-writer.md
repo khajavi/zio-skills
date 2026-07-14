@@ -53,8 +53,9 @@ differs. Do not mechanically follow steps that no longer fit.
    encountered; leave it empty if the run went smoothly. Never invent obstacles.
 
 ## Guardrails
-- Your shell starts in the repo root — use relative paths; `cd` only when it makes sense (e.g. into
-  a `<library>-examples/<leaf>` dir to build that leaf).
+- Your shell starts in the repo root — you are ALREADY inside the checkout. Never `cd` into the repo;
+  run `sbt`/`mdoc` and all commands with repo-relative paths. `cd` only *within* the repo when a tool
+  truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
 - Never invent a topic — ask.
 - Never branch the learning path.
 - Never claim done before scoped mdoc reports zero errors.

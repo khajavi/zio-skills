@@ -28,7 +28,7 @@ export default defineDocsWorkflow({
   }),
   buildPrompt: (input) =>
     `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
-    `The library checkout (repo root) is at ${input.projectPath}. ` +
+    `Your shell already starts in the repo root of the library checkout — use relative paths for every command; do not cd into the repo. ` +
     `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
     `Report the final tutorial file path, a one-line summary, and a run retrospective: ` +
     `the real obstacles you hit this run and how you resolved them (empty if it went smoothly — ` +

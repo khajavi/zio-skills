@@ -29,7 +29,7 @@ export default defineDocsWorkflow({
   }),
   buildPrompt: (input) =>
     `Write a complete, compile-verified data type reference page for: ${input.typeName}. ` +
-    `The library checkout (repo root) is at ${input.projectPath}. ` +
+    `Your shell already starts in the repo root of the library checkout — use relative paths for every command; do not cd into the repo. ` +
     `Run the full flow (research → design → write → examples → mdoc verify → integrate → ` +
     `review; review covers method coverage + writing style + the checklist). ` +
     `Report the final page path, a one-line summary, and a run retrospective: the real obstacles ` +
