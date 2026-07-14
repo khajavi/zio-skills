@@ -4,6 +4,7 @@ import tutorialWriter from '../agents/tutorial-writer.ts';
 import { trackTokenUsage } from '../shared/token-usage.ts';
 import { trackComponentUsage } from '../shared/component-usage.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
+import { insightsSchema } from '../shared/schemas.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
@@ -12,23 +13,6 @@ import { installVerboseObserver } from '../shared/verbose-observer.ts';
  * projectPath before opening a session.
  */
 export const route: WorkflowRouteHandler = async (_c, next) => next();
-
-// A self-authored run retrospective: the obstacles the agent actually hit and
-// how it got past them, so recurring friction can be mined across runs (each
-// turn's insights.json in the archive) to drive instruction/tool improvements.
-const insightsSchema = v.array(
-  v.object({
-    phase: v.picklist(['research', 'design', 'write', 'examples', 'mdoc', 'integrate', 'review']),
-    obstacle: v.pipe(v.string(), v.description('What actually went wrong or slowed you down this run')),
-    resolution: v.pipe(v.string(), v.description('How you got past it')),
-    suggestedFix: v.nullable(
-      v.pipe(
-        v.string(),
-        v.description('A concrete instruction/tool/schema change that would prevent this next time, or null'),
-      ),
-    ),
-  }),
-);
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();

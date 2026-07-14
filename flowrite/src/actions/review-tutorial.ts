@@ -2,21 +2,11 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { runStyleLoop, withTransientRetry } from '../shared/style-loop.ts';
+import { reviewSchema } from '../shared/schemas.ts';
 // The tutorial-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
 import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md' with { type: 'markdown' };
-
-const reviewSchema = v.object({
-  passed: v.pipe(v.boolean(), v.description('true only when every checklist item passes')),
-  items: v.array(
-    v.object({
-      item: v.string(),
-      pass: v.boolean(),
-      issue: v.nullable(v.pipe(v.string(), v.description('Specific problem when pass is false'))),
-    }),
-  ),
-});
 
 // The tutorial-checklist skill's Review Cadence call cap is prose the model
 // can ignore. Enforce it here instead. `harness` is

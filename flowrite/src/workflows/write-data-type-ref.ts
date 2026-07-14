@@ -4,6 +4,7 @@ import dataTypeRefWriter from '../agents/data-type-ref-writer.ts';
 import { trackTokenUsage } from '../shared/token-usage.ts';
 import { trackComponentUsage } from '../shared/component-usage.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
+import { insightsSchema } from '../shared/schemas.ts';
 
 /**
  * Finite wrapper around the data-type-ref-writer agent for CI, scheduled, or
@@ -12,20 +13,6 @@ import { installVerboseObserver } from '../shared/verbose-observer.ts';
  * projectPath before opening a session. Mirrors write-tutorial.ts.
  */
 export const route: WorkflowRouteHandler = async (_c, next) => next();
-
-const insightsSchema = v.array(
-  v.object({
-    phase: v.picklist(['research', 'design', 'write', 'mdoc', 'examples', 'integrate', 'review']),
-    obstacle: v.pipe(v.string(), v.description('What actually went wrong or slowed you down this run')),
-    resolution: v.pipe(v.string(), v.description('How you got past it')),
-    suggestedFix: v.nullable(
-      v.pipe(
-        v.string(),
-        v.description('A concrete instruction/tool/schema change that would prevent this next time, or null'),
-      ),
-    ),
-  }),
-);
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();
