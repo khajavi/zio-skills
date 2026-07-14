@@ -16,7 +16,7 @@ import { researchTutorialTopic } from '../actions/research-tutorial-topic.ts';
 import { designTutorialStructure } from '../actions/design-tutorial-structure.ts';
 import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateTutorial } from '../actions/integrate-tutorial.ts';
+import { integrateTutorial } from '../actions/integrate.ts';
 import { reviewTutorial } from '../actions/review-tutorial.ts';
 
 // subagents (agent profiles)

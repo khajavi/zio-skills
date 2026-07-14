@@ -18,7 +18,7 @@ import { researchDataType } from '../actions/research-data-type.ts';
 import { designDataTypeStructure } from '../actions/design-data-type-structure.ts';
 import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
 import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateDataTypeReference } from '../actions/integrate-data-type-reference.ts';
+import { integrateDataTypeReference } from '../actions/integrate.ts';
 import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
 
 // subagents (agent profiles) — the generic, document-kind-neutral role profiles
