@@ -12,7 +12,7 @@ Choose an mdoc modifier for every executable Scala block based on whether you ne
 - **`mdoc:compile-only`** — Renders source only, isolated scope. **Default** for self-contained examples. Later blocks cannot reference its definitions.
 - **`mdoc:silent`** — Renders nothing, scope shared with later blocks. Use to define types/values/imports later blocks reference. Cannot redefine a name later — use `silent:nest` for that.
 - **`mdoc:silent:nest`** — Renders nothing, scope shared, code wrapped in an anonymous `object`. Lets you shadow/redefine names from earlier blocks.
-- **`mdoc:silent:reset`** — Renders nothing, clears all prior scope. Use when switching to a completely different context mid-document.
+- **`mdoc:silent:reset`** — Renders nothing, clears all prior scope. Use when switching to a completely different context mid-document. Because it clears scope, **re-declare every import (and any setup) the block's code uses** — nothing from earlier blocks carries over, so a missing `import` here is a "not found" compile error.
 - **`mdoc`** (no qualifier) — Renders source + evaluated output, scope shared. Shows the code and its REPL-style result.
 - **`mdoc:invisible`** — Invisible block, scope shared. Rare; prefer `silent` or `compile-only`.
 - **`mdoc:embed:<path>`** — Custom modifier: replaces the block (leave its body empty) with the file at `<path>` (repo-root relative) as a titled code fence. Append `:showLineNumbers` for line numbers. Requires the docs subproject to depend on `"dev.zio" %% "zio-sbt-source"` — add it if missing.
@@ -38,7 +38,7 @@ After a `mdoc:silent` block, if you need a completely different context, use `md
 
 - **Silent setup + output**: `mdoc:silent` block defines helpers/imports; a following `mdoc` block calls them and shows the result.
 - **Self-contained**: a single `mdoc:compile-only` block that stands alone.
-- **Multi-example suite**: when a page has many independent examples reusing names like `user`/`file`/`config`, start **every** example's first block with `mdoc:silent:reset` to avoid "Conflicting definitions" errors — once per independent example.
+- **Multi-example suite**: when a page has many independent examples reusing names like `user`/`file`/`config`, start **every** example's first block with `mdoc:silent:reset` to avoid "Conflicting definitions" errors — once per independent example. Each such reset block must re-declare the imports its code uses (scope was cleared).
 
 ## For Tutorials (Linear Learning Path)
 
