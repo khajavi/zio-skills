@@ -7,13 +7,21 @@ import { observe } from '@flue/runtime';
  * Opt into full detail with FLUE_VERBOSE_TOOLS=1. Subagent/action/tool calls
  * are all tool_start/tool events under the hood — one observer covers all three.
  *
- * No-op unless FLUE_VERBOSE_TOOLS=1. Safe to call from every workflow module:
- * `observe()` is a global, process-wide subscription with no idempotency, and
- * flue imports every workflow entrypoint at startup (often evaluating each more
- * than once). Without a guard, each call adds another subscriber and every event
- * prints once per subscriber (the 4× duplicate lines). The flag lives on
- * globalThis so it survives repeated module evaluation — a module-level `let`
- * would reset per instance and not dedup across them.
+ * No-op unless FLUE_VERBOSE_TOOLS=1.
+ *
+ * Deduping: flue re-publishes each event up the session tree (a subagent's tool
+ * event is published in its own context, then forwarded and re-published at every
+ * parent context so parent observers see child activity — see
+ * createSubmissionEventCallback in the runtime). Each re-publish invokes the
+ * global observe() subscribers again, so one tool call arrives once per level of
+ * session nesting (the 3-4x duplicate lines, varying by depth). Forwarded copies
+ * keep the original `toolCallId`, so we log each `type:toolCallId` once and drop
+ * the re-published copies. `run_end` clears the set so a long-lived process
+ * (dev server) doesn't accumulate keys across runs.
+ *
+ * The globalThis guard is separate hygiene: `observe()` has no idempotency and
+ * every workflow module calls this at load, so the guard keeps it to one
+ * subscriber per process.
  */
 export function installVerboseObserver(): void {
   if (process.env.FLUE_VERBOSE_TOOLS !== '1') return;
@@ -23,8 +31,20 @@ export function installVerboseObserver(): void {
   g.__flueVerboseInstalled = true;
 
   const startedAt = new Map<string, number>();
+  const seen = new Set<string>(); // `${type}:${toolCallId}` already logged this run
 
   observe((event) => {
+    if (event.type === 'run_end') {
+      seen.clear();
+      return;
+    }
+
+    if (event.type === 'tool_start' || event.type === 'tool') {
+      const key = `${event.type}:${event.toolCallId}`;
+      if (seen.has(key)) return; // re-published copy forwarded from a child context
+      seen.add(key);
+    }
+
     if (event.type === 'tool_start') {
       startedAt.set(event.toolCallId, Date.now());
       const kind = event.toolName === 'task' ? 'subagent-task' : 'tool';
