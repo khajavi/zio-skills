@@ -1,10 +1,8 @@
-import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
+import { type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
-import { trackTokenUsage } from '../shared/token-usage.ts';
-import { trackComponentUsage } from '../shared/component-usage.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
-import { insightsSchema } from '../shared/schemas.ts';
+import { defineDocsWorkflow, skipPhasesField } from './docs-workflow.ts';
 
 /**
  * Finite wrapper around the tutorial-writer agent for CI, scheduled, or batch
@@ -17,57 +15,22 @@ export const route: WorkflowRouteHandler = async (_c, next) => next();
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();
 
-export default defineWorkflow({
+export default defineDocsWorkflow({
+  label: 'write-tutorial',
   agent: tutorialWriter,
   input: v.object({
-    projectPath: v.pipe(
-      v.string(),
-      v.description('Absolute path to the ZIO library checkout to document'),
-    ),
+    projectPath: v.pipe(v.string(), v.description('Absolute path to the ZIO library checkout to document')),
     topic: v.pipe(v.string(), v.description('Tutorial title or topic description')),
-    skipPhases: v.optional(
-      v.pipe(
-        v.array(v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review'])),
-        v.description(
-          'Phases to skip. Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
-            'e.g. ["research", "design", "write", "write-examples"] runs only integrate + review.',
-        ),
-      ),
+    skipPhases: skipPhasesField(
+      'Phases to skip. Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
+        'e.g. ["research", "design", "write", "write-examples"] runs only integrate + review.',
     ),
   }),
-  output: v.object({ path: v.string(), summary: v.string(), insights: insightsSchema }),
-  async run({ harness, input, log }) {
-    // The agent initializer reads REPO_PATH to set its sandbox cwd. Set it
-    // from projectPath before the session initializes the agent.
-    process.env.REPO_PATH = input.projectPath;
-    process.env.SKIP_PHASES = JSON.stringify(input.skipPhases ?? []);
-
-    const usage = trackTokenUsage();
-    const components = trackComponentUsage();
-    try {
-      const session = await harness.session();
-      const { data } = await session.prompt(
-        `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
-          `The library checkout (repo root) is at ${input.projectPath}. ` +
-          `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
-          `Report the final tutorial file path, a one-line summary, and a run retrospective: ` +
-          `the real obstacles you hit this run and how you resolved them (empty if it went smoothly — ` +
-          `never invent friction).`,
-        {
-          result: v.object({ path: v.string(), summary: v.string(), insights: insightsSchema }),
-        },
-      );
-      log.info(`write-tutorial run insights: ${JSON.stringify(data.insights)}`);
-      return data;
-    } finally {
-      const t = usage.stop();
-      log.info(
-        `write-tutorial token consumption: ${t.totalTokens} tokens ` +
-          `(in ${t.input}, out ${t.output}, cacheRead ${t.cacheRead}, cacheWrite ${t.cacheWrite}) ` +
-          `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
-        t,
-      );
-      log.info(`write-tutorial component usage: ${JSON.stringify(components.stop())}`);
-    }
-  },
+  buildPrompt: (input) =>
+    `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
+    `The library checkout (repo root) is at ${input.projectPath}. ` +
+    `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
+    `Report the final tutorial file path, a one-line summary, and a run retrospective: ` +
+    `the real obstacles you hit this run and how you resolved them (empty if it went smoothly — ` +
+    `never invent friction).`,
 });
