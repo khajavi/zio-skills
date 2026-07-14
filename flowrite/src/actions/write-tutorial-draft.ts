@@ -9,6 +9,12 @@ import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // template rides in the prompt). Same single-source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
+// TEMPORARY: flue does not package nested skill files, so the drafter cannot read
+// writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
+// https://github.com/withastro/flue/discussions/100. We inject the rules into the
+// drafter prompt at compile time instead. REVERT once flue supports nested skills:
+// drop this import + injection and let the writing-style skill supply the rules.
+import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -92,6 +98,11 @@ export const writeTutorialDraft = defineAction({
         `Follow this tutorial-structure template and its drafting rules exactly:`,
         ``,
         tutorialStructureDoc,
+        ``,
+        // TEMP (flue nested-skill limitation, see import): inject writing-style rules.
+        `Writing-style rules — apply every rule to the prose you write:`,
+        ``,
+        writingStyleRules,
         ``,
         `Topic: ${input.topic}`,
         ``,

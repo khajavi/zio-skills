@@ -8,6 +8,12 @@ import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // task (skills can't vary per session.task call). Same single-source-of-truth
 // split as writing-style/references/rules.md; the SKILL.md points here.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
+// TEMPORARY: flue does not package nested skill files, so the drafter cannot read
+// writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
+// https://github.com/withastro/flue/discussions/100. We inject the rules into the
+// drafter prompt at compile time instead. REVERT once flue supports nested skills:
+// drop this import + injection and let the writing-style skill supply the rules.
+import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 
 /** Kebab-case a type name for the filename: "NonEmptyChunk" -> "non-empty-chunk". */
 export function toKebabCase(typeName: string): string {
@@ -80,6 +86,11 @@ export const writeDataTypeReference = defineAction({
         `Follow this data-type-ref-structure template and its drafting rules exactly:`,
         ``,
         dataTypeStructureDoc,
+        ``,
+        // TEMP (flue nested-skill limitation, see import): inject writing-style rules.
+        `Writing-style rules — apply every rule to the prose you write:`,
+        ``,
+        writingStyleRules,
         ``,
         `Structural plan to follow exactly — the optional sections to include, the`,
         `construction order, and the Core Operations category grouping are already`,
