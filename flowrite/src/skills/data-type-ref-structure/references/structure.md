@@ -35,6 +35,9 @@ Keep them in this order.
 5. Construction / Creating Instances (required)
    - Every way to build a value: companion factories (apply, empty, from*, of), smart constructors,
      builders, conversions, predefined instances. One Markdown subsection per method.
+   - When the type is a `case class` built via its primary constructor, show the real case-class
+     declaration (`final case class T[..](params) { ... }`) — NOT a fabricated `def apply`. Only
+     render an `object`-level `apply`/`empty`/`from*` when the companion source actually declares it.
 6. Predefined Instances (if applicable)
    - Predefined values (e.g. TypeId.int) grouped by category in a table or code block.
 7. Core Operations (required)
@@ -62,6 +65,9 @@ When writing the page from this template:
   2. Plain-language explanation of what it does.
   3. The **signature** in a plain `scala` block using the simplest trait/object interface form —
      just name, params, return type; no `override`/`final`/`sealed`. Companion methods shown inside `object`.
+     This stripping applies to *method* signatures only — a *type* declaration keeps its real keywords
+     (`case class`, `sealed trait`, `final`) and primary-constructor params. Never synthesize a `def apply`
+     the source does not declare; a case class's construction IS its primary constructor.
   4. A **usage example** using the Setup + Evaluated Output pattern in a single `mdoc:silent:reset`
      (or `mdoc:reset`) block: setup first, then the call showing its result (e.g. `p.name // Alice`).
   5. Important caveats as Docusaurus admonitions (per the `mdoc-conventions` skill).
