@@ -52,7 +52,7 @@ cleanup() {
   # flue process does not reliably take them down with it (seen in practice).
   pkill -9 -f "flue.mjs run write-tutorial" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
-  bash scripts/archive-docs.sh "$log"
+  bash scripts/archive-docs.sh "$log" write-tutorial
   rm -f "$log"
   exit 130
 }
@@ -63,6 +63,6 @@ status=$?
 kill "$tail_pid" 2>/dev/null
 wait "$tail_pid" 2>/dev/null
 
-bash scripts/archive-docs.sh "$log"
+bash scripts/archive-docs.sh "$log" write-tutorial
 rm -f "$log"
 exit "$status"
