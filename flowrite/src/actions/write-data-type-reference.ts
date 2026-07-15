@@ -35,11 +35,22 @@ export const writeDataTypeReference = defineAction({
   input: v.object({
     structure: dataTypeStructureSchema,
     researchAnswers: dataTypeResearchSchema,
+    // Optional, for module-ref hierarchical subpages. When absent, this action
+    // behaves byte-identically to a standalone data-type-ref run.
+    outputDir: v.pipe(
+      v.optional(v.string()),
+      v.description('Directory for the page instead of the default docs/reference (e.g. "docs/reference/http-model" for a module subpage).'),
+    ),
+    moduleContext: v.pipe(
+      v.optional(v.string()),
+      v.description('When this page is a member of a module, how it relates to its sibling types; appended to the drafter prompt for recontextualization.'),
+    ),
   }),
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, input, log }) {
     const id = toKebabCase(input.researchAnswers.typeName);
-    const path = `docs/reference/${id}.md`;
+    const dir = input.outputDir ?? 'docs/reference';
+    const path = `${dir}/${id}.md`;
 
     // Resume support: the page already exists on disk — return it as-is so later
     // phases get the real path/content.
@@ -101,6 +112,17 @@ export const writeDataTypeReference = defineAction({
         `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
         `Document EVERY constructor and core operation listed):`,
         JSON.stringify(input.researchAnswers),
+        // Module-ref subpage recontextualization: when this type is a member of a
+        // module, thread its sibling relationships through each section.
+        ...(input.moduleContext
+          ? [
+              ``,
+              `This page is part of a MODULE reference. Recontextualize it to the module: in each section,`,
+              `note how this type relates to its sibling types (core vs supporting, what it is built with,`,
+              `what it composes with, module-level integration). Module context:`,
+              input.moduleContext,
+            ]
+          : []),
       ].join('\n'),
       { agent: 'drafter', result: contentSchema },
     );
