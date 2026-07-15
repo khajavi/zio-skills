@@ -78,9 +78,10 @@ export async function runCappedReview(opts: {
   log.info(`Reviewing against checklist (call ${calls}/${MAX_REVIEW_CALLS}): ${path}`);
 
   // Snapshot the pre-review version (first call only) so the review phase's edits
-  // are diffable afterwards: git diff --no-index .pre-review/<file> <path>
+  // are diffable afterwards: git diff --no-index .flowrite/pre-review/<file> <path>.
+  // Under .flowrite/ with the research cache — all flowrite artifacts in one dir.
   if (calls === 1) {
-    const snapshotPath = `.pre-review/${path.split('/').pop()}`;
+    const snapshotPath = `.flowrite/pre-review/${path.split('/').pop()}`;
     await harness.fs.writeFile(snapshotPath, await harness.fs.readFile(path));
     log.info(`Pre-review snapshot saved: ${snapshotPath}`);
   }
