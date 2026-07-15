@@ -32,7 +32,7 @@ Verify every item. The reference page is not done until all pass.
 - All method signatures and type names match the actual source code. Verify each against its cited
   `source` (`path:L<start>-L<end>`) in the research: jump to those lines; if the member isn't there
   (source drifted), `grep "def <name>"` in that same file. Never trust the page's prose alone.
-- Every constructor / operation / subtype carries a `source`, and a sampled path resolves to a real file.
+- Every constructor / operation / subtype carries a `source`, and a sampled path resolves to a real file, although you shouldn't refer/cite a link to the source code.
 - No deprecated methods or outdated patterns.
 - `sbt "docs/mdoc --in docs/reference/<type>.md --out website/docs/reference/<type>.md"` reports zero
   `[error]` lines (mandatory before done).
