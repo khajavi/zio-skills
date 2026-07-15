@@ -3,6 +3,18 @@ import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
+// The tutorial-structure skill's content, injected into the generic drafter's
+// task (a subagent's skills can't vary per session.task call, so the kind-specific
+// template rides in the prompt). Same single-source-of-truth split as
+// writing-style/references/rules.md; the SKILL.md points here.
+import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
+// TEMPORARY: flue does not package nested skill files, so the drafter cannot read
+// writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
+// https://github.com/withastro/flue/discussions/100. We inject the rules into the
+// drafter prompt at compile time instead. REVERT once flue supports nested skills:
+// drop this import + injection and let the writing-style skill supply the rules.
+import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -39,7 +51,7 @@ export const writeTutorialDraft = defineAction({
     log.info(`Writing tutorial draft: ${path}`);
 
     const session = await harness.session();
-    // Delegates to the tutorial_drafter subagent — see design-tutorial-structure.ts
+    // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
     // Uses a result schema (not response.text) so the model returns content
     // through the structured channel instead of a chat reply — that channel
@@ -83,6 +95,15 @@ export const writeTutorialDraft = defineAction({
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
         ``,
+        `Follow this tutorial-structure template and its drafting rules exactly:`,
+        ``,
+        tutorialStructureDoc,
+        ``,
+        // TEMP (flue nested-skill limitation, see import): inject writing-style rules.
+        `Writing-style rules — apply every rule to the prose you write:`,
+        ``,
+        writingStyleRules,
+        ``,
         `Topic: ${input.topic}`,
         ``,
         `Research answers (ground every fact in this — imports, signatures, real`,
@@ -90,21 +111,19 @@ export const writeTutorialDraft = defineAction({
         `verbatim code/signatures to copy exactly):`,
         JSON.stringify(input.researchAnswers),
         ``,
-        `Structure to follow exactly:`,
+        `Section plan to follow exactly:`,
         JSON.stringify(input.structure),
       ].join('\n'),
-      { agent: 'tutorial_drafter', result: contentSchema },
+      { agent: 'drafter', result: contentSchema },
     );
 
-    const frontmatter = [
-      '---',
-      `id: ${input.id}`,
-      `title: ${JSON.stringify(data.title)}`,
-      `description: ${JSON.stringify(data.description)}`,
-      `keywords: [${data.keywords.map((k) => JSON.stringify(k)).join(', ')}]`,
-      '---',
-    ].join('\n');
-    const content = `${frontmatter}\n${data.body}`;
+    const frontmatter = buildFrontmatter({
+      id: input.id,
+      title: data.title,
+      description: data.description,
+      keywords: data.keywords,
+    });
+    const content = withFrontmatter(frontmatter, data.body);
 
     await harness.fs.writeFile(path, content);
     return { path, content };

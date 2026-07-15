@@ -8,7 +8,7 @@ import instructions from './review-resolver.md' with { type: 'markdown' };
  * in an article: applies each directed fix (document-wide when the comment
  * states a general rule), strips the markers, audits each general rule against
  * the writing-style skill, and mdoc-verifies the result. Distinct from
- * tutorial_reviewer, which only evaluates and never edits. See review-resolver.md.
+ * the reviewer profile, which only evaluates and never edits. See review-resolver.md.
  */
 export const reviewResolver = defineAgentProfile({
   name: 'review_resolver',

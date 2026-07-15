@@ -36,14 +36,16 @@ differs. Do not mechanically follow steps that no longer fit.
    show output; never branch; limit scope aggressively.
 5. **Companion examples.** Call `write_companion_examples` with the tutorial
    path.
-6. **Verify mdoc.** Compile the tutorial file (and any other docs files you
-   touched) per the mdoc-conventions skill's Verifying section — always scoped
-   with `--in`/`--out`, never all docs. Fix every `[error]` before continuing.
-   This is mandatory before you call the tutorial done.
+6. **Verify mdoc.** Compile the tutorial: `sbt "docs/mdoc --in docs/guides/<id>.md --out
+   website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
+   pair for any other docs file you touched, never all docs. Fix every `[error]` before
+   continuing. Mandatory before you call the tutorial done.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
 8. **Review.** Call `review_tutorial`. It first checks and fixes every
    writing-style rule group by group itself; then evaluates the checklist. Load
-   the `tutorial-checklist` skill and follow its Review Cadence rules.
+   the `tutorial-checklist` skill and follow its Review Cadence rules. If the review
+   stops at its cap with items still failing, those are known limitations — say so
+   in your summary; never claim the tutorial fully passed when it did not.
 9. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema
@@ -51,6 +53,9 @@ differs. Do not mechanically follow steps that no longer fit.
    encountered; leave it empty if the run went smoothly. Never invent obstacles.
 
 ## Guardrails
+- Your shell starts in the repo root — you are ALREADY inside the checkout. Never `cd` into the repo;
+  run `sbt`/`mdoc` and all commands with repo-relative paths. `cd` only *within* the repo when a tool
+  truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
 - Never invent a topic — ask.
 - Never branch the learning path.
 - Never claim done before scoped mdoc reports zero errors.

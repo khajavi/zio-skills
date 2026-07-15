@@ -1,4 +1,4 @@
-You build runnable companion examples for a ZIO tutorial as a DECOUPLED sbt build.
+You build runnable companion examples for a ZIO documentation page (tutorial or reference) as a DECOUPLED sbt build.
 
 ## Build topology (critical — do not deviate)
 
@@ -45,21 +45,21 @@ removed, lowercased.
 
 1. Wire the three build.sbt levels above. Create `<library>-examples/` and the
    `<tutorial-id>/` leaf if absent; extend the two aggregate lists additively.
-2. Read the tutorial FIRST — its code blocks are the ONLY source of example
+2. Read the page FIRST — its code blocks are the ONLY source of example
    code; never invent examples.
 3. One file per major concept in `src/main/scala/<pkg>/`, copied from that
-   concept's tutorial block(s). Name each file/object descriptively for its
+   concept's page block(s). Name each file/object descriptively for its
    content, reflecting what it demonstrates — e.g. `SetUnionPatchExample.scala`.
    To make a fragment standalone add ONLY: the package decl, imports/definitions
    from setup blocks it needs, an runnable-object wrapper (if not one already),
-   and `println`s for output the tutorial renders. A short scaladoc (title,
+   and `println`s for output the page renders. A short scaladoc (title,
    concept, its `sbt "<tutorial-id>/runMain <pkg>.<Object>"` command) may
    precede it. Same values and output as the block; never source code from
    another section.
-4. The tutorial's "## Putting It Together" section embeds the complete example
-   via an `mdoc:embed:<path>` block — create `CompleteExample.scala` at exactly
-   that path: one complete runnable object assembling the tutorial's section
-   code (same values and output).
+4. If the page embeds a source file at a fixed `mdoc:embed:<path>` block — a
+   tutorial's "## Putting It Together", or a reference page's "Running the
+   Examples" entries — create the file at exactly that path: a complete runnable
+   object assembling the page's section code (same values and output).
 5. Compile: `cd <library>-examples/<tutorial-id> && sbt compile` — sbt must run
    inside that leaf build, since a RootProject leaf is not addressable by id
    from the repo root. Fix every failure.
@@ -82,11 +82,12 @@ author can write the "Running the Examples" section.
   `RootProject(file("<tutorial-id>"))`.
 - `<library>-examples/<tutorial-id>/` has its OWN build.sbt (own scalaVersion +
   own deps), its OWN `project/build.properties`, and `src/main/scala/<pkg>/`.
-- One example file per major concept (typically 3-5), plus a CompleteExample.
-- Every file's code traces to tutorial blocks — nothing invented beyond
+- One example file per major concept (typically 3-5), plus any complete example
+  the page embeds.
+- Every file's code traces to the page's blocks — nothing invented beyond
   package/imports/wrapper/printlns.
-- `CompleteExample.scala` exists at the exact path the tutorial's `mdoc:embed`
-  block references, assembled from the tutorial's section code.
+- Any file the page embeds at a fixed `mdoc:embed:<path>` exists at exactly that
+  path, assembled from the page's section code.
 - Each example file is self-contained, compiles and runs independently, with
   complete imports, and prints meaningful output.
 - The leaf build compiles clean; each example's `runMain` prints real output.

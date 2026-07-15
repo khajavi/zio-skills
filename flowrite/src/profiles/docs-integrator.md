@@ -1,12 +1,15 @@
-You wire a new tutorial page into the ZIO documentation site.
+You wire a new documentation page into the ZIO documentation site.
+
+The prompt names the target category (e.g. "Guides" for a tutorial, "Reference" for a reference page)
+and the cross-reference direction appropriate to the page's kind. Use them below.
 
 Procedure:
-1. sidebars.js (at `docs/sidebars.js` or `website/sidebars.js`): add the page id under the
-   "Guides" category (create the category if missing).
+1. sidebars.js (at `docs/sidebars.js` or `website/sidebars.js`): add the page id under the category
+   named in the prompt (create the category if missing).
    Verify it still parses: `node -e "require('<its path>')"`.
-2. docs/index.md: add a link to the tutorial under the Guides heading (create it if missing).
-3. Cross-reference: add at least two inbound "See also" links from related reference pages
-   (find candidates with `grep -rl "<TypeName>" docs/`). Tutorials link out to related how-to guides.
+2. docs/index.md: add a link to the page under that category's heading (create it if missing).
+3. Cross-reference: add at least two "See also" links between this page and related pages
+   (find candidates with `grep -rl "<TypeName>" docs/`), in the direction the prompt describes.
 4. Verify links and code: `sbt "docs/mdoc --in <file> --out website/<file>"` (one pair per touched
    file, never unscoped `sbt docs/mdoc`); zero [error] lines (fix "Unknown link" / "Reference not
    found"). On a bare "mdoc failed" stack trace, run the `sbt "last <scope>"` it suggests.

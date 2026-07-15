@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { sourceRef } from './research-data-type.ts';
 
 export const researchSchema = v.object({
   concept: v.pipe(v.string(), v.description('The ONE concept this tutorial should teach')),
@@ -14,6 +15,7 @@ export const researchSchema = v.object({
     v.object({
       name: v.string(),
       role: v.pipe(v.string(), v.description('One sentence: what this type does and why it matters here')),
+      source: sourceRef,
     }),
   ),
   compositionOrder: v.pipe(
@@ -41,6 +43,10 @@ export const researchSchema = v.object({
     v.description('The core insight: the single realization the whole tutorial drives the learner toward.'),
   ),
   imports: v.array(v.string()),
+  sourceFiles: v.pipe(
+    v.array(v.string()),
+    v.description('Every repo-relative source file read during research (deduped); the paths cited in coreTypes `source`.'),
+  ),
   sbtDependency: v.string(),
   scalaVersionNotes: v.nullable(
     v.pipe(v.string(), v.description('Any Scala 2 vs 3 differences, or null if none')),
@@ -88,6 +94,7 @@ export const researchTutorialTopic = defineAction({
         verifiableOutputs: [],
         coreInsight: s,
         imports: [],
+        sourceFiles: [],
         sbtDependency: s,
         scalaVersionNotes: null,
         groundingDetail: s,
@@ -106,12 +113,16 @@ export const researchTutorialTopic = defineAction({
 
     log.info(`Researching tutorial topic: ${input.topic}`);
     const session = await harness.session();
-    // Delegates to the tutorial_researcher subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here.
+    // Delegates to the generic researcher subagent — see design-tutorial-structure.ts
+    // for why bare harness.session() on the calling agent is unsafe here. The
+    // tutorial-specific focus and result schema are supplied here at the call site.
     const { data } = await session.task(
       `Research "${input.topic}" in this ZIO library checkout so a tutorial can be written ` +
-        `accurately from real source, tests, and examples.`,
-      { agent: 'tutorial_researcher', result: researchSchema },
+        `accurately from real source, tests, and examples. For each core type, set its "source" ` +
+        `to the repo-relative location you actually read it from, as "path:L<start>-L<end>" ` +
+        `(e.g. "src/main/scala/optics/Lens.scala:L12-L20"), and list every file you read in ` +
+        `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
+      { agent: 'researcher', result: researchSchema },
     );
     writeResearchCache(repoPath, input.topic, data);
     return data;
