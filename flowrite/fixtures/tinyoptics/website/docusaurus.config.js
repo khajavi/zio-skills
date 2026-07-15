@@ -61,6 +61,7 @@ const config = {
         logo: {
           alt: 'tinyoptics Logo',
           src: 'img/logo.svg',
+          href: '/docs',
         },
         items: [
           {
@@ -88,7 +89,7 @@ const config = {
               },
               {
                 label: 'API Reference',
-                to: '/docs/references/optics-api',
+                to: '/docs/reference/optics-api',
               },
             ],
           },
