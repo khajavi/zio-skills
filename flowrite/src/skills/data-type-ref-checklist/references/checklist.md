@@ -12,8 +12,7 @@ Verify every item. The reference page is not done until all pass.
   construction → predefined instances → core operations → subtypes → comparisons → advanced →
   integration → running the examples).
 - Installation appears only for top-level module types; internal types omit it.
-- Each Core-Operations method is a `####` subsection under its `###` category; no category has a
-  single lone method (singletons are merged into a related category).
+- Each Core-Operations method is a `####` under its `###` category; a single-method category is fine when no related one fits.
 
 ## Coverage & Content Quality
 

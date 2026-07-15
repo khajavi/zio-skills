@@ -11,7 +11,7 @@
 10. **No duplicate markdown heading**: Do not create a markdown heading (`#`) that duplicates the frontmatter title. Start directly with `## Overview` or the first real section.
 11. **Heading hierarchy**: Use `##` for major sections, `###` for subsections, `####` for subsubsections.
 12. **No bare subheaders**: Always write an intro sentence between a header and its first nested subheader — both `##` → `###` and `###` → `####`. Never stack two headings with no prose between.
-13. **No lone subheaders**: Never create a subsection with only one child.
+13. **No lone subheaders**: Never create a subsection with only one child — except a Core-Operations category may keep one method when no related category fits.
 14. **When to use `####`**: Use `####` to organize multiple related topics under a single `###`.
 15. **Every code block must be preceded by a prose sentence ending with `:`**. Never follow a heading directly with a code block. Between consecutive code blocks, add bridging prose that explains what the next block demonstrates.
 16. **Always include imports**: Every code block starts with the necessary import statements. Exception for mdoc pages: mdoc blocks share one scope, so imports in the first block of the page satisfy this rule for all later blocks.
