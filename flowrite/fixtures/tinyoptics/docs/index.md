@@ -3,8 +3,6 @@ id: index
 title: tinyoptics Documentation
 ---
 
-# tinyoptics Documentation
-
 Welcome to the **tinyoptics** documentation. tinyoptics is a tiny, dependency-free optics library for Scala 2.13 that provides meaningful functional data types for composable, immutable data access and update.
 
 ## What are Optics?
