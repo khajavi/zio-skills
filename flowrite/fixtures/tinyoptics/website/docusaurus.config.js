@@ -39,7 +39,7 @@ const config = {
         docs: {
           path: 'docs',
           routeBasePath: '/',
-          sidebarPath: require.resolve('./docs/sidebars.js'),
+          sidebarPath: require.resolve('../docs/sidebars.js'),
           editUrl: 'https://github.com/your-org/tinyoptics/tree/main/docs/',
         },
         blog: false,
