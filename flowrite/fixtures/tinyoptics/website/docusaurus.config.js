@@ -37,7 +37,7 @@ const config = {
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
-          path: 'docs',
+          path: '../docs',
           routeBasePath: '/',
           sidebarPath: require.resolve('../docs/sidebars.js'),
           editUrl: 'https://github.com/your-org/tinyoptics/tree/main/docs/',
