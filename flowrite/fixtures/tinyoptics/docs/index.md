@@ -3,8 +3,6 @@ id: index
 title: tinyoptics Documentation
 ---
 
-# tinyoptics Documentation
-
 Welcome to the **tinyoptics** documentation. tinyoptics is a tiny, dependency-free optics library for Scala 2.13 that provides meaningful functional data types for composable, immutable data access and update.
 
 ## What are Optics?
@@ -23,7 +21,7 @@ The unifying idea is **composition**: `andThen` chains optics to reach deeply ne
 ## Getting Started
 
 - **Learning Guides** — start with the [Guides](guides/index.md) for progressive, tutorial-style introductions to optics.
-- **API Reference** — see the [Optics API Reference](reference/optics-api.md) for complete documentation of `Iso`, `Lens`, `Prism`, and `Optional`, including all composition methods.
+- **API Reference** — see the [Optics API Reference](reference/index.md) for complete documentation of `Iso`, `Lens`, `Prism`, and `Optional`, including all composition methods.
 
 ## Key Features
 

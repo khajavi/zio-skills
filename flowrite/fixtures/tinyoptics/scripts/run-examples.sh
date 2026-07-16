@@ -37,7 +37,7 @@ cleanup() {
   kill -KILL "$flue_pid" 2>/dev/null
   pkill -9 -f "flue.mjs run write-examples" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
-  bash scripts/archive-docs.sh "$log"
+  bash scripts/archive-docs.sh "$log" write-examples
   rm -f "$log"
   exit 130
 }
@@ -48,6 +48,6 @@ status=$?
 kill "$tail_pid" 2>/dev/null
 wait "$tail_pid" 2>/dev/null
 
-bash scripts/archive-docs.sh "$log"
+bash scripts/archive-docs.sh "$log" write-examples
 rm -f "$log"
 exit "$status"

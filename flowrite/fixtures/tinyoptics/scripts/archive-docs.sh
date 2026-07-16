@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# archive-docs.sh — snapshot everything a write-tutorial run generated in this
-# fixture, then reset the fixture to its committed baseline (git-stash semantics).
+# archive-docs.sh — snapshot everything a write-* run generated in this fixture,
+# then reset the fixture to its committed baseline (git-stash semantics).
 #
 # Captures ALL changes vs committed HEAD (docs, src/main/scala/examples/*,
 # build.sbt, project/plugins.sbt, sidebars.js, EXAMPLES_SUMMARY.md, ...) as one
-# patch under ../tinyoptics-archive/write-tutorial-turn<N>/changes.patch, AND
+# patch under ../tinyoptics-archive/<workflow>-turn<N>/changes.patch, AND
 # writes two full, standalone, runnable project copies alongside it:
 #   tinyoptics-base/  — committed HEAD, unmodified (what the run started from)
 #   tinyoptics-final/ — HEAD + this run's changes merged (what the run produced)
@@ -15,18 +15,23 @@
 # Then restores the working tree. Ignored paths (website/ node_modules &
 # .docusaurus, .remember/) are left untouched.
 #
-# Usage: bash scripts/archive-docs.sh [flue-run-log-file]
+# Usage: bash scripts/archive-docs.sh [flue-run-log-file] [workflow-label]
+#   workflow-label defaults to write-tutorial (back-compat) and selects both the
+#   archive turn directory name (<workflow>-turn<N>) and the log-line prefixes
+#   parsed for usage/insights — every write-* workflow logs its own label, e.g.
+#   "write-module-ref token consumption:". Pass the label matching the run.
 #   If a log file path is given (and exists), it's copied into the archived
 #   turn as flue.log — even on a failed/partial run with no file changes.
-#   Also parses that log's "write-tutorial token consumption" and "write-
-#   tutorial component usage" lines into token-usage.json, and its "write-
-#   tutorial run insights" line into insights.json — flue's CLI printer only
-#   ever renders the log message text, never the structured second argument
-#   passed to log.info, so this is a regex extraction of the human-readable
-#   line, not a re-read of the original object.
+#   Also parses that log's "<workflow> token consumption" and "<workflow>
+#   component usage" lines into token-usage.json, and its "<workflow> run
+#   insights" line into insights.json — flue's CLI printer only ever renders the
+#   log message text, never the structured second argument passed to log.info,
+#   so this is a regex extraction of the human-readable line, not a re-read of
+#   the original object.
 set -euo pipefail
 
 log_file="${1:-}"
+workflow_label="${2:-write-tutorial}"
 
 # Fixture root = parent of this script's directory.
 cd "$(dirname "$0")/.."
@@ -37,17 +42,17 @@ mkdir -p "$archive_root"
 
 # Next turn number.
 n=1
-while [ -e "$archive_root/write-tutorial-turn$n" ]; do
+while [ -e "$archive_root/$workflow_label-turn$n" ]; do
   n=$((n + 1))
 done
-dest="$archive_root/write-tutorial-turn$n"
+dest="$archive_root/$workflow_label-turn$n"
 mkdir -p "$dest"
 
 if [ -n "$log_file" ] && [ -f "$log_file" ]; then
   cp "$log_file" "$dest/flue.log"
 
-  token_line="$(grep 'write-tutorial token consumption:' "$dest/flue.log" | tail -1 || true)"
-  components_line="$(grep 'write-tutorial component usage:' "$dest/flue.log" | tail -1 || true)"
+  token_line="$(grep "$workflow_label token consumption:" "$dest/flue.log" | tail -1 || true)"
+  components_line="$(grep "$workflow_label component usage:" "$dest/flue.log" | tail -1 || true)"
 
   if [ -n "$token_line" ]; then
     total="$(grep -oP '(?<=consumption: )[0-9]+' <<<"$token_line" || echo 0)"
@@ -75,7 +80,7 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
 
   # The agent's self-authored run retrospective (obstacles + fixes) — mine
   # these across turns to spot recurring friction worth an instruction change.
-  insights_line="$(grep 'write-tutorial run insights:' "$dest/flue.log" | tail -1 || true)"
+  insights_line="$(grep "$workflow_label run insights:" "$dest/flue.log" | tail -1 || true)"
   insights="${insights_line#*run insights: }"
   if [ -n "$insights" ] && jq -e . >/dev/null 2>&1 <<<"$insights"; then
     jq . <<<"$insights" > "$dest/insights.json"

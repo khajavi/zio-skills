@@ -20,15 +20,12 @@ const config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/username.
+  organizationName: 'zio/tinyoptics', // Usually your GitHub org/username.
   projectName: 'tinyoptics', // Usually your repo name.
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
-  // Even if you don't use internalization, you can use this field to set useful
-  // metadata like html lang. For example, if your site is Chinese, you may want
-  // to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -40,8 +37,9 @@ const config = {
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
-          path: 'docs',
-          sidebarPath: require.resolve('../sidebars.js'),
+          path: '../docs',
+          routeBasePath: '/',
+          sidebarPath: require.resolve('../docs/sidebars.js'),
           editUrl: 'https://github.com/your-org/tinyoptics/tree/main/docs/',
         },
         blog: false,
@@ -58,10 +56,6 @@ const config = {
       image: 'img/docusaurus-social-card.jpg',
       navbar: {
         title: 'tinyoptics',
-        logo: {
-          alt: 'tinyoptics Logo',
-          src: 'img/logo.svg',
-        },
         items: [
           {
             type: 'docSidebar',
@@ -69,53 +63,7 @@ const config = {
             position: 'left',
             label: 'Docs',
           },
-          {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
-            position: 'right',
-          },
         ],
-      },
-      footer: {
-        style: 'dark',
-        links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Learning Guides',
-                to: '/docs/guides',
-              },
-              {
-                label: 'API Reference',
-                to: '/docs/references/optics-api',
-              },
-            ],
-          },
-          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/tinyoptics',
-              },
-              {
-                label: 'GitHub Discussions',
-                href: 'https://github.com/facebook/docusaurus/discussions',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
-              },
-            ],
-          },
-        ],
-        copyright: `Copyright © ${new Date().getFullYear()} tinyoptics. Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,

@@ -10,6 +10,11 @@ import { designDataTypeStructure } from '../actions/design-data-type-structure.t
 import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
 import { integrateDataTypeReference } from '../actions/integrate.ts';
 import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
+import { researchModule } from '../actions/research-module.ts';
+import { designModuleStructure } from '../actions/design-module-structure.ts';
+import { writeModuleOverview } from '../actions/write-module-overview.ts';
+import { integrateModuleReference } from '../actions/integrate-module.ts';
+import { reviewModuleRef } from '../actions/review-module-ref.ts';
 
 /** Every agent's own actions — exposed to the model as tools but delegate their real work. */
 const ACTION_NAMES = new Set(
@@ -25,6 +30,11 @@ const ACTION_NAMES = new Set(
     writeDataTypeReference,
     integrateDataTypeReference,
     reviewDataTypeRef,
+    researchModule,
+    designModuleStructure,
+    writeModuleOverview,
+    integrateModuleReference,
+    reviewModuleRef,
   ].map((a) => a.name),
 );
 
