@@ -23,7 +23,7 @@ module.exports = {
       items: [
         {
           type: 'doc',
-          id: 'reference/optics-api',
+          id: 'reference/index',
           label: 'Optics API Reference',
         },
       ],
