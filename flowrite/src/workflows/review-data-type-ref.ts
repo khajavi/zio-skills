@@ -16,6 +16,10 @@ export default defineWorkflow({
     projectPath: v.pipe(v.string(), v.description('Absolute path to the library checkout containing the page')),
     path: v.pipe(v.string(), v.description('Reference page path relative to the checkout, e.g. docs/reference/chunk.md')),
     typeName: v.pipe(v.string(), v.description('The documented type, e.g. "Chunk" — used for method-coverage')),
+    userPrompt: v.pipe(
+      v.optional(v.string()),
+      v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+    ),
   }),
   output: v.object({
     passed: v.boolean(),
@@ -24,12 +28,14 @@ export default defineWorkflow({
   async run({ harness, input, log }) {
     process.env.REPO_PATH = input.projectPath;
     process.env.SKIP_PHASES = '[]';
+    process.env.USER_PROMPT = input.userPrompt ?? ''; // read by authorHint() in shared/review.ts
 
     const session = await harness.session();
     const { data } = await session.prompt(
       `Only call the review_data_type_ref action with path ${input.path} and typeName ${input.typeName}, ` +
         `then finish. Do NOT run research, design, write, mdoc, examples, or integrate — the page ` +
-        `already exists; this is a review-only session. Report the review result verbatim.`,
+        `already exists; this is a review-only session. Report the review result verbatim.` +
+        (input.userPrompt ? ` Author hint to steer this run: ${input.userPrompt}` : ''),
       {
         result: v.object({
           passed: v.boolean(),

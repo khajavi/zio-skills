@@ -22,7 +22,11 @@ export const skipPhasesField = (description: string) =>
  * They differ only in their agent, input schema, kick-off prompt, and log label.
  */
 export function defineDocsWorkflow<
-  TIn extends v.GenericSchema<{ projectPath: string; skipPhases?: readonly string[] | undefined }>,
+  TIn extends v.GenericSchema<{
+    projectPath: string;
+    skipPhases?: readonly string[] | undefined;
+    userPrompt?: string | undefined;
+  }>,
 >(opts: {
   /** Log prefix, e.g. 'write-tutorial'. */
   label: string;
@@ -39,6 +43,9 @@ export function defineDocsWorkflow<
       // (and the skip list) before the session initializes the agent.
       process.env.REPO_PATH = input.projectPath;
       process.env.SKIP_PHASES = JSON.stringify(input.skipPhases ?? []);
+      // Author hint: read by authorHint() at every subagent delegation site.
+      // Always assign so a stale value from a previous dev-server run can't leak.
+      process.env.USER_PROMPT = input.userPrompt ?? '';
 
       const usage = trackTokenUsage();
       const components = trackComponentUsage();

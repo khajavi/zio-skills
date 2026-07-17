@@ -14,6 +14,7 @@ import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/s
 // drafter prompt at compile time instead. REVERT once flue supports nested skills:
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import { authorHint } from '../shared/author-hint.ts';
 
 /** Kebab-case a type name for the filename: "NonEmptyChunk" -> "non-empty-chunk". */
 export function toKebabCase(typeName: string): string {
@@ -123,7 +124,7 @@ export const writeDataTypeReference = defineAction({
               input.moduleContext,
             ]
           : []),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     );
 

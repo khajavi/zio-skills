@@ -58,6 +58,10 @@ export default defineWorkflow({
         'Path to the article markdown with embedded <!-- REVIEW --> comments, relative to projectPath, e.g. docs/guides/schedule.md',
       ),
     ),
+    userPrompt: v.pipe(
+      v.optional(v.string()),
+      v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+    ),
   }),
   output: resolveReviewCommentsOutput,
   async run({ harness, input, log }) {
@@ -72,7 +76,10 @@ export default defineWorkflow({
       // Same prompt the resolve_review_comments action uses (shared via
       // resolveReviewPrompt). Delegated directly to review_resolver, bypassing
       // the top agent's flow.
-      const { data } = await session.task(resolveReviewPrompt(input.articlePath), {
+      const prompt =
+        resolveReviewPrompt(input.articlePath) +
+        (input.userPrompt ? ` Author hint to steer this run: ${input.userPrompt}` : '');
+      const { data } = await session.task(prompt, {
         agent: 'review_resolver',
         result: resolveReviewCommentsOutput,
       });

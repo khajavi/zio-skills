@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { integrateOutput } from './integrate.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 
 /**
  * Wire a finished module reference into the Docusaurus site under the Reference
@@ -41,7 +42,7 @@ export const integrateModuleReference = defineAction({
         sidebarInstruction,
         `Module references are typically linked TO from tutorials, how-to guides, and data type`,
         `reference pages — add inbound "See also" links from those pages where relevant.`,
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'docs_integrator', result: integrateOutput },
     );
     return data;

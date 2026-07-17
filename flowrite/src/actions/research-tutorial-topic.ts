@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 import { sourceRef } from './research-data-type.ts';
 
 export const researchSchema = v.object({
@@ -121,7 +122,8 @@ export const researchTutorialTopic = defineAction({
         `accurately from real source, tests, and examples. For each core type, set its "source" ` +
         `to the repo-relative location you actually read it from, as "path:L<start>-L<end>" ` +
         `(e.g. "src/main/scala/optics/Lens.scala:L12-L20"), and list every file you read in ` +
-        `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
+        `"sourceFiles". Never guess a path or line — cite only a file you opened.` +
+        authorHint(),
       { agent: 'researcher', result: researchSchema },
     );
     writeResearchCache(repoPath, input.topic, data);

@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
@@ -73,7 +74,7 @@ export const designTutorialStructure = defineAction({
         ``,
         `Research answers:`,
         JSON.stringify(input.researchAnswers),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'designer', result: structureSchema },
     );
     return data;

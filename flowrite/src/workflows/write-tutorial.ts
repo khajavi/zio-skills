@@ -21,6 +21,10 @@ export default defineDocsWorkflow({
   input: v.object({
     projectPath: v.pipe(v.string(), v.description('Absolute path to the ZIO library checkout to document')),
     topic: v.pipe(v.string(), v.description('Tutorial title or topic description')),
+    userPrompt: v.pipe(
+      v.optional(v.string()),
+      v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+    ),
     skipPhases: skipPhasesField(
       'Phases to skip. Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
         'e.g. ["research", "design", "write", "write-examples"] runs only integrate + review.',
@@ -28,6 +32,7 @@ export default defineDocsWorkflow({
   }),
   buildPrompt: (input) =>
     `Write a complete, compile-verified tutorial for: ${input.topic}. ` +
+    (input.userPrompt ? `Author hint to steer this run: ${input.userPrompt} ` : '') +
     `Your shell already starts in the repo root of the library checkout — use relative paths for every command; do not cd into the repo. ` +
     `Run the full flow (research → design → write → examples → mdoc verify → integrate → review). ` +
     `Report the final tutorial file path, a one-line summary, and a run retrospective: ` +

@@ -60,6 +60,10 @@ export default defineWorkflow({
       v.string(),
       v.description('Path to the existing tutorial markdown, relative to projectPath, e.g. docs/guides/lens.md'),
     ),
+    userPrompt: v.pipe(
+      v.optional(v.string()),
+      v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+    ),
   }),
   output: writeCompanionExamplesOutput,
   async run({ harness, input, log }) {
@@ -77,7 +81,8 @@ export default defineWorkflow({
       const { data } = await session.task(
         `Build companion examples for the tutorial at ${input.tutorialPath}. Create one runnable ` +
           `example per major concept plus a complete integrated example, then compile the examples ` +
-          `leaf build and run every example (each must print meaningful output).`,
+          `leaf build and run every example (each must print meaningful output).` +
+          (input.userPrompt ? ` Author hint to steer this run: ${input.userPrompt}` : ''),
         { agent: 'examples_builder', result: writeCompanionExamplesOutput },
       );
       return data;

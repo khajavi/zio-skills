@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { sourceRef } from './research-data-type.ts';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 
 // Module-shaped research: a module is several related types, so this enumerates
 // the member types with a LIGHT per-type surface (enough to decide flat vs
@@ -158,7 +159,7 @@ export const researchModule = defineAction({
         `For every type set its "source" to the repo-relative location you actually read it`,
         `from, as "path:L<start>-L<end>". List every file you read in "sourceFiles". Never`,
         `guess a path or line — cite only a file you opened.`,
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'researcher', result: moduleResearchSchema },
     );
     writeResearchCache(repoPath, cacheTopic, data);

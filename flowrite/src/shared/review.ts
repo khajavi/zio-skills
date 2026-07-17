@@ -2,6 +2,7 @@ import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import { reviewSchema } from './schemas.ts';
 import { runStyleLoop, withTransientRetry } from './style-loop.ts';
+import { authorHint } from './author-hint.ts';
 
 type ReviewResult = v.InferOutput<typeof reviewSchema>;
 type ReviewItem = ReviewResult['items'][number];
@@ -114,6 +115,9 @@ export async function runCappedReview(opts: {
         `Evaluate the ${opts.promptNoun} below against every item in this checklist:`,
         ``,
         opts.checklistDoc,
+        // Placed before the content delimiter so the hint reads as reviewer
+        // guidance, not as part of the page under review.
+        authorHint(),
         ``,
         `--- ${opts.headerLabel} (${path}) ---`,
         content,

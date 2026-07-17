@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
@@ -99,7 +100,7 @@ export const designDataTypeStructure = defineAction({
         `public operation into ordered Core Operations categories (a single-method`,
         `category is fine when none fits). Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'designer', result: dataTypeStructureSchema },
     );
     return data;

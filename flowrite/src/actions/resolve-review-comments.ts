@@ -1,5 +1,6 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
+import { authorHint } from '../shared/author-hint.ts';
 
 export const resolveReviewCommentsOutput = v.object({
   path: v.pipe(v.string(), v.description('Path to the resolved article, relative to the repo root')),
@@ -68,7 +69,7 @@ export const resolveReviewComments = defineAction({
     const session = await harness.session();
     // Delegates to the review_resolver subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await session.task(resolveReviewPrompt(input.articlePath), {
+    const { data } = await session.task(resolveReviewPrompt(input.articlePath) + authorHint(), {
       agent: 'review_resolver',
       result: resolveReviewCommentsOutput,
     });

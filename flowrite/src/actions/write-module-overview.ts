@@ -9,6 +9,7 @@ import moduleStructureDoc from '../skills/module-ref-structure/references/struct
 // TEMP (flue nested-skill limitation, see write-data-type-reference.ts): inject
 // writing-style rules into the drafter prompt until flue packages nested skills.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import { authorHint } from '../shared/author-hint.ts';
 
 /**
  * Write the module reference's module-level page. For a flat layout this is the
@@ -106,7 +107,7 @@ export const writeModuleOverview = defineAction({
         `examples; never substitute general knowledge; groundingDetail carries verbatim detail to copy`,
         `exactly. The "How They Work Together" section MUST reflect the real "relationships" here):`,
         JSON.stringify(input.researchAnswers),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     );
 

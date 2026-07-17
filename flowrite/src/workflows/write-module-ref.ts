@@ -26,6 +26,10 @@ export default defineDocsWorkflow({
       v.optional(v.picklist(['flat', 'hierarchical'])),
       v.description('Force the page layout; omit to let the design phase decide via the auto-rule.'),
     ),
+    userPrompt: v.pipe(
+      v.optional(v.string()),
+      v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+    ),
     skipPhases: skipPhasesField(
       'Phases to skip (only code-gated phases; mdoc verify is agent-driven and always runs). ' +
         'Skipping a head-phase prefix resumes a run whose artifacts already exist, ' +
@@ -35,6 +39,7 @@ export default defineDocsWorkflow({
   buildPrompt: (input) =>
     `Write a complete, compile-verified module reference for the module: ${input.moduleName}. ` +
     (input.layout ? `Use the "${input.layout}" layout (pass it as layoutOverride to design). ` : '') +
+    (input.userPrompt ? `Author hint to steer this run: ${input.userPrompt} ` : '') +
     `Your shell already starts in the repo root of the library checkout — use relative paths for every command; do not cd into the repo. ` +
     `Run the full flow (research → design → write module page → per-type subpages if hierarchical → ` +
     `examples → mdoc verify → integrate → review; review covers per-type method coverage + writing ` +

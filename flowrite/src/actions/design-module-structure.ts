@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { moduleResearchSchema } from './research-module.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as data-type-ref.
 import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md' with { type: 'markdown' };
@@ -99,7 +100,7 @@ export const designModuleStructure = defineAction({
         `Decide which module-level sections apply and order EVERY type (core + supporting) in typeOrder.`,
         `Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'designer', result: moduleStructureSchema },
     );
     return data;

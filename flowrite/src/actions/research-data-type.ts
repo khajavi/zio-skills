@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 
 // Per-fact source provenance: the repo-relative file and line range the fact
 // was actually read from, as "path:L<start>-L<end>" (e.g.
@@ -178,7 +179,7 @@ export const researchDataType = defineAction({
         `to the repo-relative location you actually read it from, as "path:L<start>-L<end>"`,
         `(e.g. "src/main/scala/optics/Prism.scala:L40-L41"). List every file you read in`,
         `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'researcher', result: dataTypeResearchSchema },
     );
     writeResearchCache(repoPath, cacheTopic, data);

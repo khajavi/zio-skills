@@ -1,6 +1,7 @@
 import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
+import { authorHint } from '../shared/author-hint.ts';
 
 export const writeCompanionExamplesOutput = v.object({
   skipped: v.boolean(),
@@ -35,7 +36,8 @@ export const writeCompanionExamples = defineAction({
         `and copy its code blocks: one standalone runnable example per major concept. If the page ` +
         `embeds a source file at a fixed mdoc:embed:<path> (a tutorial's "## Putting It Together", or ` +
         `a reference page's "Running the Examples" entries), create that file at exactly that path. Then ` +
-        `compile the examples leaf build and run every example (each must print meaningful output).`,
+        `compile the examples leaf build and run every example (each must print meaningful output).` +
+        authorHint(),
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
     );
     return data;

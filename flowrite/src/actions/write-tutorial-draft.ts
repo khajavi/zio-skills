@@ -15,6 +15,7 @@ import tutorialStructureDoc from '../skills/tutorial-structure/references/struct
 // drafter prompt at compile time instead. REVERT once flue supports nested skills:
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import { authorHint } from '../shared/author-hint.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -113,7 +114,7 @@ export const writeTutorialDraft = defineAction({
         ``,
         `Section plan to follow exactly:`,
         JSON.stringify(input.structure),
-      ].join('\n'),
+      ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     );
 
