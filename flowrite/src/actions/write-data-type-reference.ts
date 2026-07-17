@@ -15,6 +15,7 @@ import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/s
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 /** Kebab-case a type name for the filename: "NonEmptyChunk" -> "non-empty-chunk". */
 export function toKebabCase(typeName: string): string {
@@ -91,7 +92,8 @@ export const writeDataTypeReference = defineAction({
         ),
       ),
     });
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'drafter (data type ref)', () =>
+      session.task(
       [
         `Write a complete ZIO data type reference page as Docusaurus markdown.`,
         ``,
@@ -126,7 +128,7 @@ export const writeDataTypeReference = defineAction({
           : []),
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
-    );
+    ));
 
     const frontmatter = buildFrontmatter({
       id,

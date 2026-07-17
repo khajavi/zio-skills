@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
@@ -64,7 +65,8 @@ export const designTutorialStructure = defineAction({
     // own design_tutorial_structure action would otherwise be visible to the
     // nested session, letting it call itself and recurse until the delegation
     // depth limit is hit.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'designer (tutorial)', () =>
+      session.task(
       [
         `Design a learning-oriented tutorial structure for "${input.topic}".`,
         ``,
@@ -76,7 +78,7 @@ export const designTutorialStructure = defineAction({
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),
       { agent: 'designer', result: structureSchema },
-    );
+    ));
     return data;
   },
 });

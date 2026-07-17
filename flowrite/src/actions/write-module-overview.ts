@@ -10,6 +10,7 @@ import moduleStructureDoc from '../skills/module-ref-structure/references/struct
 // writing-style rules into the drafter prompt until flue packages nested skills.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 /**
  * Write the module reference's module-level page. For a flat layout this is the
@@ -84,7 +85,8 @@ export const writeModuleOverview = defineAction({
           `its own subpage written separately.`,
         ];
 
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'drafter (module overview)', () =>
+      session.task(
       [
         `Write a ZIO MODULE reference page as Docusaurus markdown.`,
         ``,
@@ -109,7 +111,7 @@ export const writeModuleOverview = defineAction({
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
-    );
+    ));
 
     const frontmatter = buildFrontmatter({
       id,

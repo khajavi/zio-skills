@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 export const writeCompanionExamplesOutput = v.object({
   skipped: v.boolean(),
@@ -31,7 +32,8 @@ export const writeCompanionExamples = defineAction({
     const session = await harness.session();
     // Delegates to the examples_builder subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'examples_builder', () =>
+      session.task(
       `Build companion examples for the documentation page at ${input.pagePath}. Read the page ` +
         `and copy its code blocks: one standalone runnable example per major concept. If the page ` +
         `embeds a source file at a fixed mdoc:embed:<path> (a tutorial's "## Putting It Together", or ` +
@@ -39,7 +41,7 @@ export const writeCompanionExamples = defineAction({
         `compile the examples leaf build and run every example (each must print meaningful output).` +
         authorHint(),
       { agent: 'examples_builder', result: writeCompanionExamplesOutput },
-    );
+    ));
     return data;
   },
 });

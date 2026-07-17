@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 import { sourceRef } from './research-data-type.ts';
 
 export const researchSchema = v.object({
@@ -117,7 +118,8 @@ export const researchTutorialTopic = defineAction({
     // Delegates to the generic researcher subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here. The
     // tutorial-specific focus and result schema are supplied here at the call site.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'researcher (tutorial)', () =>
+      session.task(
       `Research "${input.topic}" in this ZIO library checkout so a tutorial can be written ` +
         `accurately from real source, tests, and examples. For each core type, set its "source" ` +
         `to the repo-relative location you actually read it from, as "path:L<start>-L<end>" ` +
@@ -125,7 +127,7 @@ export const researchTutorialTopic = defineAction({
         `"sourceFiles". Never guess a path or line — cite only a file you opened.` +
         authorHint(),
       { agent: 'researcher', result: researchSchema },
-    );
+    ));
     writeResearchCache(repoPath, input.topic, data);
     return data;
   },

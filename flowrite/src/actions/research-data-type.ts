@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 // Per-fact source provenance: the repo-relative file and line range the fact
 // was actually read from, as "path:L<start>-L<end>" (e.g.
@@ -167,7 +168,8 @@ export const researchDataType = defineAction({
     const session = await harness.session();
     // Delegates to the generic researcher subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'researcher (data type)', () =>
+      session.task(
       [
         `Research the ZIO data type "${input.typeName}" in this library checkout so an API`,
         `reference page can be written accurately from real source, tests, and examples.`,
@@ -181,7 +183,7 @@ export const researchDataType = defineAction({
         `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
       ].join('\n') + authorHint(),
       { agent: 'researcher', result: dataTypeResearchSchema },
-    );
+    ));
     writeResearchCache(repoPath, cacheTopic, data);
     return data;
   },

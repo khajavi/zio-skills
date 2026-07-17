@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { moduleResearchSchema } from './research-module.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as data-type-ref.
 import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md' with { type: 'markdown' };
@@ -84,7 +85,8 @@ export const designModuleStructure = defineAction({
 
     log.info(`Designing module-reference structure for: ${input.moduleName}`);
     const session = await harness.session();
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'designer (module)', () =>
+      session.task(
       [
         `Design the structural plan for a "${input.moduleName}" module reference page.`,
         ``,
@@ -102,7 +104,7 @@ export const designModuleStructure = defineAction({
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),
       { agent: 'designer', result: moduleStructureSchema },
-    );
+    ));
     return data;
   },
 });

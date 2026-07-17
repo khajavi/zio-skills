@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { integrateOutput } from './integrate.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 /**
  * Wire a finished module reference into the Docusaurus site under the Reference
@@ -35,7 +36,8 @@ export const integrateModuleReference = defineAction({
         : `Add a sidebar "category" under "Reference": link it to the index (${input.pagePath}) and ` +
           `list every per-type subpage in the same directory as its child "reference/<module>/<type>" items, in reading order.`;
 
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'docs_integrator (module)', () =>
+      session.task(
       [
         `Integrate the module reference at ${input.pagePath} into the Docusaurus site under the`,
         `"Reference" category: sidebars.js, docs/index.md, cross-references, and full link verification.`,
@@ -44,7 +46,7 @@ export const integrateModuleReference = defineAction({
         `reference pages — add inbound "See also" links from those pages where relevant.`,
       ].join('\n') + authorHint(),
       { agent: 'docs_integrator', result: integrateOutput },
-    );
+    ));
     return data;
   },
 });

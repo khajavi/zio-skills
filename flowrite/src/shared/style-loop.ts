@@ -39,7 +39,10 @@ const ruleGroupIndex = (rule: number): number => RULE_TO_GROUP.get(rule) ?? 0;
 // Default 1 fix pass; override per run with MAX_FIX_ROUNDS=n.
 const MAX_FIX_ROUNDS = Number(process.env.MAX_FIX_ROUNDS ?? 1);
 
-const TRANSIENT = /connection error|econnreset|etimedout|fetch failed|socket hang up/i;
+// "conversation stream contract": flue beta.9 sometimes corrupts a subagent's
+// conversation record mid-task; a fresh session.task attempt starts clean.
+const TRANSIENT =
+  /connection error|econnreset|etimedout|fetch failed|socket hang up|conversation stream contract/i;
 
 /**
  * Programmatic session.task calls have no durable retry (see

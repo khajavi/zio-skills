@@ -2,6 +2,7 @@ import { defineAction } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 /** Shared output of every doc-integration action. */
 export const integrateOutput = v.object({
@@ -48,10 +49,12 @@ export function defineIntegrateAction(opts: {
       const session = await harness.session();
       // Delegates to the docs_integrator subagent — see design-tutorial-structure.ts
       // for why bare harness.session() on the calling agent is unsafe here.
-      const { data } = await session.task(opts.buildPrompt(path) + authorHint(), {
-        agent: 'docs_integrator',
-        result: integrateOutput,
-      });
+      const { data } = await withTransientRetry(log, 'docs_integrator', () =>
+        session.task(opts.buildPrompt(path) + authorHint(), {
+          agent: 'docs_integrator',
+          result: integrateOutput,
+        }),
+      );
       return data;
     },
   });

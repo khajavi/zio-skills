@@ -16,6 +16,7 @@ import tutorialStructureDoc from '../skills/tutorial-structure/references/struct
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
@@ -92,7 +93,8 @@ export const writeTutorialDraft = defineAction({
         ),
       ),
     });
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'drafter (tutorial)', () =>
+      session.task(
       [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
         ``,
@@ -116,7 +118,7 @@ export const writeTutorialDraft = defineAction({
         JSON.stringify(input.structure),
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
-    );
+    ));
 
     const frontmatter = buildFrontmatter({
       id: input.id,

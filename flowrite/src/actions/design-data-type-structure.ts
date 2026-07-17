@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
@@ -88,7 +89,8 @@ export const designDataTypeStructure = defineAction({
     const session = await harness.session();
     // Delegates to the generic designer subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'designer (data type)', () =>
+      session.task(
       [
         `Design the structural plan for a "${input.typeName}" data type reference page.`,
         ``,
@@ -102,7 +104,7 @@ export const designDataTypeStructure = defineAction({
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),
       { agent: 'designer', result: dataTypeStructureSchema },
-    );
+    ));
     return data;
   },
 });

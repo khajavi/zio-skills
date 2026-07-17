@@ -4,6 +4,7 @@ import { sourceRef } from './research-data-type.ts';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
+import { withTransientRetry } from '../shared/style-loop.ts';
 
 // Module-shaped research: a module is several related types, so this enumerates
 // the member types with a LIGHT per-type surface (enough to decide flat vs
@@ -140,7 +141,8 @@ export const researchModule = defineAction({
     const session = await harness.session();
     // Delegates to the generic researcher subagent — see design-tutorial-structure.ts
     // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await session.task(
+    const { data } = await withTransientRetry(log, 'researcher (module)', () =>
+      session.task(
       [
         `Research the ZIO module "${input.moduleName}" in this library checkout so a MODULE`,
         `reference page can be written accurately from real source, tests, and examples.`,
@@ -161,7 +163,7 @@ export const researchModule = defineAction({
         `guess a path or line — cite only a file you opened.`,
       ].join('\n') + authorHint(),
       { agent: 'researcher', result: moduleResearchSchema },
-    );
+    ));
     writeResearchCache(repoPath, cacheTopic, data);
     return data;
   },
