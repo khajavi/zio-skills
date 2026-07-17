@@ -126,6 +126,8 @@ export const writeDataTypeReference = defineAction({
               input.moduleContext,
             ]
           : []),
+        ``,
+        `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     ));

@@ -116,6 +116,8 @@ export const writeTutorialDraft = defineAction({
         ``,
         `Section plan to follow exactly:`,
         JSON.stringify(input.structure),
+        ``,
+        `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     ));

@@ -109,6 +109,8 @@ export const writeModuleOverview = defineAction({
         `examples; never substitute general knowledge; groundingDetail carries verbatim detail to copy`,
         `exactly. The "How They Work Together" section MUST reflect the real "relationships" here):`,
         JSON.stringify(input.researchAnswers),
+        ``,
+        `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
       { agent: 'drafter', result: contentSchema },
     ));

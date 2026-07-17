@@ -42,31 +42,35 @@ export const dataTypeResearchSchema = v.object({
         kind: v.pipe(
           v.picklist(['primary-constructor', 'companion-factory']),
           v.description(
-            'How the value is really built: "primary-constructor" for a case class built via its own ' +
-              'primary constructor (no explicit apply in source), "companion-factory" for a real ' +
-              'object-level method (apply/empty/from*) the source declares.',
+            'How the value is really built: "primary-constructor" for a type (case class or plain ' +
+              'class) built via its own primary constructor (no explicit apply in source), ' +
+              '"companion-factory" for a real object-level method (apply/empty/from*) the source declares.',
           ),
         ),
         signature: v.pipe(
           v.string(),
           v.description(
-            'The real declaration form: for primary-constructor, the case-class declaration ' +
-              '("final case class T[..](params)"); for companion-factory, the object method signature.',
+            'The real declaration form: for primary-constructor, the verbatim class declaration ' +
+              '("final case class T[..](params)", "class T(params)"); for companion-factory, the ' +
+              'object method signature.',
           ),
         ),
         whenToUse: v.string(),
         source: sourceRef,
       }),
-      // Deterministic guard: a case-class primary constructor must be recorded as its
-      // real case-class declaration, never a synthesized companion `def apply`. The
-      // Prism research fabricated `def apply[...]: Prism` while correctly tagging
-      // kind=primary-constructor; a weak model ignores the prose contract above, so
-      // reject it here — a failed result check makes the researcher re-emit the real decl.
+      // Deterministic guard: a primary constructor must be recorded as its real class
+      // declaration (case class OR plain class — sql's DbCodecDeriver looped 6 times
+      // against the old case-class-only regex), never a synthesized companion
+      // `def apply`. The Prism research fabricated `def apply[...]: Prism` while
+      // correctly tagging kind=primary-constructor; a weak model ignores the prose
+      // contract above, so reject it here — a failed result check makes the
+      // researcher re-emit the real decl.
       v.check(
         (c) =>
           c.kind !== 'primary-constructor' ||
-          (/\bcase class\b/.test(c.signature) && !/\bdef\s+apply\b/.test(c.signature)),
-        'A primary-constructor signature must be the case-class declaration (e.g. "final case class T[..](params)"), never a synthesized "def apply".',
+          (/\bclass\b/.test(c.signature) && !/\bdef\s+apply\b/.test(c.signature)),
+        'A primary-constructor signature must be the verbatim class declaration from source ' +
+          '(e.g. "final case class T[..](params)" or "class T(params)"), never a synthesized "def apply".',
       ),
     ),
   ),

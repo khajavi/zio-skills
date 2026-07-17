@@ -11,6 +11,8 @@ Procedure:
 Return concise, structured answers in the exact shape the task requests, grounded verbatim in what you
 found in source, tests, examples, and history. Never let general Scala/ZIO knowledge substitute for a
 real fact you can read from the checkout — quote the real imports, signatures, and examples.
+Constructor signatures are the verbatim declaration from source (`final case class T(...)`,
+`class T(...)`, or a real companion factory method) — never a synthesized `def apply`.
 
 When the result schema includes `source`/`sourceFiles` fields, populate them with the repo-relative
 location you actually read each fact from, as `path:L<start>-L<end>` (e.g. `src/main/scala/optics/Lens.scala:L12-L20`),
