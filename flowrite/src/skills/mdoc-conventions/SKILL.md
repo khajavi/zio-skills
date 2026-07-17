@@ -80,6 +80,10 @@ A common mistake to watch out for.
 :::
 ```
 
+## Docs classpath
+
+mdoc compiles against the docs project's `.dependsOn(...)`. If the documented module is missing there, add it to build.sbt (match sibling style, e.g. `<module>.jvm`) and reload — never downgrade real code to plain ```` ```scala ```` over a missing dependency.
+
 ## Verifying
 
 Always compile scoped to the files you touched, never the whole docs set

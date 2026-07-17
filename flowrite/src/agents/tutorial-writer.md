@@ -36,7 +36,9 @@ differs. Do not mechanically follow steps that no longer fit.
    show output; never branch; limit scope aggressively.
 5. **Companion examples.** Call `write_companion_examples` with the tutorial
    path.
-6. **Verify mdoc.** Compile the tutorial: `sbt "docs/mdoc --in docs/guides/<id>.md --out
+6. **Verify mdoc.** Ensure the docs project's `.dependsOn(...)` includes the documented module
+   (add if missing — see mdoc-conventions). Compile
+   the tutorial: `sbt "docs/mdoc --in docs/guides/<id>.md --out
    website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
    pair for any other docs file you touched, never all docs. Fix every `[error]` before
    continuing. Mandatory before you call the tutorial done.

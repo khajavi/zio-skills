@@ -39,7 +39,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `write_companion_examples` with the module page path to build and verify them. Prefer ONE
    module-level cross-type example set. Do this BEFORE mdoc verify: an `mdoc:embed` block fails
    unless the file it embeds already exists on disk. Skip if the page relies only on inline mdoc.
-7. **Verify mdoc.** Compile the page(s). Flat: `sbt "docs/mdoc --in docs/reference/<module>.md --out
+7. **Verify mdoc.** Ensure the docs project's `.dependsOn(...)` includes this module (add if
+   missing — see mdoc-conventions). Compile the page(s). Flat:
+   `sbt "docs/mdoc --in docs/reference/<module>.md --out
    website/docs/reference/<module>.md"`. Hierarchical: run mdoc over the module directory (index +
    every subpage). Fix every `[error]` before continuing. Mandatory before you call the page done.
 8. **Integrate.** Call `integrate_module_reference` with the module page path AND the layout. It wires
