@@ -38,6 +38,9 @@ Keep them in this order.
    - When the type is a `case class` built via its primary constructor, show the real case-class
      declaration (`final case class T[..](params) { ... }`) — NOT a fabricated `def apply`. Only
      render an `object`-level `apply`/`empty`/`from*` when the companion source actually declares it.
+   - Closed sealed hierarchy of homogeneous variants (nullary cases or single-field wrappers, no
+     variant-specific API): one shared construction example, not one subsection per variant — tabulate
+     them in Subtypes / Variants.
 6. Predefined Instances (if applicable)
    - Predefined values (e.g. TypeId.int) grouped by category in a table or code block.
 7. Core Operations (required)
@@ -45,6 +48,9 @@ Keep them in this order.
    - Each category `###` opens with a one-line intro previewing what the category does and naming its methods, before the first method `####`.
    - One subsection per method (see Drafting Rules for the per-method shape).
 8. Subtypes / Variants (if applicable) — when to use, how to create, differing operations, conversions.
+   - Closed sealed hierarchy: ONE table (variant | field type | meaning) + one `match` example. A
+     variant gets its own subsection only if it genuinely differs (e.g. two-field `DbArray` among
+     single-field wrappers).
 9. Comparison Sections (if applicable) — vs Java/Scala-stdlib/theory analogues, in padded tables.
 10. Advanced Usage / Building Blocks (if applicable) — how it composes into higher-level abstractions.
 11. Integration (if applicable) — how it connects to sibling types in the same library, with
@@ -60,7 +66,9 @@ Keep them in this order.
 When writing the page from this template:
 
 - **Opening definition has NO heading** — it is the natural opening prose right after the frontmatter.
-- **Document every public method** on the type and its companion object. Exhaustiveness is the point.
+- **Document every public method** on the type and its companion object. Exhaustiveness is the point —
+  but a member/variant is "accounted for" by a table row, not only a subsection. A variant table is
+  exhaustive; 19 identical subsections are not.
 - For **each method** in Construction and Core Operations, use this shape:
   1. A Markdown subheader ``` `MethodName` — Brief description ``` (e.g. `` `Chunk#map` — Transform elements ``).
   2. Plain-language explanation of what it does.
