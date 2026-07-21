@@ -122,7 +122,9 @@ export const writeDataTypeReference = defineAction({
               ``,
               `This page is part of a MODULE reference. Recontextualize it to the module: in each section,`,
               `note how this type relates to its sibling types (core vs supporting, what it is built with,`,
-              `what it composes with, module-level integration). Module context:`,
+              `what it composes with, module-level integration). If the context shows this type is internal`,
+              `plumbing (never used by application code directly), apply the data-type-ref-structure audience`,
+              `gate (compact page). Module context:`,
               input.moduleContext,
             ]
           : []),

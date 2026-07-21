@@ -14,6 +14,14 @@ title: "<TypeName>"
 ---
 ```
 
+## Audience gate
+
+If the type is internal plumbing — application code never constructs or calls it directly, it exists
+only to serve other module types — write a COMPACT page: opening definition (state up front "you
+rarely use this directly — it backs `<consumer>`"), the grouped structural-shape block, one API table
+(method | signature | note), and Integration. Skip Quick Showcase, per-method subsections, and
+Comparisons. Full exhaustive treatment below is the default for types application code uses directly.
+
 ## Structural Template
 
 Sections marked **(required)** must appear. Sections marked **(if applicable)** appear only when relevant.
@@ -24,8 +32,10 @@ Keep them in this order.
    - Start immediately after the frontmatter with a concise, technical definition. No `##` heading.
    - Inline-code the type signature; explain the type parameters; state the core purpose in 1-3 sentences.
    - Optionally list key properties as bullets ("Lock-Free — ...", "Atomic — ...").
-   - Then a plain ```scala block (NOT mdoc) showing only the structural shape: the trait/class
-     declaration with type params, variance, and extends clauses — no method bodies, no private members.
+   - Then a plain ```scala block (NOT mdoc): the declaration (type params, variance, extends) and its
+     main members, grouped by purpose with brief `//` comments — trait and companion members separate.
+     No bodies, no private members. Show representative members, not every overload; collapse long
+     homogeneous lists (e.g. `given` instances) to one commented line + a sentence noting more exist.
 2. Motivation / Use Case (if applicable)
    - The problem and why this type solves it, told as a short realistic scenario.
 3. Quick Showcase (required)
