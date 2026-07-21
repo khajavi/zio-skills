@@ -121,10 +121,10 @@ export const writeDataTypeReference = defineAction({
           ? [
               ``,
               `This page is part of a MODULE reference. Recontextualize it to the module: in each section,`,
-              `note how this type relates to its sibling types (core vs supporting, what it is built with,`,
-              `what it composes with, module-level integration). If the context shows this type is internal`,
-              `plumbing (never used by application code directly), apply the data-type-ref-structure audience`,
-              `gate (compact page). Module context:`,
+              `note how this type relates to its sibling types (what it is built with, what it composes`,
+              `with, module-level integration). If the context marks this type "supporting" (a helper, or`,
+              `rarely used by application code directly), write the MINIMAL supporting page per the`,
+              `data-type-ref-structure core-vs-supporting rule; a "core" type gets full depth. Module context:`,
               input.moduleContext,
             ]
           : []),

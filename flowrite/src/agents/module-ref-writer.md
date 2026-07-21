@@ -29,12 +29,14 @@ reality differs. Do not mechanically follow steps that no longer fit.
    object. For **flat** it writes the whole page (`docs/reference/<module>.md`) with every type
    documented inline. For **hierarchical** it writes only `docs/reference/<module>/index.md`
    (narrative + links to subpages).
-5. **Write per-type subpages (hierarchical only).** For EACH type in the plan's `typeOrder`:
+5. **Write per-type subpages (hierarchical only).** For EACH type in the plan's `typeGroups` (each
+   group has a `label` and its `types`, each with a `kind`):
    a. Call `research_data_type` with the type name for its full public API.
    b. Call `write_data_type_reference` with that research AND `outputDir` set to
       `docs/reference/<module-kebab>` so the subpage lands under the module directory, AND
       `moduleContext` describing how this type relates to its siblings (from the module research
-      `relationships`). Skip this whole step for a flat layout — the types are already inline.
+      `relationships`), its group `label`, and its `kind` — a `supporting` type gets a minimal page,
+      a `core` type gets full depth. Skip this whole step for a flat layout — the types are already inline.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
    `write_companion_examples` with the module page path to build and verify them. Prefer ONE
    module-level cross-type example set. Do this BEFORE mdoc verify: an `mdoc:embed` block fails
@@ -44,9 +46,11 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/reference/<module>.md --out
    website/docs/reference/<module>.md"`. Hierarchical: run mdoc over the module directory (index +
    every subpage). Fix every `[error]` before continuing. Mandatory before you call the page done.
-8. **Integrate.** Call `integrate_module_reference` with the module page path AND the layout. It wires
-   the page under the **Reference** category — a single doc entry (flat) or a category with the
-   index + one child per type (hierarchical).
+8. **Integrate.** Call `integrate_module_reference` with the module page path AND the layout. For a
+   hierarchical layout also pass `typeGroups` as `{ label, subpageIds }` (one entry per plan group,
+   subpage ids like `reference/<module>/<type>` in reading order) so the sidebar groups them. It wires
+   the page under the **Reference** category — a single doc entry (flat) or a category with the index
+   + one sub-category per group (hierarchical).
 9. **Review.** Call `review_module_ref` with the module page path (flat page or hierarchical index),
    the layout, the module name, and the list of every documented type name. It is the single quality
    gate: per-type method coverage (deterministic), the writing-style loop, and the module-ref-checklist

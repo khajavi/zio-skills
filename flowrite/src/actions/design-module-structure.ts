@@ -31,9 +31,28 @@ export const moduleStructureSchema = v.object({
     integration: v.boolean(),
     runningExamples: v.pipe(v.boolean(), v.description('true only when standalone example files will exist')),
   }),
-  typeOrder: v.pipe(
-    v.array(v.string()),
-    v.description('Every core and supporting type name, in the order the page documents them; must cover all research types'),
+  typeGroups: v.pipe(
+    v.array(
+      v.object({
+        label: v.pipe(
+          v.string(),
+          v.description('Domain group name, e.g. "Core Data Types", "Routing", "Http Messages", "Endpoints"'),
+        ),
+        types: v.pipe(
+          v.array(
+            v.object({
+              name: v.string(),
+              kind: v.pipe(
+                v.picklist(['core', 'supporting']),
+                v.description('Page depth: "core" = comprehensive, "supporting" = minimal (role + one usage example)'),
+              ),
+            }),
+          ),
+          v.description('Types in this group, in reading order'),
+        ),
+      }),
+    ),
+    v.description('Every type organized into named domain groups in reading order; must cover all research types'),
   ),
   comparisons: v.pipe(
     v.array(v.string()),
@@ -77,7 +96,7 @@ export const designModuleStructure = defineAction({
           integration: false,
           runningExamples: false,
         },
-        typeOrder: [],
+        typeGroups: [],
         comparisons: [],
         notes: '(skipped — phase already done)',
       };
@@ -99,7 +118,9 @@ export const designModuleStructure = defineAction({
           : `Decide the layout from the auto-rule (flat for ≤4 core types or always-together types; ` +
             `hierarchical for ≥5 core types or ≥3 rich self-contained types).`,
         ``,
-        `Decide which module-level sections apply and order EVERY type (core + supporting) in typeOrder.`,
+        `Decide which module-level sections apply. Organize EVERY type into named domain groups in`,
+        `reading order (the first is typically "Core Data Types"), tagging each type "core" (documented`,
+        `comprehensively) or "supporting" (a minimal page).`,
         `Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),

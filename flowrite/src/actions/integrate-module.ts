@@ -19,6 +19,20 @@ export const integrateModuleReference = defineAction({
   input: v.object({
     pagePath: v.pipe(v.string(), v.description('Path to the flat page or the hierarchical index, e.g. docs/reference/http-model.md or docs/reference/http-model/index.md')),
     layout: v.picklist(['flat', 'hierarchical']),
+    typeGroups: v.pipe(
+      v.optional(
+        v.array(
+          v.object({
+            label: v.pipe(v.string(), v.description('Sidebar sub-category name, e.g. "Core Data Types", "Routing"')),
+            subpageIds: v.pipe(
+              v.array(v.string()),
+              v.description('Subpage ids in reading order, e.g. "reference/http-model/request"'),
+            ),
+          }),
+        ),
+      ),
+      v.description('Hierarchical only: named type groups → one sidebar sub-category each, in order. Omit for a single flat listing.'),
+    ),
   }),
   output: integrateOutput,
   async run({ harness, input, log }) {
@@ -30,11 +44,16 @@ export const integrateModuleReference = defineAction({
     log.info(`Integrating ${input.layout} module reference into docs site: ${input.pagePath}`);
     const session = await harness.session();
 
+    const groups = input.layout === 'hierarchical' ? input.typeGroups : undefined;
     const sidebarInstruction =
       input.layout === 'flat'
         ? `Add a single sidebar "doc" entry for this page under the "Reference" category.`
-        : `Add a sidebar "category" under "Reference": link it to the index (${input.pagePath}) and ` +
-          `list every per-type subpage in the same directory as its child "reference/<module>/<type>" items, in reading order.`;
+        : groups?.length
+          ? `Add a sidebar "category" under "Reference" linked to the index (${input.pagePath}), with one ` +
+            `child sub-category per group (in this order): ${JSON.stringify(groups)} — each group's label ` +
+            `is the sub-category name and its subpageIds are the "doc" children, in the given order.`
+          : `Add a sidebar "category" under "Reference": link it to the index (${input.pagePath}) and ` +
+            `list every per-type subpage in the same directory as its child "reference/<module>/<type>" items, in reading order.`;
 
     const { data } = await withTransientRetry(log, 'docs_integrator (module)', () =>
       session.task(

@@ -74,9 +74,10 @@ export const writeModuleOverview = defineAction({
     const layoutInstruction = isFlat
       ? [
           `This is a FLAT module reference: write the WHOLE page in one file. After the module-level`,
-          `sections, document EVERY type in typeOrder inline under "## <TypeName>" headings, using the`,
-          `lighter per-type section shape (group operations concisely, one example per group). Do not`,
-          `create separate files.`,
+          `sections, document EVERY type from the plan's typeGroups inline, organized under each group's`,
+          `"## <label>" heading with types as "### <TypeName>" — a "core" type gets the lighter per-type`,
+          `section shape (group operations concisely, one example per group), a "supporting" type gets a`,
+          `minimal entry (role + one usage example). Do not create separate files.`,
         ]
       : [
           `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,

@@ -14,13 +14,14 @@ title: "<TypeName>"
 ---
 ```
 
-## Audience gate
+## Core vs supporting depth
 
-If the type is internal plumbing — application code never constructs or calls it directly, it exists
-only to serve other module types — write a COMPACT page: opening definition (state up front "you
-rarely use this directly — it backs `<consumer>`"), the grouped structural-shape block, one API table
-(method | signature | note), and Integration. Skip Usage, per-method subsections, and
-Comparisons. Full exhaustive treatment below is the default for types application code uses directly.
+A **supporting** type (research marks it `supporting`, or application code rarely uses it directly —
+it exists to serve other module types) gets a MINIMAL page: the opening definition (role + grouped
+structural-shape block) + one `## Usage` example + optional important-note admonition(s). Skip
+Construction, Core Operations subsections, Comparisons, and Integration.
+
+A **core** type gets the full template below.
 
 ## Structural Template
 
