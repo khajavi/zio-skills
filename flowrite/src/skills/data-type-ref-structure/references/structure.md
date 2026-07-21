@@ -19,7 +19,7 @@ title: "<TypeName>"
 If the type is internal plumbing — application code never constructs or calls it directly, it exists
 only to serve other module types — write a COMPACT page: opening definition (state up front "you
 rarely use this directly — it backs `<consumer>`"), the grouped structural-shape block, one API table
-(method | signature | note), and Integration. Skip Quick Showcase, per-method subsections, and
+(method | signature | note), and Integration. Skip Usage, per-method subsections, and
 Comparisons. Full exhaustive treatment below is the default for types application code uses directly.
 
 ## Structural Template
@@ -38,7 +38,7 @@ Keep them in this order.
      homogeneous lists (e.g. `given` instances) to one commented line + a sentence noting more exist.
 2. Motivation / Use Case (if applicable)
    - The problem and why this type solves it, told as a short realistic scenario.
-3. Quick Showcase (required)
+3. Usage (required)
    - Core capabilities in one `mdoc:reset` block (~10-20 lines) so a reader grasps the idea without reading on.
 4. Installation (if applicable — top-level module types only)
    - `libraryDependencies += "dev.zio" %% "<library>" % "@VERSION@"` (`%%%` for cross-platform).

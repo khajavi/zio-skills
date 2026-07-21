@@ -6,7 +6,7 @@ Verify every item. The reference page is not done until all pass.
 
 - Opening definition appears immediately after the frontmatter with NO heading.
 - The opening includes a plain ```scala structural block (no method bodies) showing the type's shape.
-- A "Quick Showcase" section is present, and its code is a **single `mdoc:reset` block** — not split
+- A "Usage" section is present, and its code is a **single `mdoc:reset` block** — not split
   across multiple blocks.
 - Sections appear in the template order (definition → motivation → showcase → installation →
   construction → predefined instances → core operations → subtypes → comparisons → advanced →
