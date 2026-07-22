@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
 import { runCappedReview } from '../shared/review.ts';
+import { checkMdocFencesGate } from '../tools/check-mdoc-fences.ts';
 // The tutorial-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
@@ -34,6 +35,7 @@ export const reviewTutorial = defineAction({
       harness,
       path: input.path,
       log,
+      extraGates: async () => [await checkMdocFencesGate(process.env.REPO_PATH!, [input.path])],
     });
   },
 });

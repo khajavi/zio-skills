@@ -16,7 +16,7 @@ Choose an mdoc modifier for every executable Scala block based on whether you ne
 - **`mdoc`** (no qualifier) — Renders source + evaluated output, scope shared. Shows the code and its REPL-style result.
 - **`mdoc:invisible`** — Invisible block, scope shared. Rare; prefer `silent` or `compile-only`.
 - **`mdoc:embed:<path>`** — Custom modifier: replaces the block (leave its body empty) with the file at `<path>` (repo-root relative) as a titled code fence. Append `:showLineNumbers` for line numbers. Requires the docs subproject to depend on `"dev.zio" %% "zio-sbt-source"` — add it if missing.
-- **Plain `` ```scala ``** (no mdoc) — Source only, not compiled. Use for pseudocode, ASCII diagrams, type-signature illustrations, or sbt config.
+- **Plain `` ```scala ``** (no mdoc) — Source only, not compiled. Use **only** for pseudocode, ASCII diagrams, type-signature illustrations, or sbt config. Any block with an `import`, a `val`/`def` with a right-hand side, or a call statement is executable and **must** carry an mdoc modifier (`compile-only` default) so it is verified — never leave real code plain.
 
 **Never hardcode expression output in comments** (`val x = 42 // 42`). Let `mdoc` render it.
 

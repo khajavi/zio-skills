@@ -5,6 +5,7 @@ import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
 import { runCappedReview } from '../shared/review.ts';
 import { computeMethodCoverage } from '../tools/check-method-coverage.ts';
+import { checkMdocFencesGate } from '../tools/check-mdoc-fences.ts';
 // The module-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // data-type-ref; the SKILL.md points here.
@@ -49,21 +50,27 @@ export const reviewModuleRef = defineAction({
       // subpage under docs/reference/<module>/<type>.md.
       extraGates: async () => {
         const repoPath = process.env.REPO_PATH!;
-        return Promise.all(
+        const coverage = await Promise.all(
           input.typeNames.map(async (typeName) => {
             const pagePath =
               input.layout === 'flat' ? input.path : `docs/reference/${moduleKebab}/${toKebabCase(typeName)}.md`;
-            const coverage = await computeMethodCoverage(repoPath, typeName, pagePath);
+            const c = await computeMethodCoverage(repoPath, typeName, pagePath);
             return {
-              item: `Method coverage — ${typeName} (${coverage.coveragePercent}%)`,
-              pass: coverage.missing.length === 0,
+              item: `Method coverage — ${typeName} (${c.coveragePercent}%)`,
+              pass: c.missing.length === 0,
               issue:
-                coverage.missing.length === 0
+                c.missing.length === 0
                   ? null
-                  : `Undocumented public members of ${typeName} (heuristic — verify against source, then document or justify): ${coverage.missing.join(', ')}. ${coverage.note}`,
+                  : `Undocumented public members of ${typeName} (heuristic — verify against source, then document or justify): ${c.missing.join(', ')}. ${c.note}`,
             };
           }),
         );
+        // mdoc-fence gate over every page: the module page plus (hierarchical) each subpage.
+        const pages =
+          input.layout === 'flat'
+            ? [input.path]
+            : [input.path, ...input.typeNames.map((t) => `docs/reference/${moduleKebab}/${toKebabCase(t)}.md`)];
+        return [...coverage, await checkMdocFencesGate(repoPath, pages)];
       },
     });
   },
