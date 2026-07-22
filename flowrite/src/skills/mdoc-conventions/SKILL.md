@@ -87,7 +87,8 @@ mdoc compiles against the docs project's `.dependsOn(...)`. If the documented mo
 ## Verifying
 
 Always compile scoped to the files you touched, never the whole docs set
-(unscoped `sbt docs/mdoc` recompiles every doc, minutes of sbt):
+(unscoped `sbt docs/mdoc` recompiles every doc, minutes of sbt) — the sole
+exception is the integrator's site-build-gate fallback (see docs-integrator):
 
 ```
 sbt "docs/mdoc --in <file> --out website/<file>"

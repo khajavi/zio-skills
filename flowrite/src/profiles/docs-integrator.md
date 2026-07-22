@@ -13,7 +13,11 @@ Procedure:
 4. Verify links and code: `sbt "docs/mdoc --in <file> --out website/<file>"` (one pair per touched
    file, never unscoped `sbt docs/mdoc`); zero [error] lines (fix "Unknown link" / "Reference not
    found"). On a bare "mdoc failed" stack trace, run the `sbt "last <scope>"` it suggests.
-5. Full build gate: run the site build in `website/` (command from its package.json/lockfile, pipe
-   through `tail -40`); fix any "Doc id not found" or broken-link errors.
+5. Full build gate: run the site build (`yarn run build`, else npm/pnpm equivalent) piped through
+   `tail -40`. On failure: clean `website/docs`, run ONE full unscoped `sbt docs/mdoc` (fills every
+   `website/docs` page so all sidebar ids resolve — the one sanctioned unscoped mdoc, see
+   mdoc-conventions), retry the build once.
 
-Do not consider integration done until both mdoc and the site build are clean. Fix only issues your changes introduced; pre-existing warnings are report-only. Report what you changed.
+Done when the build passes, or — after that retry — the only failures are pre-existing pages you
+did not touch (name them). Fix only what your changes broke; never delete a sibling's sidebar entry
+or document a sibling module to force green. Report what you changed.
