@@ -7,6 +7,8 @@ description: Reference for mdoc code-block modifiers and Docusaurus admonitions 
 
 Choose an mdoc modifier for every executable Scala block based on whether you need scope sharing and whether output should render.
 
+**Mandatory:** any block a reader could paste and run — it has an `import`, a bound `val`/`def` with a body, a call, or an evaluated expression — MUST carry an mdoc modifier (`mdoc:compile-only` if unsure). Plain ` ```scala ` hides code from the compiler, so use it ONLY for genuinely non-runnable content: abstract signature blocks (declarations with no bodies), pseudocode, ASCII diagrams, sbt/config. Never downgrade a real example to plain ` ```scala ` to dodge a compile error — fix the example.
+
 ## Modifiers
 
 - **`mdoc:compile-only`** — Renders source only, isolated scope. **Default** for self-contained examples. Later blocks cannot reference its definitions.
@@ -16,15 +18,15 @@ Choose an mdoc modifier for every executable Scala block based on whether you ne
 - **`mdoc`** (no qualifier) — Renders source + evaluated output, scope shared. Shows the code and its REPL-style result.
 - **`mdoc:invisible`** — Invisible block, scope shared. Rare; prefer `silent` or `compile-only`.
 - **`mdoc:embed:<path>`** — Custom modifier: replaces the block (leave its body empty) with the file at `<path>` (repo-root relative) as a titled code fence. Append `:showLineNumbers` for line numbers. Requires the docs subproject to depend on `"dev.zio" %% "zio-sbt-source"` — add it if missing.
-- **Plain `` ```scala ``** (no mdoc) — Source only, not compiled. Use **only** for pseudocode, ASCII diagrams, type-signature illustrations, or sbt config. Any block with an `import`, a `val`/`def` with a right-hand side, or a call statement is executable and **must** carry an mdoc modifier (`compile-only` default) so it is verified — never leave real code plain.
+- **Plain `` ```scala ``** (no mdoc) — Source only, not compiled. ONLY for non-runnable content: abstract signature blocks (no method bodies), pseudocode, ASCII diagrams, sbt config. Never for a block with imports/calls/bound bodies.
 
 **Never hardcode expression output in comments** (`val x = 42 // 42`). Let `mdoc` render it.
 
 ## Choosing the Right Modifier
 
 ```
-Is this real executable Scala code?
-├─ NO → plain ```scala (pseudocode, ASCII art, type signatures)
+Is this block runnable (imports / bound bodies / calls / expressions)?
+├─ NO → plain ```scala (pseudocode, ASCII art, abstract signatures — no bodies)
 └─ YES → Do later blocks need these definitions?
    ├─ NO → Show the output?  NO → mdoc:compile-only   YES → mdoc
    └─ YES → Is this a later block showing a result?
@@ -33,6 +35,8 @@ Is this real executable Scala code?
 ```
 
 After a `mdoc:silent` block, if you need a completely different context, use `mdoc:silent:reset`.
+
+**Before finishing**, scan every ` ```scala ` fence: if its body is runnable and it has no mdoc modifier, add one.
 
 ## Common Patterns
 
