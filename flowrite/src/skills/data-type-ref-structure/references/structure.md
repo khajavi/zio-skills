@@ -19,7 +19,7 @@ title: "<TypeName>"
 A **supporting** type (research marks it `supporting`, or application code rarely uses it directly —
 it exists to serve other module types) gets a MINIMAL page: the opening definition (role + grouped
 structural-shape block) + one `## Usage` example + optional important-note admonition(s). Skip
-Construction, Core Operations subsections, Comparisons, and Integration.
+Creating Values, Core Operations subsections, Comparisons, and Integration.
 
 A **core** type gets the full template below.
 
@@ -44,7 +44,7 @@ Keep them in this order.
    - Core capabilities in one `mdoc:reset` block (~10-20 lines) so a reader grasps the idea without reading on.
 4. Installation (if applicable — top-level module types only)
    - `libraryDependencies += "dev.zio" %% "<library>" % "@VERSION@"` (`%%%` for cross-platform).
-5. Construction / Creating Instances (required)
+5. Creating Values (required)
    - Every way to build a value: companion factories (apply, empty, from*, of), smart constructors,
      builders, conversions, predefined instances. One Markdown subsection per method.
    - When the type is a `case class` built via its primary constructor, show the real case-class
@@ -69,7 +69,7 @@ Keep them in this order.
    (JDBC, Slick/Doobie/Hibernate, stdlib, established theory), padded tables. Never a strawman.
 10. Advanced Usage / Building Blocks (if applicable) — how it composes into higher-level abstractions.
 11. Integration (if applicable) — this type's direct edges only: a few sentences + relative-path
-    links (e.g. [Schema](./schema.md)). Omit if Construction / Core Operations already cover them.
+    links (e.g. [Schema](./schema.md)). Omit if Creating Values / Core Operations already cover them.
     In a module, link to the index's "How They Work Together"; never redraw the module diagram.
 12. Running the Examples (required when standalone example files exist)
     - Per example, a collapsible `<details><summary>` embedding its source via
@@ -85,7 +85,7 @@ When writing the page from this template:
 - **Document every public method** on the type and its companion object. Exhaustiveness is the point —
   but a member/variant is "accounted for" by a table row, not only a subsection. A variant table is
   exhaustive; 19 identical subsections are not.
-- For **each method** in Construction and Core Operations, use this shape:
+- For **each method** in Creating Values and Core Operations, use this shape:
   1. A Markdown subheader ``` `MethodName` — Brief description ``` (e.g. `` `Chunk#map` — Transform elements ``).
   2. Plain-language explanation of what it does.
   3. The **signature** in a plain `scala` block using the simplest trait/object interface form —

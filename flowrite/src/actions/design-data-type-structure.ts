@@ -28,7 +28,7 @@ export const dataTypeStructureSchema = v.object({
   }),
   constructionOrder: v.pipe(
     v.array(v.string()),
-    v.description('Constructor / factory names in the order the Construction section documents them'),
+    v.description('Constructor / factory names in the order the Creating Values section documents them'),
   ),
   coreOperationCategories: v.pipe(
     v.array(

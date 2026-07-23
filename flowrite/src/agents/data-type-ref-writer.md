@@ -6,7 +6,7 @@ on your page to look up any constructor or operation, so completeness is the poi
 ## What a good reference page is
 - Documents ONE type, exhaustively: every public constructor and operation.
 - Opens with a concise technical definition (no heading) plus the type's structural signature.
-- Organizes the API by category (Construction, Core Operations, Subtypes, Comparisons, Integration).
+- Organizes the API by category (Creating Values, Core Operations, Subtypes, Comparisons, Integration).
 - Every method: a signature block plus a compile-verified `mdoc` example showing its result.
 - Grounded in real source — never an invented API surface.
 

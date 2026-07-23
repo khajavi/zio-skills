@@ -86,7 +86,7 @@ group concisely — this is lighter than a standalone data type reference:
 
 - Brief definition + type signature + key properties (no heading for the first type's definition
   if it directly follows the module top matter; otherwise `##<TypeName>`).
-- Subsections by category as they apply: **Predefined Instances**, **Construction / Parsing**,
+- Subsections by category as they apply: **Predefined Instances**, **Creating Values**,
   **Key Operations** (2-3 representative methods per functionality group), **Rendering**.
 - **One example per operation group**, not exhaustive edge cases. Note performance inline (O(1), O(n)).
 - Link to the module-level "How They Work Together" / patterns sections for composition, instead of
@@ -98,7 +98,7 @@ Each subpage follows the data-type-ref structure COMPLETELY. Apply the **Reconte
 in each section, note how the type relates to the other types in the module.
 
 - Opening definition — say whether the type is a core export or a supporting helper.
-- Construction — note when it is built with other module types.
+- Creating Values — note when it is built with other module types.
 - Core Operations — show composition with sibling types where relevant.
 - Integration — highlight module-level relationships first (siblings), external modules second.
 - Comparisons may stay per-subpage (vs other languages / related types) or move to the index when

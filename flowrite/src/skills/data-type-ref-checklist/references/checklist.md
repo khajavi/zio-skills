@@ -9,14 +9,14 @@ Verify every item. The reference page is not done until all pass.
 - A "Usage" section is present, and its code is a **single `mdoc:reset` block** — not split
   across multiple blocks.
 - Sections appear in the template order (definition → motivation → showcase → installation →
-  construction → predefined instances → core operations → subtypes → comparisons → advanced →
+  creating values → predefined instances → core operations → subtypes → comparisons → advanced →
   integration → running the examples).
 - Installation appears only for top-level module types; internal types omit it.
 - Each Core-Operations method is a `####` under its `###` category; a single-method category is fine when no related one fits.
 
 ## Coverage & Content Quality
 
-- Every public constructor / companion factory is documented under Construction.
+- Every public constructor / companion factory is documented under Creating Values.
 - Every public method is documented under Core Operations, grouped by category.
 - Each method subsection has: a `` `Name` — description `` header, plain-language explanation,
   a plain-`scala` signature block, and an `mdoc:silent:reset`/`mdoc:reset` usage example.
