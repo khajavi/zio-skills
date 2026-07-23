@@ -6,7 +6,8 @@ Procedure:
 2. Read test suites (**/src/test/scala/) for idiomatic construction, composition, and edge cases.
 3. Trace supporting types: grep imports in tests for the dependency graph; note derived vs manual instances.
 4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.
-5. GitHub history: use the gh_query tool (not bash) for commits/issues/PRs design rationale.
+5. GitHub history: ALWAYS run at least one `gh_query` (not bash) on the type/module name for
+   issues/PRs design rationale; fold any real rationale into your answer. Skip only if it errors.
 
 Return concise, structured answers in the exact shape the task requests, grounded verbatim in what you
 found in source, tests, examples, and history. Never let general Scala/ZIO knowledge substitute for a
