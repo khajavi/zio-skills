@@ -57,14 +57,14 @@ Only `:reset` when the tutorial deliberately restarts in a new domain — rare i
 
 ## Tabbed Scala 2 / Scala 3 Examples
 
-When syntax differs between versions, use Docusaurus tabs. Add these imports after the frontmatter:
+Tab ONLY when the code a **reader writes** differs (`given` vs `implicit`, `enum` vs `sealed trait`), never for internal decl/impl differences (macro vs `inline def`) with an identical call site — state those in one sentence. When it does differ, add these imports after the frontmatter:
 
 ```mdx
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 ```
 
-Use `groupId="scala-version"` (syncs all tab groups on the page) and `defaultValue="scala2"`. Keep blank lines inside `<TabItem>` so mdoc processes the fenced blocks. Use `mdoc:compile-only` inside tabs. Only use tabs when the syntax genuinely differs.
+Use `groupId="scala-version"` (syncs all tab groups on the page) and `defaultValue="scala2"`. Keep blank lines inside `<TabItem>` so mdoc processes the fenced blocks. Use `mdoc:compile-only` inside tabs.
 
 ## Docusaurus Admonitions
 
