@@ -30,7 +30,7 @@ Keep them in this order.
 
 ```
 1. Opening Definition (required) — NO HEADING
-   - Start immediately after the frontmatter, no `##` heading, with a plain-language overview: what the type IS and what it's FOR, in 1-3 sentences. Inline-code the type signature and explain the type parameters.
+   - Start immediately after the frontmatter, no `##` heading, with a beginner-friendly, plain-language definition: what the type IS and what it's FOR, in 1-3 sentences. Inline-code the type signature and explain the type parameters.
    - Keep the opening an overview — defer implementation mechanism to later sections.
    - Optionally list key design properties as a few compact bullets ("Lock-Free — ...", "Atomic — ...") —
      only the important, non-obvious ones.
