@@ -85,18 +85,14 @@ When writing the page from this template:
 - **Document every public method** on the type and its companion object. Exhaustiveness is the point —
   but a member/variant is "accounted for" by a table row, not only a subsection. A variant table is
   exhaustive; 19 identical subsections are not.
-- For **each method** in Creating Values and Core Operations, use this shape:
-  1. A Markdown subheader ``` `MethodName` — Brief description ``` (e.g. `` `Chunk#map` — Transform elements ``).
-  2. Plain-language explanation of what it does.
-  3. The **signature** in a plain `scala` block using the simplest trait/object interface form —
-     just name, params, return type; no `override`/`final`/`sealed`. Companion methods shown inside `object`.
-     This stripping applies to *method* signatures only — a *type* declaration keeps its real keywords
-     (`case class`, `sealed trait`, `final`) and primary-constructor params. Never synthesize a `def apply`
-     the source does not declare; a case class's construction IS its primary constructor.
-  4. A **usage example** using the Setup + Evaluated Output pattern in a single `mdoc:silent:reset`
-     (or `mdoc:reset`) block: setup first, then the call showing its result (e.g. `p.name // Alice`).
-  5. Important caveats as Docusaurus admonitions (per the `mdoc-conventions` skill).
-- Family subsection header: ✅ `#### Accessors` (list members in prose) ❌ `#### getInt / getLong / getDouble / … — Read a field`.
+- In Creating Values and Core Operations, group related methods under a **capability/task title**; the header names the intent, not an API symbol, and the method names + signatures live in the body:
+  ✅ `#### Transforming elements` (body: `map(f)`, `flatMap(f)`, `collect(pf)`)
+  ❌ `#### \`map\` — Transform each element`
+  Under each title:
+  1. Prose naming the grouped methods and what they do.
+  2. One **signature** block (simplest trait/object form — just name, params, return type; no `override`/`final`/`sealed`; companion methods inside `object`). A *type* declaration instead keeps its real keywords (`case class`, `sealed trait`, `final`) and primary-constructor params; never synthesize a `def apply` the source lacks.
+  3. A **usage example** (Setup + Evaluated Output) in a single `mdoc:silent:reset` / `mdoc:reset` block.
+  4. Important caveats as admonitions (per `mdoc-conventions`).
 - A `###` with one `####` restating it → inline the child (or give the parent ≥2 subsections).
 - **Between any two code blocks put an explanatory paragraph** — never leave two fenced blocks adjacent.
 - Note performance characteristics inline when relevant (O(1), O(n)).
