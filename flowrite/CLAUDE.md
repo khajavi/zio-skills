@@ -27,6 +27,12 @@ export default defineAgent(() => ({
 
 Always prefer declarative context over imperative code. The model + instructions + tools + skills + sandbox is the agent's "mind". The code is just a wrapper.
 
+### 3. Nudge by example, not explanation
+When adding a rule to a skill/profile, show it as a compact ✅/❌ pair, not a prose paragraph — examples teach the boundary faster and cost fewer tokens.
+
+✅ `Family header: \`#### Accessors\` (members in prose), not \`#### getInt / getLong / … — Read a field\``
+❌ `When a subsection documents a family of related methods, avoid enumerating every method name in the header because it becomes long; instead use a short group label and list the members in the introductory prose.`
+
 ## Flue Framework Reference
 
 Flue docs ship with the npm packages. Read them directly — do not rely on training data for Flue API signatures.
