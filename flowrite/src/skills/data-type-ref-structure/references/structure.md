@@ -96,6 +96,8 @@ When writing the page from this template:
   4. A **usage example** using the Setup + Evaluated Output pattern in a single `mdoc:silent:reset`
      (or `mdoc:reset`) block: setup first, then the call showing its result (e.g. `p.name // Alice`).
   5. Important caveats as Docusaurus admonitions (per the `mdoc-conventions` skill).
+- Family subsection header: ✅ `#### Accessors` (list members in prose) ❌ `#### getInt / getLong / getDouble / … — Read a field`.
+- A `###` with one `####` restating it → inline the child (or give the parent ≥2 subsections).
 - **Between any two code blocks put an explanatory paragraph** — never leave two fenced blocks adjacent.
 - Note performance characteristics inline when relevant (O(1), O(n)).
 - Use ASCII art for type hierarchies. Link related docs with relative paths `[TypeName](./type-name.md)`.
