@@ -36,7 +36,7 @@ export const moduleStructureSchema = v.object({
       v.object({
         label: v.pipe(
           v.string(),
-          v.description('Domain group name, e.g. "Core Data Types", "Routing", "Http Messages", "Endpoints"'),
+          v.description('Domain group name — a concern the types share, e.g. for an HTTP module: "Routing", "Http Messages", "Endpoints".'),
         ),
         types: v.pipe(
           v.array(
@@ -119,8 +119,9 @@ export const designModuleStructure = defineAction({
             `hierarchical for ≥5 core types or ≥3 rich self-contained types).`,
         ``,
         `Decide which module-level sections apply. Organize EVERY type into named domain groups in`,
-        `reading order (the first is typically "Core Data Types"), tagging each type "core" (documented`,
-        `comprehensively) or "supporting" (a minimal page).`,
+        `reading order — each group is a concern the types share (what they do together), e.g. for an`,
+        `HTTP module "Routing", "Http Messages", "Endpoints". Separately, tag each type "core" (documented`,
+        `comprehensively) or "supporting" (a minimal page); this is per-type depth, independent of its group.`,
         `Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),

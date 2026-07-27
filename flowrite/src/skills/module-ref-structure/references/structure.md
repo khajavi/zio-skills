@@ -51,6 +51,10 @@ to the module (see "Recontextualization" below).
 share ONE page (common shape once, then a per-type table/subsection for what differs):
 ✅ `Counter`/`UpDownCounter`/`Histogram`/`Gauge` on one `meter.md` ❌ four near-duplicate pages.
 
+**Group types by domain, not by depth.** A group label names a concern the types share (what they
+do together); depth (how comprehensively a type is documented) is a separate per-type property, never
+a heading: ✅ `Routing`, `Http Messages`, `Middlewares` ❌ `Core`, `Supporting`, `Core Data Types`.
+
 ## Module-Level Sections (BOTH LAYOUTS — this is the module page / the flat page's top matter)
 
 Keep them in this order. Sections marked **(required)** must appear; **(if applicable)** appear only
