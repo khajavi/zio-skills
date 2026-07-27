@@ -43,6 +43,14 @@ title: "<Module Title>"
 Each hierarchical subpage follows the **data type reference** structure completely, recontextualized
 to the module (see "Recontextualization" below).
 
+**Sub-domain nesting (hierarchical, ≥ 2 distinct sub-domains).** Nest each sub-domain under
+`<module-kebab>/<sub-domain-kebab>/` with its own `index.md` (that sub-domain's intro); the module
+`index.md` becomes a map — a blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
+
+**Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
+share ONE page (common shape once, then a per-type table/subsection for what differs):
+✅ `Counter`/`UpDownCounter`/`Histogram`/`Gauge` on one `meter.md` ❌ four near-duplicate pages.
+
 ## Module-Level Sections (BOTH LAYOUTS — this is the module page / the flat page's top matter)
 
 Keep them in this order. Sections marked **(required)** must appear; **(if applicable)** appear only

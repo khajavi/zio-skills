@@ -51,7 +51,8 @@ export const integrateModuleReference = defineAction({
         : groups?.length
           ? `Add a sidebar "category" under "Reference" linked to the index (${input.pagePath}), with one ` +
             `child sub-category per group (in this order): ${JSON.stringify(groups)} — each group's label ` +
-            `is the sub-category name and its subpageIds are the "doc" children, in the given order.`
+            `is the sub-category name and its subpageIds are the "doc" children, in the given order. ` +
+            `For nested ids ("reference/<module>/<sub-domain>/<type>"), link each sub-category to its sub-domain index doc.`
           : `Add a sidebar "category" under "Reference": link it to the index (${input.pagePath}) and ` +
             `list every per-type subpage in the same directory as its child "reference/<module>/<type>" items, in reading order.`;
 

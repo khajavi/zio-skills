@@ -36,7 +36,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
       `docs/reference/<module-kebab>` so the subpage lands under the module directory, AND
       `moduleContext` describing how this type relates to its siblings (from the module research
       `relationships`), its group `label`, and its `kind` — a `supporting` type gets a minimal page,
-      a `core` type gets full depth. Skip this whole step for a flat layout — the types are already inline.
+      a `core` type gets full depth. For ≥ 2 sub-domains, nest `outputDir` as
+      `docs/reference/<module-kebab>/<sub-domain-kebab>` with a sub-domain `index.md` each (module
+      `index.md` = map); fold a homogeneous family onto one page (see module-ref-structure). Skip this whole step for a flat layout — the types are already inline.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
    `write_companion_examples` with the module page path to build and verify them. Prefer ONE
    module-level cross-type example set. Do this BEFORE mdoc verify: an `mdoc:embed` block fails
