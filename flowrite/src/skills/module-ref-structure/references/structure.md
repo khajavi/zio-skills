@@ -100,6 +100,8 @@ group concisely — this is lighter than a standalone data type reference:
   if it directly follows the module top matter; otherwise `##<TypeName>`).
 - Subsections by category as they apply: **Predefined Instances**, **Creating Values**,
   **Key Operations** (2-3 representative methods per functionality group), **Rendering**.
+- Title an operation subsection by its **capability/topic**, not a method name + description; the
+  method names and signatures live in the body: ✅ `#### Internal spans` ❌ `#### \`span\` — Create an internal span`.
 - **One example per operation group**, not exhaustive edge cases. Note performance inline (O(1), O(n)).
 - Link to the module-level "How They Work Together" / patterns sections for composition, instead of
   repeating cross-type examples per type.
