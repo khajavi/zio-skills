@@ -9,6 +9,8 @@ Choose an mdoc modifier for every executable Scala block based on whether you ne
 
 **Mandatory:** any block a reader could paste and run — it has an `import`, a bound `val`/`def` with a body, a call, or an evaluated expression — MUST carry an mdoc modifier (`mdoc:compile-only` if unsure). Plain ` ```scala ` hides code from the compiler, so use it ONLY for genuinely non-runnable content: abstract signature blocks (declarations with no bodies), pseudocode, ASCII diagrams, sbt/config. Never downgrade a real example to plain ` ```scala ` to dodge a compile error — fix the example.
 
+**Public API only.** An mdoc block compiles in the default package, exactly like user code — reference only PUBLIC symbols. A `private`/`private[pkg]`/`protected` type or member won't compile in a snippet, so never demonstrate a closed extension point: ✅ implement the public `LogRecordProcessor` ❌ implement `LogFormatter` whose required parameter type is `private[telemetry]`. Verify visibility against the real source before drafting; if the only path needs a package-private symbol, pick a public alternative or drop the example.
+
 ## Modifiers
 
 - **`mdoc:compile-only`** — Renders source only, isolated scope. **Default** for self-contained examples. Later blocks cannot reference its definitions.
