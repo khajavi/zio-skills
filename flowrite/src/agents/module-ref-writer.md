@@ -42,7 +42,10 @@ reality differs. Do not mechanically follow steps that no longer fit.
       `relationships`), its group `label`, and its `kind` — a `supporting` type gets a minimal page,
       a `core` type gets full depth. For ≥ 2 sub-domains, nest `outputDir` as
       `docs/reference/<module-kebab>/<sub-domain-kebab>` with a sub-domain `index.md` each (module
-      `index.md` = map); fold a homogeneous family onto one page (see module-ref-structure). Skip this whole step for a flat layout (`single-core` or `dsl`) — a flat page has no per-type subpages.
+      `index.md` = map). Write each sub-domain `index.md` to the **"Sub-domain index page"** template in
+      module-ref-structure — never surface the `kind` (core/supporting) tag as a heading; it sets subpage
+      depth, not section structure. Fold a homogeneous family onto one page (see module-ref-structure).
+      Skip this whole step for a flat layout (`single-core` or `dsl`) — a flat page has no per-type subpages.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
    `write_companion_examples` with the module page path to build and verify them. Prefer ONE
    module-level cross-type example set. Do this BEFORE mdoc verify: an `mdoc:embed` block fails

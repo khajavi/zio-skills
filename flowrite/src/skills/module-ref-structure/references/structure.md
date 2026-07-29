@@ -71,8 +71,16 @@ or subpages. If the page grows too large, split into an index + task/topic pages
 reference pages.
 
 **Sub-domain nesting (hierarchical, ≥ 2 distinct sub-domains).** Nest each sub-domain under
-`<module-kebab>/<sub-domain-kebab>/` with its own `index.md` (that sub-domain's intro); the module
-`index.md` becomes a map — a blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
+`<module-kebab>/<sub-domain-kebab>/` with its own `index.md`; the module `index.md` becomes a map — a
+blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
+
+**Sub-domain index page.** Frontmatter `id: index`, `title`. Compact — it orients and routes; full
+APIs live on the subpages. Structure: bare opening definition → `## How They Work Together` (required:
+an ASCII diagram + a `**Type Relationships:**` bullet list for this sub-domain) → `## Putting It
+Together` (one realistic `scala mdoc:compile-only` example combining most of the sub-domain's types) →
+`## Type Pages` (the roster: `- **[Type](./type.md)** — one-line role`, most-central first). Covers
+only its own types; cross-sub-domain flow stays on the module map. No `## Installation` (it's on the
+module index).
 
 **Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
 share ONE page (common shape once, then a per-type table/subsection for what differs):
@@ -83,9 +91,10 @@ share ONE page (common shape once, then a per-type table/subsection for what dif
 example — then a link out to the real docs, not a full reference:
 ✅ a thin `otel` bridge = install + provider entry + link to OpenTelemetry ❌ a full page per exporter type.
 
-**Group types by domain, not by depth.** A group label names a concern the types share (what they
-do together); depth (how comprehensively a type is documented) is a separate per-type property, never
-a heading: ✅ `Routing`, `Http Messages`, `Middlewares` ❌ `Core`, `Supporting`, `Core Data Types`.
+**Group types by domain, not by depth** (applies everywhere a type list appears — flat sections, the
+sub-domain index `## Type Pages` roster, sidebar groups). A group label names a concern the types
+share (what they do together); depth (how comprehensively a type is documented) is a separate per-type
+property, never a heading: ✅ `Routing`, `Http Messages`, `Middlewares` ❌ `Core`, `Supporting`, `Core Data Types`.
 
 ## Module-Level Sections (BOTH LAYOUTS — this is the module page / the flat page's top matter)
 
