@@ -9,15 +9,36 @@ emphasizes three things a single-type page cannot:
 - **Type-level coverage** — each type documented, contextualized within the module (not in isolation).
 - **Multi-type examples** — composition and cross-type usage, not just single-type API snippets.
 
+## Classify the module first
+
+Classify the module by **reader intent**, not by type count — this drives everything below. If the run
+supplied a `shapeOverride`, use it and skip the test.
+
+**Discriminator:** does the module have core data types each worth their own reference, or co-equal
+types that only mean something combined? Operational test when fuzzy — remove the biggest type: one
+type carries the domain → **core-type**; the value lives in the combination → **DSL**.
+
+**Halt on doubt.** If the shape is still genuinely uncertain after that test, STOP and ask the user —
+never guess and generate the whole doc. A wrong shape mis-structures everything (per-type pages for a
+DSL, or one page for a multi-core module), wasting the run.
+
+| Shape (`shape`) | What it is                                           | `layout`     | Body                                                 | Reader asks           |
+|-----------------|------------------------------------------------------|--------------|------------------------------------------------------|-----------------------|
+| `single-core`   | one dominant core type, one domain                   | flat         | one page, `##`/`###` **per type**                    | "what does it do?"    |
+| `core-family`   | several co-equal core types, one domain              | hierarchical | `index.md` + one subpage per core type               | "what does each do?"  |
+| `multi-domain`  | core types across ≥ 2 sub-domains                    | hierarchical | index = map + per-sub-domain index + subpages        | "which domain, then?" |
+| `dsl`           | no dominant core; co-equal types combined into a DSL | flat         | one page organized **by task**, NO per-type sections | "how do I build X?"   |
+
+`layout` is only the **file structure** (one page vs index+subpages) — `single-core` and `dsl` share
+`flat` and differ solely in body organization (by-type vs by-task, keyed off `shape`). The core-type
+layout is a count sub-decision: one dominant type (+ light supporting cast) → `single-core`; several
+peers in one domain (≥ 5, or ≥ 3 with rich self-contained APIs) → `core-family`; those peers spanning
+≥ 2 sub-domains → `multi-domain`.
+
 ## Layout: Flat vs. Hierarchical
 
-Pick one layout for the whole module. The design phase decides this from the auto-rule below (an
-explicit `layout` override wins when supplied).
-
-| Module shape                                                    | Layout          |
-|----------------------------------------------------------------|-----------------|
-| ≤ 4 core types, or types always used together                  | **flat**        |
-| ≥ 5 core types, **or** ≥ 3 types with rich self-contained APIs | **hierarchical**|
+The design phase derives the layout from the shape (an explicit `layout` override wins when supplied;
+`shapeOverride` wins over both).
 
 **Flat** — single file `docs/reference/<module-kebab>.md`. All types documented inline with `##`
 headings. Best when types are tightly coupled or always used together (e.g. an HTTP model).
@@ -43,6 +64,12 @@ title: "<Module Title>"
 Each hierarchical subpage follows the **data type reference** structure completely, recontextualized
 to the module (see "Recontextualization" below).
 
+**DSL body (`shape: dsl`, flat file).** When the shape is `dsl`, the single flat page is organized
+**by task/composition**, not by type: sections are recipes ("Building X", "Combining Y and Z") that
+show how the types compose to solve the domain problem. Do NOT add a per-type `## <TypeName>` section
+or subpages. If the page grows too large, split into an index + task/topic pages — still never per-type
+reference pages.
+
 **Sub-domain nesting (hierarchical, ≥ 2 distinct sub-domains).** Nest each sub-domain under
 `<module-kebab>/<sub-domain-kebab>/` with its own `index.md` (that sub-domain's intro); the module
 `index.md` becomes a map — a blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
@@ -50,6 +77,11 @@ to the module (see "Recontextualization" below).
 **Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
 share ONE page (common shape once, then a per-type table/subsection for what differs):
 ✅ `Counter`/`UpDownCounter`/`Histogram`/`Gauge` on one `meter.md` ❌ four near-duplicate pages.
+
+**Adapter / bridge → minimal page + defer outward.** A module that only wires one thing to another
+(an external system or another module) is a stub — the dependency, the one entry point, a short
+example — then a link out to the real docs, not a full reference:
+✅ a thin `otel` bridge = install + provider entry + link to OpenTelemetry ❌ a full page per exporter type.
 
 **Group types by domain, not by depth.** A group label names a concern the types share (what they
 do together); depth (how comprehensively a type is documented) is a separate per-type property, never

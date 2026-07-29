@@ -26,6 +26,15 @@ export default defineDocsWorkflow({
       v.optional(v.picklist(['flat', 'hierarchical'])),
       v.description('Force the page layout; omit to let the design phase decide via the auto-rule.'),
     ),
+    shapeOverride: v.pipe(
+      v.optional(v.picklist(['single-core', 'core-family', 'multi-domain', 'dsl'])),
+      v.description(
+        'Force the module shape instead of letting the design phase classify. ' +
+          'single-core = one dominant core type (flat); core-family = several co-equal core types, one domain (hierarchical); ' +
+          'multi-domain = core types across ≥2 sub-domains (hierarchical + nesting); dsl = no dominant core, co-equal types combined (one task-organized page). ' +
+          'Wins over `layout`.',
+      ),
+    ),
     userPrompt: v.pipe(
       v.optional(v.string()),
       v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
@@ -38,6 +47,7 @@ export default defineDocsWorkflow({
   }),
   buildPrompt: (input) =>
     `Write a complete, compile-verified module reference for the module: ${input.moduleName}. ` +
+    (input.shapeOverride ? `Classify this module as the "${input.shapeOverride}" shape (pass it as shapeOverride to design). ` : '') +
     (input.layout ? `Use the "${input.layout}" layout (pass it as layoutOverride to design). ` : '') +
     (input.userPrompt ? `Author hint to steer this run: ${input.userPrompt} ` : '') +
     `Your shell already starts in the repo root of the library checkout — use relative paths for every command; do not cd into the repo. ` +

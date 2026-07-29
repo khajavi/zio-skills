@@ -14,14 +14,23 @@ import moduleStructureDoc from '../skills/module-ref-structure/references/struct
 // (2) which module-level sections apply and the order types are documented in.
 // Planning them up front lets the drafter follow a validated plan.
 export const moduleStructureSchema = v.object({
+  shape: v.pipe(
+    v.picklist(['single-core', 'core-family', 'multi-domain', 'dsl']),
+    v.description(
+      'Module classification by reader intent (see module-ref-structure "Classify the module first"). ' +
+        'single-core = one dominant core type; core-family = several co-equal core types in one domain; ' +
+        'multi-domain = core types across ≥2 sub-domains; dsl = no dominant core, co-equal types combined. ' +
+        'Drives layout AND (for dsl) the by-task page body.',
+    ),
+  ),
   layout: v.pipe(
     v.picklist(['flat', 'hierarchical']),
     v.description(
-      'flat = single docs/reference/<module>.md with types inline; hierarchical = index + per-type subpages. ' +
-        'Auto-rule: flat for ≤4 core types or always-together types; hierarchical for ≥5 core types or ≥3 rich types.',
+      'File structure derived from shape: single-core/dsl → flat (one docs/reference/<module>.md); ' +
+        'core-family/multi-domain → hierarchical (index + per-type subpages).',
     ),
   ),
-  layoutRationale: v.pipe(v.string(), v.description('One sentence: why this layout, per the auto-rule (or the override)')),
+  layoutRationale: v.pipe(v.string(), v.description('One sentence: why this shape/layout (per the classification or the override)')),
   optionalSections: v.object({
     motivation: v.boolean(),
     installation: v.pipe(v.boolean(), v.description('true only for a top-level published module')),
@@ -78,6 +87,10 @@ export const designModuleStructure = defineAction({
       v.optional(v.picklist(['flat', 'hierarchical'])),
       v.description('Force a layout instead of the auto-rule; omit to let the designer decide.'),
     ),
+    shapeOverride: v.pipe(
+      v.optional(v.picklist(['single-core', 'core-family', 'multi-domain', 'dsl'])),
+      v.description('Force the module shape (skips classification) and derive layout from it. Wins over layoutOverride and auto-classify.'),
+    ),
   }),
   output: moduleStructureSchema,
   async run({ harness, input, log }) {
@@ -85,6 +98,7 @@ export const designModuleStructure = defineAction({
     if (isPhaseSkipped('design')) {
       log.info('Skipping design (skipPhases)');
       return {
+        shape: input.shapeOverride ?? 'single-core',
         layout: input.layoutOverride ?? 'flat',
         layoutRationale: '(skipped — phase already done)',
         optionalSections: {
@@ -113,15 +127,23 @@ export const designModuleStructure = defineAction({
         ``,
         moduleStructureDoc,
         ``,
-        input.layoutOverride
-          ? `The caller REQUIRES the "${input.layoutOverride}" layout — set layout to it and explain briefly.`
-          : `Decide the layout from the auto-rule (flat for ≤4 core types or always-together types; ` +
-            `hierarchical for ≥5 core types or ≥3 rich self-contained types).`,
+        input.shapeOverride
+          ? `The caller REQUIRES the "${input.shapeOverride}" shape — set shape to it and derive layout ` +
+            `(single-core/dsl → flat, core-family/multi-domain → hierarchical).`
+          : input.layoutOverride
+            ? `The caller REQUIRES the "${input.layoutOverride}" layout — set layout to it, set the shape that ` +
+              `matches, and explain briefly.`
+            : `CLASSIFY THE MODULE'S SHAPE FIRST (see "Classify the module first"): run the discriminator + ` +
+              `operational test, set "shape", then derive layout (single-core/dsl → flat, core-family/` +
+              `multi-domain → hierarchical). If the shape is genuinely uncertain after the test, do NOT guess ` +
+              `silently — set your best-effort shape and FLAG the ambiguity explicitly in "notes" so the agent can halt and ask.`,
         ``,
-        `Decide which module-level sections apply. Organize EVERY type into named domain groups in`,
-        `reading order — each group is a concern the types share (what they do together), e.g. for an`,
-        `HTTP module "Routing", "Http Messages", "Endpoints". Separately, tag each type "core" (documented`,
-        `comprehensively) or "supporting" (a minimal page); this is per-type depth, independent of its group.`,
+        `Decide which module-level sections apply. Organize EVERY type into named groups in reading order.`,
+        `For a core-type shape each group is a domain concern the types share (what they do together), e.g.`,
+        `for an HTTP module "Routing", "Http Messages", "Endpoints". For a "dsl" shape group by TASK/`,
+        `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
+        `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
+        `minimal page); this is per-type depth, independent of its group.`,
         `Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),

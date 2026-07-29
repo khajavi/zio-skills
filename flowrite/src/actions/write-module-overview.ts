@@ -71,20 +71,29 @@ export const writeModuleOverview = defineAction({
       ),
     });
 
-    const layoutInstruction = isFlat
-      ? [
-          `This is a FLAT module reference: write the WHOLE page in one file. After the module-level`,
-          `sections, document EVERY type from the plan's typeGroups inline, organized under each group's`,
-          `"## <label>" heading with types as "### <TypeName>" — a "core" type gets the lighter per-type`,
-          `section shape (group operations concisely, one example per group), a "supporting" type gets a`,
-          `minimal entry (role + one usage example). Do not create separate files.`,
-        ]
-      : [
-          `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,
-          `plus an Overview that introduces each core type in 2-3 sentences and links to its subpage with`,
-          `a relative path "./<type-kebab>.md". Do NOT document the types' full APIs here; each type gets`,
-          `its own subpage written separately.`,
-        ];
+    const layoutInstruction =
+      input.structure.layout === 'hierarchical'
+        ? [
+            `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,
+            `plus an Overview that introduces each core type in 2-3 sentences and links to its subpage with`,
+            `a relative path "./<type-kebab>.md". Do NOT document the types' full APIs here; each type gets`,
+            `its own subpage written separately.`,
+          ]
+        : input.structure.shape === 'dsl'
+          ? [
+              `This is a DSL module reference: write ONE page in a single file, organized BY TASK/composition`,
+              `— sections are recipes ("Building X", "Combining Y and Z") showing how the types compose to`,
+              `solve the domain problem. Use the plan's typeGroups as the task/recipe outline. Do NOT add a`,
+              `per-type "### <TypeName>" reference section and do NOT create separate files — the types appear`,
+              `inside the recipes, not as their own sections.`,
+            ]
+          : [
+              `This is a FLAT module reference: write the WHOLE page in one file. After the module-level`,
+              `sections, document EVERY type from the plan's typeGroups inline, organized under each group's`,
+              `"## <label>" heading with types as "### <TypeName>" — a "core" type gets the lighter per-type`,
+              `section shape (group operations concisely, one example per group), a "supporting" type gets a`,
+              `minimal entry (role + one usage example). Do not create separate files.`,
+            ];
 
     const { data } = await withTransientRetry(log, 'drafter (module overview)', () =>
       session.task(

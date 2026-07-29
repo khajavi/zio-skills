@@ -21,14 +21,18 @@ reality differs. Do not mechanically follow steps that no longer fit.
 2. **Research.** Call `research_module` with the module name to discover the member
    types (core vs supporting), a light per-type surface, and the module story —
    relationships, patterns, integration, per-fact `source` citations, grounding detail.
-3. **Design.** Call `design_module_structure` with the module name and the exact research
-   object to get a validated plan: the **layout** (flat vs hierarchical, from the auto-rule
-   unless a layout override was requested), which module-level sections apply, and the type order.
-   If the run requested a specific layout, pass it as `layoutOverride`.
+3. **Design.** Call `design_module_structure` with the module name and the exact research object to
+   get a validated plan: the **shape** (`single-core` / `core-family` / `multi-domain` / `dsl` — the
+   designer classifies by reader intent, see module-ref-structure), the **layout** derived from it
+   (single-core/dsl → flat, core-family/multi-domain → hierarchical), which module-level sections apply,
+   and the type order. If the run requested a specific shape or layout, pass it as `shapeOverride` /
+   `layoutOverride`. The designer applies the adapter / homogeneous-family / supportive-type modifiers
+   where they hold.
 4. **Write the module page.** Call `write_module_overview` with the plan AND the exact research
-   object. For **flat** it writes the whole page (`docs/reference/<module>.md`) with every type
-   documented inline. For **hierarchical** it writes only `docs/reference/<module>/index.md`
-   (narrative + links to subpages).
+   object. For **flat** (`single-core`) it writes the whole page (`docs/reference/<module>.md`) with
+   every type documented inline. For **dsl** (also a flat file) it writes one page organized by
+   task/composition, with NO per-type sections. For **hierarchical** it writes only
+   `docs/reference/<module>/index.md` (narrative + links to subpages).
 5. **Write per-type subpages (hierarchical only).** For EACH type in the plan's `typeGroups` (each
    group has a `label` and its `types`, each with a `kind`):
    a. Call `research_data_type` with the type name for its full public API.
@@ -38,7 +42,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
       `relationships`), its group `label`, and its `kind` — a `supporting` type gets a minimal page,
       a `core` type gets full depth. For ≥ 2 sub-domains, nest `outputDir` as
       `docs/reference/<module-kebab>/<sub-domain-kebab>` with a sub-domain `index.md` each (module
-      `index.md` = map); fold a homogeneous family onto one page (see module-ref-structure). Skip this whole step for a flat layout — the types are already inline.
+      `index.md` = map); fold a homogeneous family onto one page (see module-ref-structure). Skip this whole step for a flat layout (`single-core` or `dsl`) — a flat page has no per-type subpages.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
    `write_companion_examples` with the module page path to build and verify them. Prefer ONE
    module-level cross-type example set. Do this BEFORE mdoc verify: an `mdoc:embed` block fails
@@ -66,6 +70,10 @@ reality differs. Do not mechanically follow steps that no longer fit.
     encountered; never invent it.
 
 ## Guardrails
+- **Halt on doubt about the shape.** If the design plan flags the module's shape as genuinely uncertain
+  (in its `notes`), STOP and ask the user which shape applies — never guess a shape and run
+  write→integrate on it; a wrong shape mis-structures the whole doc. A `shapeOverride` on the run
+  resolves this up front — honor it.
 - Your shell starts in the repo root — you are ALREADY inside the checkout. Never `cd` into the repo;
   run `sbt`/`mdoc` and all commands with repo-relative paths. `cd` only *within* the repo when a tool
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
