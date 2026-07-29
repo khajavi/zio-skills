@@ -43,8 +43,10 @@ reality differs. Do not mechanically follow steps that no longer fit.
       a `core` type gets full depth. For ≥ 2 sub-domains, nest `outputDir` as
       `docs/reference/<module-kebab>/<sub-domain-kebab>` with a sub-domain `index.md` each (module
       `index.md` = map). Write each sub-domain `index.md` to the **"Sub-domain index page"** template in
-      module-ref-structure: lead with the sub-domain's entry-point object (if any), then a problem-first
-      end-to-end `## Usage` recipe, then the type roster grouped by domain concern. Keep the `kind`
+      module-ref-structure: lead with the sub-domain's entry-point object (if any), documenting it
+      comprehensively and behavior/task-based (every feature, a subsection per capability — it has no
+      page of its own), then a problem-first end-to-end `## Usage` recipe, then the type roster grouped
+      by domain concern. Keep the `kind`
       (core/supporting) tag as per-type subpage depth. Fold a homogeneous family onto one page (see module-ref-structure).
       Skip this whole step for a flat layout (`single-core` or `dsl`) — a flat page has no per-type subpages.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
