@@ -1,4 +1,5 @@
 import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
+import { docsWorkflowRoute } from '../shared/docs-workflow.ts';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
 
@@ -7,7 +8,7 @@ import tutorialWriter from '../agents/tutorial-writer.ts';
  * checklist evaluation) on an existing tutorial without touching the other
  * phases. Useful for re-reviewing archived or hand-edited tutorials.
  */
-export const route: WorkflowRouteHandler = async (_c, next) => next();
+export const route: WorkflowRouteHandler = docsWorkflowRoute;
 
 export default defineWorkflow({
   agent: tutorialWriter,

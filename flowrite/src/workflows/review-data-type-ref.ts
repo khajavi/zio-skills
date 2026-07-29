@@ -1,4 +1,5 @@
 import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
+import { docsWorkflowRoute } from '../shared/docs-workflow.ts';
 import * as v from 'valibot';
 import dataTypeRefWriter from '../agents/data-type-ref-writer.ts';
 
@@ -8,7 +9,7 @@ import dataTypeRefWriter from '../agents/data-type-ref-writer.ts';
  * other phases. Useful for re-reviewing archived or hand-edited pages.
  * Mirrors review-tutorial.ts.
  */
-export const route: WorkflowRouteHandler = async (_c, next) => next();
+export const route: WorkflowRouteHandler = docsWorkflowRoute;
 
 export default defineWorkflow({
   agent: dataTypeRefWriter,

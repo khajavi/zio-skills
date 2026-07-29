@@ -1,4 +1,4 @@
-import { defineWorkflow, type AgentDefinition } from '@flue/runtime';
+import { defineWorkflow, type AgentDefinition, type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import { trackTokenUsage } from './token-usage.ts';
 import { trackComponentUsage } from './component-usage.ts';
@@ -7,6 +7,28 @@ import { withTransientRetry } from './style-loop.ts';
 
 /** Every write-* workflow returns the finished page path, a summary, and the run retrospective. */
 const outputSchema = v.object({ path: v.string(), summary: v.string(), insights: insightsSchema });
+
+/**
+ * Shared route middleware for docs workflows. The docs-writer agent resolves its
+ * sandbox cwd from REPO_PATH at agent-init time, which for `flue run` (and any
+ * HTTP invocation) happens BEFORE the workflow's run() body executes — so setting
+ * REPO_PATH inside run() is too late and the agent throws "REPO_PATH must be set".
+ * This middleware runs earlier in the HTTP pipeline, ahead of the workflow handler
+ * and its root-harness init, so it sets REPO_PATH from the invocation input first.
+ * It reads a CLONED request so the handler's own body read is unaffected.
+ */
+export const docsWorkflowRoute: WorkflowRouteHandler = async (c, next) => {
+  try {
+    const body = (await c.req.raw.clone().json()) as { input?: { projectPath?: unknown }; projectPath?: unknown };
+    const projectPath = body?.input?.projectPath ?? body?.projectPath;
+    if (typeof projectPath === 'string' && projectPath.length > 0) {
+      process.env.REPO_PATH = projectPath;
+    }
+  } catch {
+    // No/invalid JSON body — let the workflow handler validate the input.
+  }
+  await next();
+};
 
 /** The `skipPhases` input field, shared shape (the description varies per workflow). */
 export const skipPhasesField = (description: string) =>
@@ -39,8 +61,9 @@ export function defineDocsWorkflow<
     input: opts.input,
     output: outputSchema,
     async run({ harness, input, log }) {
-      // The agent initializer reads REPO_PATH to set its sandbox cwd. Set it
-      // (and the skip list) before the session initializes the agent.
+      // REPO_PATH is set early by docsWorkflowRoute for HTTP/`flue run` (before
+      // agent init). Re-assert it here for non-HTTP callers (ambient invoke), and
+      // set the skip list + author hint, which are read later at delegation time.
       process.env.REPO_PATH = input.projectPath;
       process.env.SKIP_PHASES = JSON.stringify(input.skipPhases ?? []);
       // Author hint: read by authorHint() at every subagent delegation site.

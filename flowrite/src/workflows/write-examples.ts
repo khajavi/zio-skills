@@ -1,4 +1,5 @@
 import { defineWorkflow, type WorkflowRouteHandler } from '@flue/runtime';
+import { docsWorkflowRoute } from '../shared/docs-workflow.ts';
 import * as v from 'valibot';
 import tutorialWriter from '../agents/tutorial-writer.ts';
 import { writeCompanionExamplesOutput } from '../actions/write-companion-examples.ts';
@@ -22,7 +23,7 @@ import { installVerboseObserver } from '../shared/verbose-observer.ts';
  * `session.task(..., { agent: 'examples_builder' })` delegates straight to the
  * subagent, so the top agent's scripted flow never runs.
  */
-export const route: WorkflowRouteHandler = async (_c, next) => next();
+export const route: WorkflowRouteHandler = docsWorkflowRoute;
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();
