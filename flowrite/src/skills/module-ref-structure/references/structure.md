@@ -74,13 +74,16 @@ reference pages.
 `<module-kebab>/<sub-domain-kebab>/` with its own `index.md`; the module `index.md` becomes a map — a
 blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
 
-**Sub-domain index page.** Frontmatter `id: index`, `title`. Compact — it orients and routes; full
-APIs live on the subpages. Structure: bare opening definition → `## How They Work Together` (required:
-an ASCII diagram + a `**Type Relationships:**` bullet list for this sub-domain) → `## Putting It
-Together` (one realistic `scala mdoc:compile-only` example combining most of the sub-domain's types) →
-`## Type Pages` (the roster: `- **[Type](./type.md)** — one-line role`, most-central first). Covers
-only its own types; cross-sub-domain flow stays on the module map. No `## Installation` (it's on the
-module index).
+**Sub-domain index page.** Frontmatter `id: index`, `title`. Compact. Structure: bare definition →
+`## <entry-point object>` (if the sub-domain has a zero-setup singleton like `trace`/`log`/`metric`,
+document it HERE — default behavior, signature, the one `install` call; skip if none) →
+`## How They Work Together` (ASCII diagram + `**Type Relationships:**` bullets) → `## Usage`
+(**problem-first**: name the core job — "track a request through your app" — then ONE
+`scala mdoc:compile-only` recipe solving it end-to-end via the entry-point object + core types) →
+`## Type Pages` (roster: `- **[Type](./type.md)** — role`). No `## Installation` (module index has it).
+
+**An entry-point singleton is documented in its scope's index** — the sub-domain index (multi-domain)
+or module index (flat/core-family).
 
 **Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
 share ONE page (common shape once, then a per-type table/subsection for what differs):
