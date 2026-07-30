@@ -25,6 +25,12 @@ declaration, not from a call site, scaladoc, or how a macro expands. When a meth
 — overloads, or one variant per severity/level/type (e.g. `<lvl>Every` / `<lvl>AtMost` across all
 severities) — enumerate the COMPLETE family from source so the author documents all of it.
 
+For each type and key method note its **audience tier**: an end-user API, or a low-level building
+block that a higher-level API wraps. Judge from visibility (`private[...]` is internal), scaladoc, and
+whether tests / other code call it directly or reach it through a higher-level API. For a building
+block, record why it is advanced and the high-level alternative to prefer (e.g. `SpanBuilder` is the
+manual path a caller rarely needs — prefer `Tracer#span`).
+
 When the result schema includes `source`/`sourceFiles` fields, populate them with the repo-relative
 location you actually read each fact from, as `path:L<start>-L<end>` (e.g. `src/main/scala/optics/Lens.scala:L12-L20`),
 and list every file you opened in `sourceFiles`. Never invent a path or line — cite only a file you read.

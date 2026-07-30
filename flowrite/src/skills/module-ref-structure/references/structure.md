@@ -118,6 +118,8 @@ when relevant.
    - List the core types as inline code: `Type1`, `Type2`, `Type3`.
    - A plain ```scala block (NOT mdoc) showing the structural shape of the 2-3 main types
      (declarations only — no bodies).
+   - Flag any core type that is a low-level building block (a higher-level API wraps it) and name the
+     high-level alternative to prefer (writing-style rule 26).
 2. Motivation / Use Case (if applicable)
    - What problem the module solves and why use it over alternatives; advantages as bullets.
 3. Installation (if applicable — top-level module only)

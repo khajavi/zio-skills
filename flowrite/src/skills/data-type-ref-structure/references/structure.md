@@ -32,6 +32,7 @@ Keep them in this order.
 1. Opening Definition (required) — NO HEADING
    - Start immediately after the frontmatter, no `##` heading, with a beginner-friendly, plain-language definition: what the type IS and what it's FOR, in 1-3 sentences. Inline-code the type signature and explain the type parameters.
    - Keep the opening an overview — defer implementation mechanism to later sections.
+   - State the audience tier: for a low-level building block (a higher-level API wraps it), signal up front that it is rarely used directly and name the high-level alternative to prefer (writing-style rule 26).
    - Optionally list key design properties as a few compact bullets ("Lock-Free — ...", "Atomic — ...") —
      only the important, non-obvious ones.
    - Then a plain ```scala block (NOT mdoc): the declaration (type params, variance, extends) and its

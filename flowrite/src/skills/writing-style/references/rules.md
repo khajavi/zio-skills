@@ -24,3 +24,4 @@
 23. **Default to Scala 2.13.x syntax**: Use `import x._` for wildcard imports, never `import x.*`.
 24. **Use tabs for version-specific syntax**: Use tabbed code blocks to show Scala 2 vs 3 differences (e.g. `using` vs `implicit`). Scala 2 is the default tab.
 25. **Use the `@VERSION@` placeholder for versions**: ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "1.0.0"` ✅ `libraryDependencies += "dev.zio" %% "zio-blocks" % "@VERSION@"`.
+26. **Frame by audience tier**: Lead with the end-user / high-level path. Open a low-level building block — one a higher-level API wraps — with a signal: "You rarely call this directly; it is an advanced API for `<case>` — prefer `<high-level API>`." Document it fully; change the framing, not the coverage.
