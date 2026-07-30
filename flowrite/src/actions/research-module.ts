@@ -52,7 +52,8 @@ export const moduleResearchSchema = v.object({
     v.string(),
     v.description(
       'How the types work together: the typical workflow / data flow and how each type uses, contains, ' +
-        'or depends on the others. This grounds the mandatory "How They Work Together" section — be concrete.',
+        'or depends on the others. Base this on a real multi-type TEST scenario — the sequence of calls a ' +
+        'test makes across the types — not an invented flow.',
     ),
   ),
   commonPatterns: v.pipe(
@@ -156,7 +157,9 @@ export const researchModule = defineAction({
         ``,
         `The heart of a module reference is HOW THE TYPES WORK TOGETHER: capture the typical`,
         `workflow / data flow and how each type uses, contains, or depends on the others in`,
-        `"relationships". Capture named module patterns and integration points too.`,
+        `"relationships". Find a test that exercises several of the module's types together and base the`,
+        `workflow (and a candidate end-to-end usage recipe) on it; cite the test path in "groundingDetail".`,
+        `Capture named module patterns and integration points too.`,
         ``,
         `For every type set its "source" to the repo-relative location you actually read it`,
         `from, as "path:L<start>-L<end>". List every file you read in "sourceFiles". Never`,
