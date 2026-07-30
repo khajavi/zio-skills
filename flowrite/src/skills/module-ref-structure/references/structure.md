@@ -74,21 +74,21 @@ reference pages.
 `<module-kebab>/<sub-domain-kebab>/` with its own `index.md`; the module `index.md` becomes a map — a
 blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
 
-**Sub-domain index page.** Frontmatter `id: index`, `title`. Structure: bare definition →
-`## <entry-point object>` (if the sub-domain has a zero-setup singleton like `trace`/`log`/`metric`,
-document it HERE **comprehensively** — see the entry-point rule below; skip if none) →
-`## How They Work Together` (ASCII diagram + `**Type Relationships:**` bullets) → `## Usage`
-(**problem-first**: name the core job — "track a request through your app" — then ONE
-`scala mdoc:compile-only` recipe solving it end-to-end via the entry-point object + core types) →
-`## Type Pages` (roster: `- **[Type](./type.md)** — role`). No `## Installation` (module index has it).
+**Sub-domain index page.** Frontmatter `id: index`, `title`. Structure: bare definition that also
+introduces the entry-point object (no `## <object>` heading) → a `## <capability>` section per
+behavior of the object → `## How They Work Together` (ASCII diagram + `**Type Relationships:**`
+bullets) → `## Usage` (**problem-first**: name the core job — "track a request through your app" —
+then ONE `scala mdoc:compile-only` recipe solving it end-to-end via the entry-point object + core
+types) → `## Type Pages` (roster: `- **[Type](./type.md)** — role`). No `## Installation` (module index has it).
 
 **An entry-point singleton is documented in its scope's index** — the sub-domain index (multi-domain)
 or module index (flat/core-family) — and because it has no page of its own, cover it **comprehensively
-and behavior/task-based**: open with what it is + the zero-setup default + the production `install`
-call, then a subsection per capability (a behavior the user achieves), each with an example, covering
-EVERY feature. Represent a method family by its behavior once (e.g. rate-limited logging = the
-`Every` count-based + `AtMost` interval-based families across all severities), not one line per method.
-✅ `### Rate-limited logging` (both families, shown once) ❌ silently listing 2 of 12 variants.
+and behavior/task-based**: open the page prose with what it is + the zero-setup default + the
+production `install` call (no `## <object>` heading), then one `## <capability>` section per behavior
+the user achieves, each covering EVERY feature. Represent a method family by its behavior once (e.g.
+rate-limited logging = the `Every` count-based + `AtMost` interval-based families across all
+severities), not one line per method.
+✅ `## Rate-limited logging` (both families, shown once) ❌ silently listing 2 of 12 variants.
 Introduce each member's signature INSIDE the capability subsection that covers it — a small
 declarations-only ` ```scala ` block right before the example — rather than one monolithic
 `object { … }` interface block up front.
