@@ -176,6 +176,9 @@ in each section, note how the type relates to the other types in the module.
 - The "How They Work Together" section is mandatory and is the reason a module reference exists —
   never omit it; ground its data flow and ASCII diagram in the real relationships from research.
 - Between any two code blocks put an explanatory paragraph — never leave two fenced blocks adjacent.
+- Open every section with prose, never a code block: lead a signature block with a sentence
+  introducing it, then follow it with explanatory prose before its example (prose → signature →
+  prose → example).
 - Use ASCII art for type relationships. Link related docs with relative paths
   (`[TypeName](./type-name.md)`, or `[TypeName](./<module>/<type>.md)` across pages).
 - Ground every signature, example, and relationship in the real source — never invent an API surface
