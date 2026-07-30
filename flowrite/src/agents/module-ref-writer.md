@@ -46,7 +46,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
       module-ref-structure: lead with the sub-domain's entry-point object (if any), documenting it
       comprehensively and behavior/task-based (every feature, a subsection per capability — it has no
       page of its own), then a problem-first end-to-end `## Usage` recipe, then the type roster grouped
-      by domain concern. Keep the `kind`
+      by domain concern. Apply the writing-style rules to this prose too (it is hand-written via the
+      `write` tool, so no action injects them) — especially link each sibling type's FIRST prose mention
+      to its subpage (`[`TracerProvider`](./tracer-provider.md)`). Keep the `kind`
       (core/supporting) tag as per-type subpage depth. Fold a homogeneous family onto one page (see module-ref-structure).
       Skip this whole step for a flat layout (`single-core` or `dsl`) — a flat page has no per-type subpages.
 6. **Companion examples.** If the page embeds standalone example files (via `mdoc:embed`), call
