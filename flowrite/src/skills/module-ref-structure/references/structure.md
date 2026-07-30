@@ -86,9 +86,9 @@ document it HERE **comprehensively** — see the entry-point rule below; skip if
 or module index (flat/core-family) — and because it has no page of its own, cover it **comprehensively
 and behavior/task-based**: open with what it is + the zero-setup default + the production `install`
 call, then a subsection per capability (a behavior the user achieves), each with an example, covering
-EVERY feature. Represent a method family by its behavior once (e.g. rate-limited logging = the
-`Every` count-based + `AtMost` interval-based families across all severities), not one line per method.
-✅ `### Rate-limited logging` (both families, shown once) ❌ silently listing 2 of 12 variants.
+EVERY feature. Represent a method family once by behavior — sample one member and note the family's
+span (in prose AND in signature blocks), neither dropping variants nor pasting the whole interface.
+✅ show `infoEvery`/`infoAtMost`, note "same three forms for all six severities" ❌ list all 12 variants (over) or only 2 of 12 (under).
 
 **Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
 share ONE page (common shape once, then a per-type table/subsection for what differs):
