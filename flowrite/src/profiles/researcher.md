@@ -15,6 +15,13 @@ real fact you can read from the checkout — quote the real imports, signatures,
 Constructor signatures are the verbatim declaration from source (`final case class T(...)`,
 `class T(...)`, or a real companion factory method) — never a synthesized `def apply`.
 
+Copy every METHOD signature verbatim from its declaration — the complete parameter list, type
+parameters, implicit/using params, varargs, and return type — read from the `def` itself (including
+macro-generated defs in `*Macros.scala` / `*VersionSpecific.scala`). Derive a signature from the
+declaration, not from a call site, scaladoc, or how a macro expands. When a method comes in a family
+— overloads, or one variant per severity/level/type (e.g. `<lvl>Every` / `<lvl>AtMost` across all
+severities) — enumerate the COMPLETE family from source so the author documents all of it.
+
 When the result schema includes `source`/`sourceFiles` fields, populate them with the repo-relative
 location you actually read each fact from, as `path:L<start>-L<end>` (e.g. `src/main/scala/optics/Lens.scala:L12-L20`),
 and list every file you opened in `sourceFiles`. Never invent a path or line — cite only a file you read.
