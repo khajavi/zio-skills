@@ -75,7 +75,8 @@ reference pages.
 blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
 
 **Sub-domain index page.** Frontmatter `id: index`, `title`. Structure: bare definition that also
-introduces the entry-point object (no `## <object>` heading) → a `## <capability>` section per
+introduces the entry-point object (no `## <object>` heading) — lead with WHAT this area gives the
+reader and WHY they'd reach for it, deferring mechanics to the capability sections → a `## <capability>` section per
 behavior of the object → `## How They Work Together` (ASCII diagram + `**Type Relationships:**`
 bullets) → `## Usage` (**problem-first**: name the core job — "track a request through your app" —
 then ONE `scala mdoc:compile-only` recipe solving it end-to-end via the entry-point object + core
@@ -115,6 +116,8 @@ when relevant.
 ```
 1. Opening Definition (required) — NO HEADING
    - Immediately after the frontmatter: what the module provides, in 1-3 sentences.
+   - Lead with WHAT it is and WHY it exists — the problem it solves — not HOW it works. Defer mechanics
+     to later sections.
    - List the core types as inline code: `Type1`, `Type2`, `Type3`.
    - A plain ```scala block (NOT mdoc) showing the structural shape of the 2-3 main types
      (declarations only — no bodies).
