@@ -71,8 +71,28 @@ or subpages. If the page grows too large, split into an index + task/topic pages
 reference pages.
 
 **Sub-domain nesting (hierarchical, ≥ 2 distinct sub-domains).** Nest each sub-domain under
-`<module-kebab>/<sub-domain-kebab>/` with its own `index.md` (that sub-domain's intro); the module
-`index.md` becomes a map — a blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
+`<module-kebab>/<sub-domain-kebab>/` with its own `index.md`; the module `index.md` becomes a map — a
+blurb + link per sub-domain. Otherwise keep subpages flat under `<module-kebab>/`.
+
+**Sub-domain index page.** Frontmatter `id: index`, `title`. Structure: bare definition that also
+introduces the entry-point object (no `## <object>` heading) — lead with WHAT this area gives the
+reader and WHY they'd reach for it, deferring mechanics to the capability sections → a `## <capability>` section per
+behavior of the object → `## How They Work Together` (ASCII diagram + `**Type Relationships:**`
+bullets) → `## Usage` (**problem-first**: name the core job — "track a request through your app" —
+then ONE `scala mdoc:compile-only` recipe solving it end-to-end via the entry-point object + core
+types) → `## Type Pages` (roster: `- **[Type](./type.md)** — role`). No `## Installation` (module index has it).
+
+**An entry-point singleton is documented in its scope's index** — the sub-domain index (multi-domain)
+or module index (flat/core-family) — and because it has no page of its own, cover it **comprehensively
+and behavior/task-based**: open the page prose with what it is + the zero-setup default + the
+production `install` call (no `## <object>` heading), then one `## <capability>` section per behavior
+the user achieves, each covering EVERY feature. Represent a method family by its behavior once (e.g.
+rate-limited logging = the `Every` count-based + `AtMost` interval-based families across all
+severities), not one line per method.
+✅ `## Rate-limited logging` (both families, shown once) ❌ silently listing 2 of 12 variants.
+Introduce each member's signature INSIDE the capability subsection that covers it — a small
+declarations-only ` ```scala ` block right before the example — rather than one monolithic
+`object { … }` interface block up front.
 
 **Homogeneous family → one page.** Sibling types with the same shape, differing only by value type,
 share ONE page (common shape once, then a per-type table/subsection for what differs):
@@ -83,9 +103,10 @@ share ONE page (common shape once, then a per-type table/subsection for what dif
 example — then a link out to the real docs, not a full reference:
 ✅ a thin `otel` bridge = install + provider entry + link to OpenTelemetry ❌ a full page per exporter type.
 
-**Group types by domain, not by depth.** A group label names a concern the types share (what they
-do together); depth (how comprehensively a type is documented) is a separate per-type property, never
-a heading: ✅ `Routing`, `Http Messages`, `Middlewares` ❌ `Core`, `Supporting`, `Core Data Types`.
+**Group types by domain, not by depth** (applies everywhere a type list appears — flat sections, the
+sub-domain index `## Type Pages` roster, sidebar groups). A group label names a concern the types
+share (what they do together); depth (how comprehensively a type is documented) is a separate per-type
+property, never a heading: ✅ `Routing`, `Http Messages`, `Middlewares` ❌ `Core`, `Supporting`, `Core Data Types`.
 
 ## Module-Level Sections (BOTH LAYOUTS — this is the module page / the flat page's top matter)
 
@@ -95,9 +116,13 @@ when relevant.
 ```
 1. Opening Definition (required) — NO HEADING
    - Immediately after the frontmatter: what the module provides, in 1-3 sentences.
+   - Lead with WHAT it is and WHY it exists — the problem it solves — not HOW it works. Defer mechanics
+     to later sections.
    - List the core types as inline code: `Type1`, `Type2`, `Type3`.
    - A plain ```scala block (NOT mdoc) showing the structural shape of the 2-3 main types
      (declarations only — no bodies).
+   - Flag any core type that is a low-level building block (a higher-level API wraps it) and name the
+     high-level alternative to prefer (writing-style rule 26).
 2. Motivation / Use Case (if applicable)
    - What problem the module solves and why use it over alternatives; advantages as bullets.
 3. Installation (if applicable — top-level module only)
@@ -156,6 +181,9 @@ in each section, note how the type relates to the other types in the module.
 - The "How They Work Together" section is mandatory and is the reason a module reference exists —
   never omit it; ground its data flow and ASCII diagram in the real relationships from research.
 - Between any two code blocks put an explanatory paragraph — never leave two fenced blocks adjacent.
+- Open every section with prose, never a code block: lead a signature block with a sentence
+  introducing it, then follow it with explanatory prose before its example (prose → signature →
+  prose → example).
 - Use ASCII art for type relationships. Link related docs with relative paths
   (`[TypeName](./type-name.md)`, or `[TypeName](./<module>/<type>.md)` across pages).
 - Ground every signature, example, and relationship in the real source — never invent an API surface

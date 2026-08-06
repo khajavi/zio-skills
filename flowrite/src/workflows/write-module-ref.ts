@@ -2,7 +2,7 @@ import { type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import moduleRefWriter from '../agents/module-ref-writer.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
-import { defineDocsWorkflow, skipPhasesField } from '../shared/docs-workflow.ts';
+import { defineDocsWorkflow, docsWorkflowRoute, skipPhasesField } from '../shared/docs-workflow.ts';
 
 /**
  * Finite wrapper around the module-ref-writer agent for CI, scheduled, or batch
@@ -11,7 +11,7 @@ import { defineDocsWorkflow, skipPhasesField } from '../shared/docs-workflow.ts'
  * so the run sets that from projectPath before opening a session. Mirrors
  * write-data-type-ref.ts.
  */
-export const route: WorkflowRouteHandler = async (_c, next) => next();
+export const route: WorkflowRouteHandler = docsWorkflowRoute;
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();

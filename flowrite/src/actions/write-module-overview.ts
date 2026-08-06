@@ -60,7 +60,7 @@ export const writeModuleOverview = defineAction({
         v.array(v.string()),
         v.minLength(3),
         v.maxLength(7),
-        v.description('Search keywords: compound phrases grounded in this module and its types. Never a bare generic word.'),
+        v.description('3-6 Title-Case search keywords, one concept each: general domain concepts (usually two words) + page-specific concepts + the module and its main type names. Not concatenated API identifiers or bare generic words.'),
       ),
       body: v.pipe(
         v.string(),

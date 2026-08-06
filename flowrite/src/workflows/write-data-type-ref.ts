@@ -2,7 +2,7 @@ import { type WorkflowRouteHandler } from '@flue/runtime';
 import * as v from 'valibot';
 import dataTypeRefWriter from '../agents/data-type-ref-writer.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
-import { defineDocsWorkflow, skipPhasesField } from '../shared/docs-workflow.ts';
+import { defineDocsWorkflow, docsWorkflowRoute, skipPhasesField } from '../shared/docs-workflow.ts';
 
 /**
  * Finite wrapper around the data-type-ref-writer agent for CI, scheduled, or
@@ -10,7 +10,7 @@ import { defineDocsWorkflow, skipPhasesField } from '../shared/docs-workflow.ts'
  * The agent resolves its sandbox cwd from REPO_PATH, so the run sets that from
  * projectPath before opening a session. Mirrors write-tutorial.ts.
  */
-export const route: WorkflowRouteHandler = async (_c, next) => next();
+export const route: WorkflowRouteHandler = docsWorkflowRoute;
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/subagent call detail.
 installVerboseObserver();

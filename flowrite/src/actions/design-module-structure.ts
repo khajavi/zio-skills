@@ -144,6 +144,8 @@ export const designModuleStructure = defineAction({
         `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
         `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
         `minimal page); this is per-type depth, independent of its group.`,
+        `Assign an entry-point/singleton object (e.g. trace/log/metric) to the sub-domain it serves; it`,
+        `anchors that sub-domain's index.`,
         `Ground every choice in these research answers:`,
         JSON.stringify(input.researchAnswers),
       ].join('\n') + authorHint(),

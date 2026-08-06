@@ -31,7 +31,9 @@ Keep them in this order.
 ```
 1. Opening Definition (required) — NO HEADING
    - Start immediately after the frontmatter, no `##` heading, with a beginner-friendly, plain-language definition: what the type IS and what it's FOR, in 1-3 sentences. Inline-code the type signature and explain the type parameters.
-   - Keep the opening an overview — defer implementation mechanism to later sections.
+   - Lead with WHAT the type is and WHY it exists — the problem it solves — not HOW it operates. Defer
+     mechanics to later sections.
+   - State the audience tier: for a low-level building block (a higher-level API wraps it), signal up front that it is rarely used directly and name the high-level alternative to prefer (writing-style rule 26).
    - Optionally list key design properties as a few compact bullets ("Lock-Free — ...", "Atomic — ...") —
      only the important, non-obvious ones.
    - Then a plain ```scala block (NOT mdoc): the declaration (type params, variance, extends) and its
@@ -59,8 +61,9 @@ Keep them in this order.
    - The primary API grouped by category (Element Access, Transformations, Combining, Querying, Conversion).
    - Each category `###` opens with a one-line intro previewing what the category does and naming its methods, before the first method `####`.
    - One subsection per method (see Drafting Rules for the per-method shape).
-   - A family differing only by type (`getInt`/`getLong`/…): ONE table + one example + shared caveats
-     once, not a subsection each. A member earns its own subsection only if it genuinely differs.
+   - A family differing only by type (`getInt`/`getLong`/…): ONE subsection — the signature block
+     lists the overloads, add one example + shared caveats, no table. A member earns its own subsection
+     only if it genuinely differs.
 8. Subtypes / Variants — only if subtypes need explaining; omit when self-evident (e.g. trivial
    value wrappers), even if subtypes exist.
    - When kept: ONE table (variant | field type | meaning) + one `match`. A variant earns its own
