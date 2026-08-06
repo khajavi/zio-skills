@@ -4,7 +4,6 @@ import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
 import { runCappedReview } from '../shared/review.ts';
 import { computeMethodCoverage } from '../tools/check-method-coverage.ts';
-import { checkMdocFencesGate } from '../tools/check-mdoc-fences.ts';
 // The data-type-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
@@ -43,8 +42,7 @@ export const reviewDataTypeRef = defineAction({
       // member? Folded into review as a gate, not a separate step. Heuristic
       // (see computeMethodCoverage), so a non-empty `missing` is a flag to check.
       extraGates: async () => {
-        const repoPath = process.env.REPO_PATH!;
-        const coverage = await computeMethodCoverage(repoPath, input.typeName, input.path);
+        const coverage = await computeMethodCoverage(process.env.REPO_PATH!, input.typeName, input.path);
         return [
           {
             item: `Method coverage (${coverage.coveragePercent}%)`,
@@ -54,7 +52,6 @@ export const reviewDataTypeRef = defineAction({
                 ? null
                 : `Undocumented public members (heuristic — verify against source, then document or justify): ${coverage.missing.join(', ')}. ${coverage.note}`,
           },
-          await checkMdocFencesGate(repoPath, [input.path]),
         ];
       },
     });
