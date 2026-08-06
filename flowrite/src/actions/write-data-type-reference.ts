@@ -80,8 +80,10 @@ export const writeDataTypeReference = defineAction({
         v.minLength(3),
         v.maxLength(7),
         v.description(
-          'Search keywords: compound phrases grounded in this type and its concepts — ' +
-            'e.g. "Immutable Sequence", "Functional Optics". Never a bare generic word.',
+          '3-6 Title-Case search keywords, one concept each: lead with general domain concepts (usually ' +
+            'two words — "Distributed Tracing", "Trace Sampling"), then page-specific concepts/tasks ' +
+            '("Custom Sampler"), then the type name ("Sampler"). Never a bag of concatenated identifiers ' +
+            '("AlwaysOnSampler AlwaysOffSampler ParentBasedSampler") or a bare generic word.',
         ),
       ),
       body: v.pipe(
