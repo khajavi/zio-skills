@@ -42,6 +42,7 @@ export function DataTypeRefWriter(props: AgentProps) {
   const facts = v.parse(initialData, useInitialData());
   return useDocsWriter(props, {
     idLabel: 'data type',
+    label: 'write-data-type-ref',
     instructions,
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
     tools: [

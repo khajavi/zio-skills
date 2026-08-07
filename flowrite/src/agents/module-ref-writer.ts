@@ -58,6 +58,7 @@ export function ModuleRefWriter(props: AgentProps) {
   const facts = v.parse(initialData, useInitialData());
   return useDocsWriter(props, {
     idLabel: 'module',
+    label: 'write-module-ref',
     instructions,
     skills: [mdocConventions, moduleRefStructure, moduleRefChecklist],
     tools: [

@@ -54,7 +54,7 @@ export function installVerboseObserver(): void {
       case 'task_start': {
         if (duplicate(event.type, event.taskId)) return;
         startedAt.set(event.taskId, Date.now());
-        console.log(`[verbose] delegate start ${event.agent ?? '(unnamed)'} prompt: ${event.prompt}`);
+        console.error(`[verbose] delegate start ${event.agent ?? '(unnamed)'} prompt: ${event.prompt}`);
         return;
       }
 
@@ -62,7 +62,7 @@ export function installVerboseObserver(): void {
         if (duplicate(event.type, event.taskId)) return;
         const start = startedAt.get(event.taskId);
         startedAt.delete(event.taskId);
-        console.log(
+        console.error(
           `[verbose] delegate end ${event.agent ?? '(unnamed)'} ` +
             `durationMs=${start ? Date.now() - start : undefined} isError=${event.isError} ` +
             `result: ${JSON.stringify(event.result)}`,
@@ -73,7 +73,7 @@ export function installVerboseObserver(): void {
       case 'tool_start': {
         if (duplicate(event.type, event.toolCallId)) return;
         startedAt.set(event.toolCallId, Date.now());
-        console.log(`[verbose] tool start ${event.toolName} args: ${JSON.stringify(event.args)}`);
+        console.error(`[verbose] tool start ${event.toolName} args: ${JSON.stringify(event.args)}`);
         return;
       }
 
@@ -81,7 +81,7 @@ export function installVerboseObserver(): void {
         if (duplicate(event.type, event.toolCallId)) return;
         const start = startedAt.get(event.toolCallId);
         startedAt.delete(event.toolCallId);
-        console.log(
+        console.error(
           `[verbose] tool end ${event.toolName} durationMs=${start ? Date.now() - start : undefined} ` +
             `isError=${event.isError} result: ${JSON.stringify(event.result)}`,
         );
@@ -92,7 +92,7 @@ export function installVerboseObserver(): void {
         if (duplicate(event.type, event.turnId)) return;
         // `harness` names the phase tool whose scratch conversation ran this turn.
         const where = event.harness ? `harness=${event.harness}` : `session=${event.session ?? 'root'}`;
-        console.log(
+        console.error(
           `[verbose] turn ${where} model=${event.request.requestedModel} ` +
             `effort=${event.request.reasoningLevel} tokens=${event.response.usage?.totalTokens ?? 0}`,
         );

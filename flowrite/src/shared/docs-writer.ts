@@ -15,6 +15,7 @@ import * as v from 'valibot';
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
 import { getRepoPath, setRunContext } from './run-context.ts';
+import { useUsageReport } from './usage-report.ts';
 
 // role delegates — the generic, document-kind-neutral roles shared by every docs
 // writer; the kind-specific focus/schema/checklist is supplied by each phase tool
@@ -108,6 +109,8 @@ export function useDocsWriter(
   opts: {
     /** Human label for the id in the missing-creation-data error, e.g. 'data type'. */
     idLabel: string;
+    /** Log prefix for the end-of-run usage summary, e.g. 'write-data-type-ref'. */
+    label: string;
     instructions: string;
     skills: SkillReference[];
     tools: ToolDefinition[];
@@ -143,6 +146,7 @@ export function useDocsWriter(
   useTool(createGhQueryTool(getRepoPath));
   for (const role of ROLES) useSubagent(role);
 
+  useUsageReport(opts.label);
   useInstruction(`${opts.runDirective} ${SHARED_DIRECTIVE}`);
   return opts.instructions;
 }

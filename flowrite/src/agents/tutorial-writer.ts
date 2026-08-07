@@ -40,6 +40,7 @@ export function TutorialWriter(props: AgentProps) {
   const facts = v.parse(initialData, useInitialData());
   return useDocsWriter(props, {
     idLabel: 'tutorial',
+    label: 'write-tutorial',
     instructions,
     skills: [mdocConventions, tutorialStructure, tutorialChecklist],
     tools: [
