@@ -1,4 +1,5 @@
 import { defineTool } from '@flue/runtime';
+import { getRepoPath } from '../shared/run-context.ts';
 import * as v from 'valibot';
 import { sourceRef } from './research-data-type.ts';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
@@ -128,7 +129,7 @@ export const researchModule = defineTool({
       };
     }
 
-    const repoPath = process.env.REPO_PATH!;
+    const repoPath = getRepoPath();
     // Namespace the cache topic by document kind so a module-ref run and a
     // data-type-ref run for the same name never collide (their schemas differ).
     const cacheTopic = `module-ref::${data.moduleName}`;

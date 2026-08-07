@@ -1,4 +1,5 @@
 import { defineTool } from '@flue/runtime';
+import { getRepoPath } from '../shared/run-context.ts';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
@@ -106,7 +107,7 @@ export const researchTutorialTopic = defineTool({
       };
     }
 
-    const repoPath = process.env.REPO_PATH!;
+    const repoPath = getRepoPath();
     const cached = readResearchCache(repoPath, data.topic);
     if (cached) {
       const parsed = v.safeParse(researchSchema, cached);

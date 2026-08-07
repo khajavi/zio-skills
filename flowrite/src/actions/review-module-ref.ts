@@ -1,4 +1,5 @@
 import { defineTool } from '@flue/runtime';
+import { getRepoPath } from '../shared/run-context.ts';
 import * as v from 'valibot';
 import { toKebabCase } from './write-data-type-reference.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
@@ -50,7 +51,7 @@ export const reviewModuleRef = defineTool({
         // in the single page (data.path). Hierarchical: each type is its own
         // subpage under docs/reference/<module>/<type>.md.
         extraGates: async () => {
-          const repoPath = process.env.REPO_PATH!;
+          const repoPath = getRepoPath();
           return Promise.all(
             data.typeNames.map(async (typeName) => {
               const pagePath =

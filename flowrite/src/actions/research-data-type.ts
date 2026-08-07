@@ -1,4 +1,5 @@
 import { defineTool } from '@flue/runtime';
+import { getRepoPath } from '../shared/run-context.ts';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
@@ -159,7 +160,7 @@ export const researchDataType = defineTool({
       };
     }
 
-    const repoPath = process.env.REPO_PATH!;
+    const repoPath = getRepoPath();
     // Namespace the cache topic by document kind so a data-type-ref run and a
     // tutorial run for the same type name never collide (their schemas differ).
     const cacheTopic = `data-type-ref::${data.typeName}`;

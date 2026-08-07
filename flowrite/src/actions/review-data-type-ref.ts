@@ -1,4 +1,5 @@
 import { defineTool } from '@flue/runtime';
+import { getRepoPath } from '../shared/run-context.ts';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
@@ -44,7 +45,7 @@ export const reviewDataTypeRef = defineTool({
         // member? Folded into review as a gate, not a separate step. Heuristic
         // (see computeMethodCoverage), so a non-empty `missing` is a flag to check.
         extraGates: async () => {
-          const coverage = await computeMethodCoverage(process.env.REPO_PATH!, data.typeName, data.path);
+          const coverage = await computeMethodCoverage(getRepoPath(), data.typeName, data.path);
           return [
             {
               item: `Method coverage (${coverage.coveragePercent}%)`,
