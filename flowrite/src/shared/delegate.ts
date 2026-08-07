@@ -3,8 +3,13 @@ import type * as v from 'valibot';
 
 // "conversation stream contract": a corrupted subagent conversation record
 // mid-task; a fresh attempt starts clean.
+//
+// "request timed out" / "stream idle" cover a provider stream that goes silent.
+// The runtime classes that as a transient provider error and retries the turn under
+// its own error budget, but the phrasing matched none of the patterns below, so a
+// stalled delegation failed the whole phase instead of being retried once.
 const TRANSIENT =
-  /connection error|econnreset|etimedout|fetch failed|socket hang up|conversation stream contract/i;
+  /connection error|econnreset|etimedout|fetch failed|socket hang up|conversation stream contract|request timed out|stream idle/i;
 
 /**
  * A harness prompt has no durable retry (see concepts/durable-execution: "not
