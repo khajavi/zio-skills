@@ -1,21 +1,27 @@
 ## Writing Flue Agents
 Read https://flueframework.com/start.md then help create flue agents
 
-## Never commit tinyoptics documentation
+## Never commit anything under fixtures/tinyoptics/
 
-`fixtures/tinyoptics/docs/` is deliberately sparse — a handful of small starter
-files that give a documentation agent somewhere to write. It is the from-scratch
-baseline every run is measured against, so committing a run's output destroys the
-fixture: later runs no longer exercise the empty-start path, and quality can no
+The fixture is a from-scratch baseline: sparse starter docs, no generated examples,
+a clean `build.sbt`. Every run is measured against it, so committing a run's output
+destroys it — later runs stop exercising the empty-start path, and quality can no
 longer be judged against a known baseline.
 
-✅ `bash scripts/archive-docs.sh <log> <label>` — snapshots the run to
-`fixtures/tinyoptics-archive/<label>-turn<N>/` and resets the fixture
-❌ `git add -A` after a run — sweeps generated pages into whatever you commit next
+A run writes far more than docs. All of it is output, none of it is committed:
 
-Never stage anything under `fixtures/tinyoptics/docs/`. Stage source paths
-explicitly (`git add src/ README.md`) rather than using `git add -A` while a run's
-output is in the working tree.
+- `docs/` — pages, `index.md`, `sidebars.js`
+- `examples/` and `tinyoptics-examples/` — generated `.scala`, `project/build.properties`
+- `build.sbt` — the integrate phase edits it (`mdocVariables`, subprojects)
+
+✅ `bash scripts/archive-docs.sh <log> <label>` — snapshots the whole run to
+`fixtures/tinyoptics-archive/<label>-turn<N>/` and resets the fixture
+❌ `git add -A` after a run — sweeps generated pages, examples and build edits into
+whatever you commit next
+
+Treat `fixtures/tinyoptics/` as read-only from git's point of view. Archive first,
+then stage source paths explicitly (`git add src/ README.md`). Never `git add -A`
+while run output is in the working tree — it has already caused two history rewrites.
 
 ## Autonomous Agent Best Practices
 
