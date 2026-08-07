@@ -48,18 +48,51 @@ On this machine flue also needs `NODE_USE_ENV_PROXY=1` and
 
 | Pipeline | Status |
 |---|---|
-| data-type-ref | Completed once: 11KB page, mdoc 0 errors, 100% method coverage, 190 turns. **Predates the sandbox fix**, so it ran without the target's `AGENTS.md` in context — re-run before trusting it. |
+| data-type-ref | **Re-run post-fix and completed** (Lens, 2026-08-07): 15KB page, mdoc 0 errors, method coverage 100%, signatures match source. 541 turns, $5.2331. Style gate fails with 26 unresolved violations — see below, this is pre-existing. |
 | module-ref | Never completed. Reached the hierarchical per-type subpages (4× research + 4× write), which is the least-tested branch, then was stopped. |
 | tutorial | Never run. `examples_builder` and the decoupled sbt examples build are therefore unexercised. |
 
-Cost baseline for comparison, from `fixtures/tinyoptics-archive/` (haiku-tier runs
-are the ~$0.008/turn ones): data-type-ref 225 turns/$1.80; module-ref 281/$2.26 and
-359/$2.85. No trustworthy 2.x figure exists yet — the one completed run predates the
-usage-reporting fix.
+## Cost: 2.x is materially more expensive
 
-Expect 2.x to cost more: every phase now routes through a harness scratch
-conversation that must itself decide to delegate, roughly 8 extra turns per
-delegation, so the overhead scales with delegation count and hits module-ref hardest.
+First trustworthy measurement, data-type-ref on the same fixture at the same haiku
+tier:
+
+| | Turns | Cost |
+|---|---|---|
+| beta `write-data-type-ref-turn4` | 225 | $1.80 |
+| beta `write-data-type-ref-turn1` | 420 | $3.58 |
+| **2.x (Lens)** | **541** | **$5.23** |
+
+Against the best comparable beta run that is **2.4× the turns and 2.9× the cost**;
+against beta's worst, 1.29× and 1.46×. Module-ref baselines for later comparison:
+281 turns/$2.26 and 359/$2.85.
+
+The mechanism is structural, not a bug. Every phase now routes through a harness
+scratch conversation that must itself decide to delegate — roughly 8 extra turns per
+delegation — so overhead scales with delegation count. The Lens run made 28
+delegations. Module-ref delegates most, so expect it to be hit hardest.
+
+If this matters, the lever is `src/shared/delegate.ts`: a tighter lead-in that gets
+the scratch conversation to delegate in one turn instead of several would cut the
+per-delegation overhead directly.
+
+## Output quality is comparable, and one agent claim is not trustworthy
+
+Hard gates pass: mdoc 0 errors, method coverage 100%, all signatures match source.
+
+The style gate does not: all four review calls returned `passed=false` with 26
+unresolved writing-style violations (rules 8, 16, 17, 19, 22, 28). This is **not a
+migration regression** — beta's `turn4` ended the same way with 84 such failures, so
+2.x is cleaner here. It follows from `MAX_FIX_ROUNDS=1` and `MAX_REVIEW_CALLS=1`,
+which are designed to finish with known issues.
+
+What is worth fixing independently: the agent's closing summary asserted
+"Comprehensive fixes addressed all 24 initial violations; final page meets
+writing-style conventions… ready for publication." Its own review data says
+`passed=false` with 26 violations outstanding. The review cap explicitly instructs it
+to "report them in your summary"; it claimed success instead, and also called review
+four times after being told not to. Do not take a run's retrospective at face value —
+check the review payloads.
 
 ## Bugs found by running, not by typechecking
 
