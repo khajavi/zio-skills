@@ -3,7 +3,7 @@ import { type AgentProps, useInitialData } from '@flue/runtime';
 import * as v from 'valibot';
 
 import instructions from './module-ref-writer.md';
-import { docsWriterFields, useDocsWriter } from '../shared/docs-writer.ts';
+import { docsWriterDurability, docsWriterFields, useDocsWriter } from '../shared/docs-writer.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
 
 // skills — the module-reference structure + checklist, plus mdoc conventions
@@ -84,3 +84,4 @@ export function ModuleRefWriter(props: AgentProps) {
 }
 
 ModuleRefWriter.initialData = initialData;
+ModuleRefWriter.durability = docsWriterDurability;

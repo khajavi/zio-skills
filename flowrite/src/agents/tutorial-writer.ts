@@ -3,7 +3,7 @@ import { type AgentProps, useInitialData } from '@flue/runtime';
 import * as v from 'valibot';
 
 import instructions from './tutorial-writer.md';
-import { docsWriterFields, useDocsWriter } from '../shared/docs-writer.ts';
+import { docsWriterDurability, docsWriterFields, useDocsWriter } from '../shared/docs-writer.ts';
 import { installVerboseObserver } from '../shared/verbose-observer.ts';
 
 // skills — writing-style comes from the shared baseline.
@@ -58,3 +58,4 @@ export function TutorialWriter(props: AgentProps) {
 }
 
 TutorialWriter.initialData = initialData;
+TutorialWriter.durability = docsWriterDurability;

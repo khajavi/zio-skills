@@ -80,6 +80,23 @@ export const docsWriterFields = {
 const runFacts = v.looseObject(docsWriterFields);
 
 /**
+ * Submission durability for every docs writer, assigned to each writer's
+ * `durability` static.
+ *
+ * Flue 2 applies a one-hour submission deadline by default, which beta had no
+ * equivalent of — flowrite never configured durability because nothing timed a run
+ * out. A full pipeline is research → design → write → per-type subpages → examples
+ * → mdoc → integrate → review, driving sbt throughout; a module reference with four
+ * core types blew straight past the hour and settled `failed` mid-review. Six hours
+ * is the runtime's own suggested figure for a long-running agent.
+ *
+ * `maxAttempts` is 2 rather than the default 10: an attempt here is a full,
+ * expensive pipeline re-run, so one automatic retry after a crash is worth having
+ * and nine are not. A timeout is terminal and is not retried either way.
+ */
+export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempts: 2 };
+
+/**
  * Operational directives identical for every docs writer, appended after the
  * caller's own run directive. Lived in each deleted workflow's `buildPrompt`;
  * they are run-invariant, so they belong in the agent rather than in the
