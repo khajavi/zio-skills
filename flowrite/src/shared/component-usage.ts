@@ -16,7 +16,12 @@ import { writeModuleOverview } from '../actions/write-module-overview.ts';
 import { integrateModuleReference } from '../actions/integrate-module.ts';
 import { reviewModuleRef } from '../actions/review-module-ref.ts';
 
-/** Every agent's own actions — exposed to the model as tools but delegate their real work. */
+/**
+ * Every agent's own phase tools — model-callable, but delegating their real work
+ * to a role. Kept under the 'action' category label so a report stays comparable
+ * with archived beta-era runs, though Flue 2 has no Actions concept: these are
+ * ordinary `harness: true` tools now.
+ */
 const ACTION_NAMES = new Set(
   [
     researchTutorialTopic,
@@ -69,12 +74,19 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
  * (action/subagent/tool/skill/agent), for a final per-run breakdown alongside
  * the aggregate total from `trackTokenUsage`.
  *
- * Call counts come from `tool_start` (actions, repo/generic tools, skill loads)
- * and `task_start` (subagent delegation via `event.agent`). Token usage comes
- * from `turn` events, attributed by the envelope's `session` name — the active
- * subagent's profile name inside a delegated child session, or the top agent's
- * name at the top level — so actions/tools never double-count the tokens their
- * delegated subagent already accounts for.
+ * Call counts come from `tool_start` (phase tools, repo/generic tools, skill
+ * loads) and `task_start` (role delegation via `event.agent`). Token usage comes
+ * from `turn` events, attributed by the most specific envelope field available —
+ * so phase tools never double-count the tokens their delegated role already
+ * accounts for.
+ *
+ * Attribution order, most specific first:
+ *  - `taskId` mapped back to the role recorded at `task_start` → that role.
+ *  - `harness` → the phase tool whose harness opened the conversation. Flue 2
+ *    routes every phase through `harness.prompt()`, and those turns carry
+ *    `harness` with no `session`; without this branch they would be dropped and
+ *    the delegation-deciding turns would vanish from the cost report.
+ *  - `session`, then `agentName` → the top-level writer.
  */
 export function trackComponentUsage(): ComponentUsageTracker {
   const components = new Map<string, ComponentUsage>();
@@ -106,9 +118,18 @@ export function trackComponentUsage(): ComponentUsageTracker {
     if (event.type === 'turn') {
       const u = event.response.usage;
       if (!u) return;
-      const name = (event.taskId && subagentByTaskId.get(event.taskId)) || event.session;
+      const role = event.taskId ? subagentByTaskId.get(event.taskId) : undefined;
+      const name = role ?? event.harness ?? event.session ?? event.agentName;
       if (!name) return;
-      const category: ComponentCategory = subagentByTaskId.has(event.taskId ?? '') ? 'subagent' : 'agent';
+      const category: ComponentCategory = role
+        ? 'subagent'
+        : event.harness
+          ? // A harness only exists inside a tool call, so its turns belong to
+            // that phase tool — 'action' when it is one of ours, else 'tool'.
+            ACTION_NAMES.has(event.harness)
+            ? 'action'
+            : 'tool'
+          : 'agent';
       const entry = entryFor(components, category, name);
       entry.tokens += u.totalTokens;
       entry.cost += u.cost.total;
