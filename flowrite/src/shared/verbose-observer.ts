@@ -90,10 +90,18 @@ export function installVerboseObserver(): void {
 
       case 'turn': {
         if (duplicate(event.type, event.turnId)) return;
-        // `harness` names the phase tool whose scratch conversation ran this turn.
-        const where = event.harness ? `harness=${event.harness}` : `session=${event.session ?? 'root'}`;
+        // A delegated role's turns inherit the parent's harness, so `harness` alone
+        // does not distinguish overhead from real work — `taskId` is what marks a
+        // turn as belonging to a delegate, and is what cost attribution keys on.
+        const where = [
+          event.harness ? `harness=${event.harness}` : undefined,
+          event.session ? `session=${event.session}` : undefined,
+          event.taskId ? `taskId=${event.taskId}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(' ');
         console.error(
-          `[verbose] turn ${where} model=${event.request.requestedModel} ` +
+          `[verbose] turn ${where || 'root'} model=${event.request.requestedModel} ` +
             `effort=${event.request.reasoningLevel} tokens=${event.response.usage?.totalTokens ?? 0}`,
         );
         return;
