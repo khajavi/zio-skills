@@ -156,7 +156,13 @@ export function useDocsWriter(
   // Owns useModel, so nothing here may call it again — it throws on a second call
   // in one render.
   useDocsAuthorBase();
-  useSandbox(local(), { cwd: parsed.output.projectPath });
+  // cwd belongs to local(), not to useSandbox. local()'s cwd anchors the sandbox on
+  // the host and defaults to process.cwd(); useSandbox's cwd only picks a directory
+  // *inside* an already-anchored environment. Passing it to useSandbox left the
+  // sandbox rooted in flowrite itself, so workspace discovery — AGENTS.md and
+  // .agents/skills/ from the session cwd — fed the writer flowrite's own AGENTS.md
+  // instead of the checkout it is documenting.
+  useSandbox(local({ cwd: parsed.output.projectPath }));
 
   for (const skill of opts.skills) useSkill(skill);
   for (const tool of opts.tools) useTool(tool);
