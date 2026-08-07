@@ -1,6 +1,22 @@
 ## Writing Flue Agents
 Read https://flueframework.com/start.md then help create flue agents
 
+## Never commit tinyoptics documentation
+
+`fixtures/tinyoptics/docs/` is deliberately sparse — a handful of small starter
+files that give a documentation agent somewhere to write. It is the from-scratch
+baseline every run is measured against, so committing a run's output destroys the
+fixture: later runs no longer exercise the empty-start path, and quality can no
+longer be judged against a known baseline.
+
+✅ `bash scripts/archive-docs.sh <log> <label>` — snapshots the run to
+`fixtures/tinyoptics-archive/<label>-turn<N>/` and resets the fixture
+❌ `git add -A` after a run — sweeps generated pages into whatever you commit next
+
+Never stage anything under `fixtures/tinyoptics/docs/`. Stage source paths
+explicitly (`git add src/ README.md`) rather than using `git add -A` while a run's
+output is in the working tree.
+
 ## Autonomous Agent Best Practices
 
 ### 1. Set the stage, don't script the steps
