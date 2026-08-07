@@ -3,6 +3,8 @@
 !.env.*.example
 node_modules/
 dist/
+.flue-vite/
+.flue-vite.wrangler.jsonc
 fixtures/tinyoptics-archive/
 fixtures/tinyoptics/website/docs/*
 .flowrite/
