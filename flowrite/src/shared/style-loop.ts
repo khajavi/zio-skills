@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
+import { delegate } from './delegate.ts';
 // Single source of truth for the 25 rules, shared with the writing-style
 // skill (its SKILL.md points here; only the SKILL.md basename itself is
 // barred from markdown imports by the build).
@@ -39,30 +40,6 @@ const ruleGroupIndex = (rule: number): number => RULE_TO_GROUP.get(rule) ?? 0;
 // Default 1 fix pass; override per run with MAX_FIX_ROUNDS=n.
 const MAX_FIX_ROUNDS = Number(process.env.MAX_FIX_ROUNDS ?? 1);
 
-// "conversation stream contract": flue beta.9 sometimes corrupts a subagent's
-// conversation record mid-task; a fresh session.task attempt starts clean.
-const TRANSIENT =
-  /connection error|econnreset|etimedout|fetch failed|socket hang up|conversation stream contract/i;
-
-/**
- * Programmatic session.task calls have no durable retry (see
- * concepts/durable-execution: "not recovered this way"), so one transient
- * provider drop would fail the whole action. Retry transient transport
- * errors a couple of times; rethrow everything else.
- */
-export async function withTransientRetry<T>(log: FlueLogger, label: string, op: () => Promise<T>): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await op();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (attempt >= 3 || !TRANSIENT.test(message)) throw error;
-      log.info(`${label} failed with transient error (attempt ${attempt}/3), retrying: ${message}`);
-      await new Promise((resolve) => setTimeout(resolve, attempt * 5_000));
-    }
-  }
-}
-
 /**
  * Detect and fix writing-style violations in a documentation page.
  *
@@ -80,10 +57,8 @@ export async function runStyleLoop(
   path: string,
   log: FlueLogger,
 ): Promise<{ passed: boolean; rounds: number; remaining: Violation[] }> {
-  const session = await harness.session();
-
   const detect = async (round: number): Promise<Violation[]> => {
-    const content = await harness.fs.readFile(path);
+    const content = await harness.sandbox.readFile(path);
     const numbered = content
       .split('\n')
       .map((line, i) => `${i + 1}: ${line}`)
@@ -92,21 +67,24 @@ export async function runStyleLoop(
     const violations: Violation[] = [];
     for (const group of RULE_GROUPS) {
       const ruleList = group.map((r) => `${r.n}. ${r.text}`).join('\n');
-      // Delegates to a no-action subagent — see design-tutorial-structure.ts
-      // for why bare harness.session() on the calling agent is unsafe here.
-      const { data } = await withTransientRetry(log, `style_checker rules ${group[0].n}-${group[group.length - 1].n}`, () =>
-        session.task(
-          [
-            `Check the page below against ONLY these writing style rules:`,
-            ``,
-            ruleList,
-            ``,
-            `--- PAGE (${path}, with line numbers) ---`,
-            numbered,
-          ].join('\n'),
-          { agent: 'style_checker', result: checkResultSchema },
-        ),
-      );
+      // Delegates to a narrow role that declares no phase tools — see
+      // design-tutorial-structure.ts for why prompting the calling agent's own
+      // conversation is unsafe here.
+      const data = await delegate({
+        harness,
+        log,
+        label: `style_checker rules ${group[0].n}-${group[group.length - 1].n}`,
+        role: 'style_checker',
+        result: checkResultSchema,
+        prompt: [
+          `Check the page below against ONLY these writing style rules:`,
+          ``,
+          ruleList,
+          ``,
+          `--- PAGE (${path}, with line numbers) ---`,
+          numbered,
+        ].join('\n'),
+      });
       violations.push(...data.violations);
       log.info(
         `Style check round ${round}, rules ${group[0].n}-${group[group.length - 1].n}: ` +
@@ -140,17 +118,19 @@ export async function runStyleLoop(
     for (const [gi, groupViolations] of batches) {
       const first = RULE_GROUPS[gi][0].n;
       const last = RULE_GROUPS[gi][RULE_GROUPS[gi].length - 1].n;
-      await withTransientRetry(log, `style_fixer rules ${first}-${last}`, () =>
-        session.task(
-          [
-            `Fix ALL of these writing style violations in ${path} in a single pass —`,
-            `read the file once, apply every fix below, then finish:`,
-            ``,
-            ...groupViolations.map((x) => `- rule ${x.rule} @ line ${x.line}: ${x.problem}`),
-          ].join('\n'),
-          { agent: 'style_fixer', result: v.object({ summary: v.string() }) },
-        ),
-      );
+      await delegate({
+        harness,
+        log,
+        label: `style_fixer rules ${first}-${last}`,
+        role: 'style_fixer',
+        result: v.object({ summary: v.string() }),
+        prompt: [
+          `Fix ALL of these writing style violations in ${path} in a single pass —`,
+          `read the file once, apply every fix below, then finish:`,
+          ``,
+          ...groupViolations.map((x) => `- rule ${x.rule} @ line ${x.line}: ${x.problem}`),
+        ].join('\n'),
+      });
       log.info(`Style fix pass rules ${first}-${last}: ${groupViolations.length} violation(s)`);
     }
   }
