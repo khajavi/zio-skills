@@ -55,11 +55,18 @@ const skipPhase = v.picklist(['research', 'design', 'write', 'write-examples', '
  *
  * Replaces the deleted workflows' input schemas. Validated once at the instance's
  * first contact, before anything durable is admitted, and read back with
- * `useInitialData()` — which is why the REPO_PATH/SKIP_PHASES/USER_PROMPT env
- * channel and its request-cloning middleware are gone (see run-context.ts).
+ * `useInitialData()` — which is what retired the SKIP_PHASES/USER_PROMPT env channel
+ * and its request-cloning middleware (see run-context.ts). REPO_PATH survives, not
+ * as that channel but as an ordinary override for `projectPath`.
  */
 export const docsWriterFields = {
-  projectPath: v.pipe(v.string(), v.description('Absolute path to the ZIO library checkout to document')),
+  projectPath: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      'Absolute path to the ZIO library checkout to document. Omit to fall back to ' +
+        'REPO_PATH, then to the process working directory.',
+    ),
+  ),
   userPrompt: v.pipe(
     v.optional(v.string()),
     v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
@@ -139,16 +146,24 @@ export function useDocsWriter(
   if (!parsed.success) {
     throw new Error(
       `Creation data is required before running (${opts.idLabel} id: ${props.id}) — ` +
-        `pass it with \`flue run --data '{"projectPath":"…"}'\`. ` +
+        `pass it with \`flue run --data '{"typeName":"…"}'\`. ` +
         `Validation said: ${parsed.issues.map((i) => i.message).join('; ')}`,
     );
   }
+
+  // The checkout the writer reads and edits. local() binds it to this host with no
+  // isolation, so keep it pointed at a directory you are willing to let the model
+  // change. Creation data is the per-run input; REPO_PATH overrides when it is
+  // omitted, and the process working directory is the last resort — so running from
+  // inside a library checkout needs no path at all. Explicit --data wins over the
+  // env var, since silently overriding a stated path would be the greater surprise.
+  const projectPath = parsed.output.projectPath ?? process.env.REPO_PATH ?? process.cwd();
 
   // Publish the run's facts for the phase tools and role renders, neither of which
   // can reach useInitialData() (it returns undefined in a subagent render).
   // Idempotent, so repeating it on every render is harmless.
   setRunContext({
-    projectPath: parsed.output.projectPath,
+    projectPath,
     userPrompt: parsed.output.userPrompt,
     skipPhases: parsed.output.skipPhases,
   });
@@ -162,7 +177,7 @@ export function useDocsWriter(
   // sandbox rooted in flowrite itself, so workspace discovery — AGENTS.md and
   // .agents/skills/ from the session cwd — fed the writer flowrite's own AGENTS.md
   // instead of the checkout it is documenting.
-  useSandbox(local({ cwd: parsed.output.projectPath }));
+  useSandbox(local({ cwd: projectPath }));
 
   for (const skill of opts.skills) useSkill(skill);
   for (const tool of opts.tools) useTool(tool);

@@ -80,15 +80,19 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
  * accounts for.
  *
  * Attribution order, most specific first:
- *  - `taskId` mapped back to the role recorded at `task_start` → that role.
- *  - `harness` set → the phase tool currently on the call stack. Flue 2 routes
- *    every phase through `harness.prompt()`, and those turns carry `harness` with
- *    no `session`; without this branch they would be dropped and the
- *    delegation-deciding turns would vanish from the cost report. The field holds
- *    the harness NAME (always "default"), not the tool's, so the tool comes from
- *    an in-flight tool_start/tool stack instead — accurate here because the writer
- *    runs one phase at a time.
- *  - `session`, then `agentName` → the top-level writer.
+ *  - `taskId` mapped back to the role recorded at `task_start` → that role. Verified
+ *    against a real run: a delegate's turns do carry `taskId`, so role cost is exact.
+ *  - otherwise `harness`, `session`, then `agentName` → the writer itself. Every
+ *    turn in a run carries `harness` (a delegate inherits the parent's), and the
+ *    field holds the harness's own name — "default" — not the owning tool's, so
+ *    harness turns cannot be split per phase from the event alone. They are the
+ *    writer's own reasoning, including each decision to delegate, so they aggregate
+ *    under the writer. An earlier attempt to bind them to the in-flight tool via a
+ *    tool_start/tool stack did not hold: the phase tool came back with zero tokens,
+ *    because the turn events do not arrive between its start and end in this stream.
+ *
+ * The totals reconcile: role tokens plus writer tokens equal the run total, which is
+ * the property that matters — no turn goes uncounted.
  */
 export function trackComponentUsage(): ComponentUsageTracker {
   const components = new Map<string, ComponentUsage>();
@@ -96,13 +100,8 @@ export function trackComponentUsage(): ComponentUsageTracker {
   // the subagent's own name, in `event.session` — map taskId back to the
   // subagent name recorded at task_start so turn tokens land on the right entry.
   const subagentByTaskId = new Map<string, string>();
-  // In-flight tool calls, innermost last. A harness exists only for the duration
-  // of the tool call that opened it, so the tool on top owns any harness turn.
-  const toolStack: string[] = [];
-
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start') {
-      toolStack.push(event.toolName);
       const category: ComponentCategory = PHASE_TOOLS.has(event.toolName)
         ? 'phase'
         : event.toolName === 'activate_skill'
@@ -110,12 +109,6 @@ export function trackComponentUsage(): ComponentUsageTracker {
           : 'tool';
       const name = category === 'skill' ? String((event.args as any)?.name ?? 'unknown') : event.toolName;
       entryFor(components, category, name).calls += 1;
-      return;
-    }
-
-    if (event.type === 'tool') {
-      const at = toolStack.lastIndexOf(event.toolName);
-      if (at !== -1) toolStack.splice(at, 1);
       return;
     }
 
@@ -131,18 +124,9 @@ export function trackComponentUsage(): ComponentUsageTracker {
       const u = event.response.usage;
       if (!u) return;
       const role = event.taskId ? subagentByTaskId.get(event.taskId) : undefined;
-      // event.harness is the harness's own name ("default"), so the owning tool
-      // comes from the call stack instead.
-      const owningTool = event.harness ? toolStack[toolStack.length - 1] : undefined;
-      const name = role ?? owningTool ?? event.session ?? event.agentName;
+      const name = role ?? event.harness ?? event.session ?? event.agentName;
       if (!name) return;
-      const category: ComponentCategory = role
-        ? 'subagent'
-        : owningTool
-          ? PHASE_TOOLS.has(owningTool)
-            ? 'phase'
-            : 'tool'
-          : 'agent';
+      const category: ComponentCategory = role ? 'subagent' : 'agent';
       const entry = entryFor(components, category, name);
       entry.tokens += u.totalTokens;
       entry.cost += u.cost.total;
