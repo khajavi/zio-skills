@@ -7,7 +7,7 @@ import { computeMethodCoverage } from '../tools/check-method-coverage.ts';
 // The data-type-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
-import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md' with { type: 'markdown' };
+import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md';
 
 /**
  * Evaluate a written data type reference page. The review phase is the single

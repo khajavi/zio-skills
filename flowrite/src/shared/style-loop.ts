@@ -3,7 +3,7 @@ import type { FlueHarness, FlueLogger } from '@flue/runtime';
 // Single source of truth for the 25 rules, shared with the writing-style
 // skill (its SKILL.md points here; only the SKILL.md basename itself is
 // barred from markdown imports by the build).
-import rulesMarkdown from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import rulesMarkdown from '../skills/writing-style/references/rules.md';
 
 export const violationSchema = v.object({
   rule: v.pipe(v.number(), v.description('The violated rule number')),

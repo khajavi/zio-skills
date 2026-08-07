@@ -1,14 +1,14 @@
 import { type AgentRouteHandler } from '@flue/runtime';
 
-import instructions from './module-ref-writer.md' with { type: 'markdown' };
+import instructions from './module-ref-writer.md';
 import { defineDocsWriter } from '../shared/docs-writer.ts';
 
 // skills — the module-reference structure + checklist, plus mdoc conventions
 // (writing-style comes from the profile). Same skills whose reference/*.md the
 // actions inject into the drafter/designer/reviewer at their call sites.
-import mdocConventions from '../skills/mdoc-conventions/SKILL.md' with { type: 'skill' };
-import moduleRefStructure from '../skills/module-ref-structure/SKILL.md' with { type: 'skill' };
-import moduleRefChecklist from '../skills/module-ref-checklist/SKILL.md' with { type: 'skill' };
+import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
+import moduleRefStructure from '../skills/module-ref-structure/SKILL.md';
+import moduleRefChecklist from '../skills/module-ref-checklist/SKILL.md';
 
 // actions — the module phases, plus the two reused data-type-ref actions that
 // build each per-type subpage in the hierarchical layout.

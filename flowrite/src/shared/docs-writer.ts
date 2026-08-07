@@ -2,22 +2,22 @@ import { defineAgent, type AgentRuntimeConfig } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 
 // reusable baseline profile (supplies model + the writing-style skill)
-import { docsAuthorBase } from '../profiles/docs-author-base.ts';
+import { docsAuthorBase } from '../subagents/docs-author-base.ts';
 
 // subagents (agent profiles) — the generic, document-kind-neutral role profiles
 // shared by every docs writer; the kind-specific focus/schema/checklist is
 // supplied by each agent's own actions at the delegation call site. The
 // design/write/review actions delegate to narrow, no-action profiles to avoid
 // the self-recursion hazard of harness.session() on this same agent.
-import { researcher } from '../profiles/researcher.ts';
-import { designer } from '../profiles/designer.ts';
-import { drafter } from '../profiles/drafter.ts';
-import { reviewer } from '../profiles/reviewer.ts';
-import { examplesBuilder } from '../profiles/examples-builder.ts';
-import { docsIntegrator } from '../profiles/docs-integrator.ts';
-import { reviewResolver } from '../profiles/review-resolver.ts';
-import { styleChecker } from '../profiles/style-checker.ts';
-import { styleFixer } from '../profiles/style-fixer.ts';
+import { researcher } from '../subagents/researcher.ts';
+import { designer } from '../subagents/designer.ts';
+import { drafter } from '../subagents/drafter.ts';
+import { reviewer } from '../subagents/reviewer.ts';
+import { examplesBuilder } from '../subagents/examples-builder.ts';
+import { docsIntegrator } from '../subagents/docs-integrator.ts';
+import { reviewResolver } from '../subagents/review-resolver.ts';
+import { styleChecker } from '../subagents/style-checker.ts';
+import { styleFixer } from '../subagents/style-fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 import { TIERS } from './models.ts';

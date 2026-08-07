@@ -1,12 +1,12 @@
 import { type AgentRouteHandler } from '@flue/runtime';
 
-import instructions from './tutorial-writer.md' with { type: 'markdown' };
+import instructions from './tutorial-writer.md';
 import { defineDocsWriter } from '../shared/docs-writer.ts';
 
 // skills — writing-style comes from the profile.
-import mdocConventions from '../skills/mdoc-conventions/SKILL.md' with { type: 'skill' };
-import tutorialStructure from '../skills/tutorial-structure/SKILL.md' with { type: 'skill' };
-import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md' with { type: 'skill' };
+import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
+import tutorialStructure from '../skills/tutorial-structure/SKILL.md';
+import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md';
 
 // actions
 import { researchTutorialTopic } from '../actions/research-tutorial-topic.ts';

@@ -8,7 +8,7 @@ import { computeMethodCoverage } from '../tools/check-method-coverage.ts';
 // The module-ref-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // data-type-ref; the SKILL.md points here.
-import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md' with { type: 'markdown' };
+import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md';
 
 /**
  * Evaluate a written module reference. The cost-bounded quality gate: it runs

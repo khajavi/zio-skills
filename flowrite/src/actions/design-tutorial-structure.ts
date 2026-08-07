@@ -6,7 +6,7 @@ import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
-import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
+import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
 
 export const structureSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),

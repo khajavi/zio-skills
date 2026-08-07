@@ -6,7 +6,7 @@ import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as data-type-ref.
-import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md' with { type: 'markdown' };
+import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
 
 // The module-reference structural plan. Two things are genuine per-module
 // decisions the drafter would otherwise improvise: (1) the layout (flat single

@@ -7,13 +7,13 @@ import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The data-type-ref-structure skill's content, injected into the generic drafter's
 // task (skills can't vary per session.task call). Same single-source-of-truth
 // split as writing-style/references/rules.md; the SKILL.md points here.
-import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
+import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
 // TEMPORARY: flue does not package nested skill files, so the drafter cannot read
 // writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
 // https://github.com/withastro/flue/discussions/100. We inject the rules into the
 // drafter prompt at compile time instead. REVERT once flue supports nested skills:
 // drop this import + injection and let the writing-style skill supply the rules.
-import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 

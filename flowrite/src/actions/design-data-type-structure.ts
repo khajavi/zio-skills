@@ -6,7 +6,7 @@ import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 // Injected into the generic designer's task (skills can't vary per session.task
 // call); the SKILL.md points here. Same source-of-truth split as rules.md.
-import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md' with { type: 'markdown' };
+import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
 
 // The reference-page structural plan. The 12-section template is fixed, but two
 // things are genuinely per-type decisions that the drafter otherwise improvises

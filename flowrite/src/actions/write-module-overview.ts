@@ -5,10 +5,10 @@ import { moduleStructureSchema } from './design-module-structure.ts';
 import { toKebabCase } from './write-data-type-reference.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
-import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md' with { type: 'markdown' };
+import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
 // TEMP (flue nested-skill limitation, see write-data-type-reference.ts): inject
 // writing-style rules into the drafter prompt until flue packages nested skills.
-import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 

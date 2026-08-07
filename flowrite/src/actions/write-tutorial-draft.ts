@@ -8,13 +8,13 @@ import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // task (a subagent's skills can't vary per session.task call, so the kind-specific
 // template rides in the prompt). Same single-source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
-import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md' with { type: 'markdown' };
+import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
 // TEMPORARY: flue does not package nested skill files, so the drafter cannot read
 // writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
 // https://github.com/withastro/flue/discussions/100. We inject the rules into the
 // drafter prompt at compile time instead. REVERT once flue supports nested skills:
 // drop this import + injection and let the writing-style skill supply the rules.
-import writingStyleRules from '../skills/writing-style/references/rules.md' with { type: 'markdown' };
+import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
 import { withTransientRetry } from '../shared/style-loop.ts';
 

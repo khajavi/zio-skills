@@ -6,7 +6,7 @@ import { runCappedReview } from '../shared/review.ts';
 // The tutorial-checklist skill's content, injected into the generic reviewer's
 // task (skills can't vary per session.task call). Same source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
-import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md' with { type: 'markdown' };
+import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md';
 
 /**
  * Evaluate a written tutorial against the tutorial-checklist skill and report
