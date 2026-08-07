@@ -29,19 +29,22 @@ async function githubSlug(cwd: string, signal?: AbortSignal): Promise<string> {
  * ~65s sbt boot and the failure was swallowed). `gh` reads HTTPS_PROXY from the
  * process env, so it works behind a proxy without extra wiring.
  */
-export function createGhQueryTool(repoPath: string) {
+export function createGhQueryTool(resolveRepoPath: () => string) {
   return defineTool({
     name: 'gh_query',
     description:
       'Search the library GitHub issues and PRs for design rationale via the gh CLI.',
     input: v.object({ query: v.string() }),
     output: v.object({ output: v.string() }),
-    async run({ input, signal }) {
+    async run({ data, signal }) {
+      // Resolved per call, not at construction: a role module is imported long
+      // before the writer's render knows the checkout path.
+      const repoPath = resolveRepoPath();
       const slug = await githubSlug(repoPath, signal);
       const search = async (kind: 'issues' | 'prs') => {
         const { stdout } = await execFileAsync(
           'gh',
-          ['search', kind, '--repo', slug, input.query, '--limit', '15', '--json', 'number,title,url,state'],
+          ['search', kind, '--repo', slug, data.query, '--limit', '15', '--json', 'number,title,url,state'],
           { cwd: repoPath, signal, maxBuffer: 16 * 1024 * 1024 },
         );
         const rows = JSON.parse(stdout) as Array<{ number: number; title: string; url: string; state: string }>;
@@ -53,7 +56,7 @@ export function createGhQueryTool(repoPath: string) {
       // execFile rejects on non-zero exit, so a real gh failure propagates as an
       // error result (isError=true) instead of being silently returned as output.
       const [issues, prs] = await Promise.all([search('issues'), search('prs')]);
-      return { output: `${issues}\n\n${prs}` };
+      return { output: { output: `${issues}\n\n${prs}` } };
     },
   });
 }

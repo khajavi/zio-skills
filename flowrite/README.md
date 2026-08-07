@@ -26,18 +26,21 @@ a branch you write:
 
 ```ts
 // src/agents/data-type-ref-writer.ts
-export default defineAgent(({ id }) => ({
-  profile: docsAuthorBase,                 // model tier + the writing-style skill
-  instructions,                            // who it is — a Markdown file
-  sandbox: local(),                        // where it runs, safely
-  cwd: process.env.REPO_PATH,              // the library checkout to document
-  skills:   [mdocConventions, dataTypeStructure, dataTypeChecklist],
-  actions:  [researchDataType, writeDataTypeReference, verifyDataTypeCompliance,
+'use agent';
+export function DataTypeRefWriter(props: AgentProps) {
+  const facts = v.parse(initialData, useInitialData()); // the checkout + the type
+  return useDocsWriter(props, {
+    instructions,                            // who it is — a Markdown file
+    skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
+    tools:  [researchDataType, designDataTypeStructure, writeDataTypeReference,
              writeCompanionExamples, integrateDataTypeReference, reviewDataTypeRef],
-  subagents:[researcher, drafter, reviewer, examplesBuilder,
-             docsIntegrator, reviewResolver, styleChecker, styleFixer],
-  tools:    [createGhQueryTool(cwd), createMethodCoverageTool(cwd)],
-}));
+    runDirective: `Write a reference page for: ${facts.typeName}. …`,
+  });
+}
+DataTypeRefWriter.initialData = initialData;
+
+// useDocsWriter is a custom hook — it calls useModel/useSandbox/useSkill/useTool
+// and declares the nine shared roles with useSubagent.
 ```
 
 Notice what's *not* there: no "step 1 research, step 2 design, step 3 write"
@@ -51,22 +54,30 @@ The interesting engineering therefore moves out of `.ts` files and into:
 - **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
-- **actions** (`src/actions/*.ts`) — a research/write/verify/integrate step, each
-  delegating to a specialized subagent with a `valibot` result schema,
-- **subagents** (`src/profiles/*`) — generic roles (researcher, drafter, reviewer…)
-  reused across both the tutorial writer and the reference writer.
+- **phase tools** (`src/phases/*.ts`) — a research/write/verify/integrate step, each
+  delegating to a specialized role with a `valibot` result schema,
+- **roles** (`src/subagents/*`) — generic delegates (researcher, drafter, reviewer…)
+  reused across every writer.
 
 ## What's in the box
 
-| Agent | Writes | Workflow wrapper |
-|-------|--------|------------------|
-| `tutorial-writer` | Narrative, pedagogical guides with companion examples | `write-tutorial` |
-| `data-type-ref-writer` | Exhaustive, API-complete reference pages | `write-data-type-ref` |
+| Agent | Writes |
+|-------|--------|
+| `tutorial-writer` | Narrative, pedagogical guides with companion examples |
+| `data-type-ref-writer` | Exhaustive, API-complete reference pages |
+| `module-ref-writer` | Module narrative plus per-type coverage, flat or hierarchical |
 
-Each agent is wrapped by a **workflow** (`src/workflows/*.ts`) — a finite,
-schema-typed entry point for CI, scheduled, or batch runs. The workflow sets
-`REPO_PATH`, opens a session, prompts the agent to run the full flow, and captures
-a structured result plus a **run retrospective**.
+Each agent is its own finite, schema-typed entry point for CI, scheduled, or batch
+runs. Its `initialData` schema declares what a run needs, validated before anything
+durable is admitted:
+
+```bash
+flue run src/agents/data-type-ref-writer.ts --id dtr-Chunk -m "go" \
+  --data '{"projectPath":"/path/to/checkout","typeName":"Chunk"}'
+```
+
+The agent captures a structured result plus a **run retrospective** in its final
+reply.
 
 The `fixtures/tinyoptics/` directory is a small ZIO optics library (Lens, Prism,
 Optional) used as the test target — real Scala source with a real `sbt`/`mdoc`
@@ -94,9 +105,9 @@ The design decisions were about **context**, not control flow:
   so research needs an API-surface-shaped result schema (every constructor, every
   method with its real signature, every subtype), whereas tutorials use a
   pedagogical schema.
-- The generic role subagents (researcher, drafter, reviewer, …) could be shared
+- The generic delegate roles (researcher, drafter, reviewer, …) could be shared
   wholesale; the *document-kind-specific* focus (schema, structure template,
-  checklist) gets injected by the actions at each delegation call site.
+  checklist) gets injected by the phase tools at each delegation call site.
 - Every researched fact must carry a **source citation** (`path:L<start>-L<end>`)
   so the drafter can't hallucinate an API that isn't in the source.
 
@@ -110,13 +121,13 @@ Implementation is mostly Markdown and schemas:
 - Write the agent's identity in `src/agents/data-type-ref-writer.md`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
-- Write the actions (`research-data-type.ts`, `write-data-type-reference.ts`, …),
-  each defining a `valibot` result schema and delegating to a generic subagent
+- Write the phase tools (`research-data-type.ts`, `write-data-type-reference.ts`, …),
+  each defining a `valibot` result schema and delegating to a generic role
   with a kind-specific prompt. The research schema alone — constructors,
   `coreOperations`, `subtypesOrVariants`, per-fact `source` — *is* the spec that
   keeps the writer honest.
-- Wire it all into the `defineAgent(...)` shown above, and expose it through the
-  `write-data-type-ref` workflow.
+- Wire it all into the agent function shown above, and declare what a run needs
+  with its `initialData` static.
 
 Model choice is centralized in `src/shared/models.ts` as **tiers**, each
 env-overridable per run — so the same agent runs on cheap models under test and
@@ -131,14 +142,14 @@ reviewer:   { model: REVIEWER_MODEL   ?? 'anthropic/claude-sonnet-4-6', effort: 
 
 ### 3. Test the agent on tinyoptics
 
-`.env.testing` pins every tier to Haiku at `low` effort and points `REPO_PATH` at
-the bundled fixture — the whole loop runs for cents:
+`.env.testing` pins every tier to Haiku at `low` effort — the whole loop runs for
+cents:
 
 ```bash
-# .env.testing selects cheap models + the tinyoptics fixture
-flue run write-data-type-ref \
-  --env .env.testing \
-  --input '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+# .env.testing selects cheap models; --data points at the tinyoptics fixture
+flue run src/agents/data-type-ref-writer.ts \
+  --env .env.testing --id dtr-Prism -m "go" \
+  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
 ```
 
 > If `pnpm exec flue` misbehaves, call the binary directly: `./node_modules/.bin/flue run …`.
@@ -224,10 +235,9 @@ diff behavior across iterations of the prompt.
 
 ```
 src/
-  agents/        # the two agents: identity (.md) + wiring (.ts)
-  workflows/     # finite, schema-typed entry points for CI/batch runs
-  actions/       # research / write / verify / integrate steps (+ result schemas)
-  profiles/      # generic subagent roles, shared across both agents
+  agents/        # the writers: identity (.md) + wiring (.ts), each an entry point
+  phases/        # research / write / verify / integrate steps (+ result schemas)
+  subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
   tools/         # gh query, method-coverage, todo tools
   shared/        # model tiers, token/component tracking, caching, skip-phases
@@ -243,8 +253,9 @@ pnpm install
 cp .env.testing.example .env.testing   # add ANTHROPIC_API_KEY
 
 # run against the bundled fixture (cheap models)
-flue run write-data-type-ref --env .env.testing \
-  --input '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+flue run src/agents/data-type-ref-writer.ts --env .env.testing \
+  --id dtr-Prism -m "go" \
+  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
 ```
 
 Flue's own docs ship with the packages — read them directly rather than guessing at

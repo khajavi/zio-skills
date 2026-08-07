@@ -1,7 +1,8 @@
 import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import { reviewSchema } from './schemas.ts';
-import { runStyleLoop, withTransientRetry } from './style-loop.ts';
+import { runStyleLoop } from './style-loop.ts';
+import { delegate } from './delegate.ts';
 import { authorHint } from './author-hint.ts';
 
 type ReviewResult = v.InferOutput<typeof reviewSchema>;
@@ -83,7 +84,7 @@ export async function runCappedReview(opts: {
   // Under .flowrite/ with the research cache — all flowrite artifacts in one dir.
   if (calls === 1) {
     const snapshotPath = `.flowrite/pre-review/${path.split('/').pop()}`;
-    await harness.fs.writeFile(snapshotPath, await harness.fs.readFile(path));
+    await harness.sandbox.writeFile(snapshotPath, await harness.sandbox.readFile(path));
     log.info(`Pre-review snapshot saved: ${snapshotPath}`);
   }
 
@@ -103,28 +104,29 @@ export async function runCappedReview(opts: {
         issue: x.problem,
       }));
 
-  const content = await harness.fs.readFile(path);
+  const content = await harness.sandbox.readFile(path);
 
-  const session = await harness.session();
-  // Delegates to the generic reviewer subagent — see design-tutorial-structure.ts
-  // for why bare harness.session() on the calling agent is unsafe here. The
+  // Delegates to the generic reviewer role — see design-tutorial-structure.ts for
+  // why prompting the calling agent's own conversation is unsafe here. The
   // kind-specific checklist is injected into the prompt at the call site.
-  const { data } = await withTransientRetry(log, 'reviewer', () =>
-    session.task(
-      [
-        `Evaluate the ${opts.promptNoun} below against every item in this checklist:`,
-        ``,
-        opts.checklistDoc,
-        // Placed before the content delimiter so the hint reads as reviewer
-        // guidance, not as part of the page under review.
-        authorHint(),
-        ``,
-        `--- ${opts.headerLabel} (${path}) ---`,
-        content,
-      ].join('\n'),
-      { agent: 'reviewer', result: reviewSchema },
-    ),
-  );
+  const data = await delegate({
+    harness,
+    log,
+    label: 'reviewer',
+    role: 'reviewer',
+    result: reviewSchema,
+    prompt: [
+      `Evaluate the ${opts.promptNoun} below against every item in this checklist:`,
+      ``,
+      opts.checklistDoc,
+      // Placed before the content delimiter so the hint reads as reviewer
+      // guidance, not as part of the page under review.
+      authorHint(),
+      ``,
+      `--- ${opts.headerLabel} (${path}) ---`,
+      content,
+    ].join('\n'),
+  });
 
   const result: ReviewResult = {
     passed: data.passed && style.passed && extraItems.every((i) => i.pass),

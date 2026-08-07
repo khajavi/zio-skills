@@ -2,26 +2,27 @@ import { observe } from '@flue/runtime';
 
 /**
  * flue's built-in CLI printer only ever renders `tool ${event.toolName}`, never
- * the call's arguments, duration, or result — so bash commands, action calls,
- * and subagent delegations (the "task" tool) are opaque in `flue run` output.
- * Opt into full detail with FLUE_VERBOSE_TOOLS=1. Subagent/action/tool calls
- * are all tool_start/tool events under the hood — one observer covers all three.
+ * the call's arguments, duration, or result — so bash commands, phase tools, and
+ * role delegations are opaque in `flue run` output. Opt into full detail with
+ * FLUE_VERBOSE_TOOLS=1.
  *
  * No-op unless FLUE_VERBOSE_TOOLS=1.
  *
- * Deduping: flue re-publishes each event up the session tree (a subagent's tool
- * event is published in its own context, then forwarded and re-published at every
- * parent context so parent observers see child activity — see
- * createSubmissionEventCallback in the runtime). Each re-publish invokes the
- * global observe() subscribers again, so one tool call arrives once per level of
- * session nesting (the 3-4x duplicate lines, varying by depth). Forwarded copies
- * keep the original `toolCallId`, so we log each `type:toolCallId` once and drop
- * the re-published copies. `run_end` clears the set so a long-lived process
- * (dev server) doesn't accumulate keys across runs.
+ * Delegation is its own event pair in Flue 2 (`task_start`/`task`, carrying the
+ * delegate in `event.agent`), so this no longer infers it from a tool named
+ * "task". Turns are logged too: they are how the extra harness hop shows up, and
+ * `requestedModel`/`reasoningLevel` are what prove a role's tier override applied.
  *
- * The globalThis guard is separate hygiene: `observe()` has no idempotency and
- * every workflow module calls this at load, so the guard keeps it to one
- * subscriber per process.
+ * Deduping: flue re-publishes each event up the session tree (a role's tool event
+ * is published in its own context, then forwarded and re-published at every parent
+ * context so parent observers see child activity). Each re-publish invokes the
+ * global observe() subscribers again, so one call arrives once per level of
+ * nesting. Forwarded copies keep their original id, so log each `type:id` once and
+ * drop the copies. `agent_end` at top level clears the set so a long-lived process
+ * doesn't accumulate keys across runs.
+ *
+ * The globalThis guard is separate hygiene: `observe()` has no idempotency, so the
+ * guard keeps it to one subscriber per process.
  */
 export function installVerboseObserver(): void {
   if (process.env.FLUE_VERBOSE_TOOLS !== '1') return;
@@ -31,36 +32,80 @@ export function installVerboseObserver(): void {
   g.__flueVerboseInstalled = true;
 
   const startedAt = new Map<string, number>();
-  const seen = new Set<string>(); // `${type}:${toolCallId}` already logged this run
+  const seen = new Set<string>(); // `${type}:${id}` already logged this run
+
+  /** True when this is a re-published copy forwarded from a child context. */
+  const duplicate = (type: string, id: string | undefined): boolean => {
+    if (!id) return false;
+    const key = `${type}:${id}`;
+    if (seen.has(key)) return true;
+    seen.add(key);
+    return false;
+  };
 
   observe((event) => {
-    if (event.type === 'run_end') {
-      seen.clear();
-      return;
-    }
+    switch (event.type) {
+      case 'agent_end': {
+        // Only the outermost agent's end clears the run; a delegate's end does not.
+        if (!event.taskId) seen.clear();
+        return;
+      }
 
-    if (event.type === 'tool_start' || event.type === 'tool') {
-      const key = `${event.type}:${event.toolCallId}`;
-      if (seen.has(key)) return; // re-published copy forwarded from a child context
-      seen.add(key);
-    }
+      case 'task_start': {
+        if (duplicate(event.type, event.taskId)) return;
+        startedAt.set(event.taskId, Date.now());
+        console.error(`[verbose] delegate start ${event.agent ?? '(unnamed)'} prompt: ${event.prompt}`);
+        return;
+      }
 
-    if (event.type === 'tool_start') {
-      startedAt.set(event.toolCallId, Date.now());
-      const kind = event.toolName === 'task' ? 'subagent-task' : 'tool';
-      console.log(`[verbose] ${kind} start ${event.toolName} args: ${JSON.stringify(event.args)}`);
-      return;
-    }
+      case 'task': {
+        if (duplicate(event.type, event.taskId)) return;
+        const start = startedAt.get(event.taskId);
+        startedAt.delete(event.taskId);
+        console.error(
+          `[verbose] delegate end ${event.agent ?? '(unnamed)'} ` +
+            `durationMs=${start ? Date.now() - start : undefined} isError=${event.isError} ` +
+            `result: ${JSON.stringify(event.result)}`,
+        );
+        return;
+      }
 
-    if (event.type === 'tool') {
-      const start = startedAt.get(event.toolCallId);
-      startedAt.delete(event.toolCallId);
-      const durationMs = start ? Date.now() - start : undefined;
-      const kind = event.toolName === 'task' ? 'subagent-task' : 'tool';
-      console.log(
-        `[verbose] ${kind} end ${event.toolName} durationMs=${durationMs} isError=${event.isError} ` +
-          `result: ${JSON.stringify(event.result)}`,
-      );
+      case 'tool_start': {
+        if (duplicate(event.type, event.toolCallId)) return;
+        startedAt.set(event.toolCallId, Date.now());
+        console.error(`[verbose] tool start ${event.toolName} args: ${JSON.stringify(event.args)}`);
+        return;
+      }
+
+      case 'tool': {
+        if (duplicate(event.type, event.toolCallId)) return;
+        const start = startedAt.get(event.toolCallId);
+        startedAt.delete(event.toolCallId);
+        console.error(
+          `[verbose] tool end ${event.toolName} durationMs=${start ? Date.now() - start : undefined} ` +
+            `isError=${event.isError} result: ${JSON.stringify(event.result)}`,
+        );
+        return;
+      }
+
+      case 'turn': {
+        if (duplicate(event.type, event.turnId)) return;
+        // A delegated role's turns inherit the parent's harness, so `harness` alone
+        // does not distinguish overhead from real work — `taskId` is what marks a
+        // turn as belonging to a delegate, and is what cost attribution keys on.
+        const where = [
+          event.harness ? `harness=${event.harness}` : undefined,
+          event.session ? `session=${event.session}` : undefined,
+          event.taskId ? `taskId=${event.taskId}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(' ');
+        console.error(
+          `[verbose] turn ${where || 'root'} model=${event.request.requestedModel} ` +
+            `effort=${event.request.reasoningLevel} tokens=${event.response.usage?.totalTokens ?? 0}`,
+        );
+        return;
+      }
     }
   });
 }

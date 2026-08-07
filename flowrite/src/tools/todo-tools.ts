@@ -45,15 +45,15 @@ export const todoCreate = defineTool({
     ),
   }),
   output: v.object({ id: v.number() }),
-  async run({ input }) {
+  async run({ data }) {
     // Models routinely send 0 or omit the field to mean "no parent" — treat all falsy as root.
-    const parentId = input.parentId || null;
+    const parentId = data.parentId || null;
     if (parentId !== null && !tasks.some((t) => t.id === parentId)) {
       throw new Error(`parentId ${parentId} does not exist — pass null or omit it for a top-level task`);
     }
     const id = tasks.length + 1;
-    tasks.push({ id, title: input.title, parentId, status: 'pending' });
-    return { id };
+    tasks.push({ id, title: data.title, parentId, status: 'pending' });
+    return { output: { id } };
   },
 });
 
@@ -66,23 +66,25 @@ export const todoUpdate = defineTool({
     status: v.picklist(['pending', 'in_progress', 'completed']),
   }),
   output: v.object({ ok: v.boolean(), error: v.nullable(v.string()), open: v.number() }),
-  async run({ input }) {
-    const task = tasks.find((t) => t.id === input.id);
-    if (!task) return { ok: false, error: `task #${input.id} does not exist`, open: openTodos().length };
-    if (input.status === 'in_progress') {
-      const busy = tasks.find((t) => t.status === 'in_progress' && t.id !== input.id && t.parentId === task.parentId);
+  async run({ data }) {
+    const task = tasks.find((t) => t.id === data.id);
+    if (!task) return { output: { ok: false, error: `task #${data.id} does not exist`, open: openTodos().length } };
+    if (data.status === 'in_progress') {
+      const busy = tasks.find((t) => t.status === 'in_progress' && t.id !== data.id && t.parentId === task.parentId);
       if (busy) {
-        return { ok: false, error: `finish #${busy.id} first — one sibling in_progress at a time`, open: openTodos().length };
+        return {
+          output: { ok: false, error: `finish #${busy.id} first — one sibling in_progress at a time`, open: openTodos().length },
+        };
       }
     }
-    if (input.status === 'completed') {
-      const openChild = tasks.find((t) => t.parentId === input.id && t.status !== 'completed');
+    if (data.status === 'completed') {
+      const openChild = tasks.find((t) => t.parentId === data.id && t.status !== 'completed');
       if (openChild) {
-        return { ok: false, error: `child #${openChild.id} is still open`, open: openTodos().length };
+        return { output: { ok: false, error: `child #${openChild.id} is still open`, open: openTodos().length } };
       }
     }
-    task.status = input.status;
-    return { ok: true, error: null, open: openTodos().length };
+    task.status = data.status;
+    return { output: { ok: true, error: null, open: openTodos().length } };
   },
 });
 
@@ -91,6 +93,6 @@ export const todoList = defineTool({
   description: 'List the todo tree with statuses ([ ] pending, [>] in_progress, [x] completed).',
   output: v.object({ tree: v.string(), open: v.number() }),
   async run() {
-    return { tree: renderTree(), open: openTodos().length };
+    return { output: { tree: renderTree(), open: openTodos().length } };
   },
 });

@@ -1,6 +1,28 @@
 ## Writing Flue Agents
 Read https://flueframework.com/start.md then help create flue agents
 
+## Never commit anything under fixtures/tinyoptics/
+
+The fixture is a from-scratch baseline: sparse starter docs, no generated examples,
+a clean `build.sbt`. Every run is measured against it, so committing a run's output
+destroys it — later runs stop exercising the empty-start path, and quality can no
+longer be judged against a known baseline.
+
+A run writes far more than docs. All of it is output, none of it is committed:
+
+- `docs/` — pages, `index.md`, `sidebars.js`
+- `examples/` and `tinyoptics-examples/` — generated `.scala`, `project/build.properties`
+- `build.sbt` — the integrate phase edits it (`mdocVariables`, subprojects)
+
+✅ `bash scripts/archive-docs.sh <log> <label>` — snapshots the whole run to
+`fixtures/tinyoptics-archive/<label>-turn<N>/` and resets the fixture
+❌ `git add -A` after a run — sweeps generated pages, examples and build edits into
+whatever you commit next
+
+Treat `fixtures/tinyoptics/` as read-only from git's point of view. Archive first,
+then stage source paths explicitly (`git add src/ README.md`). Never `git add -A`
+while run output is in the working tree — it has already caused two history rewrites.
+
 ## Autonomous Agent Best Practices
 
 ### 1. Set the stage, don't script the steps
