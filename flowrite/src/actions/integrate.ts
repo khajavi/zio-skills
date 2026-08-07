@@ -1,8 +1,8 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 
 /** Shared output of every doc-integration action. */
 export const integrateOutput = v.object({
@@ -15,7 +15,7 @@ export const integrateOutput = v.object({
  * site (sidebars.js, docs/index.md, cross-references, link verification) by
  * delegating to the generic `docs_integrator` subagent. The only real variation
  * between doc kinds is the target category and the delegation prompt, so those
- * are supplied per call; the skip guard, session, and output shape are shared.
+ * are supplied per call; the skip guard, delegation, and output shape are shared.
  *
  * The skip-list check lives here in code — see review-tutorial.ts (action) for
  * why it must not live only as prose in the orchestrator's .md.
@@ -31,31 +31,33 @@ export function defineIntegrateAction(opts: {
   /** Delegation prompt naming the target category and any inbound-link guidance. */
   buildPrompt: (path: string) => string;
 }) {
-  return defineAction({
+  return defineTool({
     name: opts.name,
     description: opts.description,
+    harness: true,
     input: v.object({
       [opts.inputKey]: v.pipe(v.string(), v.description(opts.inputDescription)),
     }),
     output: integrateOutput,
-    async run({ harness, input, log }) {
+    async run({ harness, data, log }) {
       if (isPhaseSkipped('integrate')) {
         log.info('Skipping integration (skipPhases)');
-        return { skipped: true, summary: 'Skipped by request.' };
+        return { output: { skipped: true, summary: 'Skipped by request.' } };
       }
 
-      const path = (input as Record<string, string>)[opts.inputKey];
+      const path = (data as Record<string, string>)[opts.inputKey];
       log.info(`Integrating ${opts.docKind} into docs site: ${path}`);
-      const session = await harness.session();
       // Delegates to the docs_integrator subagent — see design-tutorial-structure.ts
-      // for why bare harness.session() on the calling agent is unsafe here.
-      const { data } = await withTransientRetry(log, 'docs_integrator', () =>
-        session.task(opts.buildPrompt(path) + authorHint(), {
-          agent: 'docs_integrator',
-          result: integrateOutput,
-        }),
-      );
-      return data;
+      // for why prompting the calling agent's own conversation is unsafe here.
+      const result = await delegate({
+        harness,
+        log,
+        label: 'docs_integrator',
+        role: 'docs_integrator',
+        result: integrateOutput,
+        prompt: opts.buildPrompt(path) + authorHint(),
+      });
+      return { output: result };
     },
   });
 }

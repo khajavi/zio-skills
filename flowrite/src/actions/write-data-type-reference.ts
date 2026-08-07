@@ -1,11 +1,11 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
 import { dataTypeStructureSchema } from './design-data-type-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The data-type-ref-structure skill's content, injected into the generic drafter's
-// task (skills can't vary per session.task call). Same single-source-of-truth
+// task (skills can't vary per delegation). Same single-source-of-truth
 // split as writing-style/references/rules.md; the SKILL.md points here.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
 // TEMPORARY: flue does not package nested skill files, so the drafter cannot read
@@ -15,7 +15,7 @@ import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/s
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 
 /** Kebab-case a type name for the filename: "NonEmptyChunk" -> "non-empty-chunk". */
 export function toKebabCase(typeName: string): string {
@@ -27,17 +27,18 @@ export function toKebabCase(typeName: string): string {
 
 /**
  * Generate the reference-page markdown and write it to docs/reference/<type>.md.
- * Writing goes through harness.fs (out-of-band) so the file lands deterministically
+ * Writing goes through harness.sandbox (out-of-band) so the file lands deterministically
  * rather than depending on the model choosing to call a filesystem tool. Mirrors
  * write-tutorial-draft.ts, but for the reference-page shape and output path.
  */
-export const writeDataTypeReference = defineAction({
+export const writeDataTypeReference = defineTool({
   name: 'write_data_type_reference',
   description: 'Write the data type reference markdown to docs/reference/<type>.md and return its path and content.',
+  harness: true,
   input: v.object({
     structure: dataTypeStructureSchema,
     researchAnswers: dataTypeResearchSchema,
-    // Optional, for module-ref hierarchical subpages. When absent, this action
+    // Optional, for module-ref hierarchical subpages. When absent, this tool
     // behaves byte-identically to a standalone data-type-ref run.
     outputDir: v.pipe(
       v.optional(v.string()),
@@ -49,23 +50,22 @@ export const writeDataTypeReference = defineAction({
     ),
   }),
   output: v.object({ path: v.string(), content: v.string() }),
-  async run({ harness, input, log }) {
-    const id = toKebabCase(input.researchAnswers.typeName);
-    const dir = input.outputDir ?? 'docs/reference';
+  async run({ harness, data, log }) {
+    const id = toKebabCase(data.researchAnswers.typeName);
+    const dir = data.outputDir ?? 'docs/reference';
     const path = `${dir}/${id}.md`;
 
     // Resume support: the page already exists on disk — return it as-is so later
     // phases get the real path/content.
     if (isPhaseSkipped('write')) {
       log.info(`Skipping draft (skipPhases) — using existing ${path}`);
-      return { path, content: await harness.fs.readFile(path) };
+      return { output: { path, content: await harness.sandbox.readFile(path) } };
     }
 
     log.info(`Writing data type reference: ${path}`);
 
-    const session = await harness.session();
     // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here. The
+    // for why the calling agent must not draft this itself. The
     // reference-page template + result schema are supplied at the call site.
     const contentSchema = v.object({
       title: v.pipe(v.string(), v.description('The type name, e.g. "Chunk" — this is the page title')),
@@ -94,9 +94,13 @@ export const writeDataTypeReference = defineAction({
         ),
       ),
     });
-    const { data } = await withTransientRetry(log, 'drafter (data type ref)', () =>
-      session.task(
-      [
+    const draft = await delegate({
+      harness,
+      log,
+      label: 'drafter (data type ref)',
+      role: 'drafter',
+      result: contentSchema,
+      prompt: [
         `Write a complete ZIO data type reference page as Docusaurus markdown.`,
         ``,
         `Follow this data-type-ref-structure template and its drafting rules exactly:`,
@@ -111,15 +115,15 @@ export const writeDataTypeReference = defineAction({
         `Structural plan to follow exactly — the optional sections to include, the`,
         `construction order, and the Core Operations category grouping are already`,
         `decided; write the page to match this plan:`,
-        JSON.stringify(input.structure),
+        JSON.stringify(data.structure),
         ``,
         `Research answers (ground every fact in this — real signatures, imports, and examples;`,
         `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
         `Document EVERY constructor and core operation listed):`,
-        JSON.stringify(input.researchAnswers),
+        JSON.stringify(data.researchAnswers),
         // Module-ref subpage recontextualization: when this type is a member of a
         // module, thread its sibling relationships through each section.
-        ...(input.moduleContext
+        ...(data.moduleContext
           ? [
               ``,
               `This page is part of a MODULE reference. Recontextualize it to the module: in each section,`,
@@ -127,24 +131,23 @@ export const writeDataTypeReference = defineAction({
               `with, module-level integration). If the context marks this type "supporting" (a helper, or`,
               `rarely used by application code directly), write the MINIMAL supporting page per the`,
               `data-type-ref-structure core-vs-supporting rule; a "core" type gets full depth. Module context:`,
-              input.moduleContext,
+              data.moduleContext,
             ]
           : []),
         ``,
         `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
-      { agent: 'drafter', result: contentSchema },
-    ));
+    });
 
     const frontmatter = buildFrontmatter({
       id,
-      title: data.title,
-      description: data.description,
-      keywords: data.keywords,
+      title: draft.title,
+      description: draft.description,
+      keywords: draft.keywords,
     });
-    const content = withFrontmatter(frontmatter, data.body);
+    const content = withFrontmatter(frontmatter, draft.body);
 
-    await harness.fs.writeFile(path, content);
-    return { path, content };
+    await harness.sandbox.writeFile(path, content);
+    return { output: { path, content } };
   },
 });

@@ -1,11 +1,11 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The tutorial-structure skill's content, injected into the generic drafter's
-// task (a subagent's skills can't vary per session.task call, so the kind-specific
+// task (a subagent's skills can't vary per delegation, so the kind-specific
 // template rides in the prompt). Same single-source-of-truth split as
 // writing-style/references/rules.md; the SKILL.md points here.
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
@@ -16,16 +16,17 @@ import tutorialStructureDoc from '../skills/tutorial-structure/references/struct
 // drop this import + injection and let the writing-style skill supply the rules.
 import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 
 /**
  * Generate the tutorial markdown and write it to docs/guides/<id>.md.
- * Writing goes through harness.fs (out-of-band) so the file lands deterministically
+ * Writing goes through harness.sandbox (out-of-band) so the file lands deterministically
  * rather than depending on the model choosing to call a filesystem tool.
  */
-export const writeTutorialDraft = defineAction({
+export const writeTutorialDraft = defineTool({
   name: 'write_tutorial_draft',
   description: 'Write the tutorial markdown to docs/guides/<id>.md and return its path and content.',
+  harness: true,
   input: v.object({
     id: v.pipe(
       v.string(),
@@ -39,22 +40,21 @@ export const writeTutorialDraft = defineAction({
     researchAnswers: researchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
-  async run({ harness, input, log }) {
-    const path = `docs/guides/${input.id}.md`;
+  async run({ harness, data, log }) {
+    const path = `docs/guides/${data.id}.md`;
 
     // Resume support: the tutorial already exists on disk — return it as-is so
     // later phases get the real path/content. Fails loudly if the id does not
     // match an existing file.
     if (isPhaseSkipped('write')) {
       log.info(`Skipping draft (skipPhases) — using existing ${path}`);
-      return { path, content: await harness.fs.readFile(path) };
+      return { output: { path, content: await harness.sandbox.readFile(path) } };
     }
 
     log.info(`Writing tutorial draft: ${path}`);
 
-    const session = await harness.session();
     // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here.
+    // for why the calling agent must not draft this itself.
     // Uses a result schema (not response.text) so the model returns content
     // through the structured channel instead of a chat reply — that channel
     // doesn't carry the "narrate, then fence the deliverable" habit that
@@ -93,9 +93,13 @@ export const writeTutorialDraft = defineAction({
         ),
       ),
     });
-    const { data } = await withTransientRetry(log, 'drafter (tutorial)', () =>
-      session.task(
-      [
+    const draft = await delegate({
+      harness,
+      log,
+      label: 'drafter (tutorial)',
+      role: 'drafter',
+      result: contentSchema,
+      prompt: [
         `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
         ``,
         `Follow this tutorial-structure template and its drafting rules exactly:`,
@@ -107,30 +111,29 @@ export const writeTutorialDraft = defineAction({
         ``,
         writingStyleRules,
         ``,
-        `Topic: ${input.topic}`,
+        `Topic: ${data.topic}`,
         ``,
         `Research answers (ground every fact in this — imports, signatures, real`,
         `examples; never substitute general knowledge; groundingDetail carries the`,
         `verbatim code/signatures to copy exactly):`,
-        JSON.stringify(input.researchAnswers),
+        JSON.stringify(data.researchAnswers),
         ``,
         `Section plan to follow exactly:`,
-        JSON.stringify(input.structure),
+        JSON.stringify(data.structure),
         ``,
         `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
-      { agent: 'drafter', result: contentSchema },
-    ));
+    });
 
     const frontmatter = buildFrontmatter({
-      id: input.id,
-      title: data.title,
-      description: data.description,
-      keywords: data.keywords,
+      id: data.id,
+      title: draft.title,
+      description: draft.description,
+      keywords: draft.keywords,
     });
-    const content = withFrontmatter(frontmatter, data.body);
+    const content = withFrontmatter(frontmatter, draft.body);
 
-    await harness.fs.writeFile(path, content);
-    return { path, content };
+    await harness.sandbox.writeFile(path, content);
+    return { output: { path, content } };
   },
 });

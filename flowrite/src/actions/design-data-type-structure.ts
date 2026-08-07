@@ -1,11 +1,11 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
-// Injected into the generic designer's task (skills can't vary per session.task
-// call); the SKILL.md points here. Same source-of-truth split as rules.md.
+import { delegate } from '../shared/delegate.ts';
+// Injected into the generic designer's task (skills can't vary per delegated
+// task); the SKILL.md points here. Same source-of-truth split as rules.md.
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
 
 // The reference-page structural plan. The 12-section template is fixed, but two
@@ -53,60 +53,67 @@ export const dataTypeStructureSchema = v.object({
  * Turn the researcher's API-surface findings into a validated structural plan:
  * which optional sections apply and how the operations group into Core
  * Operations categories. Delegates to the generic `designer` subagent — see
- * design-tutorial-structure.ts for why bare harness.session() is unsafe here.
+ * design-tutorial-structure.ts for why designing in the calling agent's own
+ * conversation is unsafe here.
  */
-export const designDataTypeStructure = defineAction({
+export const designDataTypeStructure = defineTool({
   name: 'design_data_type_structure',
   description: 'Turn data-type research into a validated reference-page structural plan (section applicability + Core Operations grouping).',
+  harness: true,
   input: v.object({
     typeName: v.string(),
     researchAnswers: dataTypeResearchSchema,
   }),
   output: dataTypeStructureSchema,
-  async run({ harness, input, log }) {
+  async run({ harness, data, log }) {
     // Resume support — see research-tutorial-topic.ts.
     if (isPhaseSkipped('design')) {
       log.info('Skipping design (skipPhases)');
       return {
-        optionalSections: {
-          motivation: false,
-          installation: false,
-          predefinedInstances: false,
-          subtypes: false,
-          comparisons: false,
-          advancedUsage: false,
-          integration: false,
-          runningExamples: false,
+        output: {
+          optionalSections: {
+            motivation: false,
+            installation: false,
+            predefinedInstances: false,
+            subtypes: false,
+            comparisons: false,
+            advancedUsage: false,
+            integration: false,
+            runningExamples: false,
+          },
+          constructionOrder: [],
+          coreOperationCategories: [],
+          comparisons: [],
+          notes: '(skipped — phase already done)',
         },
-        constructionOrder: [],
-        coreOperationCategories: [],
-        comparisons: [],
-        notes: '(skipped — phase already done)',
       };
     }
 
-    log.info(`Designing reference-page structure for: ${input.typeName}`);
-    const session = await harness.session();
+    log.info(`Designing reference-page structure for: ${data.typeName}`);
     // Delegates to the generic designer subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await withTransientRetry(log, 'designer (data type)', () =>
-      session.task(
-      [
-        `Design the structural plan for a "${input.typeName}" data type reference page.`,
-        ``,
-        `Follow this data-type-ref-structure template exactly:`,
-        ``,
-        dataTypeStructureDoc,
-        ``,
-        `Decide which optional sections apply, order the constructors, and group EVERY`,
-        `public operation into ordered Core Operations categories (a single-method`,
-        `category is fine when none fits). For a closed sealed ADT of homogeneous variants,`,
-        `plan a single Subtypes/Variants table, not one construction entry per variant.`,
-        `Ground every choice in these research answers:`,
-        JSON.stringify(input.researchAnswers),
-      ].join('\n') + authorHint(),
-      { agent: 'designer', result: dataTypeStructureSchema },
-    ));
-    return data;
+    // for why designing in the calling agent's own conversation is unsafe here.
+    const structure = await delegate({
+      harness,
+      log,
+      label: 'designer (data type)',
+      role: 'designer',
+      result: dataTypeStructureSchema,
+      prompt:
+        [
+          `Design the structural plan for a "${data.typeName}" data type reference page.`,
+          ``,
+          `Follow this data-type-ref-structure template exactly:`,
+          ``,
+          dataTypeStructureDoc,
+          ``,
+          `Decide which optional sections apply, order the constructors, and group EVERY`,
+          `public operation into ordered Core Operations categories (a single-method`,
+          `category is fine when none fits). For a closed sealed ADT of homogeneous variants,`,
+          `plan a single Subtypes/Variants table, not one construction entry per variant.`,
+          `Ground every choice in these research answers:`,
+          JSON.stringify(data.researchAnswers),
+        ].join('\n') + authorHint(),
+    });
+    return { output: structure };
   },
 });

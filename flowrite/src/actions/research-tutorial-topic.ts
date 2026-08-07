@@ -1,9 +1,9 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 import { sourceRef } from './research-data-type.ts';
 
 export const researchSchema = v.object({
@@ -69,66 +69,73 @@ export const researchSchema = v.object({
  * Reliability-critical: enforces the same well-formed-output guarantee as
  * design_tutorial_structure and review_tutorial.
  */
-export const researchTutorialTopic = defineAction({
+export const researchTutorialTopic = defineTool({
   name: 'research_tutorial_topic',
   description:
     'Research a ZIO topic across source, tests, examples, and GitHub history; return structured findings.',
+  harness: true,
   input: v.object({
     topic: v.string(),
   }),
   output: researchSchema,
-  async run({ harness, input, log }) {
+  async run({ harness, data, log }) {
     // Resume support: a skipped head phase returns a marker-filled placeholder.
     // Downstream consumers (design, write) are skipped in the same runs, so the
-    // placeholder only wires the action chain — it is never drafted from.
+    // placeholder only wires the phase chain — it is never drafted from.
     if (isPhaseSkipped('research')) {
       log.info('Skipping research (skipPhases)');
       const s = '(skipped — phase already done)';
       return {
-        concept: s,
-        prerequisites: [],
-        postTutorialAbilities: [],
-        coreTypes: [],
-        compositionOrder: s,
-        factoryMethods: [],
-        helloWorld: s,
-        complexityLayers: [],
-        verifiableOutputs: [],
-        coreInsight: s,
-        imports: [],
-        sourceFiles: [],
-        sbtDependency: s,
-        scalaVersionNotes: null,
-        groundingDetail: s,
+        output: {
+          concept: s,
+          prerequisites: [],
+          postTutorialAbilities: [],
+          coreTypes: [],
+          compositionOrder: s,
+          factoryMethods: [],
+          helloWorld: s,
+          complexityLayers: [],
+          verifiableOutputs: [],
+          coreInsight: s,
+          imports: [],
+          sourceFiles: [],
+          sbtDependency: s,
+          scalaVersionNotes: null,
+          groundingDetail: s,
+        },
       };
     }
 
     const repoPath = process.env.REPO_PATH!;
-    const cached = readResearchCache(repoPath, input.topic);
+    const cached = readResearchCache(repoPath, data.topic);
     if (cached) {
       const parsed = v.safeParse(researchSchema, cached);
       if (parsed.success) {
-        log.info(`Research cache hit for "${input.topic}"`);
-        return parsed.output;
+        log.info(`Research cache hit for "${data.topic}"`);
+        return { output: parsed.output };
       }
     }
 
-    log.info(`Researching tutorial topic: ${input.topic}`);
-    const session = await harness.session();
-    // Delegates to the generic researcher subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here. The
+    log.info(`Researching tutorial topic: ${data.topic}`);
+    // Delegates to the generic researcher subagent rather than letting the
+    // harness's own scratch conversation answer — see ../shared/delegate.ts for
+    // how the role is selected now that harness.session() is gone. The
     // tutorial-specific focus and result schema are supplied here at the call site.
-    const { data } = await withTransientRetry(log, 'researcher (tutorial)', () =>
-      session.task(
-      `Research "${input.topic}" in this ZIO library checkout so a tutorial can be written ` +
+    const research = await delegate({
+      harness,
+      log,
+      label: 'researcher (tutorial)',
+      role: 'researcher',
+      result: researchSchema,
+      prompt:
+        `Research "${data.topic}" in this ZIO library checkout so a tutorial can be written ` +
         `accurately from real source, tests, and examples. For each core type, set its "source" ` +
         `to the repo-relative location you actually read it from, as "path:L<start>-L<end>" ` +
         `(e.g. "src/main/scala/optics/Lens.scala:L12-L20"), and list every file you read in ` +
         `"sourceFiles". Never guess a path or line — cite only a file you opened.` +
         authorHint(),
-      { agent: 'researcher', result: researchSchema },
-    ));
-    writeResearchCache(repoPath, input.topic, data);
-    return data;
+    });
+    writeResearchCache(repoPath, data.topic, research);
+    return { output: research };
   },
 });

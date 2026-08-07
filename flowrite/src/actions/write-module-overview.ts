@@ -1,4 +1,4 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { moduleResearchSchema } from './research-module.ts';
 import { moduleStructureSchema } from './design-module-structure.ts';
@@ -10,7 +10,7 @@ import moduleStructureDoc from '../skills/module-ref-structure/references/struct
 // writing-style rules into the drafter prompt until flue packages nested skills.
 import writingStyleRules from '../skills/writing-style/references/rules.md';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 
 /**
  * Write the module reference's module-level page. For a flat layout this is the
@@ -19,21 +19,22 @@ import { withTransientRetry } from '../shared/style-loop.ts';
  * the module narrative plus links out to the per-type subpages, which are
  * written separately by the reused write_data_type_reference loop.
  *
- * Writing goes through harness.fs so the file lands deterministically. Mirrors
+ * Writing goes through harness.sandbox so the file lands deterministically. Mirrors
  * write-data-type-reference.ts, but for the module page shape and output path.
  */
-export const writeModuleOverview = defineAction({
+export const writeModuleOverview = defineTool({
   name: 'write_module_overview',
   description:
     'Write the module reference module-level page (flat: whole page with inline type sections; hierarchical: index.md narrative + subpage links) and return its path and content.',
+  harness: true,
   input: v.object({
     structure: moduleStructureSchema,
     researchAnswers: moduleResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
-  async run({ harness, input, log }) {
-    const moduleKebab = toKebabCase(input.researchAnswers.moduleName);
-    const isFlat = input.structure.layout === 'flat';
+  async run({ harness, data, log }) {
+    const moduleKebab = toKebabCase(data.researchAnswers.moduleName);
+    const isFlat = data.structure.layout === 'flat';
     // flat -> docs/reference/<module>.md (id = <module>); hierarchical -> the
     // module dir's index (id = index) with subpages alongside it.
     const path = isFlat ? `docs/reference/${moduleKebab}.md` : `docs/reference/${moduleKebab}/index.md`;
@@ -42,12 +43,11 @@ export const writeModuleOverview = defineAction({
     // Resume support: the page already exists on disk — return it as-is.
     if (isPhaseSkipped('write')) {
       log.info(`Skipping draft (skipPhases) — using existing ${path}`);
-      return { path, content: await harness.fs.readFile(path) };
+      return { output: { path, content: await harness.sandbox.readFile(path) } };
     }
 
-    log.info(`Writing module overview (${input.structure.layout}): ${path}`);
+    log.info(`Writing module overview (${data.structure.layout}): ${path}`);
 
-    const session = await harness.session();
     const contentSchema = v.object({
       title: v.pipe(v.string(), v.description('The module title, e.g. "HTTP Model" — this is the page title')),
       description: v.pipe(
@@ -72,14 +72,14 @@ export const writeModuleOverview = defineAction({
     });
 
     const layoutInstruction =
-      input.structure.layout === 'hierarchical'
+      data.structure.layout === 'hierarchical'
         ? [
             `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,
             `plus an Overview that introduces each core type in 2-3 sentences and links to its subpage with`,
             `a relative path "./<type-kebab>.md". Do NOT document the types' full APIs here; each type gets`,
             `its own subpage written separately.`,
           ]
-        : input.structure.shape === 'dsl'
+        : data.structure.shape === 'dsl'
           ? [
               `This is a DSL module reference: write ONE page in a single file, organized BY TASK/composition`,
               `— sections are recipes ("Building X", "Combining Y and Z") showing how the types compose to`,
@@ -95,9 +95,13 @@ export const writeModuleOverview = defineAction({
               `minimal entry (role + one usage example). Do not create separate files.`,
             ];
 
-    const { data } = await withTransientRetry(log, 'drafter (module overview)', () =>
-      session.task(
-      [
+    const draft = await delegate({
+      harness,
+      log,
+      label: 'drafter (module overview)',
+      role: 'drafter',
+      result: contentSchema,
+      prompt: [
         `Write a ZIO MODULE reference page as Docusaurus markdown.`,
         ``,
         `Follow this module-ref-structure template and its drafting rules exactly:`,
@@ -113,27 +117,26 @@ export const writeModuleOverview = defineAction({
         ``,
         `Structural plan to follow exactly (layout, which sections to include, and the type order are`,
         `already decided; write the page to match this plan):`,
-        JSON.stringify(input.structure),
+        JSON.stringify(data.structure),
         ``,
         `Research answers (ground every fact and relationship in this — real signatures, imports, and`,
         `examples; never substitute general knowledge; groundingDetail carries verbatim detail to copy`,
         `exactly. The "How They Work Together" section MUST reflect the real "relationships" here):`,
-        JSON.stringify(input.researchAnswers),
+        JSON.stringify(data.researchAnswers),
         ``,
         `The finish result's "description" must be 50-150 characters.`,
       ].join('\n') + authorHint(),
-      { agent: 'drafter', result: contentSchema },
-    ));
+    });
 
     const frontmatter = buildFrontmatter({
       id,
-      title: data.title,
-      description: data.description,
-      keywords: data.keywords,
+      title: draft.title,
+      description: draft.description,
+      keywords: draft.keywords,
     });
-    const content = withFrontmatter(frontmatter, data.body);
+    const content = withFrontmatter(frontmatter, draft.body);
 
-    await harness.fs.writeFile(path, content);
-    return { path, content };
+    await harness.sandbox.writeFile(path, content);
+    return { output: { path, content } };
   },
 });

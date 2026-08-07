@@ -1,6 +1,6 @@
 import { defineSubagent, useTool } from '@flue/runtime';
 import { TIERS } from '../shared/models.ts';
-import { getRepoPath } from '../shared/repo-path.ts';
+import { getRepoPath } from '../shared/run-context.ts';
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 import instructions from './researcher.md';
 

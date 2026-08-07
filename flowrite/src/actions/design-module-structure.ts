@@ -1,11 +1,11 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { moduleResearchSchema } from './research-module.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
-// Injected into the generic designer's task (skills can't vary per session.task
-// call); the SKILL.md points here. Same source-of-truth split as data-type-ref.
+import { delegate } from '../shared/delegate.ts';
+// Injected into the generic designer's task (skills can't vary per delegated
+// task); the SKILL.md points here. Same source-of-truth split as data-type-ref.
 import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
 
 // The module-reference structural plan. Two things are genuine per-module
@@ -74,12 +74,14 @@ export const moduleStructureSchema = v.object({
  * Turn the module researcher's findings into a validated structural plan: the
  * flat-vs-hierarchical layout (via the auto-rule, unless overridden), which
  * module-level sections apply, and the type order. Delegates to the generic
- * `designer` subagent — see design-tutorial-structure.ts for why bare
- * harness.session() is unsafe here. Mirrors design-data-type-structure.ts.
+ * `designer` subagent — see design-tutorial-structure.ts for why designing in
+ * the calling agent's own conversation is unsafe here. Mirrors
+ * design-data-type-structure.ts.
  */
-export const designModuleStructure = defineAction({
+export const designModuleStructure = defineTool({
   name: 'design_module_structure',
   description: 'Turn module research into a validated module-reference plan (flat/hierarchical layout + section applicability + type order).',
+  harness: true,
   input: v.object({
     moduleName: v.string(),
     researchAnswers: moduleResearchSchema,
@@ -93,64 +95,69 @@ export const designModuleStructure = defineAction({
     ),
   }),
   output: moduleStructureSchema,
-  async run({ harness, input, log }) {
+  async run({ harness, data, log }) {
     // Resume support — see research-tutorial-topic.ts.
     if (isPhaseSkipped('design')) {
       log.info('Skipping design (skipPhases)');
       return {
-        shape: input.shapeOverride ?? 'single-core',
-        layout: input.layoutOverride ?? 'flat',
-        layoutRationale: '(skipped — phase already done)',
-        optionalSections: {
-          motivation: false,
-          installation: false,
-          overview: false,
-          howTheyWorkTogether: false,
-          commonPatterns: false,
-          integration: false,
-          runningExamples: false,
+        output: {
+          shape: data.shapeOverride ?? 'single-core',
+          layout: data.layoutOverride ?? 'flat',
+          layoutRationale: '(skipped — phase already done)',
+          optionalSections: {
+            motivation: false,
+            installation: false,
+            overview: false,
+            howTheyWorkTogether: false,
+            commonPatterns: false,
+            integration: false,
+            runningExamples: false,
+          },
+          typeGroups: [],
+          comparisons: [],
+          notes: '(skipped — phase already done)',
         },
-        typeGroups: [],
-        comparisons: [],
-        notes: '(skipped — phase already done)',
       };
     }
 
-    log.info(`Designing module-reference structure for: ${input.moduleName}`);
-    const session = await harness.session();
-    const { data } = await withTransientRetry(log, 'designer (module)', () =>
-      session.task(
-      [
-        `Design the structural plan for a "${input.moduleName}" module reference page.`,
-        ``,
-        `Follow this module-ref-structure template exactly:`,
-        ``,
-        moduleStructureDoc,
-        ``,
-        input.shapeOverride
-          ? `The caller REQUIRES the "${input.shapeOverride}" shape — set shape to it and derive layout ` +
-            `(single-core/dsl → flat, core-family/multi-domain → hierarchical).`
-          : input.layoutOverride
-            ? `The caller REQUIRES the "${input.layoutOverride}" layout — set layout to it, set the shape that ` +
-              `matches, and explain briefly.`
-            : `CLASSIFY THE MODULE'S SHAPE FIRST (see "Classify the module first"): run the discriminator + ` +
-              `operational test, set "shape", then derive layout (single-core/dsl → flat, core-family/` +
-              `multi-domain → hierarchical). If the shape is genuinely uncertain after the test, do NOT guess ` +
-              `silently — set your best-effort shape and FLAG the ambiguity explicitly in "notes" so the agent can halt and ask.`,
-        ``,
-        `Decide which module-level sections apply. Organize EVERY type into named groups in reading order.`,
-        `For a core-type shape each group is a domain concern the types share (what they do together), e.g.`,
-        `for an HTTP module "Routing", "Http Messages", "Endpoints". For a "dsl" shape group by TASK/`,
-        `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
-        `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
-        `minimal page); this is per-type depth, independent of its group.`,
-        `Assign an entry-point/singleton object (e.g. trace/log/metric) to the sub-domain it serves; it`,
-        `anchors that sub-domain's index.`,
-        `Ground every choice in these research answers:`,
-        JSON.stringify(input.researchAnswers),
-      ].join('\n') + authorHint(),
-      { agent: 'designer', result: moduleStructureSchema },
-    ));
-    return data;
+    log.info(`Designing module-reference structure for: ${data.moduleName}`);
+    const structure = await delegate({
+      harness,
+      log,
+      label: 'designer (module)',
+      role: 'designer',
+      result: moduleStructureSchema,
+      prompt:
+        [
+          `Design the structural plan for a "${data.moduleName}" module reference page.`,
+          ``,
+          `Follow this module-ref-structure template exactly:`,
+          ``,
+          moduleStructureDoc,
+          ``,
+          data.shapeOverride
+            ? `The caller REQUIRES the "${data.shapeOverride}" shape — set shape to it and derive layout ` +
+              `(single-core/dsl → flat, core-family/multi-domain → hierarchical).`
+            : data.layoutOverride
+              ? `The caller REQUIRES the "${data.layoutOverride}" layout — set layout to it, set the shape that ` +
+                `matches, and explain briefly.`
+              : `CLASSIFY THE MODULE'S SHAPE FIRST (see "Classify the module first"): run the discriminator + ` +
+                `operational test, set "shape", then derive layout (single-core/dsl → flat, core-family/` +
+                `multi-domain → hierarchical). If the shape is genuinely uncertain after the test, do NOT guess ` +
+                `silently — set your best-effort shape and FLAG the ambiguity explicitly in "notes" so the agent can halt and ask.`,
+          ``,
+          `Decide which module-level sections apply. Organize EVERY type into named groups in reading order.`,
+          `For a core-type shape each group is a domain concern the types share (what they do together), e.g.`,
+          `for an HTTP module "Routing", "Http Messages", "Endpoints". For a "dsl" shape group by TASK/`,
+          `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
+          `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
+          `minimal page); this is per-type depth, independent of its group.`,
+          `Assign an entry-point/singleton object (e.g. trace/log/metric) to the sub-domain it serves; it`,
+          `anchors that sub-domain's index.`,
+          `Ground every choice in these research answers:`,
+          JSON.stringify(data.researchAnswers),
+        ].join('\n') + authorHint(),
+    });
+    return { output: structure };
   },
 });

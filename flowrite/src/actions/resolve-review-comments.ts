@@ -1,7 +1,7 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
+import { delegate } from '../shared/delegate.ts';
 
 export const resolveReviewCommentsOutput = v.object({
   path: v.pipe(v.string(), v.description('Path to the resolved article, relative to the repo root')),
@@ -54,10 +54,11 @@ export const resolveReviewPrompt = (articlePath: string): string =>
  * resolve-review workflow — and, later, the pipeline — can reach the
  * review_resolver subagent.
  */
-export const resolveReviewComments = defineAction({
+export const resolveReviewComments = defineTool({
   name: 'resolve_review_comments',
   description:
     'Resolve embedded <!-- REVIEW --> comments in an article: apply the fixes in place and strip the markers.',
+  harness: true,
   input: v.object({
     articlePath: v.pipe(
       v.string(),
@@ -65,17 +66,18 @@ export const resolveReviewComments = defineAction({
     ),
   }),
   output: resolveReviewCommentsOutput,
-  async run({ harness, input, log }) {
-    log.info(`Resolving review comments in: ${input.articlePath}`);
-    const session = await harness.session();
+  async run({ harness, data, log }) {
+    log.info(`Resolving review comments in: ${data.articlePath}`);
     // Delegates to the review_resolver subagent — see design-tutorial-structure.ts
-    // for why bare harness.session() on the calling agent is unsafe here.
-    const { data } = await withTransientRetry(log, 'review_resolver', () =>
-      session.task(resolveReviewPrompt(input.articlePath) + authorHint(), {
-        agent: 'review_resolver',
-        result: resolveReviewCommentsOutput,
-      }),
-    );
-    return data;
+    // for why prompting the calling agent's own conversation is unsafe here.
+    const resolved = await delegate({
+      harness,
+      log,
+      label: 'review_resolver',
+      role: 'review_resolver',
+      result: resolveReviewCommentsOutput,
+      prompt: resolveReviewPrompt(data.articlePath) + authorHint(),
+    });
+    return { output: resolved };
   },
 });

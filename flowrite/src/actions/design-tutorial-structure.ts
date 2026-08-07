@@ -1,11 +1,11 @@
-import { defineAction } from '@flue/runtime';
+import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
-import { withTransientRetry } from '../shared/style-loop.ts';
-// Injected into the generic designer's task (skills can't vary per session.task
-// call); the SKILL.md points here. Same source-of-truth split as rules.md.
+import { delegate } from '../shared/delegate.ts';
+// Injected into the generic designer's task (skills can't vary per delegated
+// task); the SKILL.md points here. Same source-of-truth split as rules.md.
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
 
 export const structureSchema = v.object({
@@ -38,47 +38,55 @@ export const structureSchema = v.object({
  * Reliability-critical: the output shape is enforced so the writer stage always
  * receives a well-formed structure.
  */
-export const designTutorialStructure = defineAction({
+export const designTutorialStructure = defineTool({
   name: 'design_tutorial_structure',
   description: 'Turn deep-research answers into a validated, linear tutorial section plan.',
+  harness: true,
   input: v.object({
     topic: v.string(),
     researchAnswers: researchSchema,
   }),
   output: structureSchema,
-  async run({ harness, input, log }) {
+  async run({ harness, data, log }) {
     // Resume support — see research-tutorial-topic.ts.
     if (isPhaseSkipped('design')) {
       log.info('Skipping design (skipPhases)');
       return {
-        learningObjectives: [],
-        prerequisites: [],
-        sections: [],
-        coreInsight: '(skipped — phase already done)',
+        output: {
+          learningObjectives: [],
+          prerequisites: [],
+          sections: [],
+          coreInsight: '(skipped — phase already done)',
+        },
       };
     }
 
-    log.info(`Designing tutorial structure for: ${input.topic}`);
-    const session = await harness.session();
-    // Delegates to the generic designer subagent (no actions/subagents of its
-    // own) rather than reopening a session on the calling agent — that agent's
-    // own design_tutorial_structure action would otherwise be visible to the
-    // nested session, letting it call itself and recurse until the delegation
-    // depth limit is hit.
-    const { data } = await withTransientRetry(log, 'designer (tutorial)', () =>
-      session.task(
-      [
-        `Design a learning-oriented tutorial structure for "${input.topic}".`,
-        ``,
-        `Follow this tutorial-structure template exactly:`,
-        ``,
-        tutorialStructureDoc,
-        ``,
-        `Research answers:`,
-        JSON.stringify(input.researchAnswers),
-      ].join('\n') + authorHint(),
-      { agent: 'designer', result: structureSchema },
-    ));
-    return data;
+    log.info(`Designing tutorial structure for: ${data.topic}`);
+    // Delegates to the generic designer subagent (no tools/subagents of its
+    // own) rather than letting the work happen in the calling agent's own
+    // conversation — that agent's own design_tutorial_structure tool would
+    // otherwise be visible to whoever does the designing, letting it call
+    // itself and recurse until the delegation depth limit is hit. `delegate`
+    // still prompts through the calling agent (harness.prompt), so the lead-in
+    // it prepends is what pushes the work out to the narrow role instead.
+    const structure = await delegate({
+      harness,
+      log,
+      label: 'designer (tutorial)',
+      role: 'designer',
+      result: structureSchema,
+      prompt:
+        [
+          `Design a learning-oriented tutorial structure for "${data.topic}".`,
+          ``,
+          `Follow this tutorial-structure template exactly:`,
+          ``,
+          tutorialStructureDoc,
+          ``,
+          `Research answers:`,
+          JSON.stringify(data.researchAnswers),
+        ].join('\n') + authorHint(),
+    });
+    return { output: structure };
   },
 });
