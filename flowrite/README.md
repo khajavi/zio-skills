@@ -54,7 +54,7 @@ The interesting engineering therefore moves out of `.ts` files and into:
 - **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
-- **phase tools** (`src/actions/*.ts`) — a research/write/verify/integrate step, each
+- **phase tools** (`src/phases/*.ts`) — a research/write/verify/integrate step, each
   delegating to a specialized role with a `valibot` result schema,
 - **roles** (`src/subagents/*`) — generic delegates (researcher, drafter, reviewer…)
   reused across every writer.
@@ -105,9 +105,9 @@ The design decisions were about **context**, not control flow:
   so research needs an API-surface-shaped result schema (every constructor, every
   method with its real signature, every subtype), whereas tutorials use a
   pedagogical schema.
-- The generic role subagents (researcher, drafter, reviewer, …) could be shared
+- The generic delegate roles (researcher, drafter, reviewer, …) could be shared
   wholesale; the *document-kind-specific* focus (schema, structure template,
-  checklist) gets injected by the actions at each delegation call site.
+  checklist) gets injected by the phase tools at each delegation call site.
 - Every researched fact must carry a **source citation** (`path:L<start>-L<end>`)
   so the drafter can't hallucinate an API that isn't in the source.
 
@@ -121,13 +121,13 @@ Implementation is mostly Markdown and schemas:
 - Write the agent's identity in `src/agents/data-type-ref-writer.md`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
-- Write the actions (`research-data-type.ts`, `write-data-type-reference.ts`, …),
-  each defining a `valibot` result schema and delegating to a generic subagent
+- Write the phase tools (`research-data-type.ts`, `write-data-type-reference.ts`, …),
+  each defining a `valibot` result schema and delegating to a generic role
   with a kind-specific prompt. The research schema alone — constructors,
   `coreOperations`, `subtypesOrVariants`, per-fact `source` — *is* the spec that
   keeps the writer honest.
-- Wire it all into the `defineAgent(...)` shown above, and expose it through the
-  `write-data-type-ref` workflow.
+- Wire it all into the agent function shown above, and declare what a run needs
+  with its `initialData` static.
 
 Model choice is centralized in `src/shared/models.ts` as **tiers**, each
 env-overridable per run — so the same agent runs on cheap models under test and
@@ -142,14 +142,14 @@ reviewer:   { model: REVIEWER_MODEL   ?? 'anthropic/claude-sonnet-4-6', effort: 
 
 ### 3. Test the agent on tinyoptics
 
-`.env.testing` pins every tier to Haiku at `low` effort and points `REPO_PATH` at
-the bundled fixture — the whole loop runs for cents:
+`.env.testing` pins every tier to Haiku at `low` effort — the whole loop runs for
+cents:
 
 ```bash
-# .env.testing selects cheap models + the tinyoptics fixture
-flue run write-data-type-ref \
-  --env .env.testing \
-  --input '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+# .env.testing selects cheap models; --data points at the tinyoptics fixture
+flue run src/agents/data-type-ref-writer.ts \
+  --env .env.testing --id dtr-Prism -m "go" \
+  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
 ```
 
 > If `pnpm exec flue` misbehaves, call the binary directly: `./node_modules/.bin/flue run …`.
@@ -235,10 +235,9 @@ diff behavior across iterations of the prompt.
 
 ```
 src/
-  agents/        # the two agents: identity (.md) + wiring (.ts)
-  workflows/     # finite, schema-typed entry points for CI/batch runs
-  actions/       # research / write / verify / integrate steps (+ result schemas)
-  profiles/      # generic subagent roles, shared across both agents
+  agents/        # the writers: identity (.md) + wiring (.ts), each an entry point
+  phases/        # research / write / verify / integrate steps (+ result schemas)
+  subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
   tools/         # gh query, method-coverage, todo tools
   shared/        # model tiers, token/component tracking, caching, skip-phases
@@ -254,8 +253,9 @@ pnpm install
 cp .env.testing.example .env.testing   # add ANTHROPIC_API_KEY
 
 # run against the bundled fixture (cheap models)
-flue run write-data-type-ref --env .env.testing \
-  --input '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+flue run src/agents/data-type-ref-writer.ts --env .env.testing \
+  --id dtr-Prism -m "go" \
+  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
 ```
 
 Flue's own docs ship with the packages — read them directly rather than guessing at

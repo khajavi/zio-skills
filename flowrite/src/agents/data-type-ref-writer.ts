@@ -14,12 +14,12 @@ import dataTypeStructure from '../skills/data-type-ref-structure/SKILL.md';
 import dataTypeChecklist from '../skills/data-type-ref-checklist/SKILL.md';
 
 // phase tools
-import { researchDataType } from '../actions/research-data-type.ts';
-import { designDataTypeStructure } from '../actions/design-data-type-structure.ts';
-import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
-import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateDataTypeReference } from '../actions/integrate.ts';
-import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
+import { researchDataType } from '../phases/research-data-type.ts';
+import { designDataTypeStructure } from '../phases/design-data-type-structure.ts';
+import { writeDataTypeReference } from '../phases/write-data-type-reference.ts';
+import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
+import { integrateDataTypeReference } from '../phases/integrate.ts';
+import { reviewDataTypeRef } from '../phases/review-data-type-ref.ts';
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/delegation/turn detail. Installed here
 // because the agent module is the entry point now that workflows are gone.

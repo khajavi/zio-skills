@@ -12,12 +12,12 @@ import tutorialStructure from '../skills/tutorial-structure/SKILL.md';
 import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md';
 
 // phase tools
-import { researchTutorialTopic } from '../actions/research-tutorial-topic.ts';
-import { designTutorialStructure } from '../actions/design-tutorial-structure.ts';
-import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
-import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateTutorial } from '../actions/integrate.ts';
-import { reviewTutorial } from '../actions/review-tutorial.ts';
+import { researchTutorialTopic } from '../phases/research-tutorial-topic.ts';
+import { designTutorialStructure } from '../phases/design-tutorial-structure.ts';
+import { writeTutorialDraft } from '../phases/write-tutorial-draft.ts';
+import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
+import { integrateTutorial } from '../phases/integrate.ts';
+import { reviewTutorial } from '../phases/review-tutorial.ts';
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/delegation/turn detail. Installed here
 // because the agent module is the entry point now that workflows are gone.

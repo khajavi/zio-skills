@@ -1,28 +1,27 @@
 import { observe, type FlueEvent } from '@flue/runtime';
-import { researchTutorialTopic } from '../actions/research-tutorial-topic.ts';
-import { designTutorialStructure } from '../actions/design-tutorial-structure.ts';
-import { writeTutorialDraft } from '../actions/write-tutorial-draft.ts';
-import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateTutorial } from '../actions/integrate.ts';
-import { reviewTutorial } from '../actions/review-tutorial.ts';
-import { researchDataType } from '../actions/research-data-type.ts';
-import { designDataTypeStructure } from '../actions/design-data-type-structure.ts';
-import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
-import { integrateDataTypeReference } from '../actions/integrate.ts';
-import { reviewDataTypeRef } from '../actions/review-data-type-ref.ts';
-import { researchModule } from '../actions/research-module.ts';
-import { designModuleStructure } from '../actions/design-module-structure.ts';
-import { writeModuleOverview } from '../actions/write-module-overview.ts';
-import { integrateModuleReference } from '../actions/integrate-module.ts';
-import { reviewModuleRef } from '../actions/review-module-ref.ts';
+import { researchTutorialTopic } from '../phases/research-tutorial-topic.ts';
+import { designTutorialStructure } from '../phases/design-tutorial-structure.ts';
+import { writeTutorialDraft } from '../phases/write-tutorial-draft.ts';
+import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
+import { integrateTutorial } from '../phases/integrate.ts';
+import { reviewTutorial } from '../phases/review-tutorial.ts';
+import { researchDataType } from '../phases/research-data-type.ts';
+import { designDataTypeStructure } from '../phases/design-data-type-structure.ts';
+import { writeDataTypeReference } from '../phases/write-data-type-reference.ts';
+import { integrateDataTypeReference } from '../phases/integrate.ts';
+import { reviewDataTypeRef } from '../phases/review-data-type-ref.ts';
+import { researchModule } from '../phases/research-module.ts';
+import { designModuleStructure } from '../phases/design-module-structure.ts';
+import { writeModuleOverview } from '../phases/write-module-overview.ts';
+import { integrateModuleReference } from '../phases/integrate-module.ts';
+import { reviewModuleRef } from '../phases/review-module-ref.ts';
 
 /**
  * Every agent's own phase tools — model-callable, but delegating their real work
- * to a role. Kept under the 'action' category label so a report stays comparable
- * with archived beta-era runs, though Flue 2 has no Actions concept: these are
- * ordinary `harness: true` tools now.
+ * to a role. Reported under the 'phase' category to separate them from the generic
+ * tools; Flue 2 has no Actions concept, these are ordinary `harness: true` tools.
  */
-const ACTION_NAMES = new Set(
+const PHASE_TOOLS = new Set(
   [
     researchTutorialTopic,
     designTutorialStructure,
@@ -43,7 +42,7 @@ const ACTION_NAMES = new Set(
   ].map((a) => a.name),
 );
 
-export type ComponentCategory = 'action' | 'subagent' | 'tool' | 'skill' | 'agent';
+export type ComponentCategory = 'phase' | 'subagent' | 'tool' | 'skill' | 'agent';
 
 export interface ComponentUsage {
   category: ComponentCategory;
@@ -71,7 +70,7 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
 
 /**
  * Subscribe to runtime activity and tally calls + token usage per component
- * (action/subagent/tool/skill/agent), for a final per-run breakdown alongside
+ * (phase/subagent/tool/skill/agent), for a final per-run breakdown alongside
  * the aggregate total from `trackTokenUsage`.
  *
  * Call counts come from `tool_start` (phase tools, repo/generic tools, skill
@@ -104,8 +103,8 @@ export function trackComponentUsage(): ComponentUsageTracker {
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start') {
       toolStack.push(event.toolName);
-      const category: ComponentCategory = ACTION_NAMES.has(event.toolName)
-        ? 'action'
+      const category: ComponentCategory = PHASE_TOOLS.has(event.toolName)
+        ? 'phase'
         : event.toolName === 'activate_skill'
           ? 'skill'
           : 'tool';
@@ -140,8 +139,8 @@ export function trackComponentUsage(): ComponentUsageTracker {
       const category: ComponentCategory = role
         ? 'subagent'
         : owningTool
-          ? ACTION_NAMES.has(owningTool)
-            ? 'action'
+          ? PHASE_TOOLS.has(owningTool)
+            ? 'phase'
             : 'tool'
           : 'agent';
       const entry = entryFor(components, category, name);

@@ -15,14 +15,14 @@ import moduleRefChecklist from '../skills/module-ref-checklist/SKILL.md';
 
 // phase tools — the module phases, plus the two reused data-type-ref tools that
 // build each per-type subpage in the hierarchical layout.
-import { researchModule } from '../actions/research-module.ts';
-import { designModuleStructure } from '../actions/design-module-structure.ts';
-import { writeModuleOverview } from '../actions/write-module-overview.ts';
-import { researchDataType } from '../actions/research-data-type.ts';
-import { writeDataTypeReference } from '../actions/write-data-type-reference.ts';
-import { writeCompanionExamples } from '../actions/write-companion-examples.ts';
-import { integrateModuleReference } from '../actions/integrate-module.ts';
-import { reviewModuleRef } from '../actions/review-module-ref.ts';
+import { researchModule } from '../phases/research-module.ts';
+import { designModuleStructure } from '../phases/design-module-structure.ts';
+import { writeModuleOverview } from '../phases/write-module-overview.ts';
+import { researchDataType } from '../phases/research-data-type.ts';
+import { writeDataTypeReference } from '../phases/write-data-type-reference.ts';
+import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
+import { integrateModuleReference } from '../phases/integrate-module.ts';
+import { reviewModuleRef } from '../phases/review-module-ref.ts';
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/delegation/turn detail. Installed here
 // because the agent module is the entry point now that workflows are gone.
