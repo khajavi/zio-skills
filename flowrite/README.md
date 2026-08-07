@@ -26,18 +26,21 @@ a branch you write:
 
 ```ts
 // src/agents/data-type-ref-writer.ts
-export default defineAgent(({ id }) => ({
-  profile: docsAuthorBase,                 // model tier + the writing-style skill
-  instructions,                            // who it is — a Markdown file
-  sandbox: local(),                        // where it runs, safely
-  cwd: process.env.REPO_PATH,              // the library checkout to document
-  skills:   [mdocConventions, dataTypeStructure, dataTypeChecklist],
-  actions:  [researchDataType, writeDataTypeReference, verifyDataTypeCompliance,
+'use agent';
+export function DataTypeRefWriter(props: AgentProps) {
+  const facts = v.parse(initialData, useInitialData()); // the checkout + the type
+  return useDocsWriter(props, {
+    instructions,                            // who it is — a Markdown file
+    skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
+    tools:  [researchDataType, designDataTypeStructure, writeDataTypeReference,
              writeCompanionExamples, integrateDataTypeReference, reviewDataTypeRef],
-  subagents:[researcher, drafter, reviewer, examplesBuilder,
-             docsIntegrator, reviewResolver, styleChecker, styleFixer],
-  tools:    [createGhQueryTool(cwd), createMethodCoverageTool(cwd)],
-}));
+    runDirective: `Write a reference page for: ${facts.typeName}. …`,
+  });
+}
+DataTypeRefWriter.initialData = initialData;
+
+// useDocsWriter is a custom hook — it calls useModel/useSandbox/useSkill/useTool
+// and declares the nine shared roles with useSubagent.
 ```
 
 Notice what's *not* there: no "step 1 research, step 2 design, step 3 write"
@@ -51,22 +54,30 @@ The interesting engineering therefore moves out of `.ts` files and into:
 - **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
-- **actions** (`src/actions/*.ts`) — a research/write/verify/integrate step, each
-  delegating to a specialized subagent with a `valibot` result schema,
-- **subagents** (`src/profiles/*`) — generic roles (researcher, drafter, reviewer…)
-  reused across both the tutorial writer and the reference writer.
+- **phase tools** (`src/actions/*.ts`) — a research/write/verify/integrate step, each
+  delegating to a specialized role with a `valibot` result schema,
+- **roles** (`src/subagents/*`) — generic delegates (researcher, drafter, reviewer…)
+  reused across every writer.
 
 ## What's in the box
 
-| Agent | Writes | Workflow wrapper |
-|-------|--------|------------------|
-| `tutorial-writer` | Narrative, pedagogical guides with companion examples | `write-tutorial` |
-| `data-type-ref-writer` | Exhaustive, API-complete reference pages | `write-data-type-ref` |
+| Agent | Writes |
+|-------|--------|
+| `tutorial-writer` | Narrative, pedagogical guides with companion examples |
+| `data-type-ref-writer` | Exhaustive, API-complete reference pages |
+| `module-ref-writer` | Module narrative plus per-type coverage, flat or hierarchical |
 
-Each agent is wrapped by a **workflow** (`src/workflows/*.ts`) — a finite,
-schema-typed entry point for CI, scheduled, or batch runs. The workflow sets
-`REPO_PATH`, opens a session, prompts the agent to run the full flow, and captures
-a structured result plus a **run retrospective**.
+Each agent is its own finite, schema-typed entry point for CI, scheduled, or batch
+runs. Its `initialData` schema declares what a run needs, validated before anything
+durable is admitted:
+
+```bash
+flue run src/agents/data-type-ref-writer.ts --id dtr-Chunk -m "go" \
+  --data '{"projectPath":"/path/to/checkout","typeName":"Chunk"}'
+```
+
+The agent captures a structured result plus a **run retrospective** in its final
+reply.
 
 The `fixtures/tinyoptics/` directory is a small ZIO optics library (Lens, Prism,
 Optional) used as the test target — real Scala source with a real `sbt`/`mdoc`

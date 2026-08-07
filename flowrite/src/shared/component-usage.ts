@@ -82,10 +82,13 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
  *
  * Attribution order, most specific first:
  *  - `taskId` mapped back to the role recorded at `task_start` → that role.
- *  - `harness` → the phase tool whose harness opened the conversation. Flue 2
- *    routes every phase through `harness.prompt()`, and those turns carry
- *    `harness` with no `session`; without this branch they would be dropped and
- *    the delegation-deciding turns would vanish from the cost report.
+ *  - `harness` set → the phase tool currently on the call stack. Flue 2 routes
+ *    every phase through `harness.prompt()`, and those turns carry `harness` with
+ *    no `session`; without this branch they would be dropped and the
+ *    delegation-deciding turns would vanish from the cost report. The field holds
+ *    the harness NAME (always "default"), not the tool's, so the tool comes from
+ *    an in-flight tool_start/tool stack instead — accurate here because the writer
+ *    runs one phase at a time.
  *  - `session`, then `agentName` → the top-level writer.
  */
 export function trackComponentUsage(): ComponentUsageTracker {
@@ -94,9 +97,13 @@ export function trackComponentUsage(): ComponentUsageTracker {
   // the subagent's own name, in `event.session` — map taskId back to the
   // subagent name recorded at task_start so turn tokens land on the right entry.
   const subagentByTaskId = new Map<string, string>();
+  // In-flight tool calls, innermost last. A harness exists only for the duration
+  // of the tool call that opened it, so the tool on top owns any harness turn.
+  const toolStack: string[] = [];
 
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start') {
+      toolStack.push(event.toolName);
       const category: ComponentCategory = ACTION_NAMES.has(event.toolName)
         ? 'action'
         : event.toolName === 'activate_skill'
@@ -104,6 +111,12 @@ export function trackComponentUsage(): ComponentUsageTracker {
           : 'tool';
       const name = category === 'skill' ? String((event.args as any)?.name ?? 'unknown') : event.toolName;
       entryFor(components, category, name).calls += 1;
+      return;
+    }
+
+    if (event.type === 'tool') {
+      const at = toolStack.lastIndexOf(event.toolName);
+      if (at !== -1) toolStack.splice(at, 1);
       return;
     }
 
@@ -119,14 +132,15 @@ export function trackComponentUsage(): ComponentUsageTracker {
       const u = event.response.usage;
       if (!u) return;
       const role = event.taskId ? subagentByTaskId.get(event.taskId) : undefined;
-      const name = role ?? event.harness ?? event.session ?? event.agentName;
+      // event.harness is the harness's own name ("default"), so the owning tool
+      // comes from the call stack instead.
+      const owningTool = event.harness ? toolStack[toolStack.length - 1] : undefined;
+      const name = role ?? owningTool ?? event.session ?? event.agentName;
       if (!name) return;
       const category: ComponentCategory = role
         ? 'subagent'
-        : event.harness
-          ? // A harness only exists inside a tool call, so its turns belong to
-            // that phase tool — 'action' when it is one of ours, else 'tool'.
-            ACTION_NAMES.has(event.harness)
+        : owningTool
+          ? ACTION_NAMES.has(owningTool)
             ? 'action'
             : 'tool'
           : 'agent';
