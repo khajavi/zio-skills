@@ -15,6 +15,7 @@ import * as v from 'valibot';
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
 import { getRepoPath, setRunContext } from './run-context.ts';
+import { createReportRunResultTool } from './run-result.ts';
 import { useUsageReport } from './usage-report.ts';
 
 // role delegates — the generic, document-kind-neutral roles shared by every docs
@@ -112,8 +113,10 @@ export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempt
 const SHARED_DIRECTIVE =
   `Your shell already starts in the repo root of the library checkout — use relative paths ` +
   `for every command; do not cd into the repo. ` +
-  `Report the final page path, a one-line summary, and a run retrospective: the real obstacles ` +
-  `you hit this run and how you resolved them (empty if it went smoothly — never invent friction).`;
+  `When the work is done, call report_run_result once with the final page path, a one-line ` +
+  `summary, and a run retrospective: the real obstacles you hit this run and how you resolved ` +
+  `them (empty if it went smoothly — never invent friction). Report the review's actual verdict ` +
+  `there, including any checklist item still failing; do not describe a failing page as passing.`;
 
 /**
  * Shared composition for ZIO documentation-authoring agents (tutorial-writer,
@@ -182,6 +185,7 @@ export function useDocsWriter(
   for (const skill of opts.skills) useSkill(skill);
   for (const tool of opts.tools) useTool(tool);
   useTool(createGhQueryTool(getRepoPath));
+  useTool(createReportRunResultTool(opts.label));
   for (const role of ROLES) useSubagent(role);
 
   useUsageReport(opts.label);
