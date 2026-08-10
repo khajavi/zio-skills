@@ -28,7 +28,12 @@ input="$(jq -n --arg projectPath "$fixture_root" --arg topic "$topic" --argjson 
 
 # `exec` replaces this subshell with flue itself, so $! below is flue's real
 # PID (not a wrapper) — kill "$flue_pid" hits the actual node process.
-(cd "$flowrite_root" && exec ./node_modules/.bin/flue run write-tutorial --env .env.testing --input "$input") \
+# Flue 2 invocation — see run-data-type-ref.sh for why each flag and env var is here.
+(cd "$flowrite_root" && exec env \
+  NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
+  FLUE_VERBOSE_TOOLS=1 MAX_REVIEW_CALLS=1 MAX_FIX_ROUNDS=1 \
+  ./node_modules/.bin/flue run src/agents/tutorial-writer.ts \
+  --env .env.testing -m "go" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
 
@@ -50,7 +55,7 @@ cleanup() {
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children, not this script's — a killed
   # flue process does not reliably take them down with it (seen in practice).
-  pkill -9 -f "flue.mjs run write-tutorial" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agents/tutorial-writer.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-tutorial
   rm -f "$log"
