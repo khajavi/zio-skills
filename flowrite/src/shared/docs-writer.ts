@@ -14,7 +14,7 @@ import * as v from 'valibot';
 
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
-import { guardPhase } from './phase-guard.ts';
+import { guardPhase, guardRootOnly } from './phase-guard.ts';
 import { getRepoPath, setRunContext } from './run-context.ts';
 import { createReportRunResultTool } from './run-result.ts';
 import { useUsageReport } from './usage-report.ts';
@@ -186,11 +186,13 @@ export function useDocsWriter(
   for (const skill of opts.skills) useSkill(skill);
   // Guarded: a phase tool's harness conversation inherits every other phase tool, so without this
   // a phase can re-enter the workflow until the delegation cap trips — which is how reviewer and
-  // style_checker became unreachable. gh_query and report_run_result below stay unguarded; they
-  // are ordinary tools that must remain callable from inside a phase. See phase-guard.ts.
+  // style_checker became unreachable. See phase-guard.ts.
   for (const tool of opts.tools) useTool(guardPhase(tool));
+  // gh_query stays unguarded — an ordinary lookup any phase may legitimately need.
   useTool(createGhQueryTool(getRepoPath));
-  useTool(createReportRunResultTool(opts.label));
+  // report_run_result is guarded on a different axis: not "is it a phase?" but "is it terminal for
+  // the run?". It was exempt originally, and a phase duly filed the run's verdict mid-review.
+  useTool(guardRootOnly(createReportRunResultTool(opts.label)));
   for (const role of ROLES) useSubagent(role);
 
   useUsageReport(opts.label);
