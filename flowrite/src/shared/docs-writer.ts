@@ -123,12 +123,37 @@ export function useRunBasics(schema: v.GenericSchema, request: string): RunFacts
 
   // Owns useModel, so nothing here may call it again — it throws on a second call in one render.
   useDocsAuthorBase();
+
   // cwd belongs to local(), not to useSandbox. local()'s cwd anchors the sandbox on the host and
   // defaults to process.cwd(); useSandbox's cwd only picks a directory *inside* an already-anchored
   // environment. Passing it to useSandbox left the sandbox rooted in flowrite itself, so workspace
   // discovery — AGENTS.md and .agents/skills/ from the session cwd — fed the writer flowrite's own
   // AGENTS.md instead of the checkout it is documenting.
   useSandbox(local({ cwd: projectPath }));
+
+  // MUST come after useSandbox. Declared before it, the roles never reach a phase tool's harness
+  // conversation: every phase gave up with "No subagents are currently available. The system context
+  // explicitly states \"Available Agents: None\"", while the root agent's own roster looked fine (a
+  // probe confirmed all nine declared on every render). One delegation happened in a whole run,
+  // against 24 in the equivalent pre-merge run.
+  //
+  // Isolated by measurement, one variable at a time, because two candidates were confounded at
+  // first — position relative to useSandbox, and position relative to the useTool calls:
+  //
+  //   before useSandbox                    → 0 delegations, every phase gave up
+  //   after useSandbox, before useTool     → delegation works
+  //   after useSandbox, after useTool      → delegation works
+  //
+  // So useTool order is irrelevant and useSandbox order is everything. The likely mechanism is in
+  // reference/agent-api.md: a sandbox attach narrates an `environment` signal that is "always a full
+  // snapshot, never a delta … and the live skill and subagent catalogs", and that snapshot is the
+  // baseline a harness conversation inherits. Attach before the roles exist and the baseline records
+  // none. This contradicts the hooks reference, which lists useSubagent as "conditional and
+  // reorderable" — worth reporting upstream.
+  //
+  // The pre-merge writers were accidentally correct: they called useSandbox first and useSubagent
+  // last. Nothing said the order mattered.
+  useRoles();
 
   return facts;
 }
@@ -176,6 +201,16 @@ const SHARED_DIRECTIVE =
  * an agent's durable identity is its own exported function name — the agent must declare that
  * function itself rather than receive one from a factory.
  */
+/**
+ * Declare the nine role delegates. Called by useRunBasics, so every render has the full roster —
+ * including the classification gate, whose render is the baseline snapshot phase tools inherit.
+ *
+ * Order matters and is not obvious: see the call site for the measurements.
+ */
+export function useRoles(): void {
+  for (const role of ROLES) useSubagent(role);
+}
+
 export function useDocsWriter(
   opts: {
     /** Log prefix for the end-of-run usage summary, e.g. 'write-data-type-ref'. */
@@ -197,7 +232,6 @@ export function useDocsWriter(
   // report_run_result is guarded on a different axis: not "is it a phase?" but "is it terminal for
   // the run?". It was exempt originally, and a phase duly filed the run's verdict mid-review.
   useTool(guardRootOnly(createReportRunResultTool(opts.label)));
-  for (const role of ROLES) useSubagent(role);
 
   useUsageReport(opts.label);
   useInstruction(`${opts.runDirective} ${SHARED_DIRECTIVE}`);

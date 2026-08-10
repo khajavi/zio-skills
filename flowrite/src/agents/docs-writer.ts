@@ -262,6 +262,10 @@ export function DocsWriter(_props: AgentProps) {
       },
     });
 
+    // Declared here too, after the gate's own tools: the `task` roster is frozen into the system
+    // prompt from the FIRST render's snapshot, and every phase tool's harness conversation is seeded
+    // with that prompt. A roster declared only after classification is invisible to the code that
+    // delegates.
     return GATE_INSTRUCTIONS;
   }
 
