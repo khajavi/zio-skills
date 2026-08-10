@@ -14,6 +14,7 @@ import * as v from 'valibot';
 
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
+import { guardPhase } from './phase-guard.ts';
 import { getRepoPath, setRunContext } from './run-context.ts';
 import { createReportRunResultTool } from './run-result.ts';
 import { useUsageReport } from './usage-report.ts';
@@ -183,7 +184,11 @@ export function useDocsWriter(
   useSandbox(local({ cwd: projectPath }));
 
   for (const skill of opts.skills) useSkill(skill);
-  for (const tool of opts.tools) useTool(tool);
+  // Guarded: a phase tool's harness conversation inherits every other phase tool, so without this
+  // a phase can re-enter the workflow until the delegation cap trips — which is how reviewer and
+  // style_checker became unreachable. gh_query and report_run_result below stay unguarded; they
+  // are ordinary tools that must remain callable from inside a phase. See phase-guard.ts.
+  for (const tool of opts.tools) useTool(guardPhase(tool));
   useTool(createGhQueryTool(getRepoPath));
   useTool(createReportRunResultTool(opts.label));
   for (const role of ROLES) useSubagent(role);
