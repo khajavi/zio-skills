@@ -24,8 +24,14 @@ skip_phases_json="[]"
 if [ -n "$skip_phases" ]; then
   skip_phases_json="$(printf '%s' "$skip_phases" | tr ',' '\n' | jq -R . | jq -s .)"
 fi
-input="$(jq -n --arg projectPath "$fixture_root" --arg typeName "$type_name" --argjson skipPhases "$skip_phases_json" \
-  '{projectPath: $projectPath, typeName: $typeName, skipPhases: $skipPhases}')"
+# The kind of document and its subject now come from the MESSAGE, not from creation data, so
+# --data carries only what a sentence cannot express with schema validation.
+input="$(jq -n --arg projectPath "$fixture_root" --argjson skipPhases "$skip_phases_json" \
+  '{projectPath: $projectPath, skipPhases: $skipPhases}')"
+
+# Unambiguous on purpose: a vague request makes the writer stop and ask which kind is wanted —
+# correct behaviour, but it produces no document.
+request="Please write reference documentation for the $type_name data type."
 
 # `exec` replaces this subshell with flue itself, so $! below is flue's real PID.
 #
@@ -42,8 +48,8 @@ input="$(jq -n --arg projectPath "$fixture_root" --arg typeName "$type_name" --a
 (cd "$flowrite_root" && exec env \
   NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
   FLUE_VERBOSE_TOOLS=1 MAX_REVIEW_CALLS=1 MAX_FIX_ROUNDS=1 \
-  ./node_modules/.bin/flue run src/agents/data-type-ref-writer.ts \
-  --env .env.testing -m "go" --data "$input") \
+  ./node_modules/.bin/flue run src/agents/docs-writer.ts \
+  --env .env.testing -m "$request" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
 
@@ -59,7 +65,7 @@ cleanup() {
   kill -TERM "$flue_pid" 2>/dev/null
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children — kill them too.
-  pkill -9 -f "flue.mjs run src/agents/data-type-ref-writer.ts" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agents/docs-writer.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-data-type-ref
   rm -f "$log"
