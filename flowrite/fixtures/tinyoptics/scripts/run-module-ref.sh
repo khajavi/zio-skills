@@ -28,7 +28,7 @@ if [ -n "$skip_phases" ]; then
   skip_phases_json="$(printf '%s' "$skip_phases" | tr ',' '\n' | jq -R . | jq -s .)"
 fi
 
-# layout is optional in the workflow schema — only include the key when given.
+# layout is optional in the agent's initialData schema — only include the key when given.
 if [ -n "$layout" ]; then
   input="$(jq -n --arg projectPath "$fixture_root" --arg moduleName "$module_name" --arg layout "$layout" --argjson skipPhases "$skip_phases_json" \
     '{projectPath: $projectPath, moduleName: $moduleName, layout: $layout, skipPhases: $skipPhases}')"
@@ -38,7 +38,12 @@ else
 fi
 
 # `exec` replaces this subshell with flue itself, so $! below is flue's real PID.
-(cd "$flowrite_root" && exec ./node_modules/.bin/flue run write-module-ref --env .env.testing --input "$input") \
+# Flue 2 invocation — see run-data-type-ref.sh for why each flag and env var is here.
+(cd "$flowrite_root" && exec env \
+  NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
+  FLUE_VERBOSE_TOOLS=1 MAX_REVIEW_CALLS=1 MAX_FIX_ROUNDS=1 \
+  ./node_modules/.bin/flue run src/agents/module-ref-writer.ts \
+  --env .env.testing -m "go" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
 
@@ -54,7 +59,7 @@ cleanup() {
   kill -TERM "$flue_pid" 2>/dev/null
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children — kill them too.
-  pkill -9 -f "flue.mjs run write-module-ref" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agents/module-ref-writer.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-module-ref
   rm -f "$log"

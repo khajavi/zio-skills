@@ -27,6 +27,29 @@ import type { ToolDefinition } from '@flue/runtime';
 const activePhase = new AsyncLocalStorage<string>();
 
 /**
+ * Refuse a call, loudly.
+ *
+ * Logged because refusals are the only direct evidence a guard is working: counting
+ * `Maximum delegation depth` errors does NOT measure re-entry — nesting only errors if it happens
+ * to reach depth 4, and repro runs nested with zero errors. stderr, never stdout: stdout carries
+ * the reply and `--json` must stay parseable.
+ *
+ * Thrown, not returned: the runtime surfaces a thrown error as a tool error, which the calling
+ * model reads as an instruction. Measured behaviour is that it then reaches the goal another way
+ * rather than looping.
+ */
+function refuse(name: string, parent: string, advice: string): never {
+  console.error(`[phase-guard] refused ${name} inside ${parent}`);
+  throw new Error(`"${name}" cannot run inside the "${parent}" phase. ${advice}`);
+}
+
+// `?? {}` only satisfies the erased type: a tool with no output schema may return void
+// synchronously, which is legal, but `Promise<void>` is not — and wrapping makes every return a
+// promise. `{}` carries the same "no output" meaning. Every flowrite tool wrapped here declares an
+// output schema and returns `{ output }`, so this branch is unreachable today.
+const normalize = <T>(result: T) => result ?? {};
+
+/**
  * Wrap a phase tool so it refuses to run inside another phase.
  *
  * Rewrapping is safe: `defineTool` returns a frozen plain object of exactly
@@ -41,26 +64,47 @@ export function guardPhase(tool: ToolDefinition): ToolDefinition {
     async run(ctx) {
       const parent = activePhase.getStore();
       if (parent) {
-        // Logged because refusals are the only direct evidence the guard is working: counting
-        // `Maximum delegation depth` errors does NOT measure re-entry — nesting only errors if it
-        // happens to reach depth 4, and repro runs nested with zero errors. stderr, never stdout:
-        // stdout carries the reply and `--json` must stay parseable.
-        console.error(`[phase-guard] refused ${tool.name} inside ${parent}`);
-        // Thrown, not returned: the runtime surfaces a thrown error as a tool error, which the
-        // calling model reads as an instruction. Measured behaviour is that it then reaches the
-        // goal another way rather than looping.
-        throw new Error(
-          `"${tool.name}" cannot run inside the "${parent}" phase. ` +
-            `Delegate with the task tool, or return your result and let the writer ` +
+        refuse(
+          tool.name,
+          parent,
+          `Delegate with the task tool, or return your result and let the writer ` +
             `call this phase next.`,
         );
       }
-      // `?? {}` only satisfies the erased type: a tool with no output schema may return void
-      // synchronously, which is legal, but `Promise<void>` is not — and wrapping makes every
-      // return a promise. `{}` carries the same "no output" meaning. Every flowrite phase tool
-      // declares an output schema and returns `{ output }`, so this branch is unreachable today.
-      const result = await activePhase.run(tool.name, async () => tool.run(ctx));
-      return result ?? {};
+      return normalize(await activePhase.run(tool.name, async () => tool.run(ctx)));
+    },
+  };
+}
+
+/**
+ * Wrap a run-terminal tool so only the writer itself may call it.
+ *
+ * `report_run_result` records the run's outcome, so exactly one caller is correct: the root
+ * writer, once, after everything else. A phase calling it is always wrong, and it happened —
+ * `review_data_type_ref` filed the report 40 minutes before its own review finished, and the
+ * module-ref run had three reports because three phases each filed one. Same inheritance hazard as
+ * re-entry: every phase's harness conversation receives the writer's system prompt verbatim,
+ * including SHARED_DIRECTIVE's "when the work is done, call report_run_result", and acts on it.
+ *
+ * Separate from `guardPhase` because the two differ in both directions. This one opens no phase
+ * frame — a report is not a phase and must not make a later sibling call look nested — and its
+ * advice tells the caller to return its result rather than to delegate, since delegating a report
+ * would just move the same mistake.
+ */
+export function guardRootOnly(tool: ToolDefinition): ToolDefinition {
+  return {
+    ...tool,
+    async run(ctx) {
+      const parent = activePhase.getStore();
+      if (parent) {
+        refuse(
+          tool.name,
+          parent,
+          `It reports the outcome of the whole run, so only the writer may call it, once, ` +
+            `at the very end. Return your result and let the writer report.`,
+        );
+      }
+      return normalize(await tool.run(ctx));
     },
   };
 }
