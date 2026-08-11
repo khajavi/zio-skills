@@ -22,6 +22,35 @@ let reviewCallCount = 0;
 // pass/fail + unresolved items instead of a fabricated `passed: true` (which the
 // agent misreads as a genuine pass and then reports success over a failing page).
 let lastReview: ReviewResult | null = null;
+
+/**
+ * The last real review result, or null when no review ran this process.
+ *
+ * Read by `report_run_result` so the end-of-run record carries the review's own verdict instead of
+ * the model's description of it. Measured need: with only a prose instruction ("report the review's
+ * actual verdict … do not describe a failing page as passing"), two runs filed "Complete Prism
+ * reference page …" over a `passed: false` review that had named its failures twice.
+ */
+export function getLastReview(): ReviewResult | null {
+  return lastReview;
+}
+
+/** The failing checklist items of the last review, by name. Empty when it passed or none ran. */
+export function failingReviewItems(): string[] {
+  return (lastReview?.items ?? []).filter((item) => !item.pass).map((item) => item.item);
+}
+
+/**
+ * Seed the cached review from a test. Not for production code.
+ *
+ * The cache is module state deliberately (one process per run — see the comment on
+ * `reviewCallCount`), which leaves no seam for a test to drive `report_run_result`'s verdict gate.
+ * A setter is the smallest opening; the alternative was reaching into the module's internals or
+ * running a whole review, and a real review means a model call.
+ */
+export function __setLastReviewForTests(result: ReviewResult | null): void {
+  lastReview = result;
+}
 // Default 1 review pass; override per run with MAX_REVIEW_CALLS=n.
 const MAX_REVIEW_CALLS = Number(process.env.MAX_REVIEW_CALLS ?? 1);
 
