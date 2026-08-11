@@ -79,6 +79,15 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
       > "$dest/token-usage.json"
   fi
 
+  # Per-phase cost, split into the phase's own harness turns and its delegates'. The component
+  # breakdown above cannot answer "which phase cost the most" — every phase's own turns collapse
+  # into agent:default, which is why that line dominates while each phase reports zero tokens.
+  phase_line="$(grep "$workflow_label phase usage:" "$dest/flue.log" | tail -1 || true)"
+  phase_usage="${phase_line#*phase usage: }"
+  if [ -n "$phase_usage" ] && jq -e . >/dev/null 2>&1 <<<"$phase_usage"; then
+    jq . <<<"$phase_usage" > "$dest/phase-usage.json"
+  fi
+
   # The agent's self-authored run retrospective (obstacles + fixes) — mine
   # these across turns to spot recurring friction worth an instruction change.
   insights_line="$(grep "$workflow_label run insights:" "$dest/flue.log" | tail -1 || true)"
@@ -111,6 +120,7 @@ if [ ! -s "$dest/changes.patch" ]; then
     [ -e "$dest/token-usage.json" ] && usage_note="$usage_note, usage saved to $dest/token-usage.json"
     [ -e "$dest/insights.json" ] && usage_note="$usage_note, insights saved to $dest/insights.json"
     [ -e "$dest/verdict.json" ] && usage_note="$usage_note, verdict saved to $dest/verdict.json"
+    [ -e "$dest/phase-usage.json" ] && usage_note="$usage_note, phase usage saved to $dest/phase-usage.json"
     echo "no file changes; log saved to $dest/flue.log$usage_note"
   else
     rm -rf "$dest"
@@ -159,5 +169,6 @@ log_note=""
 [ -e "$dest/token-usage.json" ] && log_note="$log_note, usage saved to $dest/token-usage.json"
 [ -e "$dest/insights.json" ] && log_note="$log_note, insights saved to $dest/insights.json"
 [ -e "$dest/verdict.json" ] && log_note="$log_note, verdict saved to $dest/verdict.json"
+[ -e "$dest/phase-usage.json" ] && log_note="$log_note, phase usage saved to $dest/phase-usage.json"
 echo "archived turn $n: $changed file(s) changed. $base_count file(s) in $dest/tinyoptics-base/, $final_count file(s) in $dest/tinyoptics-final/$log_note"
 echo "fixture reset to HEAD. Both copies are standalone runnable projects (cd in, run sbt). Or replay the diff onto this fixture: git apply $dest/changes.patch"

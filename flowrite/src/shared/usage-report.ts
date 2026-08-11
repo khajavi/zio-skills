@@ -39,6 +39,10 @@ function report(label: string): void {
       `(in ${t.input}, out ${t.output}, cacheRead ${t.cacheRead}, cacheWrite ${t.cacheWrite}) ` +
       `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
   );
+  // Per phase before per component: "which phase cost the most" is the question actually asked of
+  // these runs, and the component view cannot answer it — every phase's own harness turns collapse
+  // into `agent:default`, which is why that line dominates while each phase reports zero tokens.
+  console.error(`${label} phase usage: ${JSON.stringify(state.components.phases())}`);
   console.error(`${label} component usage: ${JSON.stringify(state.components.stop())}`);
 }
 

@@ -52,9 +52,33 @@ export interface ComponentUsage {
   cost: number;
 }
 
+/**
+ * What one phase of the pipeline cost, end to end.
+ *
+ * `own` is the phase's own harness conversation — the turns that decide what to ask for and read
+ * the results back. `delegate` is what its roles spent. The distinction is the interesting one: in a
+ * measured run the review phase's own conversation cost $1.67 against $0.99 for all three of its
+ * roles, so the expensive part was the coordination, not the reviewing.
+ */
+export interface PhaseUsage {
+  /** Phase tool name, or '(between phases)' for the writer's own turns outside any phase. */
+  phase: string;
+  ownTurns: number;
+  ownTokens: number;
+  ownCost: number;
+  delegateTurns: number;
+  delegateTokens: number;
+  delegateCost: number;
+  /** own + delegate, the figure to compare phases by. */
+  totalTokens: number;
+  totalCost: number;
+}
+
 export interface ComponentUsageTracker {
   /** Snapshot of accumulated per-component usage, grouped by category then name. */
   report(): ComponentUsage[];
+  /** Snapshot of accumulated per-phase usage, most expensive first. */
+  phases(): PhaseUsage[];
   stop(): ComponentUsage[];
 }
 
@@ -85,14 +109,19 @@ function entryFor(components: Map<string, ComponentUsage>, category: ComponentCa
  *  - otherwise `harness`, `session`, then `agentName` → the writer itself. Every
  *    turn in a run carries `harness` (a delegate inherits the parent's), and the
  *    field holds the harness's own name — "default" — not the owning tool's, so
- *    harness turns cannot be split per phase from the event alone. They are the
- *    writer's own reasoning, including each decision to delegate, so they aggregate
- *    under the writer. An earlier attempt to bind them to the in-flight tool via a
- *    tool_start/tool stack did not hold: the phase tool came back with zero tokens,
- *    because the turn events do not arrive between its start and end in this stream.
+ *    harness turns cannot be split per phase from that field. They aggregate under
+ *    the writer, which is why `agent:default` is the largest line in every run.
  *
  * The totals reconcile: role tokens plus writer tokens equal the run total, which is
  * the property that matters — no turn goes uncounted.
+ *
+ * `phases()` splits that same spending by which phase was running, which the component view cannot
+ * show. It keys on a stack of open PHASE tools, and the "phase tools only" part is the whole trick:
+ * an earlier attempt at this pushed *every* tool and reported zero for the phases, because during a
+ * long phase the innermost open tool is nearly always `bash` or `edit`, never the phase itself. The
+ * note left behind blamed turn events not arriving between a phase's start and end; walking a real
+ * run's log disproved that — 84% of the writer's tokens fell inside the review phase's window, and
+ * only 12% outside any phase.
  */
 export function trackComponentUsage(): ComponentUsageTracker {
   const components = new Map<string, ComponentUsage>();
@@ -100,7 +129,41 @@ export function trackComponentUsage(): ComponentUsageTracker {
   // the subagent's own name, in `event.session` — map taskId back to the
   // subagent name recorded at task_start so turn tokens land on the right entry.
   const subagentByTaskId = new Map<string, string>();
+
+  const phases = new Map<string, PhaseUsage>();
+  const BETWEEN = '(between phases)';
+  // Open phase tools, innermost last. Phase tools only — see the note above on why including
+  // ordinary tools makes this report zeros.
+  const openPhases: string[] = [];
+  const phaseEntry = (name: string) => {
+    let entry = phases.get(name);
+    if (!entry) {
+      entry = {
+        phase: name,
+        ownTurns: 0,
+        ownTokens: 0,
+        ownCost: 0,
+        delegateTurns: 0,
+        delegateTokens: 0,
+        delegateCost: 0,
+        totalTokens: 0,
+        totalCost: 0,
+      };
+      phases.set(name, entry);
+    }
+    return entry;
+  };
+
   const unsubscribe = observe((event: FlueEvent) => {
+    if (event.type === 'tool_start' && PHASE_TOOLS.has(event.toolName)) openPhases.push(event.toolName);
+    // The completion event is `tool`, not `tool_end` — `tool_start` has no symmetric partner.
+    if (event.type === 'tool' && PHASE_TOOLS.has(event.toolName)) {
+      // Remove the innermost occurrence, not the first: a module run can have the same phase open
+      // twice concurrently (one research_data_type per core type).
+      const at = openPhases.lastIndexOf(event.toolName);
+      if (at !== -1) openPhases.splice(at, 1);
+    }
+
     if (event.type === 'tool_start') {
       const category: ComponentCategory = PHASE_TOOLS.has(event.toolName)
         ? 'phase'
@@ -130,15 +193,34 @@ export function trackComponentUsage(): ComponentUsageTracker {
       const entry = entryFor(components, category, name);
       entry.tokens += u.totalTokens;
       entry.cost += u.cost.total;
+
+      // Same turn, filed a second way: by which phase was running. With parallel phase calls this
+      // credits the most recently started one, so a module run's concurrent per-type phases are
+      // approximate; sequential runs are exact.
+      const phase = phaseEntry(openPhases.at(-1) ?? BETWEEN);
+      if (role) {
+        phase.delegateTurns += 1;
+        phase.delegateTokens += u.totalTokens;
+        phase.delegateCost += u.cost.total;
+      } else {
+        phase.ownTurns += 1;
+        phase.ownTokens += u.totalTokens;
+        phase.ownCost += u.cost.total;
+      }
+      phase.totalTokens = phase.ownTokens + phase.delegateTokens;
+      phase.totalCost = phase.ownCost + phase.delegateCost;
     }
   });
 
   const report = () =>
     [...components.values()].sort((a, b) => a.category.localeCompare(b.category) || b.calls - a.calls);
 
+  const phaseReport = () => [...phases.values()].sort((a, b) => b.totalCost - a.totalCost);
+
   let stopped = false;
   return {
     report,
+    phases: phaseReport,
     stop() {
       if (!stopped) {
         unsubscribe();
