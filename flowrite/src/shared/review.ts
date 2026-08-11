@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import { reviewSchema } from './schemas.ts';
-import { runStyleLoop } from './style-loop.ts';
+import { RULE_COUNT, runStyleLoop } from './style-loop.ts';
 import { delegate } from './delegate.ts';
 import { authorHint } from './author-hint.ts';
 
@@ -126,7 +126,7 @@ export async function runCappedReview(opts: {
   // corrected page. Unfixable violations surface as failing items.
   const style = await runStyleLoop(harness, path, log);
   const styleItems: ReviewItem[] = style.passed
-    ? [{ item: 'Writing style (all 25 rules, checked mechanically)', pass: true, issue: null }]
+    ? [{ item: `Writing style (all ${RULE_COUNT} rules, checked mechanically)`, pass: true, issue: null }]
     : style.remaining.map((x) => ({
         item: `writing-style rule ${x.rule} @ line ${x.line}`,
         pass: false,
