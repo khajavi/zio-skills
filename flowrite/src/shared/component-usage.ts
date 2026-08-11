@@ -1,4 +1,5 @@
 import { observe, type FlueEvent } from '@flue/runtime';
+import { getRepoPath } from './run-context.ts';
 import { researchTutorialTopic } from '../phases/research-tutorial-topic.ts';
 import { designTutorialStructure } from '../phases/design-tutorial-structure.ts';
 import { writeTutorialDraft } from '../phases/write-tutorial-draft.ts';
@@ -74,11 +75,35 @@ export interface PhaseUsage {
   totalCost: number;
 }
 
+/**
+ * What the run *did*, as counts — with no cost column, deliberately.
+ *
+ * `bash`, `read`, `edit` and friends are local operations with no model call, so their cost is
+ * genuinely zero. Reporting that zero next to real money was the whole complaint about the old flat
+ * table: it invites the reader to think the number is broken. The informative fact about `bash` is
+ * the 20, not the $0.
+ */
+export interface ActivityReport {
+  /** Call counts per ordinary tool. */
+  tools: Record<string, number>;
+  /** Failures per tool, any category. */
+  toolErrors: Record<string, number>;
+  /** Phase calls that ended isError=true — paid-for work that was thrown away. */
+  phaseFailures: Record<string, number>;
+  /** Skills the model activated, in the order first seen. */
+  skills: string[];
+  /** Phase tool call counts, so a repeated phase is visible. */
+  phaseCalls: Record<string, number>;
+  cdViolations: number;
+}
+
 export interface ComponentUsageTracker {
   /** Snapshot of accumulated per-component usage, grouped by category then name. */
   report(): ComponentUsage[];
   /** Snapshot of accumulated per-phase usage, most expensive first. */
   phases(): PhaseUsage[];
+  /** Snapshot of what the run did, as counts. */
+  activity(): ActivityReport;
   stop(): ComponentUsage[];
 }
 
@@ -154,14 +179,46 @@ export function trackComponentUsage(): ComponentUsageTracker {
     return entry;
   };
 
+  // Failures per tool. `read` on a guessed path and `edit` on a stale `old_string` are the common
+  // ones, and a run with several is usually looping rather than progressing.
+  const toolErrors = new Map<string, number>();
+  // Phase calls that ended isError=true — work paid for and thrown away.
+  const phaseFailures = new Map<string, number>();
+  // bash commands that cd into the repo, against SHARED_DIRECTIVE's "do not cd into the repo".
+  // An earlier run did it 76 times.
+  let cdViolations = 0;
+
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start' && PHASE_TOOLS.has(event.toolName)) openPhases.push(event.toolName);
     // The completion event is `tool`, not `tool_end` — `tool_start` has no symmetric partner.
-    if (event.type === 'tool' && PHASE_TOOLS.has(event.toolName)) {
-      // Remove the innermost occurrence, not the first: a module run can have the same phase open
-      // twice concurrently (one research_data_type per core type).
-      const at = openPhases.lastIndexOf(event.toolName);
-      if (at !== -1) openPhases.splice(at, 1);
+    if (event.type === 'tool') {
+      if (event.isError) {
+        toolErrors.set(event.toolName, (toolErrors.get(event.toolName) ?? 0) + 1);
+        if (PHASE_TOOLS.has(event.toolName)) {
+          phaseFailures.set(event.toolName, (phaseFailures.get(event.toolName) ?? 0) + 1);
+        }
+      }
+      if (PHASE_TOOLS.has(event.toolName)) {
+        // Remove the innermost occurrence, not the first: a module run can have the same phase open
+        // twice concurrently (one research_data_type per core type).
+        const at = openPhases.lastIndexOf(event.toolName);
+        if (at !== -1) openPhases.splice(at, 1);
+      }
+    }
+
+    if (event.type === 'tool_start' && event.toolName === 'bash') {
+      // Read defensively: this runs inside every run, and neither a surprising args shape nor an
+      // unset run context may throw and take the run down with it — getRepoPath() throws before the
+      // first render has published the context. Matching the repo path specifically: `cd website`
+      // for a subdirectory build is legitimate, `cd /abs/path/to/checkout` is the wasted one.
+      const command = String((event.args as { command?: unknown } | undefined)?.command ?? '');
+      let repoPath: string | undefined;
+      try {
+        repoPath = getRepoPath();
+      } catch {
+        repoPath = undefined;
+      }
+      if (repoPath && command.includes(`cd ${repoPath}`)) cdViolations += 1;
     }
 
     if (event.type === 'tool_start') {
@@ -217,10 +274,25 @@ export function trackComponentUsage(): ComponentUsageTracker {
 
   const phaseReport = () => [...phases.values()].sort((a, b) => b.totalCost - a.totalCost);
 
+  const byCategory = (category: ComponentCategory): Record<string, number> =>
+    Object.fromEntries(
+      [...components.values()].filter((c) => c.category === category).map((c) => [c.name, c.calls]),
+    );
+
+  const activityReport = (): ActivityReport => ({
+    tools: byCategory('tool'),
+    toolErrors: Object.fromEntries(toolErrors),
+    phaseFailures: Object.fromEntries(phaseFailures),
+    skills: [...components.values()].filter((c) => c.category === 'skill').map((c) => c.name),
+    phaseCalls: byCategory('phase'),
+    cdViolations,
+  });
+
   let stopped = false;
   return {
     report,
     phases: phaseReport,
+    activity: activityReport,
     stop() {
       if (!stopped) {
         unsubscribe();

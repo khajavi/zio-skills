@@ -1,6 +1,9 @@
 import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
+import { guardRefusals } from './phase-guard.ts';
+import { failingReviewItems, getLastReview } from './review.ts';
+import { buildRunReport } from './run-report.ts';
 
 /**
  * Per-run token, cost, and per-component usage reporting.
@@ -39,10 +42,25 @@ function report(label: string): void {
       `(in ${t.input}, out ${t.output}, cacheRead ${t.cacheRead}, cacheWrite ${t.cacheWrite}) ` +
       `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
   );
-  // Per phase before per component: "which phase cost the most" is the question actually asked of
-  // these runs, and the component view cannot answer it — every phase's own harness turns collapse
-  // into `agent:default`, which is why that line dominates while each phase reports zero tokens.
-  console.error(`${label} phase usage: ${JSON.stringify(state.components.phases())}`);
+  // The report proper: cost per phase, cost per role, what the run did as counts, the review's
+  // verdict, and computed flags. It answers "which phase cost the most" and "what looks wrong",
+  // neither of which the component view below can — every phase's own harness turns collapse into
+  // `agent:default` there, which is why that one line dominates while each phase reports zero.
+  const components = state.components.report();
+  console.error(
+    `${label} run report: ${JSON.stringify(
+      buildRunReport({
+        totals: t,
+        components,
+        phases: state.components.phases(),
+        activity: state.components.activity(),
+        refusals: guardRefusals(),
+        verdict: { passed: getLastReview()?.passed ?? null, failingItems: failingReviewItems() },
+      }),
+    )}`,
+  );
+  // Kept as-is: it is the reconciliation anchor (own + delegate must equal `agent:default` plus the
+  // roles) and the archive's historical continuity — every earlier turn has this shape.
   console.error(`${label} component usage: ${JSON.stringify(state.components.stop())}`);
 }
 

@@ -24,8 +24,9 @@
 #   turn as flue.log — even on a failed/partial run with no file changes.
 #   Also parses that log's "<workflow> token consumption" and "<workflow>
 #   component usage" lines into token-usage.json, and its "<workflow> run
-#   insights" line into insights.json, and its "<workflow> run verdict" line into
-#   verdict.json — flue's CLI printer only ever renders the
+#   insights" line into insights.json, its "<workflow> run verdict" line into
+#   verdict.json, and its "<workflow> run report" line into run-report.json (render
+#   that with `node scripts/run-report.mjs <turn>`) — flue's CLI printer only ever renders the
 #   log message text, never the structured second argument passed to log.info,
 #   so this is a regex extraction of the human-readable line, not a re-read of
 #   the original object.
@@ -79,13 +80,12 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
       > "$dest/token-usage.json"
   fi
 
-  # Per-phase cost, split into the phase's own harness turns and its delegates'. The component
-  # breakdown above cannot answer "which phase cost the most" — every phase's own turns collapse
-  # into agent:default, which is why that line dominates while each phase reports zero tokens.
-  phase_line="$(grep "$workflow_label phase usage:" "$dest/flue.log" | tail -1 || true)"
-  phase_usage="${phase_line#*phase usage: }"
-  if [ -n "$phase_usage" ] && jq -e . >/dev/null 2>&1 <<<"$phase_usage"; then
-    jq . <<<"$phase_usage" > "$dest/phase-usage.json"
+  # The run report: cost per phase (own vs delegate), cost per role, activity counts, the review
+  # verdict, and computed flags. Render it with `node scripts/run-report.mjs <turn>`.
+  report_line="$(grep "$workflow_label run report:" "$dest/flue.log" | tail -1 || true)"
+  run_report="${report_line#*run report: }"
+  if [ -n "$run_report" ] && jq -e . >/dev/null 2>&1 <<<"$run_report"; then
+    jq . <<<"$run_report" > "$dest/run-report.json"
   fi
 
   # The agent's self-authored run retrospective (obstacles + fixes) — mine
@@ -120,7 +120,7 @@ if [ ! -s "$dest/changes.patch" ]; then
     [ -e "$dest/token-usage.json" ] && usage_note="$usage_note, usage saved to $dest/token-usage.json"
     [ -e "$dest/insights.json" ] && usage_note="$usage_note, insights saved to $dest/insights.json"
     [ -e "$dest/verdict.json" ] && usage_note="$usage_note, verdict saved to $dest/verdict.json"
-    [ -e "$dest/phase-usage.json" ] && usage_note="$usage_note, phase usage saved to $dest/phase-usage.json"
+    [ -e "$dest/run-report.json" ] && usage_note="$usage_note, run report saved to $dest/run-report.json"
     echo "no file changes; log saved to $dest/flue.log$usage_note"
   else
     rm -rf "$dest"
@@ -169,6 +169,6 @@ log_note=""
 [ -e "$dest/token-usage.json" ] && log_note="$log_note, usage saved to $dest/token-usage.json"
 [ -e "$dest/insights.json" ] && log_note="$log_note, insights saved to $dest/insights.json"
 [ -e "$dest/verdict.json" ] && log_note="$log_note, verdict saved to $dest/verdict.json"
-[ -e "$dest/phase-usage.json" ] && log_note="$log_note, phase usage saved to $dest/phase-usage.json"
+[ -e "$dest/run-report.json" ] && log_note="$log_note, run report saved to $dest/run-report.json"
 echo "archived turn $n: $changed file(s) changed. $base_count file(s) in $dest/tinyoptics-base/, $final_count file(s) in $dest/tinyoptics-final/$log_note"
 echo "fixture reset to HEAD. Both copies are standalone runnable projects (cd in, run sbt). Or replay the diff onto this fixture: git apply $dest/changes.patch"
