@@ -43,6 +43,10 @@ import { reviewDataTypeRef } from '../phases/review-data-type-ref.ts';
 import { reviewModuleRef } from '../phases/review-module-ref.ts';
 import { reviewTutorial } from '../phases/review-tutorial.ts';
 
+// Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
+// instead of waiting for the review phase to discover a gap.
+import { checkMethodCoverage } from '../tools/check-method-coverage.ts';
+
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/delegation/turn detail. Installed once, here, because
 // this module is now the single entry point for every kind of document.
 installVerboseObserver();
@@ -85,6 +89,7 @@ export const KINDS = {
       integrateDataTypeReference,
       reviewDataTypeRef,
     ],
+    plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → integrate → ` +
@@ -107,6 +112,8 @@ export const KINDS = {
       integrateModuleReference,
       reviewModuleRef,
     ],
+    // Module references carry per-type subpages, so coverage applies to each of them.
+    plainTools: [checkMethodCoverage],
     directive: (subject: string, facts: DirectiveFacts) =>
       `Write a complete, compile-verified module reference for the module: ${subject}. ` +
       (facts.shapeOverride
@@ -276,6 +283,9 @@ export function DocsWriter(_props: AgentProps) {
     // Spread because `as const` makes these readonly and useDocsWriter takes mutable arrays.
     skills: [...config.skills],
     tools: [...config.tools],
+    // `in` rather than optional-chaining: KINDS is `as const`, so the tutorial variant has no
+    // plainTools key at all and the union type does not admit the property.
+    plainTools: 'plainTools' in config ? [...config.plainTools] : [],
     runDirective: config.directive(subject, facts),
   });
 }

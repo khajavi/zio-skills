@@ -50,6 +50,34 @@ test('no kind mounts the same skill twice', () => {
   }
 });
 
+test('check_method_coverage is a plain tool, never a guarded one', () => {
+  // The distinction is load-bearing. Everything in `tools` is wrapped by guardPhase, which refuses a
+  // call made from inside another phase — correct for phase tools, wrong for this one: it starts no
+  // conversation, and the review phase and drafter both have legitimate reason to call it while a
+  // phase is open. Listing it under `tools` would refuse it exactly when it is useful.
+  for (const kind of DOC_KINDS) {
+    const config = KINDS[kind];
+    assert.ok(
+      !config.tools.some((t) => t.name === 'check_method_coverage'),
+      `${kind} must not register check_method_coverage as a phase tool`,
+    );
+  }
+
+  // Reference pages promise complete API coverage, so both reference kinds get it. A tutorial is
+  // selective by design — coverage is not a defect there, and offering the tool would invite a
+  // check that should fail.
+  for (const kind of ['data-type', 'module'] as const) {
+    const config = KINDS[kind];
+    assert.ok('plainTools' in config, `${kind} should offer plain tools`);
+    assert.deepEqual(
+      config.plainTools.map((t) => t.name),
+      ['check_method_coverage'],
+      kind,
+    );
+  }
+  assert.ok(!('plainTools' in KINDS.tutorial), 'tutorial should not offer method coverage');
+});
+
 test('the module escape hatches reach the directive', () => {
   // layout/shapeOverride survive only in creation data — no sentence can express them with schema
   // validation — and run-module-ref.sh passes them when testing a forced layout.

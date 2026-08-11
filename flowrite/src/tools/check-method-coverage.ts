@@ -2,6 +2,9 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { defineTool } from '@flue/runtime';
+import * as v from 'valibot';
+import { getRepoPath } from '../shared/run-context.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -104,3 +107,40 @@ export async function computeMethodCoverage(
       'not gospel. Confirm any surprising entry against the real source before adding or dismissing it.',
   };
 }
+
+/**
+ * The same computation, model-callable.
+ *
+ * The review phase runs `computeMethodCoverage` directly as a gate, and must keep doing so: a
+ * verdict that depended on the model choosing to check would be no verdict at all. This tool exists
+ * for the opposite reason — so coverage stops being something a run only discovers at review time.
+ * It is deterministic and free, so the writer can check a page, fix a gap, and check again for
+ * nothing, instead of paying for a review round to learn that one operation is undocumented.
+ *
+ * Plain, not `harness: true`: it computes and returns. No sub-conversation, no delegation depth, and
+ * nothing to re-enter — so it must NOT be registered through the guarded `tools` list, or it would be
+ * refused exactly when a phase legitimately calls it.
+ */
+export const checkMethodCoverage = defineTool({
+  name: 'check_method_coverage',
+  description:
+    'Check which of a type\'s public members a reference page documents. Deterministic and free — ' +
+    'call it as often as you like while writing, rather than waiting for review to find a gap.',
+  input: v.object({
+    typeName: v.pipe(v.string(), v.description('The documented type, e.g. "Prism"')),
+    path: v.pipe(
+      v.string(),
+      v.description('Repo-relative path of the page to check, e.g. docs/reference/prism.md'),
+    ),
+  }),
+  output: v.object({
+    coveragePercent: v.number(),
+    covered: v.array(v.string()),
+    missing: v.array(v.string()),
+    sourceFiles: v.array(v.string()),
+    note: v.string(),
+  }),
+  async run({ data }) {
+    return { output: await computeMethodCoverage(getRepoPath(), data.typeName, data.path) };
+  },
+});

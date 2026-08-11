@@ -218,7 +218,17 @@ export function useDocsWriter(
     label: string;
     instructions: string;
     skills: SkillReference[];
+    /** Phase tools. Guarded — each one refuses to run inside another phase. */
     tools: ToolDefinition[];
+    /**
+     * Ordinary tools, mounted unguarded.
+     *
+     * The distinction is not cosmetic: the guard exists because a phase tool's harness conversation
+     * inherits the whole registry, so one phase can re-enter another. A plain tool starts no
+     * conversation and can re-enter nothing, and a phase may legitimately need it — guarding it would
+     * refuse the call for no reason.
+     */
+    plainTools?: ToolDefinition[];
     /** What to do this run, built from the request's kind and subject. */
     runDirective: string;
   },
@@ -228,6 +238,7 @@ export function useDocsWriter(
   // a phase can re-enter the workflow until the delegation cap trips — which is how reviewer and
   // style_checker became unreachable. See phase-guard.ts.
   for (const tool of opts.tools) useTool(guardPhase(tool));
+  for (const tool of opts.plainTools ?? []) useTool(tool);
   // gh_query stays unguarded — an ordinary lookup any phase may legitimately need.
   useTool(createGhQueryTool(getRepoPath));
   // report_run_result is guarded on a different axis: not "is it a phase?" but "is it terminal for
