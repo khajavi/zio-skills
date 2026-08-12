@@ -1,9 +1,8 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { getRepoPath } from '../shared/run-context.ts';
+import { authorHint, getRepoPath } from '../shared/run-context.ts';
 import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/author-hint.ts';
 import { delegate } from '../shared/delegate.ts';
 
 /**

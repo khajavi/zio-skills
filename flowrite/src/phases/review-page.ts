@@ -2,7 +2,7 @@ import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
-import { authorHint } from '../shared/author-hint.ts';
+import { authorHint } from '../shared/run-context.ts';
 import { delegate } from '../shared/delegate.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
 // (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:

@@ -2,7 +2,7 @@ import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } from './research.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/author-hint.ts';
+import { authorHint } from '../shared/run-context.ts';
 import { delegate } from '../shared/delegate.ts';
 // Each kind's structure template, injected into the generic designer's task (a subagent's skills
 // cannot vary per delegated task, so the kind-specific template rides in the prompt). Same

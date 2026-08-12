@@ -4,7 +4,7 @@ import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } 
 import { dataTypeStructureSchema, moduleStructureSchema, tutorialStructureSchema } from './design-doc-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
-import { authorHint } from '../shared/author-hint.ts';
+import { authorHint } from '../shared/run-context.ts';
 import { delegate } from '../shared/delegate.ts';
 // Each kind's structure template, injected into the generic drafter's task (a subagent's skills
 // cannot vary per delegated task). Same single-source-of-truth split as writing-style rules: the
