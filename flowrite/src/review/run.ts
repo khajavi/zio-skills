@@ -17,6 +17,21 @@ type ReviewResult = v.InferOutput<typeof reviewSchema>;
 let lastReview: ReviewResult | null = null;
 let lastByCheck = new Map<string, ReviewItem[]>();
 let lastFailedIds: string[] = [];
+/** How many passes in a row have failed on exactly the same checks. See STALL_LIMIT. */
+let stalls = 0;
+
+/**
+ * Consecutive repeats of an identical failing set before the loop is told to stop.
+ *
+ * Two, not one, and turn17 is why: its failing rules went 19,20 → 19,20 → 19 → clean. One repeated set
+ * was a slow repair, not a spin, and stopping there would have shipped two known-fixable violations.
+ * Three identical sets is a much better signal that the writer has run out of ideas.
+ *
+ * This replaces `MAX_REVIEW_CALLS`, and the difference is the point: a call cap punished the cheap
+ * confirming pass, so a fixed page kept its failing verdict. This bounds only *unproductive* repeats, so
+ * a run may review as often as it keeps making progress.
+ */
+const STALL_LIMIT = 2;
 
 /**
  * The last review result, or null when none ran this process.
@@ -51,6 +66,7 @@ export function pendingCheckIds(): string[] {
 export function __setLastReviewForTests(result: ReviewResult | null): void {
   lastReview = result;
   lastByCheck = new Map();
+  stalls = 0;
   lastFailedIds = [...new Set((result?.items ?? []).filter((i) => !i.pass).map((i) => idOfItem(i.item)))];
 }
 
@@ -138,14 +154,36 @@ export async function runChecks(opts: {
     produced.get(check.id) ?? lastByCheck.get(check.id) ?? [];
   const items = checks.flatMap(contribution);
 
+  const failedIds = [...new Set(checks.flatMap((check) => failingIdsOf(check, contribution(check))))];
+
+  // Progress check. An identical failing set means the repair attempt changed nothing on those checks;
+  // enough of those in a row and the loop is spinning, so say so rather than letting it run forever.
+  const sameAsLast =
+    failedIds.length > 0 &&
+    failedIds.length === lastFailedIds.length &&
+    failedIds.every((id) => lastFailedIds.includes(id));
+  stalls = sameAsLast ? stalls + 1 : 0;
+
+  if (stalls >= STALL_LIMIT) {
+    items.push({
+      item: 'Review progress',
+      pass: false,
+      issue:
+        `These checks have failed unchanged for ${stalls + 1} passes: ${failedIds.join(', ')}. ` +
+        `Further repair attempts are not landing, so stop reviewing: finish now, and name these as ` +
+        `known limitations in your summary and in the run result. The verdict stays "failed".`,
+    });
+    log.warn(`Review stalled on ${failedIds.join(', ')} for ${stalls + 1} passes — telling the writer to finish`);
+  }
+
   // The verdict is computed here, never self-reported.
   const result: ReviewResult = { passed: items.every((item) => item.pass), items };
   lastReview = result;
   lastByCheck = new Map(checks.map((check) => [check.id, contribution(check)]));
-  lastFailedIds = [...new Set(checks.flatMap((check) => failingIdsOf(check, contribution(check))))];
+  lastFailedIds = failedIds;
   log.info(
     `Review verdict: passed=${result.passed}` +
-      (lastFailedIds.length > 0 ? `, re-check with only: ${lastFailedIds.join(', ')}` : ''),
+      (failedIds.length > 0 ? `, re-check with only: ${failedIds.join(', ')}` : ''),
   );
   return result;
 }

@@ -10,7 +10,7 @@ import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import type { Check, ReviewItem } from './check.ts';
 import { __setLastReviewForTests, getLastReview, pendingCheckIds, runChecks } from './run.ts';
 
-const log = { info() {} } as unknown as FlueLogger;
+const log = { info() {}, warn() {}, error() {} } as unknown as FlueLogger;
 
 /** A harness whose sandbox serves whatever the test currently calls the page. */
 function harnessOver(page: () => string): FlueHarness {
@@ -199,6 +199,52 @@ test('a failure that belongs to no covered id still gets re-run', async () => {
   const second = await runChecks({ checks, harness: harnessOver(() => 'clean'), log, path: 'p.md' });
   assert.equal(runs, 2, 'the repeat must re-run the check that failed');
   assert.equal(second.passed, true);
+});
+
+test('an unchanged failing set tells the writer to stop, but only after two repeats', async () => {
+  // turn17's failing rules went 19,20 -> 19,20 -> 19 -> clean: one repeated set was a SLOW repair, not a
+  // spin, and stopping there would have shipped two fixable violations. Three identical sets is the
+  // signal. This is what replaced MAX_REVIEW_CALLS, and the difference matters — the old cap punished the
+  // cheap confirming pass, so a fixed page kept its failing verdict.
+  __setLastReviewForTests(null);
+  const checks = [codeCheck('style-15', 'BAD15')];
+  const stuck = () => 'BAD15';
+  const advisory = (r: { items: ReviewItem[] }) => r.items.find((i) => i.item === 'Review progress');
+
+  const first = await runChecks({ checks, harness: harnessOver(stuck), log, path: 'p.md' });
+  assert.equal(advisory(first), undefined, 'no advisory on the first failure');
+
+  const second = await runChecks({ checks, harness: harnessOver(stuck), log, path: 'p.md' });
+  assert.equal(advisory(second), undefined, 'one repeat may still be a slow repair');
+
+  const third = await runChecks({ checks, harness: harnessOver(stuck), log, path: 'p.md' });
+  const item = advisory(third);
+  assert.ok(item, 'two repeats of the same set is a stall');
+  assert.equal(item?.pass, false);
+  assert.match(item?.issue ?? '', /failed unchanged for 3 passes: style-15/);
+  assert.match(item?.issue ?? '', /stop reviewing/);
+  assert.equal(third.passed, false);
+  // The advisory must not pollute narrowing, or the next pass would try to re-run a check called
+  // "Review progress" that does not exist.
+  assert.deepEqual(pendingCheckIds(), ['style-15']);
+});
+
+test('progress resets the stall counter', async () => {
+  __setLastReviewForTests(null);
+  const a = codeCheck('style-15', 'BAD15');
+  const b = codeCheck('style-22', 'BAD22');
+  const checks = [a, b];
+  let page = 'BAD15 BAD22';
+
+  await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  // One violation fixed: the set changed, so the count starts over.
+  page = 'BAD15';
+  const third = await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  assert.equal(third.items.find((i) => i.item === 'Review progress'), undefined);
+
+  const fourth = await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  assert.equal(fourth.items.find((i) => i.item === 'Review progress'), undefined, 'only one repeat so far');
 });
 
 test('explicit narrowing wins over the remembered failures', async () => {
