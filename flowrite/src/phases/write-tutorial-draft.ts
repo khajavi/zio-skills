@@ -1,7 +1,7 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { tutorialStructureSchema } from './design-doc-structure.ts';
-import { researchSchema } from './research-tutorial-topic.ts';
+import { tutorialResearchSchema } from './research.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The tutorial-structure skill's content, injected into the generic drafter's
@@ -37,7 +37,7 @@ export const writeTutorialDraft = defineTool({
     ),
     topic: v.string(),
     structure: tutorialStructureSchema,
-    researchAnswers: researchSchema,
+    researchAnswers: tutorialResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, data, log }) {

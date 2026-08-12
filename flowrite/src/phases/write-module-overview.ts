@@ -1,6 +1,6 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { moduleResearchSchema } from './research-module.ts';
+import { moduleResearchSchema } from './research.ts';
 import { moduleStructureSchema } from './design-doc-structure.ts';
 import { toKebabCase } from './write-data-type-reference.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';

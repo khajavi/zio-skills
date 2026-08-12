@@ -1,8 +1,6 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { dataTypeResearchSchema } from './research-data-type.ts';
-import { moduleResearchSchema } from './research-module.ts';
-import { researchSchema } from './research-tutorial-topic.ts';
+import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } from './research.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { authorHint } from '../shared/author-hint.ts';
 import { delegate } from '../shared/delegate.ts';
@@ -195,7 +193,7 @@ async function designStructure<S extends v.GenericSchema>(opts: {
   guidance: string[];
   researchAnswers: unknown;
 }): Promise<v.InferOutput<S>> {
-  // Resume support — see research-tutorial-topic.ts.
+  // Resume support — see research.ts.
   if (isPhaseSkipped('design')) {
     opts.log.info('Skipping design (skipPhases)');
     return opts.skipDefault;
@@ -362,7 +360,7 @@ export const designTutorialStructure = defineTool({
   harness: true,
   input: v.object({
     topic: v.string(),
-    researchAnswers: researchSchema,
+    researchAnswers: tutorialResearchSchema,
   }),
   output: tutorialStructureSchema,
   async run({ harness, data, log }) {

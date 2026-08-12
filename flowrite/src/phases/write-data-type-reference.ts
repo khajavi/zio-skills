@@ -1,6 +1,6 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { dataTypeResearchSchema } from './research-data-type.ts';
+import { dataTypeResearchSchema } from './research.ts';
 import { dataTypeStructureSchema } from './design-doc-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
