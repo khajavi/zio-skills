@@ -48,7 +48,7 @@ request="Please write reference documentation for the $type_name data type."
 (cd "$flowrite_root" && exec env \
   NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
   FLUE_VERBOSE_TOOLS=1 \
-  ./node_modules/.bin/flue run src/agents/docs-writer.ts \
+  ./node_modules/.bin/flue run src/agent.ts \
   --env .env.testing -m "$request" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
@@ -65,7 +65,7 @@ cleanup() {
   kill -TERM "$flue_pid" 2>/dev/null
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children — kill them too.
-  pkill -9 -f "flue.mjs run src/agents/docs-writer.ts" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agent.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-data-type-ref
   rm -f "$log"

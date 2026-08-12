@@ -35,7 +35,7 @@ request="Please write a tutorial on $topic."
 (cd "$flowrite_root" && exec env \
   NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
   FLUE_VERBOSE_TOOLS=1 \
-  ./node_modules/.bin/flue run src/agents/docs-writer.ts \
+  ./node_modules/.bin/flue run src/agent.ts \
   --env .env.testing -m "$request" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
@@ -58,7 +58,7 @@ cleanup() {
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children, not this script's — a killed
   # flue process does not reliably take them down with it (seen in practice).
-  pkill -9 -f "flue.mjs run src/agents/docs-writer.ts" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agent.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-tutorial
   rm -f "$log"

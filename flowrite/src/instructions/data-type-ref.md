@@ -42,8 +42,9 @@ reality differs. Do not mechanically follow steps that no longer fit.
 8. **Review.** Call `review_data_type_ref` with the page path. It evaluates the page against
    the data-type-ref-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Use `check_method_coverage` yourself to confirm every public member
-   is documented. Fix every failing item, then call review again to confirm. Finish when it
-   passes, naming any genuinely unfixable item in your summary.
+   is documented. Review rounds are budgeted — the tool's description says how many the run allows,
+   and by default it is one, so there is no confirming pass. Fix every failing item, then finish;
+   name anything still failing in your summary and report the run as failed.
 9. **Retrospective.** In your final result, alongside the path and summary, report
    the real obstacles you hit this run (per phase), how you resolved each, and —
    where you can name one — a concrete instruction/tool/schema change that would

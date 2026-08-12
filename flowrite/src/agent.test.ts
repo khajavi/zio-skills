@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { DOC_KINDS, KINDS } from './docs-writer.ts';
+import { DOC_KINDS, KINDS } from './agent.ts';
 
 test('every kind is fully configured', () => {
   for (const kind of DOC_KINDS) {

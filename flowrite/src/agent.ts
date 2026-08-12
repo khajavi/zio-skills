@@ -4,9 +4,9 @@ import * as v from 'valibot';
 
 // instructions — one per kind. These files are the real per-kind content and are unchanged by the
 // merge: what differs between the three documents is writing guidance, which is data, not code.
-import dataTypeRefMd from './data-type-ref-writer.md';
-import moduleRefMd from './module-ref-writer.md';
-import tutorialMd from './tutorial-writer.md';
+import dataTypeRefMd from './instructions/data-type-ref.md';
+import moduleRefMd from './instructions/module-ref.md';
+import tutorialMd from './instructions/tutorial.md';
 
 import {
   type RunFacts,
@@ -14,36 +14,36 @@ import {
   docsWriterFields,
   useDocsWriter,
   useRunBasics,
-} from '../runtime/composition.ts';
-import { installVerboseObserver } from '../runtime/verbose-observer.ts';
+} from './runtime/composition.ts';
+import { installVerboseObserver } from './runtime/verbose-observer.ts';
 
 // skills — mdoc-conventions is shared by all three; writing-style comes from the shared baseline.
-import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
-import dataTypeStructure from '../skills/data-type-ref-structure/SKILL.md';
-import dataTypeChecklist from '../skills/data-type-ref-checklist/SKILL.md';
-import moduleRefStructure from '../skills/module-ref-structure/SKILL.md';
-import moduleRefChecklist from '../skills/module-ref-checklist/SKILL.md';
-import tutorialStructure from '../skills/tutorial-structure/SKILL.md';
-import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md';
+import mdocConventions from './skills/mdoc-conventions/SKILL.md';
+import dataTypeStructure from './skills/data-type-ref-structure/SKILL.md';
+import dataTypeChecklist from './skills/data-type-ref-checklist/SKILL.md';
+import moduleRefStructure from './skills/module-ref-structure/SKILL.md';
+import moduleRefChecklist from './skills/module-ref-checklist/SKILL.md';
+import tutorialStructure from './skills/tutorial-structure/SKILL.md';
+import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 
 // phase tools
-import { researchDataType } from '../tools/phases/research.ts';
-import { designDataTypeStructure } from '../tools/phases/design-doc-structure.ts';
-import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
-import { researchModule } from '../tools/phases/research.ts';
-import { designModuleStructure } from '../tools/phases/design-doc-structure.ts';
-import { writeModuleOverview } from '../tools/phases/write-doc.ts';
-import { researchTutorialTopic } from '../tools/phases/research.ts';
-import { designTutorialStructure } from '../tools/phases/design-doc-structure.ts';
-import { writeTutorialDraft } from '../tools/phases/write-doc.ts';
-import { writeCompanionExamples } from '../tools/phases/write-companion-examples.ts';
-import { integrateDataTypeReference, integrateTutorial } from '../tools/phases/integrate.ts';
-import { integrateModuleReference } from '../tools/phases/integrate-module.ts';
-import { reviewDataTypeRef, reviewModuleRef, reviewTutorial } from '../tools/phases/review-page.ts';
+import { researchDataType } from './tools/phases/research.ts';
+import { designDataTypeStructure } from './tools/phases/design-doc-structure.ts';
+import { writeDataTypeReference } from './tools/phases/write-doc.ts';
+import { researchModule } from './tools/phases/research.ts';
+import { designModuleStructure } from './tools/phases/design-doc-structure.ts';
+import { writeModuleOverview } from './tools/phases/write-doc.ts';
+import { researchTutorialTopic } from './tools/phases/research.ts';
+import { designTutorialStructure } from './tools/phases/design-doc-structure.ts';
+import { writeTutorialDraft } from './tools/phases/write-doc.ts';
+import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
+import { integrateDataTypeReference, integrateTutorial } from './tools/phases/integrate.ts';
+import { integrateModuleReference } from './tools/phases/integrate-module.ts';
+import { reviewDataTypeRef, reviewModuleRef, reviewTutorial } from './tools/phases/review-page.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
 // instead of waiting for the review phase to discover a gap.
-import { checkMethodCoverage } from '../tools/check-method-coverage.ts';
+import { checkMethodCoverage } from './tools/check-method-coverage.ts';
 
 // FLUE_VERBOSE_TOOLS=1 opts into full tool/delegation/turn detail. Installed once, here, because
 // this module is now the single entry point for every kind of document.
@@ -179,7 +179,7 @@ const GATE_INSTRUCTIONS = [
  * module reference, or a tutorial.
  *
  * Run it with a plain request — the kind and subject are read from the message:
- *   flue run src/agents/docs-writer.ts --id dtr-Chunk \
+ *   flue run src/agent.ts --id dtr-Chunk \
  *     -m "Please write reference documentation for the Chunk data type" \
  *     --data '{"projectPath":"/path/to/checkout"}'
  */
