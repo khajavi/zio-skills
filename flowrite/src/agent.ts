@@ -37,8 +37,8 @@ import { researchTutorialTopic } from './tools/phases/research.ts';
 import { designTutorialStructure } from './tools/phases/design-doc-structure.ts';
 import { writeTutorialDraft } from './tools/phases/write-doc.ts';
 import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
-import { integrateDataTypeReference, integrateTutorial } from './tools/phases/integrate.ts';
-import { integrateModuleReference } from './tools/phases/integrate-module.ts';
+import { integrateDataTypeReference, integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
+
 import { reviewPage } from './tools/phases/review-page.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them

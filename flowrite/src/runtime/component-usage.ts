@@ -8,12 +8,11 @@ import { integrateTutorial } from '../tools/phases/integrate.ts';
 import { researchDataType } from '../tools/phases/research.ts';
 import { designDataTypeStructure } from '../tools/phases/design-doc-structure.ts';
 import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
-import { integrateDataTypeReference } from '../tools/phases/integrate.ts';
+import { integrateDataTypeReference, integrateModuleReference } from '../tools/phases/integrate.ts';
 import { reviewPage } from '../tools/phases/review-page.ts';
 import { researchModule } from '../tools/phases/research.ts';
 import { designModuleStructure } from '../tools/phases/design-doc-structure.ts';
 import { writeModuleOverview } from '../tools/phases/write-doc.ts';
-import { integrateModuleReference } from '../tools/phases/integrate-module.ts';
 
 /**
  * Every agent's own phase tools — model-callable, but delegating their real work
