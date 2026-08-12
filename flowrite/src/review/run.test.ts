@@ -170,6 +170,37 @@ test('the recorded verdict is the one report_run_result reads', async () => {
   assert.deepEqual(pendingCheckIds(), []);
 });
 
+test('a failure that belongs to no covered id still gets re-run', async () => {
+  // The batched style check reports `style-llm (payload unverified)` when it cannot prove the page
+  // reached the checker. That item maps to the check's own id, not to any covered rule — so `idsOf` has
+  // to include the check id, or the repeat skips the check, carries forward nothing for it, and the
+  // unverified failure disappears into a passing verdict.
+  __setLastReviewForTests(null);
+  let broken = true;
+  let runs = 0;
+  const style: Check = {
+    id: 'style-llm',
+    kind: 'llm',
+    covers: ['style-7', 'style-9'],
+    async run() {
+      runs++;
+      return broken
+        ? [{ item: 'style-llm (payload unverified)', pass: false, issue: 'Page did not arrive.' }]
+        : [{ item: 'Writing style (2 model-judged rules)', pass: true, issue: null }];
+    },
+  };
+  const checks = [codeCheck('style-15', 'BAD15'), style];
+
+  const first = await runChecks({ checks, harness: harnessOver(() => 'clean'), log, path: 'p.md' });
+  assert.equal(first.passed, false);
+  assert.deepEqual(pendingCheckIds(), ['style-llm']);
+
+  broken = false;
+  const second = await runChecks({ checks, harness: harnessOver(() => 'clean'), log, path: 'p.md' });
+  assert.equal(runs, 2, 'the repeat must re-run the check that failed');
+  assert.equal(second.passed, true);
+});
+
 test('explicit narrowing wins over the remembered failures', async () => {
   __setLastReviewForTests(null);
   const code = codeCheck('style-15', 'BAD15');

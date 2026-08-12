@@ -63,5 +63,14 @@ export interface Check {
   fix?(content: string): string;
 }
 
-/** The item ids a check can produce. */
-export const idsOf = (check: Check): string[] => check.covers ?? [check.id];
+/**
+ * Every id that should select this check for a re-run: its own, plus everything it covers.
+ *
+ * The check's own id has to be in here even when `covers` is set. A check can report a failure that
+ * belongs to no single covered id — the batched style check does exactly that when it cannot prove the
+ * page reached the checker — and such an item narrows to the check id. Returning only `covers` would
+ * leave that id matching nothing, so the repeat would skip the check, carry forward no items for it,
+ * and turn the unverified failure into a passing verdict.
+ */
+export const idsOf = (check: Check): string[] =>
+  check.covers === undefined ? [check.id] : [check.id, ...check.covers];
