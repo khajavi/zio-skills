@@ -15,7 +15,7 @@ import * as v from 'valibot';
 import { useDocsAuthorBase } from './docs-author-base.ts';
 import { guardPhase, guardRootOnly } from './phase-guard.ts';
 import { getRepoPath, setRunContext } from './run-context.ts';
-import { createReportRunResultTool } from './run-result.ts';
+import { createReportRunResultTool } from './self-report.ts';
 import { useUsageReport } from './usage-report.ts';
 
 // role delegates — the generic, document-kind-neutral roles shared by every docs

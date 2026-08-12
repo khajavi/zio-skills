@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { ActivityReport, PhaseUsage } from './component-usage.ts';
-import { computeFlags, type FlagInput } from './run-report.ts';
+import { computeFlags, type FlagInput } from './run-telemetry.ts';
 
 /** A phase costing what a healthy phase costs, delegating more than it spends itself. */
 const phase = (name: string, over: Partial<PhaseUsage> = {}): PhaseUsage => ({

@@ -26,6 +26,11 @@ const insightsSchema = v.array(
  * The end-of-run report every docs writer files: where the page landed, what it did, the review's
  * verdict, and the run retrospective.
  *
+ * The MODEL's account of the run, authored by it and taken on trust. Its counterpart is
+ * run-telemetry.ts, which reports the same run from the event stream — observed, not claimed. That
+ * split is the reason these are two modules: nothing here may be fed from telemetry and nothing
+ * there may be fed from here, or the archive stops being able to disagree with itself.
+ *
  * This existed as the deleted workflow's `outputSchema`, collected by a closing
  * `session.prompt(..., { result })` and logged as three lines. Losing the workflow
  * lost the retrospective with it: `scripts/archive-docs.sh` parses a

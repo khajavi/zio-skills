@@ -2,7 +2,7 @@ import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
 import { guardRefusals } from './phase-guard.ts';
-import { buildRunReport } from './run-report.ts';
+import { buildRunReport } from './run-telemetry.ts';
 
 /**
  * Per-run token, cost, and per-component usage reporting.

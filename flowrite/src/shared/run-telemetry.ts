@@ -4,6 +4,11 @@ import type { TokenUsageTotals } from './token-usage.ts';
 /**
  * The end-of-run report: what the run cost, what it did, and what looks wrong.
  *
+ * Built from OBSERVED telemetry — the `observe()` event stream, via the trackers — and never from
+ * anything the model says about itself. Its counterpart is self-report.ts, which is the model's own
+ * account. Keeping the two apart is what lets a reader catch a run whose story does not match its
+ * event stream; it is also why this report carries no review verdict (see FlagInput).
+ *
  * Separate from the trackers on purpose. They observe and tally; this interprets. Interpretation is
  * where thresholds live, and thresholds are the part worth reviewing and testing — `computeFlags` is
  * a pure function for exactly that reason.

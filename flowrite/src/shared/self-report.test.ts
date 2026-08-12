@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as v from 'valibot';
 
-import { createReportRunResultTool } from './run-result.ts';
+import { createReportRunResultTool } from './self-report.ts';
 
 const tool = createReportRunResultTool('write-data-type-ref');
 
