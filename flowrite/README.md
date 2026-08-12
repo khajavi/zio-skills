@@ -24,7 +24,7 @@ The code is just the wrapper. The writer reads a plain request, decides what kin
 is, and then every capability it has is a thing you *hand it*, not a branch you write:
 
 ```ts
-// src/agents/docs-writer.ts
+// src/agent.ts
 'use agent';
 export function DocsWriter() {
   const [kind] = usePersistentState<DocKind | null>('docKind', null);
@@ -54,7 +54,7 @@ in the loop, reality always diverges).
 
 The interesting engineering therefore moves out of `.ts` files and into:
 
-- **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
+- **instructions** (`src/instructions/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
 - **phase tools** (`src/tools/phases/*.ts`) — a research/write/verify/integrate step, each
@@ -76,7 +76,7 @@ Ask for what you want in plain words — the writer works out which kind it is a
 is, and mounts only that kind's phase tools:
 
 ```bash
-flue run src/agents/docs-writer.ts --id dtr-Chunk \
+flue run src/agent.ts --id dtr-Chunk \
   -m "Please write reference documentation for the Chunk data type" \
   --data '{"projectPath":"/path/to/checkout"}'
 ```
@@ -127,7 +127,7 @@ prescribed sequence of moves.
 
 Implementation is mostly Markdown and schemas:
 
-- Write the kind's identity in `src/agents/data-type-ref-writer.md`, and add its row to `KINDS`.
+- Write the kind's identity in `src/instructions/data-type-ref.md`, and add its row to `KINDS`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
 - Add the kind's phase tools to the existing phase modules — `research.ts`,
@@ -159,7 +159,7 @@ cents:
 
 ```bash
 # .env.testing selects cheap models; --data points at the tinyoptics fixture
-flue run src/agents/docs-writer.ts \
+flue run src/agent.ts \
   --env .env.testing --id dtr-Prism \
   -m "Please write reference documentation for the Prism data type" \
   --data '{ "projectPath": "fixtures/tinyoptics" }'
@@ -187,6 +187,10 @@ info write-tutorial component usage: [ … per-component call counts, tokens, co
 
 The **component usage** line is the money view — it breaks spend down by subagent,
 action, skill, and tool, so you can see exactly where the tokens went:
+
+Some role names below are historical — this is real output from an archived run, and
+`style_checker` and `tutorial_drafter` no longer exist (the three writers merged into
+one, and the style loop was removed). The shape of the view is the point.
 
 | component | calls | cost |
 |-----------|-------|------|
@@ -248,7 +252,8 @@ diff behavior across iterations of the prompt.
 
 ```
 src/
-  agents/        # one writer (.ts) + one identity (.md) per kind of document
+  agent.ts       # the one agent: classifies the request, then mounts that kind's tools
+  instructions/  # one identity (.md) per kind of document
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
   tools/         # gh query, method-coverage, todo tools
@@ -266,7 +271,7 @@ pnpm install
 cp .env.testing.example .env.testing   # add ANTHROPIC_API_KEY
 
 # run against the bundled fixture (cheap models)
-flue run src/agents/docs-writer.ts --env .env.testing \
+flue run src/agent.ts --env .env.testing \
   --id dtr-Prism \
   -m "Please write reference documentation for the Prism data type" \
   --data '{ "projectPath": "fixtures/tinyoptics" }'

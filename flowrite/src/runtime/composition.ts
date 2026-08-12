@@ -30,8 +30,6 @@ import { reviewer } from '../subagents/reviewer.ts';
 import { examplesBuilder } from '../subagents/examples-builder.ts';
 import { docsIntegrator } from '../subagents/docs-integrator.ts';
 import { reviewResolver } from '../subagents/review-resolver.ts';
-import { styleChecker } from '../subagents/style-checker.ts';
-import { styleFixer } from '../subagents/style-fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
@@ -55,8 +53,6 @@ const ROLES = [
   examplesBuilder,
   docsIntegrator,
   reviewResolver,
-  styleChecker,
-  styleFixer,
 ];
 
 const skipPhase = v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review']);
@@ -146,7 +142,8 @@ export function useRunBasics(schema: v.GenericSchema, request: string): RunFacts
   // MUST come after useSandbox. Declared before it, the roles never reach a phase tool's harness
   // conversation: every phase gave up with "No subagents are currently available. The system context
   // explicitly states \"Available Agents: None\"", while the root agent's own roster looked fine (a
-  // probe confirmed all nine declared on every render). One delegation happened in a whole run,
+  // probe confirmed all nine declared on every render — the roster was nine roles then, seven now).
+  // One delegation happened in a whole run,
   // against 24 in the equivalent pre-merge run.
   //
   // Isolated by measurement, one variable at a time, because two candidates were confounded at
@@ -204,7 +201,7 @@ const SHARED_DIRECTIVE =
   `against the review any more, so reporting it accurately is on you.`;
 
 /**
- * Declare the nine role delegates. Called by useRunBasics, so every render has the full roster —
+ * Declare the seven role delegates. Called by useRunBasics, so every render has the full roster —
  * including the classification gate, whose render is the baseline snapshot phase tools inherit.
  *
  * Order matters and is not obvious: see the call site for the measurements.
