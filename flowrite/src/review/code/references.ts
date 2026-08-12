@@ -74,6 +74,53 @@ function declaresMain(repoRoot: string, fqcn: string, cache: Map<string, string[
   });
 }
 
+/**
+ * Every markdown page under docs/, for repairing broken links: a link that misses usually names a real
+ * page in the wrong directory (./lens.md from docs/reference/, when the page lives in docs/guides/).
+ * The check knows the whole tree, so the finding can carry the correct path instead of making a model
+ * hunt for it — in a measured run the writer, told only "does not exist", created three such links
+ * obeying the link-siblings style rule and needed another full round to repair them.
+ */
+function markdownPages(repoRoot: string, cache: Map<string, string[]>): string[] {
+  const key = `${repoRoot}::md`;
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry === 'node_modules' || entry === '.git' || entry === 'target') continue;
+      const full = path.join(dir, entry);
+      let isDir = false;
+      try {
+        isDir = statSync(full).isDirectory();
+      } catch {
+        continue;
+      }
+      if (isDir) walk(full);
+      else if (entry.endsWith('.md')) out.push(full);
+    }
+  };
+  walk(path.join(repoRoot, 'docs'));
+  cache.set(key, out);
+  return out;
+}
+
+/** A "did you mean" for a broken relative link, when exactly one page has that basename. */
+function linkSuggestion(repoRoot: string, pageDir: string, broken: string, cache: Map<string, string[]>): string {
+  const wanted = path.basename(broken);
+  const matches = markdownPages(repoRoot, cache).filter((page) => path.basename(page) === wanted);
+  if (matches.length !== 1) return '';
+  let relative = path.relative(pageDir, matches[0]);
+  if (!relative.startsWith('.')) relative = `./${relative}`;
+  return ` A page with that name exists — use exactly: "${relative}"`;
+}
+
 /** Matches of `pattern` in the page's prose, with the line each was found on. */
 function prose(ctx: CheckContext, pattern: RegExp): { value: string; line: number }[] {
   const mask = fenceMask(ctx.lines);
@@ -112,13 +159,14 @@ export const referencesCheck: Check = {
     }
 
     for (const { value, line } of prose(ctx, REL_LINK)) {
-      const target = path.resolve(path.dirname(path.join(repoRoot, ctx.path)), value);
-      if (!existsSync(target)) {
+      const pageDir = path.dirname(path.join(repoRoot, ctx.path));
+      if (!existsSync(path.resolve(pageDir, value))) {
         missing(
           line,
           'Linked page',
           value,
-          'Link a page that exists, with its full .md filename and a relative path.',
+          'Link a page that exists, with its full .md filename and a relative path.' +
+            linkSuggestion(repoRoot, pageDir, value, cache),
         );
       }
     }

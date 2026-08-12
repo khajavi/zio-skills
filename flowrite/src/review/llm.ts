@@ -38,6 +38,14 @@ const violationSchema = v.object({
     v.string(),
     v.description('What is wrong, specific enough to fix without re-reading the rule'),
   ),
+  // Findings that carry the fix get repaired in one pass; findings that describe the problem draw
+  // repair attempts that miss. Optional because some violations need a rewrite no checker should draft.
+  suggestion: v.optional(
+    v.pipe(
+      v.string(),
+      v.description('The corrected text for the smallest span that fixes it, when you can state it exactly'),
+    ),
+  ),
 });
 const checkResultSchema = v.object({
   /**
@@ -141,7 +149,9 @@ export const llmStyleCheck: Check = {
         items.push({
           item: `style-${rule} @ line ${violation.line}`,
           pass: false,
-          issue: violation.problem,
+          issue:
+            violation.problem +
+            (violation.suggestion !== undefined ? ` Use exactly: "${violation.suggestion}"` : ''),
         });
       }
     }
@@ -179,7 +189,8 @@ function ask(
       ...group.map((rule) => `${rule}. ${RULE_TEXT.get(rule) ?? ''}`),
       ``,
       `Report "lastLine" as the number on the final "N:" line you can see, so we can confirm the whole`,
-      `page reached you.`,
+      `page reached you. When you can state a violation's corrected text exactly, put it in`,
+      `"suggestion" — a finding that carries its fix gets repaired in one pass.`,
       ``,
       `--- PAGE (${ctx.path}, with line numbers) ---`,
       page,

@@ -82,6 +82,19 @@ test('the page is sent with line-number prefixes', async () => {
   assert.match(prompts[0], /^3: Prose\.$/m);
 });
 
+test('a checker suggestion rides along in the issue text', async () => {
+  // Findings that carry the fix get repaired in one pass; the schema invites the corrected text and
+  // the item passes it through verbatim.
+  const { harness } = stubHarness([
+    [{ rule: 7, line: 12, problem: 'Sibling type is not linked.', suggestion: '[`Lens`](./lens.md)' } as never],
+    [],
+  ]);
+  const items = await llmStyleCheck.run(context(harness, '## Overview', '', 'Prose.'));
+  const failing = items.filter((item) => !item.pass);
+  assert.equal(failing.length, 1);
+  assert.match(failing[0].issue ?? '', /Sibling type is not linked\. Use exactly: "\[`Lens`\]\(\.\/lens\.md\)"/);
+});
+
 test('violations become items a repeat review can narrow onto', async () => {
   const { harness } = stubHarness([[{ rule: 7, line: 12, problem: 'Sibling type is not linked.' }], []]);
   const items = await llmStyleCheck.run(context(harness, '## Overview', '', 'Prose.'));

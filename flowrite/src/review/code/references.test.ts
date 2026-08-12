@@ -105,6 +105,22 @@ test('a broken relative link fails, and is resolved from the page directory', as
   assert.match(found[0].issue ?? '', /Linked page "\.\/iso\.md"/);
 });
 
+test('a broken link whose page exists elsewhere carries the correct relative path', async () => {
+  // The turn18 case: obeying the link-siblings style rule, the writer linked ./optional-guide.md from
+  // docs/reference/ — but the page lives in docs/guides/. Told only "does not exist", it needed
+  // another full round; the check knows the tree, so the finding now names the right path. A basename
+  // that exists nowhere (iso.md — repo() creates no such page) gets no suggestion.
+  repo({ 'docs/guides/optional-guide.md': '# g\n' });
+  const found = await failures(
+    page('## Overview', '', 'See [`Iso`](./iso.md) and the [guide](./optional-guide.md).', ''),
+  );
+  assert.equal(found.length, 2);
+  const iso = found.find((item) => (item.issue ?? '').includes('iso.md'));
+  const guide = found.find((item) => (item.issue ?? '').includes('optional-guide.md'));
+  assert.doesNotMatch(iso?.issue ?? '', /use exactly/);
+  assert.match(guide?.issue ?? '', /use exactly: "\.\.\/guides\/optional-guide\.md"/);
+});
+
 test('a missing mdoc embed fails', async () => {
   repo();
   const found = await failures(

@@ -32,8 +32,8 @@ export const style25: Check = {
             fail(
               'style-25',
               i,
-              `Hardcoded dependency version "${match[1]}" in "${line.trim()}". Use the "@VERSION@" ` +
-                `placeholder, which mdoc substitutes at build time.`,
+              `Hardcoded dependency version "${match[1]}" in "${line.trim()}". mdoc substitutes the ` +
+                `placeholder at build time — use exactly: "${line.trim().replace(PINNED, '% "@VERSION@"')}"`,
             ),
           );
         }

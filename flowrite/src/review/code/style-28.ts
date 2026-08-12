@@ -45,11 +45,29 @@ export const style28: Check = {
       });
 
       if (offenders.length > 0) {
+        // The finding carries the fix: the corrected heading is computable from the offender list, so
+        // hand it over verbatim instead of making a model re-derive title-case word by word.
+        const offenderSet = new Set(offenders);
+        let inCode = false;
+        const corrected = heading.text
+          .split(/(\s+|`)/)
+          .map((token) => {
+            if (token === '`') {
+              inCode = !inCode;
+              return token;
+            }
+            const cleaned = token.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
+            return !inCode && offenderSet.has(cleaned)
+              ? token.replace(/\p{Ll}/u, (c) => c.toUpperCase())
+              : token;
+          })
+          .join('');
         failures.push(
           fail(
             'style-28',
             heading.line,
-            `"${heading.text}" is not Title Case: capitalize ${offenders.map((w) => `"${w}"`).join(', ')}.`,
+            `"${heading.text}" is not Title Case: capitalize ${offenders.map((w) => `"${w}"`).join(', ')}. ` +
+              `Use exactly: "${'#'.repeat(heading.level)} ${corrected}"`,
           ),
         );
       }

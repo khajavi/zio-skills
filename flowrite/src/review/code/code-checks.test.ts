@@ -105,6 +105,7 @@ test('style-4 flags a full-sentence bullet that starts lowercase', async () => {
   );
   assert.equal(found.length, 1);
   assert.match(found[0].item, /^style-4 @ line 5$/);
+  assert.match(found[0].issue ?? '', /Use exactly: "This bullet is a whole sentence\."/);
 });
 
 test('style-4 ignores bullets that open with code, links or digits', async () => {
@@ -338,7 +339,9 @@ test('style-18 ignores var outside Scala blocks', async () => {
   assert.deepEqual(found, []);
 });
 
-test('style-22 flags an unpadded column', async () => {
+test('style-22 flags an unpadded column and hands over the padded table', async () => {
+  // The finding carries the fix: a measured run failed eight passes on the writer's own padding
+  // arithmetic ("kept missing by 1-2 characters"), so the check now computes the compliant table.
   const found = await failures(
     style22,
     page(
@@ -352,6 +355,15 @@ test('style-22 flags an unpadded column', async () => {
   );
   assert.equal(found.length, 1);
   assert.match(found[0].issue ?? '', /Column 1 of this table is not padded/);
+  assert.match(found[0].issue ?? '', /Replace the whole table with this correctly padded version:/);
+  const suggested = (found[0].issue ?? '').split(':\n')[1].split('\n');
+  assert.deepEqual(suggested, [
+    '| Method | Description |',
+    '|--------|-------------|',
+    '| `set`  | Replaces it |',
+  ]);
+  // The suggestion itself must satisfy the check, or the loop chases its own advice.
+  assert.deepEqual(await failures(style22, page('Prose:', '', ...suggested, '')), []);
 });
 
 test('style-22 flags a ragged table', async () => {
@@ -368,6 +380,7 @@ test('style-23 flags a Scala 3 wildcard import, and its fix is idempotent', asyn
   const found = await failures(style23, scala3);
   assert.equal(found.length, 1);
   assert.match(found[0].item, /^style-23 @ line 4$/);
+  assert.match(found[0].issue ?? '', /use exactly: "import tinyoptics\._"/);
 
   const once = style23.fix?.(scala3) ?? scala3;
   assert.match(once, /import tinyoptics\._/);
@@ -389,6 +402,10 @@ test('style-25 flags a pinned dependency version but not scalaVersion', async ()
   assert.equal(found.length, 1);
   assert.match(found[0].item, /^style-25 @ line 5$/);
   assert.match(found[0].issue ?? '', /"1\.2\.3"/);
+  assert.match(
+    found[0].issue ?? '',
+    /use exactly: "libraryDependencies \+= "dev\.zio" %% "tinyoptics" % "@VERSION@""/,
+  );
 
   const once = style25.fix?.(build) ?? build;
   assert.match(once, /% "@VERSION@"/);
@@ -424,6 +441,15 @@ test('style-28 flags lowercase heading words, leaving the small ones alone', asy
   assert.equal(found.length, 1);
   // "a" and "and" stay lowercase in title case; the content words do not.
   assert.match(found[0].issue ?? '', /capitalize "span", "record", "work"/);
+  // The finding carries the corrected heading verbatim, small words untouched.
+  assert.match(found[0].issue ?? '', /Use exactly: "## Open a Span and Record Work"/);
+});
+
+test('style-28 suggestions never touch words inside inline code', async () => {
+  const found = await failures(style28, page('## Working with `map` and other tools', '', 'Prose.', ''));
+  assert.equal(found.length, 1);
+  // `map` stays lowercase — it is an identifier, not prose; "other"/"tools" get capitals.
+  assert.match(found[0].issue ?? '', /Use exactly: "## Working with `map` and Other Tools"/);
 });
 
 test('style-28 leaves identifiers, acronyms and conventional names alone', async () => {

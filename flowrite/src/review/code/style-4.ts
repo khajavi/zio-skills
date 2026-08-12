@@ -25,7 +25,8 @@ export const style4: Check = {
           'style-4',
           bullet.line,
           `This bullet is a full sentence but starts lowercase: "${bullet.text}". ` +
-            `Capitalize its first word.`,
+            // The finding carries the fix — one computed capital beats a described one.
+            `Use exactly: "${bullet.text.replace(/[a-z]/, (c) => c.toUpperCase())}"`,
         ),
       );
     return summarize('style-4', 'bullet capitalization', failures);

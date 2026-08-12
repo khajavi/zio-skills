@@ -23,8 +23,8 @@ export const style23: Check = {
             fail(
               'style-23',
               i,
-              `Scala 3 wildcard import "${ctx.lines[i].trim()}". This corpus defaults to Scala 2.13: ` +
-                `write "import x._".`,
+              `Scala 3 wildcard import "${ctx.lines[i].trim()}". This corpus defaults to Scala 2.13 — ` +
+                `use exactly: "${ctx.lines[i].trim().replace(/\.\*$/, '._')}"`,
             ),
           );
         }
