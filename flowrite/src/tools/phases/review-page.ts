@@ -116,23 +116,18 @@ export function consumeReviewRound(): void {
   roundsUsed++;
 }
 
-/** What the review prompt needs that differs per kind: the checklist, and two bits of wording. */
-const KIND_REVIEW: Record<DocKind, { checklistDoc: string; noun: string; label: string }> = {
-  'data-type': {
-    checklistDoc: dataTypeChecklistDoc,
-    noun: 'data type reference page',
-    label: 'REFERENCE PAGE',
-  },
-  module: {
-    checklistDoc: moduleChecklistDoc,
-    noun: 'module reference page',
-    label: 'MODULE REFERENCE',
-  },
-  tutorial: {
-    checklistDoc: tutorialChecklistDoc,
-    noun: 'tutorial',
-    label: 'TUTORIAL',
-  },
+/**
+ * The only thing the review prompt needs per kind: which checklist to judge against.
+ *
+ * This table briefly also carried a `noun` ("data type reference page") for the opening line and a
+ * `label` ("REFERENCE PAGE") for the content fence. Both were dropped as pure restatement — each
+ * checklist opens by naming its own kind (`# Data Type Reference Review Checklist`), three lines
+ * below where the noun said it, and the fence already carries the page's path.
+ */
+const CHECKLISTS: Record<DocKind, string> = {
+  'data-type': dataTypeChecklistDoc,
+  module: moduleChecklistDoc,
+  tutorial: tutorialChecklistDoc,
 };
 
 /**
@@ -172,7 +167,7 @@ export const reviewPage = defineTool({
     // does not spend budget, since it never reviewed anything.
     consumeReviewRound();
 
-    const kind = KIND_REVIEW[docKind()];
+    const checklistDoc = CHECKLISTS[docKind()];
     const content = await harness.sandbox.readFile(data.path);
     return {
       output: await delegate({
@@ -182,9 +177,9 @@ export const reviewPage = defineTool({
         role: 'reviewer',
         result: reviewSchema,
         prompt: [
-          `Evaluate the ${kind.noun} below against every item in this checklist:`,
+          `Evaluate the page below against every item in this checklist:`,
           ``,
-          kind.checklistDoc,
+          checklistDoc,
           ``,
           `Also check it against every one of these writing style rules, reporting each violation as a`,
           `failing item named "writing-style rule <N>" with the line and a specific, actionable issue:`,
@@ -194,7 +189,7 @@ export const reviewPage = defineTool({
           // of the page under review.
           authorHint(),
           ``,
-          `--- ${kind.label} (${data.path}) ---`,
+          `--- PAGE (${data.path}) ---`,
           content,
         ].join('\n'),
       }),
