@@ -20,27 +20,30 @@ An agent is not a program you write step by step. It's a *context you assemble*:
 
 > **agent = model + instructions + tools + skills + subagents + sandbox**
 
-The code is just the wrapper. Here is the entire definition of the
-data-type reference writer — every capability it has is a thing you *hand it*, not
-a branch you write:
+The code is just the wrapper. The writer reads a plain request, decides what kind of document it
+is, and then every capability it has is a thing you *hand it*, not a branch you write:
 
 ```ts
-// src/agents/data-type-ref-writer.ts
+// src/agents/docs-writer.ts
 'use agent';
-export function DataTypeRefWriter(props: AgentProps) {
-  const facts = v.parse(initialData, useInitialData()); // the checkout + the type
-  return useDocsWriter(props, {
-    instructions,                            // who it is — a Markdown file
-    skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
-    tools:  [researchDataType, designDataTypeStructure, writeDataTypeReference,
-             writeCompanionExamples, integrateDataTypeReference, reviewDataTypeRef],
-    runDirective: `Write a reference page for: ${facts.typeName}. …`,
+export function DocsWriter() {
+  const [kind] = usePersistentState<DocKind | null>('docKind', null);
+  const [subject] = usePersistentState<string | null>('subject', null);
+  useRunBasics(initialData, request);         // model + sandbox + run context
+
+  if (kind === null) return classificationGate();  // one turn: which kind, which subject?
+
+  const config = KINDS[kind];                 // the whole per-kind difference, in a table
+  return useDocsWriter({
+    instructions: config.instructions,        // who it is — a Markdown file
+    skills: config.skills,                   // e.g. mdocConventions + structure + checklist
+    tools: config.tools,                      // only THIS kind's phase tools, never all three
+    runDirective: config.directive(subject),
   });
 }
-DataTypeRefWriter.initialData = initialData;
 
-// useDocsWriter is a custom hook — it calls useModel/useSandbox/useSkill/useTool
-// and declares the nine shared roles with useSubagent.
+// useDocsWriter is a custom hook — it declares the skills, the guarded phase tools, and the nine
+// shared roles with useSubagent.
 ```
 
 Notice what's *not* there: no "step 1 research, step 2 design, step 3 write"
@@ -61,20 +64,26 @@ The interesting engineering therefore moves out of `.ts` files and into:
 
 ## What's in the box
 
-| Agent | Writes |
-|-------|--------|
-| `tutorial-writer` | Narrative, pedagogical guides with companion examples |
-| `data-type-ref-writer` | Exhaustive, API-complete reference pages |
-| `module-ref-writer` | Module narrative plus per-type coverage, flat or hierarchical |
+One agent, `docs-writer`, which writes three kinds of document:
 
-Each agent is its own finite, schema-typed entry point for CI, scheduled, or batch
-runs. Its `initialData` schema declares what a run needs, validated before anything
-durable is admitted:
+| Kind | Writes |
+|------|--------|
+| `data-type` | Exhaustive, API-complete reference pages |
+| `module` | Module narrative plus per-type coverage, flat or hierarchical |
+| `tutorial` | Narrative, pedagogical guides with companion examples |
+
+Ask for what you want in plain words — the writer works out which kind it is and what the subject
+is, and mounts only that kind's phase tools:
 
 ```bash
-flue run src/agents/data-type-ref-writer.ts --id dtr-Chunk -m "go" \
-  --data '{"projectPath":"/path/to/checkout","typeName":"Chunk"}'
+flue run src/agents/docs-writer.ts --id dtr-Chunk \
+  -m "Please write reference documentation for the Chunk data type" \
+  --data '{"projectPath":"/path/to/checkout"}'
 ```
+
+`--data` carries only what a sentence cannot express: the checkout path, phases to skip, and the
+module layout override. When a request is ambiguous ("write docs for Chunk" — a reference page or a
+tutorial?) the writer asks instead of guessing, because guessing spends hours on the wrong document.
 
 The agent captures a structured result plus a **run retrospective** in its final
 reply.
@@ -118,7 +127,7 @@ prescribed sequence of moves.
 
 Implementation is mostly Markdown and schemas:
 
-- Write the agent's identity in `src/agents/data-type-ref-writer.md`.
+- Write the kind's identity in `src/agents/data-type-ref-writer.md`, and add its row to `KINDS`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
 - Write the phase tools (`research-data-type.ts`, `write-data-type-reference.ts`, …),
@@ -147,9 +156,10 @@ cents:
 
 ```bash
 # .env.testing selects cheap models; --data points at the tinyoptics fixture
-flue run src/agents/data-type-ref-writer.ts \
-  --env .env.testing --id dtr-Prism -m "go" \
-  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+flue run src/agents/docs-writer.ts \
+  --env .env.testing --id dtr-Prism \
+  -m "Please write reference documentation for the Prism data type" \
+  --data '{ "projectPath": "fixtures/tinyoptics" }'
 ```
 
 > If `pnpm exec flue` misbehaves, call the binary directly: `./node_modules/.bin/flue run …`.
@@ -235,7 +245,7 @@ diff behavior across iterations of the prompt.
 
 ```
 src/
-  agents/        # the writers: identity (.md) + wiring (.ts), each an entry point
+  agents/        # one writer (.ts) + one identity (.md) per kind of document
   phases/        # research / write / verify / integrate steps (+ result schemas)
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
@@ -253,9 +263,10 @@ pnpm install
 cp .env.testing.example .env.testing   # add ANTHROPIC_API_KEY
 
 # run against the bundled fixture (cheap models)
-flue run src/agents/data-type-ref-writer.ts --env .env.testing \
-  --id dtr-Prism -m "go" \
-  --data '{ "projectPath": "fixtures/tinyoptics", "typeName": "Prism" }'
+flue run src/agents/docs-writer.ts --env .env.testing \
+  --id dtr-Prism \
+  -m "Please write reference documentation for the Prism data type" \
+  --data '{ "projectPath": "fixtures/tinyoptics" }'
 ```
 
 Flue's own docs ship with the packages — read them directly rather than guessing at

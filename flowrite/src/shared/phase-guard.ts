@@ -38,7 +38,21 @@ const activePhase = new AsyncLocalStorage<string>();
  * model reads as an instruction. Measured behaviour is that it then reaches the goal another way
  * rather than looping.
  */
+const refusals: { tool: string; parent: string }[] = [];
+
+/**
+ * Every re-entry this guard blocked. Empty is the expected case.
+ *
+ * Collected because a refusal is not a runtime event, so the end-of-run report cannot observe it —
+ * and counting `Maximum delegation depth` errors is not a substitute: nesting only errors if it
+ * happens to reach depth 4, and measured runs nested with zero such errors.
+ */
+export function guardRefusals(): readonly { tool: string; parent: string }[] {
+  return refusals;
+}
+
 function refuse(name: string, parent: string, advice: string): never {
+  refusals.push({ tool: name, parent });
   console.error(`[phase-guard] refused ${name} inside ${parent}`);
   throw new Error(`"${name}" cannot run inside the "${parent}" phase. ${advice}`);
 }

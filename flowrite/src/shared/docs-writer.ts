@@ -1,5 +1,4 @@
 import {
-  type AgentProps,
   type SkillReference,
   type ToolDefinition,
   useInitialData,
@@ -69,9 +68,21 @@ export const docsWriterFields = {
         'REPO_PATH, then to the process working directory.',
     ),
   ),
-  userPrompt: v.pipe(
-    v.optional(v.string()),
-    v.description('Optional free-form hint to steer the run, e.g. scope, emphasis, or known gotchas.'),
+  // Module-run escape hatches. They stay in creation data because no sentence can express them
+  // with schema validation, and run-module-ref.sh uses them to force a layout while testing.
+  // Ignored by the other kinds.
+  layout: v.pipe(
+    v.optional(v.picklist(['flat', 'hierarchical'])),
+    v.description('Module runs only: force the page layout; omit to let the design phase decide.'),
+  ),
+  shapeOverride: v.pipe(
+    v.optional(v.picklist(['single-core', 'core-family', 'multi-domain', 'dsl'])),
+    v.description(
+      'Module runs only: force the module shape instead of letting the design phase classify. ' +
+        'single-core = one dominant core type (flat); core-family = several co-equal core types, one domain (hierarchical); ' +
+        'multi-domain = core types across ≥2 sub-domains (hierarchical + nesting); dsl = no dominant core, co-equal types combined (one task-organized page). ' +
+        'Wins over `layout`.',
+    ),
   ),
   skipPhases: v.pipe(
     v.optional(v.array(skipPhase), []),
@@ -83,10 +94,69 @@ export const docsWriterFields = {
   ),
 };
 
-// Loose so a writer's own subject field passes through: the agent's initialData
-// static already validated the whole shape at admission: this is a typed re-read
-// of just the fields this hook needs.
-const runFacts = v.looseObject(docsWriterFields);
+/** The parsed shape of a run's creation data, as `useRunBasics` hands it back. */
+export type RunFacts = v.InferOutput<v.ObjectSchema<typeof docsWriterFields, undefined>>;
+
+/**
+ * The setup every render needs, whichever branch the writer takes: run context, model tier,
+ * sandbox. Returns the parsed creation data so the caller can read the module escape hatches.
+ *
+ * Called by the classification gate AND by the writing branch, with identical values. Identical is
+ * the point: `useSandbox` presence is re-read at every turn boundary, so a render that skipped it
+ * would detach and re-attach the environment and make the runtime re-announce the whole workspace.
+ * A render with no `useModel` at all cannot start.
+ */
+export function useRunBasics(schema: v.GenericSchema, request: string): RunFacts {
+  const facts = v.parse(schema, useInitialData()) as RunFacts;
+
+  // The checkout the writer reads and edits. local() binds it to this host with no isolation, so
+  // keep it pointed at a directory you are willing to let the model change. Creation data is the
+  // per-run input; REPO_PATH overrides when it is omitted, and the process working directory is the
+  // last resort — so running from inside a library checkout needs no path at all.
+  const projectPath = facts.projectPath ?? process.env.REPO_PATH ?? process.cwd();
+
+  // Publish the run's facts for the phase tools and role renders, neither of which can reach
+  // useInitialData() (it returns undefined in a subagent render). Idempotent, so repeating it on
+  // every render is harmless. The caller owns the `request` state — declaring the same
+  // usePersistentState name twice in one render throws, so it is passed in rather than re-read.
+  setRunContext({ projectPath, request, skipPhases: facts.skipPhases ?? [] });
+
+  // Owns useModel, so nothing here may call it again — it throws on a second call in one render.
+  useDocsAuthorBase();
+
+  // cwd belongs to local(), not to useSandbox. local()'s cwd anchors the sandbox on the host and
+  // defaults to process.cwd(); useSandbox's cwd only picks a directory *inside* an already-anchored
+  // environment. Passing it to useSandbox left the sandbox rooted in flowrite itself, so workspace
+  // discovery — AGENTS.md and .agents/skills/ from the session cwd — fed the writer flowrite's own
+  // AGENTS.md instead of the checkout it is documenting.
+  useSandbox(local({ cwd: projectPath }));
+
+  // MUST come after useSandbox. Declared before it, the roles never reach a phase tool's harness
+  // conversation: every phase gave up with "No subagents are currently available. The system context
+  // explicitly states \"Available Agents: None\"", while the root agent's own roster looked fine (a
+  // probe confirmed all nine declared on every render). One delegation happened in a whole run,
+  // against 24 in the equivalent pre-merge run.
+  //
+  // Isolated by measurement, one variable at a time, because two candidates were confounded at
+  // first — position relative to useSandbox, and position relative to the useTool calls:
+  //
+  //   before useSandbox                    → 0 delegations, every phase gave up
+  //   after useSandbox, before useTool     → delegation works
+  //   after useSandbox, after useTool      → delegation works
+  //
+  // So useTool order is irrelevant and useSandbox order is everything. The likely mechanism is in
+  // reference/agent-api.md: a sandbox attach narrates an `environment` signal that is "always a full
+  // snapshot, never a delta … and the live skill and subagent catalogs", and that snapshot is the
+  // baseline a harness conversation inherits. Attach before the roles exist and the baseline records
+  // none. This contradicts the hooks reference, which lists useSubagent as "conditional and
+  // reorderable" — worth reporting upstream.
+  //
+  // The pre-merge writers were accidentally correct: they called useSandbox first and useSubagent
+  // last. Nothing said the order mattered.
+  useRoles();
+
+  return facts;
+}
 
 /**
  * Submission durability for every docs writer, assigned to each writer's
@@ -114,86 +184,66 @@ export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempt
 const SHARED_DIRECTIVE =
   `Your shell already starts in the repo root of the library checkout — use relative paths ` +
   `for every command; do not cd into the repo. ` +
-  `When the work is done, call report_run_result once with the final page path, a one-line ` +
-  `summary, and a run retrospective: the real obstacles you hit this run and how you resolved ` +
-  `them (empty if it went smoothly — never invent friction). Report the review's actual verdict ` +
-  `there, including any checklist item still failing; do not describe a failing page as passing.`;
+  `When the work is done, call report_run_result once with the final page path, the review's ` +
+  `verdict, a one-line summary, and a run retrospective: the real obstacles you hit this run and ` +
+  `how you resolved them (empty if it went smoothly — never invent friction). ` +
+  `The verdict is checked against the recorded review, so a page with any failing checklist item ` +
+  `is "failed" — name what is still wrong in the summary and in your closing reply.`;
 
 /**
- * Shared composition for ZIO documentation-authoring agents (tutorial-writer,
- * data-type-ref-writer, …). Every such agent runs the same flow with the same role
- * delegates, model tier, sandbox, and gh tool — they differ only in their
- * orchestration instructions, the kind-specific skills, and the phase tools that
- * drive each step. Supply those three; everything else is fixed here. Returns the
+ * Shared composition for the writing branch of a docs writer: the role delegates, the guarded
+ * phase tools, the kind's skills, the gh tool, the run reporter and the usage summary. Returns the
  * instructions for the caller to return as its own.
  *
- * A custom hook rather than a factory, for two reasons: Flue 2 replaced profiles
- * with hook composition, and an agent's durable identity is its own exported
- * function name — so each writer must declare that function itself rather than
- * receive one from a factory.
+ * Model tier, sandbox and run context are NOT here — they belong to `useRunBasics`, which the agent
+ * calls on every render including the one that has not yet classified the request.
+ *
+ * A custom hook rather than a factory, because Flue 2 replaced profiles with hook composition and
+ * an agent's durable identity is its own exported function name — the agent must declare that
+ * function itself rather than receive one from a factory.
  */
+/**
+ * Declare the nine role delegates. Called by useRunBasics, so every render has the full roster —
+ * including the classification gate, whose render is the baseline snapshot phase tools inherit.
+ *
+ * Order matters and is not obvious: see the call site for the measurements.
+ */
+export function useRoles(): void {
+  for (const role of ROLES) useSubagent(role);
+}
+
 export function useDocsWriter(
-  props: AgentProps,
   opts: {
-    /** Human label for the id in the missing-creation-data error, e.g. 'data type'. */
-    idLabel: string;
     /** Log prefix for the end-of-run usage summary, e.g. 'write-data-type-ref'. */
     label: string;
     instructions: string;
     skills: SkillReference[];
+    /** Phase tools. Guarded — each one refuses to run inside another phase. */
     tools: ToolDefinition[];
-    /** What to do this run, built from the writer's own creation data. */
+    /**
+     * Ordinary tools, mounted unguarded.
+     *
+     * The distinction is not cosmetic: the guard exists because a phase tool's harness conversation
+     * inherits the whole registry, so one phase can re-enter another. A plain tool starts no
+     * conversation and can re-enter nothing, and a phase may legitimately need it — guarding it would
+     * refuse the call for no reason.
+     */
+    plainTools?: ToolDefinition[];
+    /** What to do this run, built from the request's kind and subject. */
     runDirective: string;
   },
 ): string {
-  const parsed = v.safeParse(runFacts, useInitialData());
-  if (!parsed.success) {
-    throw new Error(
-      `Creation data is required before running (${opts.idLabel} id: ${props.id}) — ` +
-        `pass it with \`flue run --data '{"typeName":"…"}'\`. ` +
-        `Validation said: ${parsed.issues.map((i) => i.message).join('; ')}`,
-    );
-  }
-
-  // The checkout the writer reads and edits. local() binds it to this host with no
-  // isolation, so keep it pointed at a directory you are willing to let the model
-  // change. Creation data is the per-run input; REPO_PATH overrides when it is
-  // omitted, and the process working directory is the last resort — so running from
-  // inside a library checkout needs no path at all. Explicit --data wins over the
-  // env var, since silently overriding a stated path would be the greater surprise.
-  const projectPath = parsed.output.projectPath ?? process.env.REPO_PATH ?? process.cwd();
-
-  // Publish the run's facts for the phase tools and role renders, neither of which
-  // can reach useInitialData() (it returns undefined in a subagent render).
-  // Idempotent, so repeating it on every render is harmless.
-  setRunContext({
-    projectPath,
-    userPrompt: parsed.output.userPrompt,
-    skipPhases: parsed.output.skipPhases,
-  });
-
-  // Owns useModel, so nothing here may call it again — it throws on a second call
-  // in one render.
-  useDocsAuthorBase();
-  // cwd belongs to local(), not to useSandbox. local()'s cwd anchors the sandbox on
-  // the host and defaults to process.cwd(); useSandbox's cwd only picks a directory
-  // *inside* an already-anchored environment. Passing it to useSandbox left the
-  // sandbox rooted in flowrite itself, so workspace discovery — AGENTS.md and
-  // .agents/skills/ from the session cwd — fed the writer flowrite's own AGENTS.md
-  // instead of the checkout it is documenting.
-  useSandbox(local({ cwd: projectPath }));
-
   for (const skill of opts.skills) useSkill(skill);
   // Guarded: a phase tool's harness conversation inherits every other phase tool, so without this
   // a phase can re-enter the workflow until the delegation cap trips — which is how reviewer and
   // style_checker became unreachable. See phase-guard.ts.
   for (const tool of opts.tools) useTool(guardPhase(tool));
+  for (const tool of opts.plainTools ?? []) useTool(tool);
   // gh_query stays unguarded — an ordinary lookup any phase may legitimately need.
   useTool(createGhQueryTool(getRepoPath));
   // report_run_result is guarded on a different axis: not "is it a phase?" but "is it terminal for
   // the run?". It was exempt originally, and a phase duly filed the run's verdict mid-review.
   useTool(guardRootOnly(createReportRunResultTool(opts.label)));
-  for (const role of ROLES) useSubagent(role);
 
   useUsageReport(opts.label);
   useInstruction(`${opts.runDirective} ${SHARED_DIRECTIVE}`);

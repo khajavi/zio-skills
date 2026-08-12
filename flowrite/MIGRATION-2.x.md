@@ -31,14 +31,16 @@ is used rather than a code-driven orchestrator.
 ## Running it
 
 ```bash
-flue run src/agents/data-type-ref-writer.ts --env .env.testing \
-  --id dtr-Chunk -m "go" \
-  --data '{"projectPath":"/path/to/checkout","typeName":"Chunk"}'
+flue run src/agents/docs-writer.ts --env .env.testing \
+  --id dtr-Chunk \
+  -m "Please write reference documentation for the Chunk data type" \
+  --data '{"projectPath":"/path/to/checkout"}'
 ```
 
-`projectPath` resolves from `--data`, then `REPO_PATH`, then `process.cwd()`.
-Also `module-ref-writer.ts` (`moduleName`, optional `layout`/`shapeOverride`) and
-`tutorial-writer.ts` (`topic`). `--env .env.testing` pins every tier to Haiku.
+`projectPath` resolves from `--data`, then `REPO_PATH`, then `process.cwd()`. The kind of document
+and its subject come from the message; ask for a module reference or a tutorial the same way.
+`layout`/`shapeOverride` remain `--data` overrides for module runs. `--env .env.testing` pins every
+tier to Haiku.
 `FLUE_VERBOSE_TOOLS=1` logs tools, delegations, and turns to stderr.
 
 On this machine flue also needs `NODE_USE_ENV_PROXY=1` and

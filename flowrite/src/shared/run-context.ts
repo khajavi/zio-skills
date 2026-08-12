@@ -4,8 +4,15 @@ export type SkipPhase = 'research' | 'design' | 'write' | 'write-examples' | 'in
 export interface RunContext {
   /** Absolute path to the library checkout being documented. */
   projectPath: string;
-  /** Optional free-form hint steering this run. */
-  userPrompt?: string | undefined;
+  /**
+   * The requester's own words — the message that started the run, e.g. "Please write reference
+   * documentation for the Chunk data type".
+   *
+   * Replaces the optional `userPrompt` creation-data field: the request IS the input now, so this
+   * is always populated once the run is classified (empty only during the classification turn,
+   * before any phase tool can run).
+   */
+  request: string;
   /** Code-gated phases to skip, for resuming a run whose artifacts exist. */
   skipPhases: readonly SkipPhase[];
 }
@@ -57,6 +64,6 @@ export function isPhaseSkipped(phase: SkipPhase): boolean {
  * top-level agent's own prompt cannot forward it.
  */
 export function authorHint(): string {
-  const hint = current?.userPrompt?.trim();
-  return hint ? `\nAuthor hint from the user — treat as a constraint for this task: ${hint}` : '';
+  const hint = current?.request?.trim();
+  return hint ? `\nThe requester asked for this — treat it as a constraint for this task: ${hint}` : '';
 }

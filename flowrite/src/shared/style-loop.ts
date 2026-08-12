@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import { delegate } from './delegate.ts';
-// Single source of truth for the 25 rules, shared with the writing-style
+// Single source of truth for the rules, shared with the writing-style
 // skill (its SKILL.md points here; only the SKILL.md basename itself is
 // barred from markdown imports by the build).
 import rulesMarkdown from '../skills/writing-style/references/rules.md';
@@ -16,15 +16,28 @@ const checkResultSchema = v.object({ violations: v.array(violationSchema) });
 export type Violation = v.InferOutput<typeof violationSchema>;
 
 // Parse "N. **rule text**" lines out of the imported rules file once at module
-// init, then chunk into groups so each checker call judges a handful of rules
-// with full attention instead of all 25 at once.
+// init, then chunk into groups so no checker call has to hold every rule at once. The count is
+// derived, never hardcoded: rules 26-28 were added at some point and left three comments and one
+// user-visible review label still claiming 25.
 const RULES: { n: number; text: string }[] = rulesMarkdown
   .split('\n')
   .map((line) => /^(\d+)\. (.+)$/.exec(line))
   .filter((m): m is RegExpExecArray => m !== null)
   .map((m) => ({ n: Number(m[1]), text: m[2] }));
 
-const GROUP_SIZE = 5;
+/**
+ * How many rules one `style_checker` call judges. A genuine trade, not a tuning detail.
+ *
+ * Bigger groups mean fewer delegations, and delegations are what review costs: each one takes the
+ * coordinator ~2 turns of a conversation that *accumulates* (the harness continues one scratch
+ * conversation across calls, growing 18.6k → 143k tokens in a measured run), so cost is turns ×
+ * context and the two multiply. At 28 rules, 5 gives 6 delegations per detection round; 10 gives 3.
+ *
+ * Smaller groups mean more attention per rule. The plausible cost of going bigger is a missed
+ * violation — a cheaper review that is also a weaker one — so this is env-overridable to be
+ * A/B measured on one page rather than argued about.
+ */
+const GROUP_SIZE = Number(process.env.STYLE_GROUP_SIZE ?? 10);
 const RULE_GROUPS: (typeof RULES)[] = [];
 for (let i = 0; i < RULES.length; i += GROUP_SIZE) {
   RULE_GROUPS.push(RULES.slice(i, i + GROUP_SIZE));
@@ -40,11 +53,14 @@ const ruleGroupIndex = (rule: number): number => RULE_TO_GROUP.get(rule) ?? 0;
 // Default 1 fix pass; override per run with MAX_FIX_ROUNDS=n.
 const MAX_FIX_ROUNDS = Number(process.env.MAX_FIX_ROUNDS ?? 1);
 
+/** How many rules the loop checks. Derived from the rules file, so a label can never go stale. */
+export const RULE_COUNT = RULES.length;
+
 /**
  * Detect and fix writing-style violations in a documentation page.
  *
  * Detection is a code-owned loop — every rule group is checked by a delegated
- * `style_checker` task each round, so coverage of all 25 rules never depends
+ * `style_checker` task each round, so coverage of every rule never depends
  * on the model remembering a checklist. Fixing is batched by rule group: one
  * delegated `style_fixer` task per group with violations, each reading the page
  * once and applying all of that group's fixes in a single pass. This keeps page
