@@ -130,11 +130,14 @@ Implementation is mostly Markdown and schemas:
 - Write the kind's identity in `src/agents/data-type-ref-writer.md`, and add its row to `KINDS`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
-- Write the phase tools (`research-data-type.ts`, `write-data-type-reference.ts`, …),
-  each defining a `valibot` result schema and delegating to a generic role
-  with a kind-specific prompt. The research schema alone — constructors,
-  `coreOperations`, `subtypesOrVariants`, per-fact `source` — *is* the spec that
-  keeps the writer honest.
+- Add the kind's phase tools to the existing phase modules — `research.ts`,
+  `design-doc-structure.ts`, `write-doc.ts` — each defining a `valibot` result
+  schema and delegating to a generic role with a kind-specific prompt. One
+  module per phase, one tool per kind inside it: the shared body is already
+  there, so a fourth kind is a schema, a prompt and a config object rather than
+  three new files. The research schema alone — constructors, `coreOperations`,
+  `subtypesOrVariants`, per-fact `source` — *is* the spec that keeps the writer
+  honest.
 - Wire it all into the agent function shown above, and declare what a run needs
   with its `initialData` static.
 
