@@ -41,8 +41,8 @@ function report(label: string): void {
       `(in ${t.input}, out ${t.output}, cacheRead ${t.cacheRead}, cacheWrite ${t.cacheWrite}) ` +
       `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
   );
-  // The report proper: cost per phase, cost per role, what the run did as counts, the review's
-  // and computed flags. It answers "which phase cost the most" and "what looks wrong",
+  // The report proper: cost per phase, cost per role, what the run did as counts, and computed
+  // flags. It answers "which phase cost the most" and "what looks wrong",
   // neither of which the component view below can — every phase's own harness turns collapse into
   // `agent:default` there, which is why that one line dominates while each phase reports zero.
   const components = state.components.report();
