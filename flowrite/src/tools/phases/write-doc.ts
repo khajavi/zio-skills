@@ -11,11 +11,15 @@ import { delegate } from '../../runtime/delegate.ts';
 import dataTypeStructureDoc from '../../skills/data-type-ref-structure/references/structure.md';
 import moduleStructureDoc from '../../skills/module-ref-structure/references/structure.md';
 import tutorialStructureDoc from '../../skills/tutorial-structure/references/structure.md';
-// TEMPORARY: flue does not package nested skill files, so the drafter cannot read
-// writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
-// https://github.com/withastro/flue/discussions/100. We inject the rules into the drafter prompt at
-// compile time instead. REVERT once flue supports nested skills: drop this import + injection and let
-// the writing-style skill supply the rules.
+// The writing-style rules, injected into the drafter prompt at compile time.
+//
+// This was a workaround: flue beta.9 did not package nested skill files, so the drafter could not read
+// writing-style/references/rules.md at runtime. That is fixed — 2.0.3 packages a skill's whole
+// directory and adds `read_skill_resource`, verified with a probe on 2026-08-12 — but the injection
+// stays, deliberately. The whole injected corpus across a worst-case run is ~9,500 tokens, about $0.01,
+// while activating a skill and reading a resource costs three tool round-trips that each re-send the
+// delegate's accumulated context. The file remains the single source of truth: it is imported here,
+// never copied.
 import writingStyleRules from '../../skills/writing-style/references/rules.md';
 
 /**
