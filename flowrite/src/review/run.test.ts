@@ -201,6 +201,73 @@ test('a failure that belongs to no covered id still gets re-run', async () => {
   assert.equal(second.passed, true);
 });
 
+test('free-first triage: a mechanical failure defers every delegating check', async () => {
+  // A model judging a page that stat-level evidence already proves broken is spend the next repair
+  // invalidates. In a measured run, 6 of 8 passes paid for delegations while free findings were open.
+  __setLastReviewForTests(null);
+  const code = codeCheck('style-15', 'BAD15');
+  const style = llmCheck('BAD7');
+  const list = checklistCheck('NOLIST');
+  const result = await runChecks({
+    checks: [code, style, list],
+    harness: harnessOver(() => 'BAD15 and BAD7'),
+    log,
+    path: 'p.md',
+  });
+
+  assert.equal(style.runs, 0, 'style-llm must not run while mechanical checks fail');
+  assert.equal(list.runs, 0, 'checklist must not run while mechanical checks fail');
+  assert.equal(result.passed, false);
+  const triage = result.items.find((item) => item.item === 'Review triage');
+  assert.ok(triage, 'the verdict says why the model-judged checks are absent');
+  assert.match(triage?.issue ?? '', /did not run this pass/);
+  // The advisory is not a check: narrowing onto it would try to re-run something that does not exist.
+  assert.deepEqual(pendingCheckIds(), ['style-15']);
+});
+
+test('free-first triage: when the page comes clean, a never-run delegating check runs despite narrowing', async () => {
+  // THE hole this clause closes: triage deferred the checklist on every earlier pass, so its ids never
+  // entered the failing set — a repeat narrowed to the last failures would skip it, carry forward its
+  // empty contribution, and compute a passing verdict on a page the checklist never saw.
+  __setLastReviewForTests(null);
+  const code = codeCheck('style-15', 'BAD15');
+  const style = llmCheck('BAD7');
+  const list = checklistCheck('NOLIST');
+  const checks = [code, style, list];
+  let page = 'BAD15 only';
+
+  const first = await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  assert.equal(first.passed, false);
+  assert.deepEqual(pendingCheckIds(), ['style-15']);
+
+  // The writer fixes the mechanical finding and calls review again with no arguments.
+  page = 'clean page';
+  const second = await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+
+  assert.equal(style.runs, 1, 'the gate opening must run the deferred style check');
+  assert.equal(list.runs, 1, 'the gate opening must run the deferred checklist');
+  assert.equal(second.passed, true);
+  assert.equal(second.items.find((item) => item.item === 'Review triage'), undefined);
+});
+
+test('free-first triage: carried delegating failures stay in a deferred verdict', async () => {
+  // A regression pass (mechanical failure appears after the llm checks have run) must not make the
+  // llm checks' earlier failures vanish while they are deferred.
+  __setLastReviewForTests(null);
+  const code = codeCheck('style-15', 'BAD15');
+  const style = llmCheck('BAD7');
+  const checks = [code, style];
+  let page = 'BAD7 only';
+
+  await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+  page = 'BAD7 and BAD15'; // the repair introduced a mechanical violation; rule 7 still broken
+  const second = await runChecks({ checks, harness: harnessOver(() => page), log, path: 'p.md' });
+
+  assert.equal(style.runs, 1, 'deferred, not re-run');
+  assert.ok(second.items.some((item) => item.item === 'style-7 @ line 4' && !item.pass));
+  assert.deepEqual(pendingCheckIds().sort(), ['style-15', 'style-7']);
+});
+
 test('an unchanged failing set tells the writer to stop, but only after two repeats', async () => {
   // turn17's failing rules went 19,20 -> 19,20 -> 19 -> clean: one repeated set was a SLOW repair, not a
   // spin, and stopping there would have shipped two fixable violations. Three identical sets is the

@@ -128,24 +128,59 @@ export async function runChecks(opts: {
     log,
   };
 
-  // On a narrowed run, every deterministic check runs anyway. They cost nothing, and skipping them
-  // would let a repair introduce a fresh mechanical violation that no later pass ever looks at.
-  const selected =
-    only === undefined
-      ? checks
-      : checks.filter((check) => check.kind === 'code' || idsOf(check).some((id) => only.includes(id)));
+  const codeChecks = checks.filter((check) => check.kind === 'code');
+  const llmChecks = checks.filter((check) => check.kind === 'llm');
+  const produced = new Map<string, ReviewItem[]>();
 
-  const delegating = selected.filter((check) => check.kind === 'llm').length;
-  log.info(
-    `Reviewing ${path}: ${selected.length}/${checks.length} checks, ${delegating} of them delegating` +
-      (only === undefined ? '' : ` (targeted: ${only.join(', ') || 'nothing'})`),
+  // Tier 1 — every deterministic check, every pass, narrowed or not. They cost nothing, and skipping
+  // one would let a repair introduce a fresh mechanical violation that no later pass ever looks at.
+  for (const check of codeChecks) produced.set(check.id, await check.run(ctx, only));
+  const mechanicalFailures = codeChecks.flatMap((check) =>
+    (produced.get(check.id) ?? []).filter((item) => !item.pass),
   );
 
-  // Sequential, deliberately: the llm checks share one scratch conversation, and the runtime allows
-  // "one active operation at a time" on it (reference/agent-api.md) — concurrent delegations would
-  // reject with SessionBusyError.
-  const produced = new Map<string, ReviewItem[]>();
-  for (const check of selected) produced.set(check.id, await check.run(ctx, only));
+  // Free-first triage: while the free tier is failing, the paid tier does not run. A model judging a
+  // page that stat-level evidence already proves broken is spend the next repair invalidates — in a
+  // measured run, 6 of 8 passes paid for delegations while mechanical findings were still open, and
+  // the checklist verdicts churned as the pages they judged were rewritten underneath them. The
+  // findings the writer gets back are complete for the free tier, so it iterates against that for
+  // nothing and faces the expensive judges once, on a mechanically clean page.
+  let triageItem: ReviewItem | null = null;
+  if (mechanicalFailures.length > 0) {
+    triageItem = {
+      item: 'Review triage',
+      pass: false,
+      issue:
+        `${mechanicalFailures.length} deterministic finding(s) are open, so the model-judged checks ` +
+        `(writing style, checklist) did not run this pass. Fix the findings above, then call review ` +
+        `again — re-checking them is free.`,
+    };
+    log.info(
+      `Reviewing ${path}: ${codeChecks.length} deterministic checks, ${mechanicalFailures.length} ` +
+        `finding(s) — model-judged checks deferred until these pass`,
+    );
+  } else {
+    // Tier 2 — the delegating checks, on a mechanically clean page. A check with no recorded
+    // contribution runs regardless of narrowing: triage may have deferred it on every earlier pass, so
+    // its ids never entered the failing set, and skipping it here would compute a passing verdict on a
+    // page the checklist never saw. (The same clause re-runs a check whose last contribution was
+    // legitimately empty — rare, and one spare delegation is the safe direction.)
+    const selected = llmChecks.filter(
+      (check) =>
+        only === undefined ||
+        idsOf(check).some((id) => only.includes(id)) ||
+        (lastByCheck.get(check.id) ?? []).length === 0,
+    );
+    log.info(
+      `Reviewing ${path}: ${codeChecks.length} deterministic checks clean, ` +
+        `${selected.length}/${llmChecks.length} delegating check(s) running` +
+        (only === undefined ? '' : ` (targeted: ${only.join(', ') || 'nothing'})`),
+    );
+    // Sequential, deliberately: the llm checks share one scratch conversation, and the runtime allows
+    // "one active operation at a time" on it (reference/agent-api.md) — concurrent delegations would
+    // reject with SessionBusyError.
+    for (const check of selected) produced.set(check.id, await check.run(ctx, only));
+  }
 
   // A narrowed run must not shrink the verdict: checks that did not re-run keep the result they last
   // reported, in registry order, so the record always describes every check rather than the subset the
@@ -153,6 +188,9 @@ export async function runChecks(opts: {
   const contribution = (check: Check): ReviewItem[] =>
     produced.get(check.id) ?? lastByCheck.get(check.id) ?? [];
   const items = checks.flatMap(contribution);
+  // Appended to the verdict, never to a contribution: like the stall advisory, the triage item must
+  // not carry forward into later passes or enter the narrowing set.
+  if (triageItem !== null) items.push(triageItem);
 
   const failedIds = [...new Set(checks.flatMap((check) => failingIdsOf(check, contribution(check))))];
 
