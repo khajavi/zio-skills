@@ -14,6 +14,11 @@ import { style5 } from './style-5.ts';
 import { style10 } from './style-10.ts';
 import { style11 } from './style-11.ts';
 import { style12 } from './style-12.ts';
+import { style13 } from './style-13.ts';
+import { style14 } from './style-14.ts';
+import { style15 } from './style-15.ts';
+import { style18 } from './style-18.ts';
+import { style22 } from './style-22.ts';
 
 const page = (...lines: string[]): string => lines.join('\n');
 
@@ -29,7 +34,13 @@ const context = (content: string): CheckContext => ({
 const failures = async (check: Check, content: string): Promise<ReviewItem[]> =>
   (await check.run(context(content))).filter((item) => !item.pass);
 
-/** One correct page, checked against every grader in this file. */
+/**
+ * One correct page, checked against every grader in this file.
+ *
+ * It is deliberately realistic — frontmatter, two sibling subsections, an mdoc code block, a padded
+ * table, a bullet list mixing fragments and sentences — because the graders' risk is not missing a
+ * violation, it is inventing one on ordinary prose.
+ */
 const CLEAN = page(
   '---',
   'id: prism',
@@ -50,15 +61,26 @@ const CLEAN = page(
   'val first = Prism[Either[Int, String], Int](_.left.toOption)(Left(_))',
   '```',
   '',
-  'Two operations matter here:',
+  '### Using a Prism',
+  '',
+  'The operations:',
+  '',
+  '| Method      | Description                   |',
+  '|-------------|-------------------------------|',
+  '| `getOption` | Returns the focused value     |',
+  '| `set`       | Replaces it                   |',
+  '',
+  'Two of them matter here:',
   '',
   '- Fragments in a list need no capital',
   '- Full sentences start with a capital letter.',
   '',
 );
 
+const ALL = [style4, style5, style10, style11, style12, style13, style14, style15, style18, style22];
+
 test('every grader stays silent on a correct page', async () => {
-  for (const check of [style4, style5, style10, style11, style12]) {
+  for (const check of ALL) {
     const items = await check.run(context(CLEAN));
     assert.deepEqual(
       items.filter((item) => !item.pass),
@@ -187,4 +209,149 @@ test('style-12 ignores two headings at the same level', async () => {
   // An empty section is a different problem; this rule is about nesting only.
   const found = await failures(style12, page('## First', '', '## Second', '', 'Prose.', ''));
   assert.deepEqual(found, []);
+});
+
+test('style-13 flags a section with exactly one subsection', async () => {
+  const found = await failures(
+    style13,
+    page('## Overview', '', 'Prose.', '', '### Only Child', '', 'More prose.', ''),
+  );
+  assert.equal(found.length, 1);
+  assert.match(found[0].item, /^style-13 @ line 5$/);
+});
+
+test('style-13 honours the Core Operations exception', async () => {
+  const found = await failures(
+    style13,
+    page('## Core Operations', '', 'Prose.', '', '### getOption', '', 'More prose.', ''),
+  );
+  assert.deepEqual(found, []);
+});
+
+test('style-14 flags a lone subsubsection, and style-13 stays out of it', async () => {
+  const lone = page(
+    '## Overview',
+    '',
+    'Prose.',
+    '',
+    '### Accessors',
+    '',
+    'Prose.',
+    '',
+    '#### Only One',
+    '',
+    'More prose.',
+    '',
+    '### Combinators',
+    '',
+    'Prose.',
+    '',
+  );
+  const found = await failures(style14, lone);
+  assert.equal(found.length, 1);
+  assert.match(found[0].item, /^style-14 @ line 9$/);
+  // The lone heading is reported once, by the rule that names its level.
+  assert.deepEqual(await failures(style13, lone), []);
+});
+
+test('style-15 flags a code block after a heading, after another block, and after a bare sentence', async () => {
+  const found = await failures(
+    style15,
+    page(
+      '## Overview',
+      '```scala',
+      'val a = 1',
+      '```',
+      '',
+      '```scala',
+      'val b = 2',
+      '```',
+      '',
+      'Some prose without a colon.',
+      '',
+      '```scala',
+      'val c = 3',
+      '```',
+      '',
+    ),
+  );
+  assert.equal(found.length, 3);
+  assert.match(found[0].issue ?? '', /follows the heading/);
+  assert.match(found[1].issue ?? '', /follows another code block/);
+  assert.match(found[2].issue ?? '', /does not end with a colon/);
+});
+
+test('style-15 accepts a block introduced by a tab wrapper or a directive', async () => {
+  // Rule 24 asks for tabbed blocks; punishing the tab wrapper would penalize following another rule.
+  const found = await failures(
+    style15,
+    page(
+      'Pick your Scala version:',
+      '',
+      '<TabItem value="scala-2">',
+      '```scala',
+      'implicit val x = 1',
+      '```',
+      '</TabItem>',
+      '',
+      ':::note',
+      '```scala',
+      'val y = 2',
+      '```',
+      ':::',
+      '',
+    ),
+  );
+  assert.deepEqual(found, []);
+});
+
+test('style-18 flags var in a Scala block but not in a comment or another word', async () => {
+  const found = await failures(
+    style18,
+    page(
+      'An example:',
+      '',
+      '```scala',
+      '// never use var here',
+      'val variance = 1',
+      'var count = 0',
+      '```',
+      '',
+    ),
+  );
+  assert.equal(found.length, 1);
+  assert.match(found[0].item, /^style-18 @ line 6$/);
+});
+
+test('style-18 ignores var outside Scala blocks', async () => {
+  const found = await failures(
+    style18,
+    page('Config:', '', '```bash', 'var=1', '```', '', 'Prose mentioning var in passing.', ''),
+  );
+  assert.deepEqual(found, []);
+});
+
+test('style-22 flags an unpadded column', async () => {
+  const found = await failures(
+    style22,
+    page(
+      'The operations:',
+      '',
+      '| Method | Description |',
+      '|--------|-------------|',
+      '| `set` | Replaces it |',
+      '',
+    ),
+  );
+  assert.equal(found.length, 1);
+  assert.match(found[0].issue ?? '', /Column 1 of this table is not padded/);
+});
+
+test('style-22 flags a ragged table', async () => {
+  const found = await failures(
+    style22,
+    page('The operations:', '', '| A | B |', '|---|---|', '| 1 |', ''),
+  );
+  assert.equal(found.length, 1);
+  assert.match(found[0].issue ?? '', /do not all have 2 columns/);
 });

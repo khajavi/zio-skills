@@ -198,5 +198,15 @@ export function proseParagraphs(lines: string[]): Span[] {
  */
 export const stripInlineCode = (text: string): string => text.replace(/`[^`]*`/g, '');
 
+/**
+ * Inline code spans replaced by same-length filler.
+ *
+ * For checks that care about column positions or delimiters rather than words: a table cell holding
+ * `` `a|b` `` must not be split on the pipe inside the code span, but the cell's width has to stay
+ * exactly what the source says.
+ */
+export const maskInlineCode = (text: string): string =>
+  text.replace(/`[^`]*`/g, (span) => 'x'.repeat(span.length));
+
 /** 0-based index → the 1-based line number a human or a model expects to see. */
 export const at = (index: number): number => index + 1;
