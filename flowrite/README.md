@@ -42,7 +42,7 @@ export function DocsWriter() {
   });
 }
 
-// useDocsWriter is a custom hook — it declares the skills, the guarded phase tools, and the nine
+// useDocsWriter is a custom hook — it declares the skills, the guarded phase tools, and the seven
 // shared roles with useSubagent.
 ```
 
@@ -253,6 +253,8 @@ diff behavior across iterations of the prompt.
 ```
 src/
   agent.ts       # the one agent: classifies the request, then mounts that kind's tools
+  app.ts         # HTTP route map — what makes the agent servable
+  db.ts          # conversation storage (data/flue.db)
   instructions/  # one identity (.md) per kind of document
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
@@ -275,6 +277,15 @@ flue run src/agent.ts --env .env.testing \
   --id dtr-Prism \
   -m "Please write reference documentation for the Prism data type" \
   --data '{ "projectPath": "fixtures/tinyoptics" }'
+```
+
+`flue run` is how flowrite is actually used — it invokes the agent directly and never
+touches `app.ts`. The server build exists for when you want the agent reachable over
+HTTP instead:
+
+```bash
+pnpm build   # bundles src/app.ts into dist/ (Vite + the flue plugin)
+pnpm dev     # the same app on a dev server
 ```
 
 Flue's own docs ship with the packages — read them directly rather than guessing at
