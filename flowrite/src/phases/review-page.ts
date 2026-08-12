@@ -1,7 +1,6 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { reviewSchema } from '../shared/schemas.ts';
 import { authorHint } from '../shared/run-context.ts';
 import { delegate } from '../shared/delegate.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
@@ -11,6 +10,24 @@ import rulesMarkdown from '../skills/writing-style/references/rules.md';
 import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md';
 import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md';
 import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md';
+
+/**
+ * Per-item pass/fail from a checklist review. `passed` is true only when every item passes.
+ *
+ * Lives here because the review phase is the only thing that produces or consumes it. It sat in a
+ * shared schemas module back when there were three review tools in three files; they are one file
+ * now, and `report_run_result` takes the verdict as the model's own claim rather than this shape.
+ */
+export const reviewSchema = v.object({
+  passed: v.pipe(v.boolean(), v.description('true only when every checklist item passes')),
+  items: v.array(
+    v.object({
+      item: v.string(),
+      pass: v.boolean(),
+      issue: v.nullable(v.pipe(v.string(), v.description('Specific problem when pass is false'))),
+    }),
+  ),
+});
 
 /**
  * The review phase: a simple LLM review.
