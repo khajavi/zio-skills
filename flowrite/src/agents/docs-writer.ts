@@ -29,13 +29,13 @@ import tutorialChecklist from '../skills/tutorial-checklist/SKILL.md';
 // phase tools
 import { researchDataType } from '../phases/research.ts';
 import { designDataTypeStructure } from '../phases/design-doc-structure.ts';
-import { writeDataTypeReference } from '../phases/write-data-type-reference.ts';
+import { writeDataTypeReference } from '../phases/write-doc.ts';
 import { researchModule } from '../phases/research.ts';
 import { designModuleStructure } from '../phases/design-doc-structure.ts';
-import { writeModuleOverview } from '../phases/write-module-overview.ts';
+import { writeModuleOverview } from '../phases/write-doc.ts';
 import { researchTutorialTopic } from '../phases/research.ts';
 import { designTutorialStructure } from '../phases/design-doc-structure.ts';
-import { writeTutorialDraft } from '../phases/write-tutorial-draft.ts';
+import { writeTutorialDraft } from '../phases/write-doc.ts';
 import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
 import { integrateDataTypeReference, integrateTutorial } from '../phases/integrate.ts';
 import { integrateModuleReference } from '../phases/integrate-module.ts';
