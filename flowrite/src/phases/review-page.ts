@@ -2,88 +2,85 @@ import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
-import { buildChecks, type KindReview } from '../review/registry.ts';
-import { runChecks } from '../review/run.ts';
-import { toKebabCase } from './write-data-type-reference.ts';
-// Each kind's checklist, injected into the generic reviewer's task (skills are role-owned and cannot
-// vary per delegated task). Same source-of-truth split as writing-style/references/rules.md.
+import { recordReview } from '../shared/review-state.ts';
+import { authorHint } from '../shared/author-hint.ts';
+import { delegate } from '../shared/delegate.ts';
+// Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
+// (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:
+// the SKILL.md files point at these.
+import rulesMarkdown from '../skills/writing-style/references/rules.md';
 import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md';
 import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md';
 import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md';
 
 /**
- * The three review tools, over one shared body.
+ * The review phase: a simple LLM review.
  *
- * This file replaces review-data-type-ref.ts, review-module-ref.ts and review-tutorial.ts, which
- * differed by four fields and shared everything else through `runCappedReview`. What is left per kind is
- * an input schema and a `KindReview` — the schema stays per-kind on purpose, because it is where the
- * model is told what to pass, and a module review genuinely needs every type name while a tutorial
- * needs only a path.
- */
-
-/** The two input fields every review shares. */
-const path = v.pipe(v.string(), v.description('Path to the page to review, e.g. docs/reference/prism.md'));
-const only = v.pipe(
-  v.optional(v.array(v.string())),
-  v.description(
-    'Check ids to re-run, as the previous review printed them (e.g. ["style-7","checklist"]). ' +
-      'Omit on a repeat call and only the previously failing checks run. A repeat is cheap — after ' +
-      'fixing the failures, call review again to confirm.',
-  ),
-);
-
-/** Wording shared by all three tool descriptions: what the tool does NOT do. */
-const READ_ONLY =
-  'Read-only — fix the failures yourself, then call it again to confirm (a repeat re-checks only what failed).';
-
-type ReviewOutput = v.InferOutput<typeof reviewSchema>;
-
-/**
- * The shared body: skip gate, build the kind's checks, run them, return the verdict.
+ * One delegation to the generic `reviewer` role per call — the kind's checklist, the writing-style
+ * rules, and the page. The reviewer judges everything; the verdict is whatever it reports.
  *
- * Nothing here edits the page. The writer owns repairs, and the deterministic ones already ran on the
- * write phase's return path — which is what makes a repeat call meaningful, since it re-reads the page
- * as the writer left it. Turn 11 shipped a page whose recorded verdict still named a rule the writer had
- * already fixed.
+ * This deliberately replaces a registry of code checks (15 mechanical style graders, a
+ * reference-existence check, per-type method coverage, free-first triage, narrowed repeats, a payload
+ * guard and a stall guard) — removed by direction on 2026-08-12: checking through code was not wanted,
+ * a simple model-based review was. The one survivor is the verdict recorder, because
+ * `report_run_result` still checks the model's claimed outcome against the recorded one.
+ *
+ * Known costs of this shape, measured before the registry existed: every call re-judges everything
+ * (there is no cheap confirming pass), and rules that are arithmetic — table padding, title case,
+ * line counting — are judged by a model again.
  */
 async function reviewPage(opts: {
   harness: FlueHarness;
   log: FlueLogger;
   path: string;
-  only?: string[];
-  kind: KindReview;
-  typeName?: string;
-}): Promise<ReviewOutput> {
+  checklistDoc: string;
+  /** Noun for the delegation prompt, e.g. 'data type reference page'. */
+  promptNoun: string;
+  /** Fenced header label, e.g. 'REFERENCE PAGE'. */
+  headerLabel: string;
+}): Promise<v.InferOutput<typeof reviewSchema>> {
   if (isPhaseSkipped('review')) {
-    opts.log.info('Skipping review (skipPhases)');
     return { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] };
   }
-  return runChecks({
-    checks: buildChecks(opts.kind),
+
+  const content = await opts.harness.sandbox.readFile(opts.path);
+  const data = await delegate({
     harness: opts.harness,
     log: opts.log,
-    path: opts.path,
-    typeName: opts.typeName,
-    only: opts.only,
+    label: 'reviewer',
+    role: 'reviewer',
+    result: reviewSchema,
+    prompt: [
+      `Evaluate the ${opts.promptNoun} below against every item in this checklist:`,
+      ``,
+      opts.checklistDoc,
+      ``,
+      `Also check it against every one of these writing style rules, reporting each violation as a`,
+      `failing item named "writing-style rule <N>" with the line and a specific, actionable issue:`,
+      ``,
+      rulesMarkdown,
+      // Before the content delimiter, so the hint reads as reviewer guidance rather than as part of
+      // the page under review.
+      authorHint(),
+      ``,
+      `--- ${opts.headerLabel} (${opts.path}) ---`,
+      content,
+    ].join('\n'),
   });
+
+  recordReview(data);
+  return data;
 }
 
-/**
- * Review a data type reference page.
- *
- * The single quality gate for a reference page: fifteen deterministic style checks, method coverage for
- * the documented type, the model-judged style rules, and the data-type-ref-checklist.
- */
+/** Review a data type reference page against the data-type-ref checklist and the style rules. */
 export const reviewDataTypeRef = defineTool({
   name: 'review_data_type_ref',
   description:
-    'Review a data type reference page: mechanical style checks + method coverage + model-judged style ' +
-    `+ the data-type-ref-checklist. ${READ_ONLY}`,
+    'Review a data type reference page against the data-type-ref-checklist and the writing style ' +
+    'rules; report per-item pass/fail. Fix the failures yourself, then call it again to confirm.',
   harness: true,
   input: v.object({
-    path,
-    only,
-    typeName: v.pipe(v.string(), v.description('The documented type, e.g. "Chunk" — used for method coverage')),
+    path: v.pipe(v.string(), v.description('Path to the reference markdown, e.g. docs/reference/chunk.md')),
   }),
   output: reviewSchema,
   async run({ harness, data, log }) {
@@ -92,44 +89,25 @@ export const reviewDataTypeRef = defineTool({
         harness,
         log,
         path: data.path,
-        only: data.only,
-        typeName: data.typeName,
-        kind: {
-          checklistDoc: dataTypeChecklistDoc,
-          promptNoun: 'data type reference page',
-          headerLabel: 'REFERENCE PAGE',
-          coverageTypes: [data.typeName],
-          pagePathFor: () => data.path,
-        },
+        checklistDoc: dataTypeChecklistDoc,
+        promptNoun: 'data type reference page',
+        headerLabel: 'REFERENCE PAGE',
       }),
     };
   },
 });
 
-/**
- * Review a module reference.
- *
- * Coverage runs per documented type, and costs nothing per type because it is deterministic. It
- * deliberately does NOT run a full per-type checklist on every subpage — that is the N×LLM cost the
- * design cut.
- */
+/** Review a module reference page against the module-ref checklist and the style rules. */
 export const reviewModuleRef = defineTool({
   name: 'review_module_ref',
   description:
-    'Review a module reference: mechanical style checks + per-type method coverage + model-judged style ' +
-    `+ the module-ref-checklist on the module page. ${READ_ONLY}`,
+    'Review a module reference against the module-ref-checklist and the writing style rules; report ' +
+    'per-item pass/fail. Fix the failures yourself, then call it again to confirm.',
   harness: true,
   input: v.object({
     path: v.pipe(
       v.string(),
-      v.description('The module page reviewed against the checklist: the flat page or the hierarchical index'),
-    ),
-    only,
-    layout: v.picklist(['flat', 'hierarchical']),
-    moduleName: v.pipe(v.string(), v.description('The module name — used to locate hierarchical subpages')),
-    typeNames: v.pipe(
-      v.array(v.string()),
-      v.description('Every documented type name — one method-coverage check runs per type'),
+      v.description('The module page to review: the flat page or the hierarchical index'),
     ),
   }),
   output: reviewSchema,
@@ -139,31 +117,24 @@ export const reviewModuleRef = defineTool({
         harness,
         log,
         path: data.path,
-        only: data.only,
-        kind: {
-          checklistDoc: moduleChecklistDoc,
-          promptNoun: 'module reference page',
-          headerLabel: 'MODULE REFERENCE',
-          coverageTypes: data.typeNames,
-          // Flat: every type is documented in the single page under review. Hierarchical: each type has
-          // its own subpage under docs/reference/<module>/<type>.md.
-          pagePathFor: (typeName) =>
-            data.layout === 'flat'
-              ? data.path
-              : `docs/reference/${toKebabCase(data.moduleName)}/${toKebabCase(typeName)}.md`,
-        },
+        checklistDoc: moduleChecklistDoc,
+        promptNoun: 'module reference page',
+        headerLabel: 'MODULE REFERENCE',
       }),
     };
   },
 });
 
-/** Review a tutorial. No coverage checks — a tutorial is selective by design. */
+/** Review a tutorial against the tutorial checklist and the style rules. */
 export const reviewTutorial = defineTool({
   name: 'review_tutorial',
   description:
-    `Review a tutorial: mechanical style checks + model-judged style + the tutorial-checklist. ${READ_ONLY}`,
+    'Evaluate a written tutorial against the tutorial-checklist and the writing style rules; report ' +
+    'per-item pass/fail. Fix the failures yourself, then call it again to confirm.',
   harness: true,
-  input: v.object({ path, only }),
+  input: v.object({
+    path: v.pipe(v.string(), v.description('Path to the tutorial markdown, e.g. docs/guides/scope.md')),
+  }),
   output: reviewSchema,
   async run({ harness, data, log }) {
     return {
@@ -171,14 +142,9 @@ export const reviewTutorial = defineTool({
         harness,
         log,
         path: data.path,
-        only: data.only,
-        kind: {
-          checklistDoc: tutorialChecklistDoc,
-          promptNoun: 'tutorial',
-          headerLabel: 'TUTORIAL',
-          coverageTypes: [],
-          pagePathFor: (typeName) => typeName,
-        },
+        checklistDoc: tutorialChecklistDoc,
+        promptNoun: 'tutorial',
+        headerLabel: 'TUTORIAL',
       }),
     };
   },

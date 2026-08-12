@@ -64,8 +64,8 @@ const TOOL_ERROR_THRESHOLD = 3;
  * Review is *designed* to repeat now — it reports, the writer fixes, it confirms — so `calls > 1` is the
  * normal case rather than a defect, and flagging it on every run would teach the reader to skip the
  * report. Six is above what a healthy run needs: the worst measured (turn17) converged in six passes
- * from an unusually rough draft, so seven means something is wrong even though `runChecks` also bounds
- * the loop from the inside.
+ * from an unusually rough draft, so seven means something is wrong. Nothing bounds the loop from the
+ * inside any more (the stall guard left with the check registry), so this flag is the only watcher.
  */
 const REVIEW_REPEAT_LIMIT = 6;
 
@@ -91,11 +91,9 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   const real = phases.filter((p) => !p.phase.startsWith('('));
 
   for (const [phase, calls] of Object.entries(activity.phaseCalls)) {
-    // Review is expected to repeat: it reports, the writer fixes, it confirms — and a repeat re-checks
-    // only what failed, so it is cheap by construction. Flagging every run's normal loop would train the
-    // reader to ignore the report, which is the one thing a report must not do. `runChecks` bounds the
-    // loop itself by refusing to keep going when repairs stop landing (see STALL_LIMIT), so the flag only
-    // has to catch a loop long enough to look pathological even when it is making progress.
+    // Review is expected to repeat: it reports, the writer fixes, it confirms. Flagging every run's
+    // normal loop would train the reader to ignore the report, which is the one thing a report must
+    // not do. See REVIEW_REPEAT_LIMIT for why six.
     const limit = phase.startsWith('review') ? REVIEW_REPEAT_LIMIT : 1;
     if (calls > limit) {
       flags.push({

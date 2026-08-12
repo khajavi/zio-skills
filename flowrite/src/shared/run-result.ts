@@ -1,6 +1,6 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { failingReviewItems, getLastReview } from '../review/run.ts';
+import { failingReviewItems, getLastReview } from './review-state.ts';
 import { insightsSchema } from './schemas.ts';
 
 /**

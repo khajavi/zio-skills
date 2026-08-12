@@ -4,7 +4,6 @@ import { structureSchema } from './design-tutorial-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
-import { normalizePage } from '../review/fix.ts';
 // The tutorial-structure skill's content, injected into the generic drafter's
 // task (a subagent's skills can't vary per delegation, so the kind-specific
 // template rides in the prompt). Same single-source-of-truth split as
@@ -132,9 +131,7 @@ export const writeTutorialDraft = defineTool({
       description: draft.description,
       keywords: draft.keywords,
     });
-    // Deterministic style repairs, applied before anything reads the page: review is read-only, so a
-    // mechanical violation surfacing there means a later phase reintroduced it or a fix is broken.
-    const content = normalizePage(withFrontmatter(frontmatter, draft.body), log);
+    const content = withFrontmatter(frontmatter, draft.body);
 
     await harness.sandbox.writeFile(path, content);
     return { output: { path, content } };

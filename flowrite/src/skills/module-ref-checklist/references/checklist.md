@@ -34,13 +34,13 @@ not attempt to re-count members here.
 
 - Every core type discovered in research is documented (flat section or hierarchical subpage) — none dropped.
 - Relationships and composition shown in the narrative reflect the real source, not invented links.
-- Writing style is checked mechanically rule-by-rule before this checklist runs — do not re-verify
-  the `writing-style` rules here.
+- The writing style rules are evaluated in the same review pass — report their violations as
+  failing items too.
 - mdoc verification reports zero `[error]` lines for the page (flat) or the whole directory
   (hierarchical) — mandatory before done.
 
 ## Review Cadence
 
 - Fix every failing item in one editing pass, then call review again to confirm.
-- The repeat re-checks only what failed, so confirming is cheap — do it.
+- Confirm with one more review after fixing; finish when it passes.
 - Finish when the review passes. Name any genuinely unfixable item in the final summary.

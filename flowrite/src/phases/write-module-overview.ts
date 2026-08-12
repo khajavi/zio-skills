@@ -5,7 +5,6 @@ import { moduleStructureSchema } from './design-module-structure.ts';
 import { toKebabCase } from './write-data-type-reference.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
-import { normalizePage } from '../review/fix.ts';
 import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
 // TEMP (flue nested-skill limitation, see write-data-type-reference.ts): inject
 // writing-style rules into the drafter prompt until flue packages nested skills.
@@ -135,9 +134,7 @@ export const writeModuleOverview = defineTool({
       description: draft.description,
       keywords: draft.keywords,
     });
-    // Deterministic style repairs, applied before anything reads the page: review is read-only, so a
-    // mechanical violation surfacing there means a later phase reintroduced it or a fix is broken.
-    const content = normalizePage(withFrontmatter(frontmatter, draft.body), log);
+    const content = withFrontmatter(frontmatter, draft.body);
 
     await harness.sandbox.writeFile(path, content);
     return { output: { path, content } };

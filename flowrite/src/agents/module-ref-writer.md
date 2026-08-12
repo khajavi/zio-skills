@@ -65,13 +65,11 @@ reality differs. Do not mechanically follow steps that no longer fit.
    subpage ids like `reference/<module>/<type>` in reading order) so the sidebar groups them. It wires
    the page under the **Reference** category — a single doc entry (flat) or a category with the index
    + one sub-category per group (hierarchical).
-9. **Review.** Call `review_module_ref` with the module page path (flat page or hierarchical index),
-   the layout, the module name, and the list of every documented type name. It is the single quality
-   gate: mechanical style checks, per-type method coverage (deterministic), the model-judged style
-   rules, and the module-ref-checklist over the module page. Review reports; you fix. For any member it
-   reports missing, either document it or confirm from real source it is private/internal. Fix every
-   failing item, then call review again to confirm — the repeat re-checks only what failed, so it is
-   cheap. Finish when it passes, naming any genuinely unfixable item in your summary.
+9. **Review.** Call `review_module_ref` with the module page path (flat page or hierarchical
+   index). It evaluates the page against the module-ref-checklist and every writing style rule, and
+   reports per-item pass/fail. Review reports; you fix. Use `check_method_coverage` yourself for each
+   documented type to confirm every public member is documented. Fix every failing item, then call
+   review again to confirm. Finish when it passes, naming any genuinely unfixable item in your summary.
 10. **Retrospective.** In your final result, alongside the path and summary, report the real obstacles
     you hit this run (per phase), how you resolved each, and — where you can name one — a concrete
     instruction/tool/schema change that would prevent it next time. Report only friction you actually

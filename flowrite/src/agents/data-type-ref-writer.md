@@ -39,13 +39,11 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `[error]` before continuing. Mandatory before you call the page done.
 7. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
-8. **Review.** Call `review_data_type_ref` with the page path AND the type name. It is
-   the single quality gate: mechanical style checks, method coverage (is every public member
-   documented?), the model-judged style rules, and the data-type-ref-checklist, in one pass.
-   Review reports; you fix. For any member it reports missing, either document it or confirm
-   from the real source it is private/internal. Fix every failing item, then call review again
-   to confirm — the repeat re-checks only what failed, so it is cheap. Finish when it passes,
-   naming any genuinely unfixable item in your summary.
+8. **Review.** Call `review_data_type_ref` with the page path. It evaluates the page against
+   the data-type-ref-checklist and every writing style rule, and reports per-item pass/fail.
+   Review reports; you fix. Use `check_method_coverage` yourself to confirm every public member
+   is documented. Fix every failing item, then call review again to confirm. Finish when it
+   passes, naming any genuinely unfixable item in your summary.
 9. **Retrospective.** In your final result, alongside the path and summary, report
    the real obstacles you hit this run (per phase), how you resolved each, and —
    where you can name one — a concrete instruction/tool/schema change that would

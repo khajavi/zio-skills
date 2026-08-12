@@ -23,8 +23,8 @@ Verify every item. The reference page is not done until all pass.
 - Comparison sections (if present) use padded tables.
 - "Running the Examples" (when standalone example files exist) embeds each via a
   `mdoc:embed:<path>:show-line-numbers` block inside a collapsible `<details>`.
-- Writing style is checked mechanically rule-by-rule before this checklist runs — do not re-verify
-  the `writing-style` rules here.
+- The writing style rules are evaluated in the same review pass — report their violations as
+  failing items too.
 
 ## Technical Accuracy
 
@@ -39,5 +39,5 @@ Verify every item. The reference page is not done until all pass.
 ## Review Cadence
 
 - Fix every failing item in one editing pass, then call review again to confirm.
-- The repeat re-checks only what failed, so confirming is cheap — do it.
+- Confirm with one more review after fixing; finish when it passes.
 - Finish when the review passes. Name any genuinely unfixable item in the final summary.
