@@ -1,6 +1,6 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { structureSchema } from './design-tutorial-structure.ts';
+import { tutorialStructureSchema } from './design-doc-structure.ts';
 import { researchSchema } from './research-tutorial-topic.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
@@ -36,7 +36,7 @@ export const writeTutorialDraft = defineTool({
       ),
     ),
     topic: v.string(),
-    structure: structureSchema,
+    structure: tutorialStructureSchema,
     researchAnswers: researchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
@@ -53,7 +53,7 @@ export const writeTutorialDraft = defineTool({
 
     log.info(`Writing tutorial draft: ${path}`);
 
-    // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
+    // Delegates to the generic drafter subagent — see design-doc-structure.ts
     // for why the calling agent must not draft this itself.
     // Uses a result schema (not response.text) so the model returns content
     // through the structured channel instead of a chat reply — that channel

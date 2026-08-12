@@ -30,7 +30,7 @@ export const writeCompanionExamples = defineTool({
     }
 
     log.info(`Building companion examples for: ${data.pagePath}`);
-    // Delegates to the examples_builder subagent — see design-tutorial-structure.ts
+    // Delegates to the examples_builder subagent — see design-doc-structure.ts
     // for why the calling agent must not build the examples itself.
     const result = await delegate({
       harness,

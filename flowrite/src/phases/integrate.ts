@@ -47,7 +47,7 @@ export function defineIntegrateAction(opts: {
 
       const path = (data as Record<string, string>)[opts.inputKey];
       log.info(`Integrating ${opts.docKind} into docs site: ${path}`);
-      // Delegates to the docs_integrator subagent — see design-tutorial-structure.ts
+      // Delegates to the docs_integrator subagent — see design-doc-structure.ts
       // for why prompting the calling agent's own conversation is unsafe here.
       const result = await delegate({
         harness,

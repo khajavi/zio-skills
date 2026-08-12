@@ -6,7 +6,7 @@ import instructions from './drafter.md';
 
 /**
  * Generic documentation-prose writer, shared across document kinds. Declares no
- * tools or delegates of its own — see design-tutorial-structure.ts for why that
+ * tools or delegates of its own — see design-doc-structure.ts for why that
  * matters.
  *
  * The kind-specific structure/template is injected into the delegation prompt by

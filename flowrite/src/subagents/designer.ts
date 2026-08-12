@@ -4,7 +4,7 @@ import instructions from './designer.md';
 
 /**
  * Generic documentation structure-planner, shared across document kinds. Declares
- * no tools or delegates of its own — see design-tutorial-structure.ts for why that
+ * no tools or delegates of its own — see design-doc-structure.ts for why that
  * matters: a narrow delegate cannot see or re-invoke the design phase tool itself,
  * avoiding runaway self-recursion.
  *

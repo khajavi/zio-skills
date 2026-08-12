@@ -1,7 +1,7 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema } from './research-data-type.ts';
-import { dataTypeStructureSchema } from './design-data-type-structure.ts';
+import { dataTypeStructureSchema } from './design-doc-structure.ts';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { buildFrontmatter, withFrontmatter } from '../shared/frontmatter.ts';
 // The data-type-ref-structure skill's content, injected into the generic drafter's
@@ -64,7 +64,7 @@ export const writeDataTypeReference = defineTool({
 
     log.info(`Writing data type reference: ${path}`);
 
-    // Delegates to the generic drafter subagent — see design-tutorial-structure.ts
+    // Delegates to the generic drafter subagent — see design-doc-structure.ts
     // for why the calling agent must not draft this itself. The
     // reference-page template + result schema are supplied at the call site.
     const contentSchema = v.object({

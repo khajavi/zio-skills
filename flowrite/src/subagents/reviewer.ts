@@ -4,7 +4,7 @@ import instructions from './reviewer.md';
 
 /**
  * Generic documentation reviewer, shared across document kinds. Declares no tools
- * or delegates of its own — see design-tutorial-structure.ts for why that matters.
+ * or delegates of its own — see design-doc-structure.ts for why that matters.
  *
  * The kind-specific checklist is injected into the delegation prompt by the
  * calling phase tool (skills are role-owned and cannot vary per call), so this
