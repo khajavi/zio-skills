@@ -59,6 +59,29 @@ export function isPhaseSkipped(phase: SkipPhase): boolean {
 }
 
 /**
+ * How many times the review phase may run for one page. Default 1, `MAX_REVIEW_ROUNDS` to raise it.
+ *
+ * A cap exists because a review round is the most expensive thing a run does, and it is expensive
+ * *repeatedly*: the simple LLM review re-judges the whole page against the whole checklist and all 28
+ * style rules every time, so round 4 costs what round 1 cost. Measured on the Prism run of
+ * 2026-08-12: four rounds took 1,082s of a 45-minute run — 40% of the wall clock — with per-round
+ * times of 242s, 344s, 239s and 256s that showed no sign of converging. Each round also drags a fix
+ * pass and another sbt/mdoc verify behind it, so rounds multiply rather than add.
+ *
+ * The cost of the default: with one round, the writer's fixes ship UNVERIFIED. That is a real
+ * trade-off, not a free win. An earlier cap of 1 (`MAX_REVIEW_CALLS`) produced a measured bug — a page
+ * shipped whose verdict still named a rule the writer had already fixed — though that specific failure
+ * came from returning a cached verdict, and nothing caches one now.
+ *
+ * Read from the environment rather than creation data because it is a cost knob for whoever launches
+ * the run, like the model tiers in models.ts, not a fact about the document being written.
+ */
+export function maxReviewRounds(): number {
+  const raw = Number(process.env.MAX_REVIEW_ROUNDS);
+  return Number.isInteger(raw) && raw > 0 ? raw : 1;
+}
+
+/**
  * The run's author hint, formatted for appending to a delegation prompt so it
  * reaches the role doing the real work — a phase prompt is built in code, so the
  * top-level agent's own prompt cannot forward it.

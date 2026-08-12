@@ -68,24 +68,37 @@ test('a phase that ran twice is flagged', () => {
   assert.deepEqual(flags, ['phase-repeat']);
 });
 
-test('a repeating review is not flagged — that is the design', () => {
-  // Review reports, the writer fixes, review confirms. A repeat re-checks only what failed, so it is
-  // cheap by construction; flagging every run's normal loop would teach the reader to skip the report.
-  // turn17 needed six passes to converge from a rough draft and was flagged for it.
-  for (const calls of [2, 4, 6]) {
-    assert.deepEqual(
-      codes({ activity: activity({ phaseCalls: { review_data_type_ref: calls } }) }),
-      [],
-      `${calls} review passes should be unremarkable`,
+test('one review round is unremarkable — it is the whole budget', () => {
+  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_data_type_ref: 1 } }) }), []);
+});
+
+test('review rounds beyond the budget mean the cap did not hold', () => {
+  // Under the default budget of one, a second round should be impossible: consumeReviewRound throws
+  // before delegating. So this flag no longer reports a slow-converging loop — it reports that the cap
+  // was bypassed, which is a defect in the cap rather than in the page.
+  for (const calls of [2, 4, 7]) {
+    const flags = computeFlags(
+      input({ activity: activity({ phaseCalls: { review_module_ref: calls } }) }),
     );
+    assert.deepEqual(flags.map((f) => f.code), ['phase-repeat'], `${calls} rounds should flag`);
+    assert.match(flags[0]!.detail, /against a budget of 1 — the review cap did not hold/);
   }
 });
 
-test('a review loop past the limit is still flagged, in its own words', () => {
-  const flags = computeFlags(input({ activity: activity({ phaseCalls: { review_module_ref: 7 } }) }));
-  assert.equal(flags.length, 1);
-  assert.equal(flags[0]!.code, 'phase-repeat');
-  assert.match(flags[0]!.detail, /more review rounds than a page should need/);
+test('raising MAX_REVIEW_ROUNDS raises the flag threshold with it', () => {
+  // The threshold reads the same function the cap reads, so the two cannot drift into flagging a run
+  // for spending rounds it was explicitly granted.
+  const previous = process.env.MAX_REVIEW_ROUNDS;
+  process.env.MAX_REVIEW_ROUNDS = '3';
+  try {
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 3 } }) }), []);
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 4 } }) }), [
+      'phase-repeat',
+    ]);
+  } finally {
+    if (previous === undefined) delete process.env.MAX_REVIEW_ROUNDS;
+    else process.env.MAX_REVIEW_ROUNDS = previous;
+  }
 });
 
 test('a failed phase is flagged with what it spent', () => {

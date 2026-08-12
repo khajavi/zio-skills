@@ -29,6 +29,9 @@ Verify every item. The tutorial is not done until all pass.
 
 ## Review Cadence
 
-- Fix every failing item in one editing pass, then call review again to confirm.
-- Confirm with one more review after fixing; finish when it passes.
-- Finish when the review passes. Name any genuinely unfixable item in the final summary.
+- Fix every failing item in one editing pass.
+- The run has a bounded number of review rounds and the review tool's description states how many.
+  With the default of one there is no confirming pass, so treat the first review as the only one:
+  fix what it reports, then finish.
+- Name every item you could not fix in the final summary, and report the run as failed when any
+  remain. An unverified fix is not a pass.
