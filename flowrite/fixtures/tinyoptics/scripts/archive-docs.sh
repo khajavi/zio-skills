@@ -96,10 +96,11 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
     jq . <<<"$insights" > "$dest/insights.json"
   fi
 
-  # The review's own pass/fail, emitted by report_run_result from the recorded review rather than
-  # from the model's summary prose. Kept as its own file so "did this run actually pass?" is a
-  # lookup, not a reading-comprehension exercise over a sentence the model wrote about its own work
-  # (two runs described a failing page as complete before the verdict became data).
+  # The run's pass/fail, as report_run_result was told it. Kept as its own file so "did this run
+  # pass?" is a lookup rather than a reading-comprehension exercise over a paragraph — but it is the
+  # model's own account now, not an independent record: the recorded review it used to be checked
+  # against was removed. Two runs have described a failing page as complete, so when a turn matters,
+  # confirm this against the review output in flue.log.
   verdict_line="$(grep "$workflow_label run verdict:" "$dest/flue.log" | tail -1 || true)"
   verdict="${verdict_line#*run verdict: }"
   if [ -n "$verdict" ] && jq -e . >/dev/null 2>&1 <<<"$verdict"; then

@@ -28,7 +28,14 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   toolErrors: {},
   phaseFailures: {},
   skills: ['writing-style'],
-  phaseCalls: { research_data_type: 1, design_data_type_structure: 1, write_data_type_reference: 1 },
+  // A real clean run reviews its page, so the default fixture does too — otherwise every case
+  // would trip the review-not-run flag.
+  phaseCalls: {
+    research_data_type: 1,
+    design_data_type_structure: 1,
+    write_data_type_reference: 1,
+    review_data_type_ref: 1,
+  },
   cdViolations: 0,
   ...over,
 });
@@ -44,7 +51,6 @@ const input = (over: Partial<FlagInput> = {}): FlagInput => ({
   ],
   activity: activity(),
   refusals: [],
-  verdict: { passed: true, failingItems: [] },
   reportCalls: 1,
   ...over,
 });
@@ -56,7 +62,9 @@ test('a clean run produces no flags at all', () => {
 });
 
 test('a phase that ran twice is flagged', () => {
-  const flags = codes({ activity: activity({ phaseCalls: { research_data_type: 3 } }) });
+  // Keeps a review call in the override so the assertion stays about the repeat, not about the
+  // review-not-run flag a review-less phaseCalls map would also trip.
+  const flags = codes({ activity: activity({ phaseCalls: { research_data_type: 3, review_data_type_ref: 1 } }) });
   assert.deepEqual(flags, ['phase-repeat']);
 });
 
@@ -102,11 +110,13 @@ test('cd-ing into the repo is flagged', () => {
   assert.deepEqual(codes({ activity: activity({ cdViolations: 76 }) }), ['cd-into-repo']);
 });
 
-test('the review verdict drives review-failed and review-not-run', () => {
-  assert.deepEqual(codes({ verdict: { passed: false, failingItems: ['writing-style rule 7'] } }), [
-    'review-failed',
-  ]);
-  assert.deepEqual(codes({ verdict: { passed: null, failingItems: [] } }), ['review-not-run']);
+test('a run that never reviewed its page is flagged', () => {
+  // An activity count, not a verdict: the report no longer carries pass/fail, but "nothing reviewed
+  // this page at all" is still visible from the phase calls and still worth saying.
+  assert.deepEqual(
+    codes({ activity: activity({ phaseCalls: { research_data_type: 1, write_data_type_reference: 1 } }) }),
+    ['review-not-run'],
+  );
 });
 
 test('a phase outspending its own delegates is flagged', () => {
@@ -140,7 +150,9 @@ test('bloat needs at least three phases to have a baseline', () => {
     phases: [phase('research_data_type', { ownTurns: 1, ownTokens: 900_000 })],
     activity: activity({ phaseCalls: { research_data_type: 1 } }),
   });
-  assert.deepEqual(flags, []);
+  // Asserts the absence of this one flag rather than of all flags: a research-only run legitimately
+  // trips review-not-run, and that has nothing to do with the threshold under test.
+  assert.ok(!flags.includes('context-bloat'), `unexpected bloat flag in ${flags.join(', ')}`);
 });
 
 test('a refiled report is flagged', () => {

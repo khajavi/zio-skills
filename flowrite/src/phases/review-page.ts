@@ -2,7 +2,6 @@ import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../shared/skip-phases.ts';
 import { reviewSchema } from '../shared/schemas.ts';
-import { recordReview } from '../shared/review-state.ts';
 import { authorHint } from '../shared/author-hint.ts';
 import { delegate } from '../shared/delegate.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
@@ -22,12 +21,13 @@ import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checkl
  * This deliberately replaces a registry of code checks (15 mechanical style graders, a
  * reference-existence check, per-type method coverage, free-first triage, narrowed repeats, a payload
  * guard and a stall guard) — removed by direction on 2026-08-12: checking through code was not wanted,
- * a simple model-based review was. The one survivor is the verdict recorder, because
- * `report_run_result` still checks the model's claimed outcome against the recorded one.
+ * a simple model-based review was. The verdict recorder outlived that removal by a few hours and then
+ * went too, so nothing outside this function keeps the result: `report_run_result` takes the model's
+ * word for what the review concluded.
  *
  * Known costs of this shape, measured before the registry existed: every call re-judges everything
- * (there is no cheap confirming pass), and rules that are arithmetic — table padding, title case,
- * line counting — are judged by a model again.
+ * (there is no cheap confirming pass), rules that are arithmetic — table padding, title case, line
+ * counting — are judged by a model again, and a run's recorded pass/fail is now self-reported.
  */
 async function reviewPage(opts: {
   harness: FlueHarness;
@@ -68,7 +68,6 @@ async function reviewPage(opts: {
     ].join('\n'),
   });
 
-  recordReview(data);
   return data;
 }
 

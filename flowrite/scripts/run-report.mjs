@@ -68,9 +68,13 @@ console.log(
 );
 const worst = r.phases.find((p) => !p.phase.startsWith('('));
 if (worst) console.log(`  costliest phase   ${worst.phase} (${money(worst.totalCost)}, ${pct(worst.share)})`);
-console.log(
-  `  verdict           ${r.verdict.passed === null ? 'not reviewed' : r.verdict.passed ? 'passed' : `failed (${r.verdict.failingItems.length} item(s))`}`,
-);
+// Archives written before the verdict left this report still carry one, so render it when present.
+// Newer turns keep their (self-reported) verdict in verdict.json instead.
+if (r.verdict) {
+  console.log(
+    `  verdict           ${r.verdict.passed === null ? 'not reviewed' : r.verdict.passed ? 'passed' : `failed (${r.verdict.failingItems.length} item(s))`}`,
+  );
+}
 console.log(`  flags             ${r.flags.length}`);
 
 const w = Math.max(20, ...r.phases.map((p) => p.phase.length));

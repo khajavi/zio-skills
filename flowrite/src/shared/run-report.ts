@@ -35,16 +35,24 @@ export interface RunReport {
   phases: (PhaseUsage & { share: number; calls: number; failedCalls: number; tokensPerOwnTurn: number })[];
   roles: { role: string; calls: number; cost: number }[];
   activity: ActivityReport;
-  verdict: { passed: boolean | null; failingItems: string[] };
   flags: RunFlag[];
 }
 
+/**
+ * Deliberately carries no review verdict.
+ *
+ * It used to, from a module-level record of what the review actually returned. That record is gone,
+ * so the only verdict left is the one the model reports to `report_run_result` — which lands in the
+ * archive's `verdict.json` and is labelled there as self-reported. Piping it back into this report
+ * would need a new module-state holder to carry it from the tool call to the end-of-run observer,
+ * which is the holder that was just removed. So the report stays silent about pass/fail rather than
+ * presenting a self-assessment in the place an independent one used to sit.
+ */
 export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  verdict: { passed: boolean | null; failingItems: string[] };
-  /** How many times `report_run_result` was called; >1 means the verdict gate rejected a claim. */
+  /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
 
@@ -84,7 +92,7 @@ function median(values: number[]): number {
  * the first property the tests pin.
  */
 export function computeFlags(input: FlagInput): RunFlag[] {
-  const { phases, activity, refusals, verdict, reportCalls } = input;
+  const { phases, activity, refusals, reportCalls } = input;
   const flags: RunFlag[] = [];
   // The synthetic bucket for turns outside any phase — it is not a phase and must not be judged
   // like one (it has no delegates, so it would always trip own-exceeds-delegate).
@@ -138,14 +146,10 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     });
   }
 
-  if (verdict.passed === false) {
-    flags.push({
-      code: 'review-failed',
-      detail: `the page ships with ${verdict.failingItems.length} failing checklist item(s): ${verdict.failingItems.join('; ')}`,
-    });
-  }
-  if (verdict.passed === null) {
-    flags.push({ code: 'review-not-run', detail: 'nothing checked this page' });
+  // A run in which no review tool was called at all is still worth flagging — that is an activity
+  // count, not a verdict, so it survives the verdict's removal.
+  if (!Object.keys(activity.phaseCalls).some((phase) => phase.startsWith('review'))) {
+    flags.push({ code: 'review-not-run', detail: 'no review phase ran for this page' });
   }
 
   for (const phase of real) {
@@ -183,7 +187,7 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   if (reportCalls > 1) {
     flags.push({
       code: 'report-refiled',
-      detail: `report_run_result called ${reportCalls}× — the verdict gate rejected a false claim`,
+      detail: `report_run_result called ${reportCalls}× — a report was rejected and refiled`,
     });
   }
 
@@ -206,9 +210,8 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  verdict: { passed: boolean | null; failingItems: string[] };
 }): RunReport {
-  const { totals, components, phases, activity, refusals, verdict } = input;
+  const { totals, components, phases, activity, refusals } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -230,12 +233,10 @@ export function buildRunReport(input: {
       .map((c) => ({ role: c.name, calls: c.calls, cost: c.cost }))
       .sort((a, b) => b.cost - a.cost),
     activity,
-    verdict,
     flags: computeFlags({
       phases,
       activity,
       refusals,
-      verdict,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };

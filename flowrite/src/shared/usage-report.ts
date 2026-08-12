@@ -2,7 +2,6 @@ import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
 import { guardRefusals } from './phase-guard.ts';
-import { failingReviewItems, getLastReview } from './review-state.ts';
 import { buildRunReport } from './run-report.ts';
 
 /**
@@ -43,7 +42,7 @@ function report(label: string): void {
       `across ${t.turns} turns, cost $${t.cost.toFixed(4)}`,
   );
   // The report proper: cost per phase, cost per role, what the run did as counts, the review's
-  // verdict, and computed flags. It answers "which phase cost the most" and "what looks wrong",
+  // and computed flags. It answers "which phase cost the most" and "what looks wrong",
   // neither of which the component view below can — every phase's own harness turns collapse into
   // `agent:default` there, which is why that one line dominates while each phase reports zero.
   const components = state.components.report();
@@ -55,7 +54,6 @@ function report(label: string): void {
         phases: state.components.phases(),
         activity: state.components.activity(),
         refusals: guardRefusals(),
-        verdict: { passed: getLastReview()?.passed ?? null, failingItems: failingReviewItems() },
       }),
     )}`,
   );

@@ -187,8 +187,9 @@ const SHARED_DIRECTIVE =
   `When the work is done, call report_run_result once with the final page path, the review's ` +
   `verdict, a one-line summary, and a run retrospective: the real obstacles you hit this run and ` +
   `how you resolved them (empty if it went smoothly — never invent friction). ` +
-  `The verdict is checked against the recorded review, so a page with any failing checklist item ` +
-  `is "failed" — name what is still wrong in the summary and in your closing reply.`;
+  `A page with any failing checklist item is "failed" — pass those items to failingItems, and name ` +
+  `what is still wrong in the summary and in your closing reply. Nothing cross-checks the verdict ` +
+  `against the review any more, so reporting it accurately is on you.`;
 
 /**
  * Shared composition for the writing branch of a docs writer: the role delegates, the guarded
