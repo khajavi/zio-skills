@@ -178,8 +178,11 @@ export async function runChecks(opts: {
     );
     // Sequential, deliberately: the llm checks share one scratch conversation, and the runtime allows
     // "one active operation at a time" on it (reference/agent-api.md) — concurrent delegations would
-    // reject with SessionBusyError.
-    for (const check of selected) produced.set(check.id, await check.run(ctx, only));
+    // reject with SessionBusyError. Each check receives its own previous contribution, so a repeat can
+    // review only what changed instead of re-judging everything it already passed.
+    for (const check of selected) {
+      produced.set(check.id, await check.run(ctx, only, lastByCheck.get(check.id)));
+    }
   }
 
   // A narrowed run must not shrink the verdict: checks that did not re-run keep the result they last

@@ -82,6 +82,52 @@ test('the page is sent with line-number prefixes', async () => {
   assert.match(prompts[0], /^3: Prose\.$/m);
 });
 
+test('a checklist repeat re-evaluates only the failed items and merges over the previous verdict', async () => {
+  // Later rounds review only what changed: a full evaluation walks every checklist item; the re-check
+  // sends just the failures and keeps everything the full pass already settled.
+  const { checklistCheck } = await import('./llm.ts');
+  const check = checklistCheck({ checklistDoc: 'THE FULL CHECKLIST', promptNoun: 'page', headerLabel: 'PAGE' });
+  const previous = [
+    { item: 'Overview section', pass: true, issue: null },
+    { item: 'Installation section', pass: false, issue: 'Missing.' },
+    { item: 'mdoc directives', pass: true, issue: null },
+  ];
+  const { harness, prompts } = stubHarness([[]]);
+  (harness as { prompt: unknown }).prompt = async (text: string) => {
+    prompts.push(text);
+    return { data: { passed: true, items: [{ item: 'Installation section', pass: true, issue: null }] } };
+  };
+
+  const items = await check.run(
+    { path: 'p.md', content: 'page', lines: ['page'], harness, log } as never,
+    ['checklist'],
+    previous,
+  );
+
+  assert.equal(prompts.length, 1);
+  assert.match(prompts[0], /Re-evaluate ONLY these/);
+  assert.match(prompts[0], /- Installation section: Missing\./);
+  assert.doesNotMatch(prompts[0], /THE FULL CHECKLIST/, 'the re-check must not resend the checklist');
+  assert.deepEqual(items, [
+    { item: 'Overview section', pass: true, issue: null },
+    { item: 'Installation section', pass: true, issue: null },
+    { item: 'mdoc directives', pass: true, issue: null },
+  ]);
+});
+
+test('a checklist run without narrowing stays a full evaluation', async () => {
+  const { checklistCheck } = await import('./llm.ts');
+  const check = checklistCheck({ checklistDoc: 'THE FULL CHECKLIST', promptNoun: 'page', headerLabel: 'PAGE' });
+  const { harness, prompts } = stubHarness([[]]);
+  (harness as { prompt: unknown }).prompt = async (text: string) => {
+    prompts.push(text);
+    return { data: { passed: true, items: [{ item: 'Overview section', pass: true, issue: null }] } };
+  };
+
+  await check.run({ path: 'p.md', content: 'page', lines: ['page'], harness, log } as never, undefined, undefined);
+  assert.match(prompts[0], /THE FULL CHECKLIST/);
+});
+
 test('a checker suggestion rides along in the issue text', async () => {
   // Findings that carry the fix get repaired in one pass; the schema invites the corrected text and
   // the item passes it through verbatim.

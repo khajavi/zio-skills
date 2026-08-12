@@ -214,7 +214,45 @@ export function checklistCheck(opts: {
   return {
     id: 'checklist',
     kind: 'llm',
-    async run(ctx) {
+    async run(ctx, only, previous) {
+      // Later rounds review only what changed. A full evaluation walks every checklist item with tool
+      // use — the most expensive delegation in the phase — and a measured run paid for six of them
+      // when after the first only two or three items were ever in question. A repeat narrowed onto
+      // this check re-evaluates just the items that failed, and the result is merged over `previous`
+      // so the verdict still describes the whole checklist.
+      const failed = (previous ?? []).filter((item) => !item.pass);
+      const targeted = only !== undefined && only.includes('checklist') && failed.length > 0;
+
+      if (targeted) {
+        const data = await delegate({
+          harness: ctx.harness,
+          log: ctx.log,
+          label: 'reviewer (re-check)',
+          role: 'reviewer',
+          result: reviewSchema,
+          prompt: [
+            `A previous full evaluation of this ${opts.promptNoun} left ${failed.length} checklist ` +
+              `item(s) failing. Re-evaluate ONLY these against the current page — the rest already passed:`,
+            ``,
+            ...failed.map((item) => `- ${item.item}: ${item.issue ?? ''}`),
+            ``,
+            `Report each with EXACTLY the same item name, pass/fail, and a specific issue when it still fails.`,
+            authorHint(),
+            ``,
+            `--- ${opts.headerLabel} (${ctx.path}) ---`,
+            ctx.content,
+          ].join('\n'),
+        });
+        ctx.log.info(
+          `reviewer (re-check of ${failed.length}): ${data.items.filter((item) => !item.pass).length} still failing`,
+        );
+        // Merge by item name: re-checked verdicts replace their predecessors, everything the full
+        // evaluation already passed is kept, and a genuinely new finding is appended rather than lost.
+        const byName = new Map((previous ?? []).map((item) => [item.item, item]));
+        for (const item of data.items) byName.set(item.item, item);
+        return [...byName.values()];
+      }
+
       const data = await delegate({
         harness: ctx.harness,
         log: ctx.log,

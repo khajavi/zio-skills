@@ -51,8 +51,14 @@ export interface Check {
    * round-trips — worse than the loop this replaces.
    */
   covers?: string[];
-  /** `only` is the subset of `covers` still worth checking; `undefined` means all of them. */
-  run(ctx: CheckContext, only?: string[]): Promise<ReviewItem[]>;
+  /**
+   * `only` is the subset of `covers` still worth checking; `undefined` means all of them.
+   *
+   * `previous` is this check's contribution to the last review, when there was one — the channel for
+   * "review only what changed": the checklist re-evaluates just its previously failing items instead
+   * of walking all ~19 again, and merges the result over `previous` so the verdict stays whole.
+   */
+  run(ctx: CheckContext, only?: string[], previous?: ReviewItem[]): Promise<ReviewItem[]>;
   /**
    * A deterministic repair.
    *
