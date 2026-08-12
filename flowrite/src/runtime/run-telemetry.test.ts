@@ -32,7 +32,7 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   // would trip the review-not-run flag.
   phaseCalls: {
     research_data_type: 1,
-    design_data_type_structure: 1,
+    design_data_type_plan: 1,
     write_data_type_reference: 1,
     review_data_type_ref: 1,
   },
@@ -43,7 +43,7 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
 const input = (over: Partial<FlagInput> = {}): FlagInput => ({
   phases: [
     phase('research_data_type'),
-    phase('design_data_type_structure'),
+    phase('design_data_type_plan'),
     phase('write_data_type_reference'),
     // The synthetic bucket is always present in a real run, and must never be judged as a phase:
     // it has no delegates, so it would trip own-exceeds-delegate on every single run.
@@ -103,7 +103,7 @@ test('raising MAX_REVIEW_ROUNDS raises the flag threshold with it', () => {
 
 test('a failed phase is flagged with what it spent', () => {
   const flags = computeFlags(
-    input({ activity: activity({ phaseFailures: { design_data_type_structure: 2 } }) }),
+    input({ activity: activity({ phaseFailures: { design_data_type_plan: 2 } }) }),
   );
   assert.equal(flags.length, 1);
   assert.equal(flags[0]!.code, 'phase-failed');

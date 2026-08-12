@@ -44,7 +44,7 @@ the same checkout reuses its research across runs. **This plan does not change i
 Look at what the design phase asks the model for:
 
 ```ts
-// src/tools/phases/design-doc-structure.ts
+// src/tools/phases/design-doc-plan.ts
 input: v.object({
   typeName: v.string(),
   researchAnswers: dataTypeResearchSchema,   // ← the ENTIRE research result
@@ -59,7 +59,7 @@ Measured on the archived Prism run (`fixtures/tinyoptics-archive/write-data-type
 
 | relayed payload | size | tokens |
 |---|--:|--:|
-| research result, as re-emitted into `design_data_type_structure`'s input | 6,905 B | ~1,726 |
+| research result, as re-emitted into `design_data_type_plan`'s input | 6,905 B | ~1,726 |
 | design plan, as re-emitted into `write_data_type_reference`'s input | 2,511 B | ~627 |
 | research result again, into the same input | 6,905 B | ~1,726 |
 | **total generated purely to move data between phases** | | **~4,079** |
@@ -84,7 +84,7 @@ the numbers came from a relayed copy rather than the file.
 
 ### Why this is also why we have three design tools
 
-`design_data_type_structure`, `design_module_structure` and `design_tutorial_structure` are three tools
+`design_data_type_plan`, `design_module_plan` and `design_tutorial_plan` are three tools
 for exactly one reason: each embeds a *different research schema* in its input. Remove the payload from
 the input and the three inputs become nearly identical. The same argument applies to the three write
 tools. So this change is also the honest version of "why not one tool with multiple schemas" — the
@@ -211,7 +211,7 @@ One line inside `researchSubject`, after the delegation and the cache write:
 `'module'` + `data.moduleName`, `'tutorial'` + `data.topic`). The cache-hit path must record too —
 otherwise a cached run leaves the store empty and every downstream phase throws.
 
-### 4.3 `design-doc-structure.ts` — load instead of receive
+### 4.3 `design-doc-plan.ts` — load instead of receive
 
 ```ts
   input: v.object({
@@ -225,7 +225,7 @@ and in the body, replacing `data.researchAnswers`:
   researchAnswers: requireResearch('data-type', data.typeName),
 ```
 
-then record the plan before returning: `recordPlan('data-type', data.typeName, structure)`.
+then record the plan before returning: `recordPlan('data-type', data.typeName, plan)`.
 
 The module tool keeps `layoutOverride` and `shapeOverride` — those are caller intent, not relayed state.
 
@@ -239,7 +239,7 @@ The module tool keeps `layoutOverride` and `shapeOverride` — those are caller 
   }),
 ```
 
-`researchAnswers` and `structure` are gone from every write input. The body loads them:
+`researchAnswers` and `plan` are gone from every write input. The body loads them:
 
 ```ts
     const research = requireResearch('data-type', data.typeName) as DataTypeResearch;
@@ -268,7 +268,7 @@ string by construction, since the research was recorded under it.
 | 1 | `feat(runtime): a store for phase outputs` | `phase-outputs.ts` + its tests. Nothing imports it; inert. |
 | 2 | `feat(research): record research into the store` | research records on both the fresh and cached paths. Still passed through the model as well — nothing breaks. |
 | 3 | `refactor(design): load research from the store` | design's three inputs shed `researchAnswers`; design records its plan. |
-| 4 | `refactor(write): load research and plan from the store` | write's three inputs shed `researchAnswers` and `structure`. |
+| 4 | `refactor(write): load research and plan from the store` | write's three inputs shed `researchAnswers` and `plan`. |
 | 5 | `docs(instructions): the phases pass subjects, not payloads` | the three instruction files stop telling the model to pass "the exact research object". |
 
 Steps 1–2 change no behaviour, which is deliberate: the risky part is one commit (3 and 4 together are
@@ -318,7 +318,7 @@ What to compare against turn19:
 
 | what | expected |
 |---|--:|
-| `design_data_type_structure` tool-start line | 6,905 B → a few hundred |
+| `design_data_type_plan` tool-start line | 6,905 B → a few hundred |
 | generated tokens moving data between phases | ~4,079 → ~0 |
 | the page itself | unchanged in structure and grounding |
 
@@ -327,15 +327,15 @@ What to compare against turn19:
 ## 6. The open decision, which needs your call
 
 **A module run writes per-type subpages with no design phase behind them.** `KINDS.module.tools`
-mounts `write_data_type_reference` but *not* `design_data_type_structure`, while
-`write_data_type_reference` requires `structure: dataTypeStructureSchema`. So today the model
+mounts `write_data_type_reference` but *not* `design_data_type_plan`, while
+`write_data_type_reference` requires `plan: dataTypePlanSchema`. So today the model
 **fabricates** a structural plan for every subpage — invented, not designed.
 
 **It has already produced a wrong page, and there is a log to prove it.** Parsing every
 `write_data_type_reference` call from `fixtures/tinyoptics-archive/write-module-ref-turn3/flue.log` — 15
 calls, each read as one balanced JSON object, so this is not two log lines spliced together — gives:
 
-| call | `researchAnswers.typeName` | `structure.constructionOrder` | `structure` methods |
+| call | `researchAnswers.typeName` | `plan.constructionOrder` | `plan` methods |
 |--:|---|---|---|
 | 1 | **`Lens`** | **`["Iso.apply"]`** | `to`, `from`, `reverse`, `modify`, `andThen`, `asLens` |
 | 2-15 | self-consistent | | |
@@ -345,7 +345,7 @@ The drafter was handed Lens's research and **Iso's plan**. Lens has `get`, `set`
 document four methods the type does not have. One call in fifteen — rare enough to pass unnoticed, often
 enough to ship a broken page.
 
-Nothing catches it: `dataTypeStructureSchema` validates the *shape* (are the booleans booleans?) and
+Nothing catches it: `dataTypePlanSchema` validates the *shape* (are the booleans booleans?) and
 never that the plan describes the same type as the research. And the plan rides inside ~7 KB of relayed
 JSON, where a wrong `notes` field three levels down is invisible.
 
@@ -355,7 +355,7 @@ load — the defect becomes a missing value rather than a wrong one. Three optio
 1. **Draft subpages without a plan** *(recommended)*. `findPlan` returns undefined, and the drafter
    works from the research plus the module context, which is what the fabricated plan effectively
    amounted to. Cheapest, and it makes an existing behaviour honest instead of hidden.
-2. **Mount `design_data_type_structure` for module runs too.** Most correct, and most expensive: one
+2. **Mount `design_data_type_plan` for module runs too.** Most correct, and most expensive: one
    extra design phase per documented type, on the phase that already costs 86s for one type.
 3. **Derive the subpage plan from the module plan.** The module plan has `typeGroups` with a
    `core`/`supporting` depth per type, which is roughly what a subpage needs. Cheap, but it is new

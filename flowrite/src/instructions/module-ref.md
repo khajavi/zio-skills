@@ -21,7 +21,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
 2. **Research.** Call `research_module` with the module name to discover the member
    types (core vs supporting), a light per-type surface, and the module story —
    relationships, patterns, integration, per-fact `source` citations, grounding detail.
-3. **Design.** Call `design_module_structure` with the module name and the exact research object to
+3. **Design.** Call `design_module_plan` with the module name and the exact research object to
    get a validated plan: the **shape** (`single-core` / `core-family` / `multi-domain` / `dsl` — the
    designer classifies by reader intent, see module-ref-structure), the **layout** derived from it
    (single-core/dsl → flat, core-family/multi-domain → hierarchical), which module-level sections apply,

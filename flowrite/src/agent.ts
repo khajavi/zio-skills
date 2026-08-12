@@ -28,13 +28,13 @@ import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 
 // phase tools
 import { researchDataType } from './tools/phases/research.ts';
-import { designDataTypeStructure } from './tools/phases/design-doc-structure.ts';
+import { designDataTypePlan } from './tools/phases/design-doc-plan.ts';
 import { writeDataTypeReference } from './tools/phases/write-doc.ts';
 import { researchModule } from './tools/phases/research.ts';
-import { designModuleStructure } from './tools/phases/design-doc-structure.ts';
+import { designModulePlan } from './tools/phases/design-doc-plan.ts';
 import { writeModuleOverview } from './tools/phases/write-doc.ts';
 import { researchTutorialTopic } from './tools/phases/research.ts';
-import { designTutorialStructure } from './tools/phases/design-doc-structure.ts';
+import { designTutorialPlan } from './tools/phases/design-doc-plan.ts';
 import { writeTutorialDraft } from './tools/phases/write-doc.ts';
 import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
 import { integrateDataTypeReference, integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
@@ -84,7 +84,7 @@ export const KINDS = {
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
     tools: [
       researchDataType,
-      designDataTypeStructure,
+      designDataTypePlan,
       writeDataTypeReference,
       writeCompanionExamples,
       integrateDataTypeReference,
@@ -105,7 +105,7 @@ export const KINDS = {
     skills: [mdocConventions, moduleRefStructure, moduleRefChecklist],
     tools: [
       researchModule,
-      designModuleStructure,
+      designModulePlan,
       writeModuleOverview,
       researchDataType,
       writeDataTypeReference,
@@ -131,7 +131,7 @@ export const KINDS = {
     skills: [mdocConventions, tutorialStructure, tutorialChecklist],
     tools: [
       researchTutorialTopic,
-      designTutorialStructure,
+      designTutorialPlan,
       writeTutorialDraft,
       writeCompanionExamples,
       integrateTutorial,

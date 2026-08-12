@@ -1,16 +1,16 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } from './research.ts';
-import { dataTypeStructureSchema, moduleStructureSchema, tutorialStructureSchema } from './design-doc-structure.ts';
+import { dataTypePlanSchema, modulePlanSchema, tutorialPlanSchema } from './design-doc-plan.ts';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 // Each kind's structure template, injected into the generic drafter's task (a subagent's skills
 // cannot vary per delegated task). Same single-source-of-truth split as writing-style rules: the
 // SKILL.md files point here.
-import dataTypeStructureDoc from '../../skills/data-type-ref-structure/references/structure.md';
-import moduleStructureDoc from '../../skills/module-ref-structure/references/structure.md';
-import tutorialStructureDoc from '../../skills/tutorial-structure/references/structure.md';
+import dataTypeTemplateDoc from '../../skills/data-type-ref-structure/references/structure.md';
+import moduleTemplateDoc from '../../skills/module-ref-structure/references/structure.md';
+import tutorialTemplateDoc from '../../skills/tutorial-structure/references/structure.md';
 // The writing-style rules, injected into the drafter prompt at compile time.
 //
 // This was a workaround: flue beta.9 did not package nested skill files, so the drafter could not read
@@ -25,7 +25,7 @@ import writingStyleRules from '../../skills/writing-style/references/rules.md';
 /**
  * The write phase: draft one page and put it on disk.
  *
- * ONE body, THREE tools, for the reasons given in design-doc-structure.ts — the inputs embed that
+ * ONE body, THREE tools, for the reasons given in design-doc-plan.ts — the inputs embed that
  * kind's plan and research schemas verbatim, and `KINDS` mounts only the write tools a run can use
  * (a module run mounts two on purpose: the module page, plus `write_data_type_reference` again for
  * each hierarchical subpage).
@@ -112,7 +112,7 @@ function draftSchema(guidance: { title: string; purpose: string; keywords: strin
  *
  * Writing goes through `harness.sandbox` (out-of-band) so the file lands deterministically rather
  * than depending on the model choosing to call a filesystem tool. The delegation matters for the
- * reason design-doc-structure.ts explains: the calling agent's own write tool is visible to whoever
+ * reason design-doc-plan.ts explains: the calling agent's own write tool is visible to whoever
  * drafts, so drafting in that conversation lets it call itself.
  */
 async function writeDoc(opts: {
@@ -161,12 +161,12 @@ async function writeDoc(opts: {
 }
 
 /** The four lines every drafter prompt opens with: what to write, and the template to follow. */
-const followTemplate = (task: string, templateName: string, structureDoc: string): string[] => [
+const followTemplate = (task: string, templateName: string, templateDoc: string): string[] => [
   task,
   ``,
   `Follow this ${templateName} template and its drafting rules exactly:`,
   ``,
-  structureDoc,
+  templateDoc,
 ];
 
 /** The injected writing-style rules block. TEMP — see the `writingStyleRules` import. */
@@ -185,7 +185,7 @@ export const writeDataTypeReference = defineTool({
   description: 'Write the data type reference markdown to docs/reference/<type>.md and return its path and content.',
   harness: true,
   input: v.object({
-    structure: dataTypeStructureSchema,
+    plan: dataTypePlanSchema,
     researchAnswers: dataTypeResearchSchema,
     // Optional, for module-ref hierarchical subpages. When absent, this tool behaves
     // byte-identically to a standalone data-type-ref run.
@@ -225,15 +225,15 @@ export const writeDataTypeReference = defineTool({
           ...followTemplate(
             `Write a complete ZIO data type reference page as Docusaurus markdown.`,
             'data-type-ref-structure',
-            dataTypeStructureDoc,
+            dataTypeTemplateDoc,
           ),
           ``,
           ...styleRules(),
           ``,
-          `Structural plan to follow exactly — the optional sections to include, the`,
+          `Plan to follow exactly — the optional sections to include, the`,
           `construction order, and the Core Operations category grouping are already`,
           `decided; write the page to match this plan:`,
-          JSON.stringify(data.structure),
+          JSON.stringify(data.plan),
           ``,
           `Research answers (ground every fact in this — real signatures, imports, and examples;`,
           `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
@@ -272,24 +272,24 @@ export const writeModuleOverview = defineTool({
     'Write the module reference module-level page (flat: whole page with inline type sections; hierarchical: index.md narrative + subpage links) and return its path and content.',
   harness: true,
   input: v.object({
-    structure: moduleStructureSchema,
+    plan: modulePlanSchema,
     researchAnswers: moduleResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, data, log }) {
     const moduleKebab = toKebabCase(data.researchAnswers.moduleName);
-    const isFlat = data.structure.layout === 'flat';
+    const isFlat = data.plan.layout === 'flat';
     // flat -> docs/reference/<module>.md (id = <module>); hierarchical -> the module dir's index
     // (id = index) with subpages alongside it.
     const layoutInstruction =
-      data.structure.layout === 'hierarchical'
+      data.plan.layout === 'hierarchical'
         ? [
             `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,
             `plus an Overview that introduces each core type in 2-3 sentences and links to its subpage with`,
             `a relative path "./<type-kebab>.md". Do NOT document the types' full APIs here; each type gets`,
             `its own subpage written separately.`,
           ]
-        : data.structure.shape === 'dsl'
+        : data.plan.shape === 'dsl'
           ? [
               `This is a DSL module reference: write ONE page in a single file, organized BY TASK/composition`,
               `— sections are recipes ("Building X", "Combining Y and Z") showing how the types compose to`,
@@ -312,7 +312,7 @@ export const writeModuleOverview = defineTool({
         label: 'drafter (module overview)',
         path: isFlat ? `docs/reference/${moduleKebab}.md` : `docs/reference/${moduleKebab}/index.md`,
         id: isFlat ? moduleKebab : 'index',
-        writing: `module overview (${data.structure.layout})`,
+        writing: `module overview (${data.plan.layout})`,
         guidance: {
           title: 'The module title, e.g. "HTTP Model" — this is the page title',
           purpose: 'module reference purpose',
@@ -326,16 +326,16 @@ export const writeModuleOverview = defineTool({
           ...followTemplate(
             `Write a ZIO MODULE reference page as Docusaurus markdown.`,
             'module-ref-structure',
-            moduleStructureDoc,
+            moduleTemplateDoc,
           ),
           ``,
           ...layoutInstruction,
           ``,
           ...styleRules(),
           ``,
-          `Structural plan to follow exactly (layout, which sections to include, and the type order are`,
+          `Plan to follow exactly (layout, which sections to include, and the type order are`,
           `already decided; write the page to match this plan):`,
-          JSON.stringify(data.structure),
+          JSON.stringify(data.plan),
           ``,
           `Research answers (ground every fact and relationship in this — real signatures, imports, and`,
           `examples; never substitute general knowledge; groundingDetail carries verbatim detail to copy`,
@@ -363,7 +363,7 @@ export const writeTutorialDraft = defineTool({
       ),
     ),
     topic: v.string(),
-    structure: tutorialStructureSchema,
+    plan: tutorialPlanSchema,
     researchAnswers: tutorialResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
@@ -395,7 +395,7 @@ export const writeTutorialDraft = defineTool({
           ...followTemplate(
             `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
             'tutorial-structure',
-            tutorialStructureDoc,
+            tutorialTemplateDoc,
           ),
           ``,
           ...styleRules(),
@@ -408,7 +408,7 @@ export const writeTutorialDraft = defineTool({
           JSON.stringify(data.researchAnswers),
           ``,
           `Section plan to follow exactly:`,
-          JSON.stringify(data.structure),
+          JSON.stringify(data.plan),
           ``,
           DESCRIPTION_LENGTH,
         ],

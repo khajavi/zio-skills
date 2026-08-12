@@ -23,7 +23,7 @@ differs. Do not mechanically follow steps that no longer fit.
    abilities, each core type's role, composition order, the "hello world"
    starting point, incremental complexity layers, verifiable outputs, the core
    insight, imports, sbt deps, and verbatim grounding detail.
-3. **Design the structure.** Call the `design_tutorial_structure` action with the
+3. **Design the plan.** Call the `design_tutorial_plan` action with the
    exact object from step 2 (pass it through unchanged) to get an ordered section
    plan. Load the `tutorial-structure` skill for the template and section-design
    rules.

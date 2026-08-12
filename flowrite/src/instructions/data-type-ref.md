@@ -20,10 +20,10 @@ reality differs. Do not mechanically follow steps that no longer fit.
    API surface: signature, type params, constructors, predefined instances, core
    operations (with real signatures), subtypes, comparisons, imports, sbt deps,
    per-fact `source` citations, and verbatim grounding detail.
-3. **Design.** Call `design_data_type_structure` with the exact research object from
-   step 2 to get a validated structural plan — which optional sections apply and how
+3. **Design.** Call `design_data_type_plan` with the exact research object from
+   step 2 to get a validated plan — which optional sections apply and how
    the operations group into Core Operations categories (no single-method category).
-4. **Write.** Call `write_data_type_reference` with BOTH the structural plan from
+4. **Write.** Call `write_data_type_reference` with BOTH the plan from
    step 3 AND the exact research object from step 2. It writes `docs/reference/<type-kebab>.md`.
    The reference-page template is supplied to the drafter automatically.
 5. **Companion examples.** If the page's "Running the Examples" section embeds

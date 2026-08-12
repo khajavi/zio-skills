@@ -8,7 +8,7 @@ import { delegate } from '../../runtime/delegate.ts';
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.
  *
- * ONE body, THREE tools, for the same reasons as design-doc-structure.ts — the three result schemas
+ * ONE body, THREE tools, for the same reasons as design-doc-plan.ts — the three result schemas
  * are unrelated (a module has `relationships`, a tutorial has `complexityLayers`, a data type has an
  * exhaustive `coreOperations`), each is embedded verbatim in the matching design and write phase's
  * input, and `KINDS` mounts only the one tool a run can use. A single tool over a `v.variant` would
@@ -276,7 +276,7 @@ const SKIPPED = '(skipped — phase already done)';
 /**
  * Research one subject by delegating to the generic `researcher` subagent.
  *
- * The delegation is not incidental — see design-doc-structure.ts for why a phase must not do its own
+ * The delegation is not incidental — see design-doc-plan.ts for why a phase must not do its own
  * work in the calling agent's conversation, and ../runtime/delegate.ts for how the role is selected now
  * that `harness.session()` is gone. The per-kind focus and result schema are supplied at the call site.
  *

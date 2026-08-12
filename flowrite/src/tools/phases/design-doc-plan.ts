@@ -7,12 +7,12 @@ import { delegate } from '../../runtime/delegate.ts';
 // Each kind's structure template, injected into the generic designer's task (a subagent's skills
 // cannot vary per delegated task, so the kind-specific template rides in the prompt). Same
 // single-source-of-truth split as writing-style/references/rules.md: the SKILL.md files point here.
-import dataTypeStructureDoc from '../../skills/data-type-ref-structure/references/structure.md';
-import moduleStructureDoc from '../../skills/module-ref-structure/references/structure.md';
-import tutorialStructureDoc from '../../skills/tutorial-structure/references/structure.md';
+import dataTypeTemplateDoc from '../../skills/data-type-ref-structure/references/structure.md';
+import moduleTemplateDoc from '../../skills/module-ref-structure/references/structure.md';
+import tutorialTemplateDoc from '../../skills/tutorial-structure/references/structure.md';
 
 /**
- * The design phase: turn one kind's research findings into a validated structural plan.
+ * The design phase: turn one kind's research findings into a validated plan.
  *
  * ONE body, THREE tools — deliberately not one tool over a `v.variant`. The three plans have
  * genuinely different shapes (a tutorial has no `coreOperationCategories`; only a module has a
@@ -26,21 +26,21 @@ import tutorialStructureDoc from '../../skills/tutorial-structure/references/str
  *  - **A guarantee.** Designing a module plan during a data-type run is impossible right now because
  *    the tool is not mounted. A variant would demote that to a branch the model picks, which is the
  *    misclassification failure the pipeline already halts on rather than guesses at.
- *  - **The handoff.** `write_data_type_reference.structure` *is* `dataTypeStructureSchema`. A union
+ *  - **The handoff.** `write_data_type_reference.plan` *is* `dataTypePlanSchema`. A union
  *    output either makes the write phases narrow it, or turns a wrong branch into a validation error
  *    one phase later instead of an impossibility.
  *
  * What was actually duplicated — the skip branch, the log line, the `delegate` call and the prompt
- * skeleton — is now written once, in `designStructure`.
+ * skeleton — is now written once, in `designPlan`.
  */
 
-// The reference-page structural plan. The 12-section template is fixed, but two things are genuinely
+// The reference-page plan. The 12-section template is fixed, but two things are genuinely
 // per-type decisions that the drafter otherwise improvises mid-write (and got wrong in early runs:
 // single-method categories violating the no-lone-subheader rule, a member nested under the wrong
 // category): (1) which optional sections apply, and (2) how the public operations group into Core
 // Operations categories. Planning both up front lets the drafter follow a validated plan instead of
 // inventing structure while writing prose.
-export const dataTypeStructureSchema = v.object({
+export const dataTypePlanSchema = v.object({
   optionalSections: v.object({
     motivation: v.boolean(),
     installation: v.pipe(v.boolean(), v.description('true only for top-level module types')),
@@ -74,11 +74,11 @@ export const dataTypeStructureSchema = v.object({
   notes: v.nullable(v.pipe(v.string(), v.description('Any structural decisions/rationale, or null'))),
 });
 
-// The module-reference structural plan. Two things are genuine per-module decisions the drafter would
+// The module-reference plan. Two things are genuine per-module decisions the drafter would
 // otherwise improvise: (1) the layout (flat single page vs hierarchical index+subpages), which drives
 // the entire write phase, and (2) which module-level sections apply and the order types are
 // documented in. Planning them up front lets the drafter follow a validated plan.
-export const moduleStructureSchema = v.object({
+export const modulePlanSchema = v.object({
   shape: v.pipe(
     v.picklist(['single-core', 'core-family', 'multi-domain', 'dsl']),
     v.description(
@@ -136,7 +136,7 @@ export const moduleStructureSchema = v.object({
 });
 
 // The tutorial's section plan: strictly linear, one new concept per section.
-export const tutorialStructureSchema = v.object({
+export const tutorialPlanSchema = v.object({
   learningObjectives: v.pipe(v.array(v.string()), v.description('3-5 objectives')),
   prerequisites: v.array(v.string()),
   sections: v.array(
@@ -162,7 +162,7 @@ export const tutorialStructureSchema = v.object({
 });
 
 /**
- * Design one document's structure by delegating to the generic `designer` subagent.
+ * Design one document's plan by delegating to the generic `designer` subagent.
  *
  * The delegation is not incidental. The designer has no tools or subagents of its own, whereas the
  * calling agent's own `design_*` tool is visible to whoever does the designing — so designing inside
@@ -174,7 +174,7 @@ export const tutorialStructureSchema = v.object({
  * `skipDefault` is per kind because it is the empty instance of that kind's own schema — data, not
  * logic, which is why the skip branch itself lives here only once.
  */
-async function designStructure<S extends v.GenericSchema>(opts: {
+async function designPlan<S extends v.GenericSchema>(opts: {
   harness: FlueHarness;
   log: FlueLogger;
   /** Log/delegation label, e.g. 'designer (module)'. */
@@ -182,13 +182,13 @@ async function designStructure<S extends v.GenericSchema>(opts: {
   result: S;
   /** Returned verbatim when `skipPhases` includes design. */
   skipDefault: v.InferOutput<S>;
-  /** What the phase announces it is designing, e.g. 'reference-page structure for: Prism'. */
+  /** What the phase announces it is designing, e.g. 'reference-page plan for: Prism'. */
   designing: string;
-  /** First prompt line, e.g. 'Design the structural plan for a "Prism" data type reference page.' */
+  /** First prompt line, e.g. 'Design the plan for a "Prism" data type reference page.' */
   task: string;
   /** Template name as the prompt cites it, e.g. 'data-type-ref-structure'. */
   templateName: string;
-  structureDoc: string;
+  templateDoc: string;
   /** Per-kind planning instructions, between the template and the research payload. */
   guidance: string[];
   researchAnswers: unknown;
@@ -212,7 +212,7 @@ async function designStructure<S extends v.GenericSchema>(opts: {
         ``,
         `Follow this ${opts.templateName} template exactly:`,
         ``,
-        opts.structureDoc,
+        opts.templateDoc,
         ``,
         ...opts.guidance,
         `Ground every choice in these research answers:`,
@@ -222,25 +222,25 @@ async function designStructure<S extends v.GenericSchema>(opts: {
 }
 
 /**
- * Turn the researcher's API-surface findings into a validated structural plan: which optional
+ * Turn the researcher's API-surface findings into a validated plan: which optional
  * sections apply and how the operations group into Core Operations categories.
  */
-export const designDataTypeStructure = defineTool({
-  name: 'design_data_type_structure',
-  description: 'Turn data-type research into a validated reference-page structural plan (section applicability + Core Operations grouping).',
+export const designDataTypePlan = defineTool({
+  name: 'design_data_type_plan',
+  description: 'Turn data-type research into a validated reference-page plan (section applicability + Core Operations grouping).',
   harness: true,
   input: v.object({
     typeName: v.string(),
     researchAnswers: dataTypeResearchSchema,
   }),
-  output: dataTypeStructureSchema,
+  output: dataTypePlanSchema,
   async run({ harness, data, log }) {
     return {
-      output: await designStructure({
+      output: await designPlan({
         harness,
         log,
         label: 'designer (data type)',
-        result: dataTypeStructureSchema,
+        result: dataTypePlanSchema,
         skipDefault: {
           optionalSections: {
             motivation: false,
@@ -257,10 +257,10 @@ export const designDataTypeStructure = defineTool({
           comparisons: [],
           notes: '(skipped — phase already done)',
         },
-        designing: `reference-page structure for: ${data.typeName}`,
-        task: `Design the structural plan for a "${data.typeName}" data type reference page.`,
+        designing: `reference-page plan for: ${data.typeName}`,
+        task: `Design the plan for a "${data.typeName}" data type reference page.`,
         templateName: 'data-type-ref-structure',
-        structureDoc: dataTypeStructureDoc,
+        templateDoc: dataTypeTemplateDoc,
         guidance: [
           `Decide which optional sections apply, order the constructors, and group EVERY`,
           `public operation into ordered Core Operations categories (a single-method`,
@@ -274,12 +274,12 @@ export const designDataTypeStructure = defineTool({
 });
 
 /**
- * Turn the module researcher's findings into a validated structural plan: the flat-vs-hierarchical
+ * Turn the module researcher's findings into a validated plan: the flat-vs-hierarchical
  * layout (via the auto-rule, unless overridden), which module-level sections apply, and the type
  * order.
  */
-export const designModuleStructure = defineTool({
-  name: 'design_module_structure',
+export const designModulePlan = defineTool({
+  name: 'design_module_plan',
   description: 'Turn module research into a validated module-reference plan (flat/hierarchical layout + section applicability + type order).',
   harness: true,
   input: v.object({
@@ -294,14 +294,14 @@ export const designModuleStructure = defineTool({
       v.description('Force the module shape (skips classification) and derive layout from it. Wins over layoutOverride and auto-classify.'),
     ),
   }),
-  output: moduleStructureSchema,
+  output: modulePlanSchema,
   async run({ harness, data, log }) {
     return {
-      output: await designStructure({
+      output: await designPlan({
         harness,
         log,
         label: 'designer (module)',
-        result: moduleStructureSchema,
+        result: modulePlanSchema,
         skipDefault: {
           shape: data.shapeOverride ?? 'single-core',
           layout: data.layoutOverride ?? 'flat',
@@ -319,10 +319,10 @@ export const designModuleStructure = defineTool({
           comparisons: [],
           notes: '(skipped — phase already done)',
         },
-        designing: `module-reference structure for: ${data.moduleName}`,
-        task: `Design the structural plan for a "${data.moduleName}" module reference page.`,
+        designing: `module-reference plan for: ${data.moduleName}`,
+        task: `Design the plan for a "${data.moduleName}" module reference page.`,
         templateName: 'module-ref-structure',
-        structureDoc: moduleStructureDoc,
+        templateDoc: moduleTemplateDoc,
         guidance: [
           data.shapeOverride
             ? `The caller REQUIRES the "${data.shapeOverride}" shape — set shape to it and derive layout ` +
@@ -352,34 +352,34 @@ export const designModuleStructure = defineTool({
 
 /**
  * Turn the researcher's answers into a validated, strictly linear section plan. Reliability-critical:
- * the output shape is enforced so the writer stage always receives a well-formed structure.
+ * the output shape is enforced so the writer stage always receives a well-formed plan.
  */
-export const designTutorialStructure = defineTool({
-  name: 'design_tutorial_structure',
+export const designTutorialPlan = defineTool({
+  name: 'design_tutorial_plan',
   description: 'Turn deep-research answers into a validated, linear tutorial section plan.',
   harness: true,
   input: v.object({
     topic: v.string(),
     researchAnswers: tutorialResearchSchema,
   }),
-  output: tutorialStructureSchema,
+  output: tutorialPlanSchema,
   async run({ harness, data, log }) {
     return {
-      output: await designStructure({
+      output: await designPlan({
         harness,
         log,
         label: 'designer (tutorial)',
-        result: tutorialStructureSchema,
+        result: tutorialPlanSchema,
         skipDefault: {
           learningObjectives: [],
           prerequisites: [],
           sections: [],
           coreInsight: '(skipped — phase already done)',
         },
-        designing: `tutorial structure for: ${data.topic}`,
-        task: `Design a learning-oriented tutorial structure for "${data.topic}".`,
+        designing: `tutorial plan for: ${data.topic}`,
+        task: `Design a learning-oriented tutorial plan for "${data.topic}".`,
         templateName: 'tutorial-structure',
-        structureDoc: tutorialStructureDoc,
+        templateDoc: tutorialTemplateDoc,
         guidance: [],
         researchAnswers: data.researchAnswers,
       }),

@@ -131,7 +131,7 @@ Implementation is mostly Markdown and schemas:
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
 - Add the kind's phase tools to the existing phase modules — `research.ts`,
-  `design-doc-structure.ts`, `write-doc.ts` — each defining a `valibot` result
+  `design-doc-plan.ts`, `write-doc.ts` — each defining a `valibot` result
   schema and delegating to a generic role with a kind-specific prompt. One
   module per phase, one tool per kind inside it: the shared body is already
   there, so a fourth kind is a schema, a prompt and a config object rather than

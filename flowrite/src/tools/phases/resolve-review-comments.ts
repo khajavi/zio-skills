@@ -68,7 +68,7 @@ export const resolveReviewComments = defineTool({
   output: resolveReviewCommentsOutput,
   async run({ harness, data, log }) {
     log.info(`Resolving review comments in: ${data.articlePath}`);
-    // Delegates to the review_resolver subagent — see design-doc-structure.ts
+    // Delegates to the review_resolver subagent — see design-doc-plan.ts
     // for why prompting the calling agent's own conversation is unsafe here.
     const resolved = await delegate({
       harness,

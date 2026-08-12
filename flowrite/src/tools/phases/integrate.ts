@@ -8,7 +8,7 @@ import { delegate } from '../../runtime/delegate.ts';
  * The integrate phase: wire a finished page into the Docusaurus site — sidebars.js, docs/index.md,
  * cross-references, link verification.
  *
- * ONE body, THREE tools, the same shape as research.ts, design-doc-structure.ts and write-doc.ts. Each
+ * ONE body, THREE tools, the same shape as research.ts, design-doc-plan.ts and write-doc.ts. Each
  * kind mounts exactly one of these, and they are three rather than one because their inputs genuinely
  * differ: a module reference needs its layout and type groups to build the right sidebar shape, while a
  * tutorial or a data type page needs only its path. Folding those into optional fields would make them
@@ -36,7 +36,7 @@ const pagePathInput = (description: string) =>
 /**
  * Hand one page to the generic `docs_integrator` subagent.
  *
- * Delegated rather than done in the calling conversation for the reason design-doc-structure.ts
+ * Delegated rather than done in the calling conversation for the reason design-doc-plan.ts
  * explains. The skip check lives here in code, not as prose in the agent's .md, because a phase the
  * model is merely *asked* to skip is a phase it can decide to run.
  */

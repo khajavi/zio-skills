@@ -1,17 +1,17 @@
 import { observe, type FlueEvent } from '@flue/runtime';
 import { getRepoPath } from './run-context.ts';
 import { researchTutorialTopic } from '../tools/phases/research.ts';
-import { designTutorialStructure } from '../tools/phases/design-doc-structure.ts';
+import { designTutorialPlan } from '../tools/phases/design-doc-plan.ts';
 import { writeTutorialDraft } from '../tools/phases/write-doc.ts';
 import { writeCompanionExamples } from '../tools/phases/write-companion-examples.ts';
 import { integrateTutorial } from '../tools/phases/integrate.ts';
 import { researchDataType } from '../tools/phases/research.ts';
-import { designDataTypeStructure } from '../tools/phases/design-doc-structure.ts';
+import { designDataTypePlan } from '../tools/phases/design-doc-plan.ts';
 import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
 import { integrateDataTypeReference, integrateModuleReference } from '../tools/phases/integrate.ts';
 import { reviewPage } from '../tools/phases/review-page.ts';
 import { researchModule } from '../tools/phases/research.ts';
-import { designModuleStructure } from '../tools/phases/design-doc-structure.ts';
+import { designModulePlan } from '../tools/phases/design-doc-plan.ts';
 import { writeModuleOverview } from '../tools/phases/write-doc.ts';
 
 /**
@@ -22,18 +22,18 @@ import { writeModuleOverview } from '../tools/phases/write-doc.ts';
 const PHASE_TOOLS = new Set(
   [
     researchTutorialTopic,
-    designTutorialStructure,
+    designTutorialPlan,
     writeTutorialDraft,
     writeCompanionExamples,
     integrateTutorial,
     reviewPage,
     researchDataType,
-    designDataTypeStructure,
+    designDataTypePlan,
     writeDataTypeReference,
     integrateDataTypeReference,
     reviewPage,
     researchModule,
-    designModuleStructure,
+    designModulePlan,
     writeModuleOverview,
     integrateModuleReference,
     reviewPage,
