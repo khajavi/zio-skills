@@ -124,6 +124,72 @@ export function frontmatterEnd(lines: string[]): number {
   return lines.findIndex((line, i) => i > 0 && line.trim() === '---');
 }
 
+export interface Bullet {
+  /** 0-based line index. */
+  line: number;
+  /** Leading spaces before the marker. */
+  indent: number;
+  /** The marker itself: `-`, `*`, `+` or `1.`. */
+  marker: string;
+  /** Everything after the marker and its space. */
+  text: string;
+}
+
+/** List items outside code blocks, bulleted and numbered alike. */
+export function bullets(lines: string[]): Bullet[] {
+  const mask = fenceMask(lines);
+  const out: Bullet[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (mask[i]) continue;
+    const match = /^(\s*)([-*+]|\d+\.)\s+(.*)$/.exec(lines[i]);
+    if (match !== null) {
+      out.push({ line: i, indent: match[1].length, marker: match[2], text: match[3].trim() });
+    }
+  }
+  return out;
+}
+
+/** A contiguous span of lines, both ends inclusive. */
+export interface Span {
+  start: number;
+  end: number;
+}
+
+/**
+ * A line that can be the start of an ordinary prose paragraph.
+ *
+ * Everything structural is excluded — headings, list markers, table rows, blockquotes, Docusaurus
+ * `:::` directives, JSX/HTML, horizontal rules — and so is any indented line. The indentation rule is
+ * what keeps a bullet wrapped across three lines from looking like a hard-wrapped paragraph: real
+ * top-level prose in this corpus is never indented, while list continuations always are.
+ */
+const isProseLine = (line: string): boolean =>
+  line.trim() !== '' &&
+  !/^\s/.test(line) &&
+  !/^(#{1,6}\s|[-*+]\s|\d+\.\s|\||>|:::|<|---|===)/.test(line);
+
+/**
+ * Maximal runs of consecutive prose lines.
+ *
+ * A run longer than one line means the paragraph was hard-wrapped, which is rule 5's whole subject.
+ * Frontmatter is skipped because `key: value` lines would otherwise read as a paragraph.
+ */
+export function proseParagraphs(lines: string[]): Span[] {
+  const mask = fenceMask(lines);
+  const from = frontmatterEnd(lines) + 1;
+  const out: Span[] = [];
+  let start = -1;
+  for (let i = from; i <= lines.length; i++) {
+    const eligible = i < lines.length && !mask[i] && isProseLine(lines[i]);
+    if (eligible && start < 0) start = i;
+    else if (!eligible && start >= 0) {
+      out.push({ start, end: i - 1 });
+      start = -1;
+    }
+  }
+  return out;
+}
+
 /**
  * Text with `inline code` spans removed.
  *
