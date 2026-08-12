@@ -39,7 +39,7 @@ import { writeTutorialDraft } from './tools/phases/write-doc.ts';
 import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
 import { integrateDataTypeReference, integrateTutorial } from './tools/phases/integrate.ts';
 import { integrateModuleReference } from './tools/phases/integrate-module.ts';
-import { reviewDataTypeRef, reviewModuleRef, reviewTutorial } from './tools/phases/review-page.ts';
+import { reviewPage } from './tools/phases/review-page.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
 // instead of waiting for the review phase to discover a gap.
@@ -49,8 +49,11 @@ import { checkMethodCoverage } from './tools/check-method-coverage.ts';
 // this module is now the single entry point for every kind of document.
 installVerboseObserver();
 
-export const DOC_KINDS = ['data-type', 'module', 'tutorial'] as const;
-export type DocKind = (typeof DOC_KINDS)[number];
+// Defined in run-context.ts, where the phase tools can reach the type without importing this module
+// and closing a cycle. Re-exported because this is where a reader looks for it, and the tests import
+// it from here.
+import { DOC_KINDS, type DocKind } from './runtime/run-context.ts';
+export { DOC_KINDS, type DocKind };
 
 /**
  * The slice of creation data a run directive may read: the module escape hatches, and nothing else.
@@ -85,7 +88,7 @@ export const KINDS = {
       writeDataTypeReference,
       writeCompanionExamples,
       integrateDataTypeReference,
-      reviewDataTypeRef,
+      reviewPage,
     ],
     plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
@@ -108,7 +111,7 @@ export const KINDS = {
       writeDataTypeReference,
       writeCompanionExamples,
       integrateModuleReference,
-      reviewModuleRef,
+      reviewPage,
     ],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
@@ -132,7 +135,7 @@ export const KINDS = {
       writeTutorialDraft,
       writeCompanionExamples,
       integrateTutorial,
-      reviewTutorial,
+      reviewPage,
     ],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified tutorial for: ${subject}. ` +
@@ -197,7 +200,7 @@ export function DocsWriter(_props: AgentProps) {
   // Setup both branches need: run context, model tier, sandbox. Called in BOTH renders with
   // identical values, because `useSandbox` presence is re-read at every turn boundary — a render
   // that skipped it would detach and re-attach the environment and re-announce the workspace.
-  const facts = useRunBasics(initialData, request);
+  const facts = useRunBasics(initialData, request, kind);
 
   if (kind === null || subject === null) {
     // Two tools while the kind is unknown, and both are plain rather than `harness: true`: they

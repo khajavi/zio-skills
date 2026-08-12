@@ -65,7 +65,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
    subpage ids like `reference/<module>/<type>` in reading order) so the sidebar groups them. It wires
    the page under the **Reference** category — a single doc entry (flat) or a category with the index
    + one sub-category per group (hierarchical).
-9. **Review.** Call `review_module_ref` with the module page path (flat page or hierarchical
+9. **Review.** Call `review_page` with the module page path (flat page or hierarchical
    index). It evaluates the page against the module-ref-checklist and every writing style rule, and
    reports per-item pass/fail. Review reports; you fix. Use `check_method_coverage` yourself for each
    documented type to confirm every public member is documented. Review rounds are budgeted across the

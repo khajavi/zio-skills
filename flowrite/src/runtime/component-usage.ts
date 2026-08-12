@@ -5,17 +5,15 @@ import { designTutorialStructure } from '../tools/phases/design-doc-structure.ts
 import { writeTutorialDraft } from '../tools/phases/write-doc.ts';
 import { writeCompanionExamples } from '../tools/phases/write-companion-examples.ts';
 import { integrateTutorial } from '../tools/phases/integrate.ts';
-import { reviewTutorial } from '../tools/phases/review-page.ts';
 import { researchDataType } from '../tools/phases/research.ts';
 import { designDataTypeStructure } from '../tools/phases/design-doc-structure.ts';
 import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
 import { integrateDataTypeReference } from '../tools/phases/integrate.ts';
-import { reviewDataTypeRef } from '../tools/phases/review-page.ts';
+import { reviewPage } from '../tools/phases/review-page.ts';
 import { researchModule } from '../tools/phases/research.ts';
 import { designModuleStructure } from '../tools/phases/design-doc-structure.ts';
 import { writeModuleOverview } from '../tools/phases/write-doc.ts';
 import { integrateModuleReference } from '../tools/phases/integrate-module.ts';
-import { reviewModuleRef } from '../tools/phases/review-page.ts';
 
 /**
  * Every agent's own phase tools — model-callable, but delegating their real work
@@ -29,17 +27,17 @@ const PHASE_TOOLS = new Set(
     writeTutorialDraft,
     writeCompanionExamples,
     integrateTutorial,
-    reviewTutorial,
+    reviewPage,
     researchDataType,
     designDataTypeStructure,
     writeDataTypeReference,
     integrateDataTypeReference,
-    reviewDataTypeRef,
+    reviewPage,
     researchModule,
     designModuleStructure,
     writeModuleOverview,
     integrateModuleReference,
-    reviewModuleRef,
+    reviewPage,
   ].map((a) => a.name),
 );
 

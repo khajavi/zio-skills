@@ -43,7 +43,7 @@ differs. Do not mechanically follow steps that no longer fit.
    pair for any other docs file you touched, never all docs. Fix every `[error]` before
    continuing. Mandatory before you call the tutorial done.
 7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
-8. **Review.** Call `review_tutorial`. It evaluates the tutorial against the
+8. **Review.** Call `review_page` with the tutorial path. It evaluates the tutorial against the
    tutorial-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Review rounds are budgeted — the tool's description says how many the
    run allows, and by default it is one, so there is no confirming pass. Fix every failing item, then

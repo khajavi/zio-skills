@@ -1,9 +1,28 @@
 export type SkipPhase = 'research' | 'design' | 'write' | 'write-examples' | 'integrate' | 'review';
 
+/**
+ * The kinds of document flowrite writes.
+ *
+ * Declared here rather than in the agent module because phase tools need the type and importing the
+ * agent from a tool would close a cycle (agent → composition → run-context → agent). The agent
+ * re-exports both for its own tests.
+ */
+export const DOC_KINDS = ['data-type', 'module', 'tutorial'] as const;
+export type DocKind = (typeof DOC_KINDS)[number];
+
 /** Per-run facts every phase needs, taken from the writer agent's `initialData`. */
 export interface RunContext {
   /** Absolute path to the library checkout being documented. */
   projectPath: string;
+  /**
+   * Which kind of document this run writes, or null before the request has been classified.
+   *
+   * Published here because a phase tool cannot read it any other way: it lives in
+   * `usePersistentState('docKind')`, and hooks are unreachable from a tool body — the same reason
+   * `projectPath` and `skipPhases` travel through this object. It is what lets one review tool serve
+   * all three kinds instead of three tools differing only in which checklist they paste.
+   */
+  kind: DocKind | null;
   /**
    * The requester's own words — the message that started the run, e.g. "Please write reference
    * documentation for the Chunk data type".
@@ -56,6 +75,25 @@ export function getRepoPath(): string {
 /** True when this code-gated phase was skipped for the current run. */
 export function isPhaseSkipped(phase: SkipPhase): boolean {
   return requireContext().skipPhases.includes(phase);
+}
+
+/**
+ * Which kind of document this run writes.
+ *
+ * Throws rather than defaulting: a phase tool that ran before classification would silently review a
+ * data type page against the tutorial checklist, and a wrong checklist is worse than a stopped run.
+ * In practice it cannot happen — the phase tools are only mounted once the kind is set — so this
+ * guards a programming error, not a run.
+ */
+export function docKind(): DocKind {
+  const kind = requireContext().kind;
+  if (kind === null) {
+    throw new Error(
+      'The document kind is not set yet, so this phase ran before the request was classified. ' +
+        'Call set_document_kind first.',
+    );
+  }
+  return kind;
 }
 
 /**

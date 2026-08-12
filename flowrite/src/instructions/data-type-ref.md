@@ -39,7 +39,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `[error]` before continuing. Mandatory before you call the page done.
 7. **Integrate.** Call `integrate_data_type_reference` with the page path. It wires
    the page under the **Reference** category (not Guides).
-8. **Review.** Call `review_data_type_ref` with the page path. It evaluates the page against
+8. **Review.** Call `review_page` with the page path. It evaluates the page against
    the data-type-ref-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Use `check_method_coverage` yourself to confirm every public member
    is documented. Review rounds are budgeted — the tool's description says how many the run allows,

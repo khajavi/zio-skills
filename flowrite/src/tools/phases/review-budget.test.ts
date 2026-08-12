@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { __resetReviewRoundsForTests, consumeReviewRound } from './review-page.ts';
-import { maxReviewRounds } from '../../runtime/run-context.ts';
+import { docKind, maxReviewRounds, setRunContext } from '../../runtime/run-context.ts';
 
 /** Run `fn` with MAX_REVIEW_ROUNDS set to `value`, restoring the environment afterwards. */
 function withBudget(value: string | undefined, fn: () => void): void {
@@ -64,6 +64,19 @@ test('the budget is shared across every review tool, not per tool', () => {
     consumeReviewRound();
     assert.throws(() => consumeReviewRound(), /budget for this run is spent/);
   });
+});
+
+// review_page is the only consumer of docKind(), so its guard is pinned here rather than in a
+// run-context test file of its own.
+test('docKind() refuses to guess before the request is classified', () => {
+  // One review tool serves all three kinds by reading the kind from the run context. If that read
+  // defaulted instead of throwing, a data type page would be reviewed against the tutorial checklist
+  // and pass — a wrong checklist is worse than a stopped run.
+  setRunContext({ projectPath: '/tmp/x', request: 'Write docs', kind: null, skipPhases: [] });
+  assert.throws(() => docKind(), /not set yet|classified/);
+
+  setRunContext({ projectPath: '/tmp/x', request: 'Write docs', kind: 'module', skipPhases: [] });
+  assert.equal(docKind(), 'module');
 });
 
 test('a junk MAX_REVIEW_ROUNDS falls back to one rather than to unlimited', () => {

@@ -14,7 +14,7 @@ import * as v from 'valibot';
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
 import { guardPhase, guardRootOnly } from './phase-guard.ts';
-import { getRepoPath, setRunContext } from './run-context.ts';
+import { type DocKind, getRepoPath, setRunContext } from './run-context.ts';
 import { createReportRunResultTool } from './self-report.ts';
 import { useUsageReport } from './usage-report.ts';
 
@@ -114,7 +114,7 @@ export type RunFacts = v.InferOutput<v.ObjectSchema<typeof docsWriterFields, und
  * would detach and re-attach the environment and make the runtime re-announce the whole workspace.
  * A render with no `useModel` at all cannot start.
  */
-export function useRunBasics(schema: v.GenericSchema, request: string): RunFacts {
+export function useRunBasics(schema: v.GenericSchema, request: string, kind: DocKind | null): RunFacts {
   const facts = v.parse(schema, useInitialData()) as RunFacts;
 
   // The checkout the writer reads and edits. local() binds it to this host with no isolation, so
@@ -127,7 +127,7 @@ export function useRunBasics(schema: v.GenericSchema, request: string): RunFacts
   // useInitialData() (it returns undefined in a subagent render). Idempotent, so repeating it on
   // every render is harmless. The caller owns the `request` state — declaring the same
   // usePersistentState name twice in one render throws, so it is passed in rather than re-read.
-  setRunContext({ projectPath, request, skipPhases: facts.skipPhases ?? [] });
+  setRunContext({ projectPath, request, kind, skipPhases: facts.skipPhases ?? [] });
 
   // Owns useModel, so nothing here may call it again — it throws on a second call in one render.
   useDocsAuthorBase();

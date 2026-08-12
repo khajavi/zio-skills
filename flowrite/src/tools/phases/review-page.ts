@@ -1,7 +1,7 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
-import { authorHint, maxReviewRounds } from '../../runtime/run-context.ts';
+import { type DocKind, authorHint, docKind, maxReviewRounds } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
 // (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:
@@ -116,128 +116,87 @@ export function consumeReviewRound(): void {
   roundsUsed++;
 }
 
-async function reviewPage(opts: {
-  harness: FlueHarness;
-  log: FlueLogger;
-  path: string;
-  checklistDoc: string;
-  /** Noun for the delegation prompt, e.g. 'data type reference page'. */
-  promptNoun: string;
-  /** Fenced header label, e.g. 'REFERENCE PAGE'. */
-  headerLabel: string;
-}): Promise<v.InferOutput<typeof reviewSchema>> {
-  if (isPhaseSkipped('review')) {
-    return { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] };
-  }
-
-  // Before the file read and the delegation: a refused round must cost nothing. A skipped phase does
-  // not spend budget, since it never reviewed anything.
-  consumeReviewRound();
-
-  const content = await opts.harness.sandbox.readFile(opts.path);
-  const data = await delegate({
-    harness: opts.harness,
-    log: opts.log,
-    label: 'reviewer',
-    role: 'reviewer',
-    result: reviewSchema,
-    prompt: [
-      `Evaluate the ${opts.promptNoun} below against every item in this checklist:`,
-      ``,
-      opts.checklistDoc,
-      ``,
-      `Also check it against every one of these writing style rules, reporting each violation as a`,
-      `failing item named "writing-style rule <N>" with the line and a specific, actionable issue:`,
-      ``,
-      rulesMarkdown,
-      // Before the content delimiter, so the hint reads as reviewer guidance rather than as part of
-      // the page under review.
-      authorHint(),
-      ``,
-      `--- ${opts.headerLabel} (${opts.path}) ---`,
-      content,
-    ].join('\n'),
-  });
-
-  return data;
-}
-
-/** Review a data type reference page against the data-type-ref checklist and the style rules. */
-export const reviewDataTypeRef = defineTool({
-  name: 'review_data_type_ref',
-  description:
-    'Review a data type reference page against the data-type-ref-checklist and the writing style ' +
-    'rules; report per-item pass/fail. Fix the failures yourself. ' +
-    reviewBudgetNote(),
-  harness: true,
-  input: v.object({
-    path: v.pipe(v.string(), v.description('Path to the reference markdown, e.g. docs/reference/chunk.md')),
-  }),
-  output: reviewSchema,
-  async run({ harness, data, log }) {
-    return {
-      output: await reviewPage({
-        harness,
-        log,
-        path: data.path,
-        checklistDoc: dataTypeChecklistDoc,
-        promptNoun: 'data type reference page',
-        headerLabel: 'REFERENCE PAGE',
-      }),
-    };
+/** What the review prompt needs that differs per kind: the checklist, and two bits of wording. */
+const KIND_REVIEW: Record<DocKind, { checklistDoc: string; noun: string; label: string }> = {
+  'data-type': {
+    checklistDoc: dataTypeChecklistDoc,
+    noun: 'data type reference page',
+    label: 'REFERENCE PAGE',
   },
-});
+  module: {
+    checklistDoc: moduleChecklistDoc,
+    noun: 'module reference page',
+    label: 'MODULE REFERENCE',
+  },
+  tutorial: {
+    checklistDoc: tutorialChecklistDoc,
+    noun: 'tutorial',
+    label: 'TUTORIAL',
+  },
+};
 
-/** Review a module reference page against the module-ref checklist and the style rules. */
-export const reviewModuleRef = defineTool({
-  name: 'review_module_ref',
+/**
+ * Review the page at `path` against its kind's checklist and the writing style rules.
+ *
+ * ONE tool for all three kinds, unlike the research, design and write phases. Those keep a tool per
+ * kind because each carries a different result schema that the next phase embeds verbatim; review
+ * has neither — every kind takes `{ path }` and returns `reviewSchema`. All that differed was which
+ * checklist string got pasted into the prompt, which is data, and the kind now arrives through the
+ * run context rather than as a parameter the model could get wrong.
+ */
+export const reviewPage = defineTool({
+  name: 'review_page',
   description:
-    'Review a module reference against the module-ref-checklist and the writing style rules; report ' +
-    'per-item pass/fail. Fix the failures yourself. ' +
+    'Review the finished page against its document kind\'s checklist and the writing style rules; ' +
+    'report per-item pass/fail. Fix the failures yourself. ' +
     reviewBudgetNote(),
   harness: true,
   input: v.object({
     path: v.pipe(
       v.string(),
-      v.description('The module page to review: the flat page or the hierarchical index'),
+      v.description(
+        'The page to review, repo-relative — e.g. docs/reference/prism.md, docs/guides/scope.md, or a ' +
+          'module reference\'s flat page or hierarchical index.',
+      ),
     ),
   }),
   output: reviewSchema,
   async run({ harness, data, log }) {
-    return {
-      output: await reviewPage({
-        harness,
-        log,
-        path: data.path,
-        checklistDoc: moduleChecklistDoc,
-        promptNoun: 'module reference page',
-        headerLabel: 'MODULE REFERENCE',
-      }),
-    };
-  },
-});
+    if (isPhaseSkipped('review')) {
+      return {
+        output: { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] },
+      };
+    }
 
-/** Review a tutorial against the tutorial checklist and the style rules. */
-export const reviewTutorial = defineTool({
-  name: 'review_tutorial',
-  description:
-    'Evaluate a written tutorial against the tutorial-checklist and the writing style rules; report ' +
-    'per-item pass/fail. Fix the failures yourself. ' +
-    reviewBudgetNote(),
-  harness: true,
-  input: v.object({
-    path: v.pipe(v.string(), v.description('Path to the tutorial markdown, e.g. docs/guides/scope.md')),
-  }),
-  output: reviewSchema,
-  async run({ harness, data, log }) {
+    // Before the file read and the delegation: a refused round must cost nothing. A skipped phase
+    // does not spend budget, since it never reviewed anything.
+    consumeReviewRound();
+
+    const kind = KIND_REVIEW[docKind()];
+    const content = await harness.sandbox.readFile(data.path);
     return {
-      output: await reviewPage({
+      output: await delegate({
         harness,
         log,
-        path: data.path,
-        checklistDoc: tutorialChecklistDoc,
-        promptNoun: 'tutorial',
-        headerLabel: 'TUTORIAL',
+        label: 'reviewer',
+        role: 'reviewer',
+        result: reviewSchema,
+        prompt: [
+          `Evaluate the ${kind.noun} below against every item in this checklist:`,
+          ``,
+          kind.checklistDoc,
+          ``,
+          `Also check it against every one of these writing style rules, reporting each violation as a`,
+          `failing item named "writing-style rule <N>" with the line and a specific, actionable issue:`,
+          ``,
+          rulesMarkdown,
+          // Before the content delimiter, so the hint reads as reviewer guidance rather than as part
+          // of the page under review.
+          authorHint(),
+          ``,
+          `--- ${kind.label} (${data.path}) ---`,
+          content,
+        ].join('\n'),
       }),
     };
   },
