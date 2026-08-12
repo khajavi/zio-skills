@@ -258,7 +258,7 @@ src/
   instructions/  # one identity (.md) per kind of document
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
-  tools/         # gh query, method-coverage, todo tools
+  tools/         # gh query, method-coverage
     phases/      # research / write / verify / integrate steps (+ result schemas)
   runtime/       # composition, model tiers, token/component tracking, caching
 fixtures/
