@@ -1,8 +1,8 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/run-context.ts';
-import { delegate } from '../shared/delegate.ts';
+import { isPhaseSkipped } from '../../shared/skip-phases.ts';
+import { authorHint } from '../../shared/run-context.ts';
+import { delegate } from '../../shared/delegate.ts';
 
 /** Shared output of every doc-integration action. */
 export const integrateOutput = v.object({

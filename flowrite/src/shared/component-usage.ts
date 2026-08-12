@@ -1,21 +1,21 @@
 import { observe, type FlueEvent } from '@flue/runtime';
 import { getRepoPath } from './run-context.ts';
-import { researchTutorialTopic } from '../phases/research.ts';
-import { designTutorialStructure } from '../phases/design-doc-structure.ts';
-import { writeTutorialDraft } from '../phases/write-doc.ts';
-import { writeCompanionExamples } from '../phases/write-companion-examples.ts';
-import { integrateTutorial } from '../phases/integrate.ts';
-import { reviewTutorial } from '../phases/review-page.ts';
-import { researchDataType } from '../phases/research.ts';
-import { designDataTypeStructure } from '../phases/design-doc-structure.ts';
-import { writeDataTypeReference } from '../phases/write-doc.ts';
-import { integrateDataTypeReference } from '../phases/integrate.ts';
-import { reviewDataTypeRef } from '../phases/review-page.ts';
-import { researchModule } from '../phases/research.ts';
-import { designModuleStructure } from '../phases/design-doc-structure.ts';
-import { writeModuleOverview } from '../phases/write-doc.ts';
-import { integrateModuleReference } from '../phases/integrate-module.ts';
-import { reviewModuleRef } from '../phases/review-page.ts';
+import { researchTutorialTopic } from '../tools/phases/research.ts';
+import { designTutorialStructure } from '../tools/phases/design-doc-structure.ts';
+import { writeTutorialDraft } from '../tools/phases/write-doc.ts';
+import { writeCompanionExamples } from '../tools/phases/write-companion-examples.ts';
+import { integrateTutorial } from '../tools/phases/integrate.ts';
+import { reviewTutorial } from '../tools/phases/review-page.ts';
+import { researchDataType } from '../tools/phases/research.ts';
+import { designDataTypeStructure } from '../tools/phases/design-doc-structure.ts';
+import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
+import { integrateDataTypeReference } from '../tools/phases/integrate.ts';
+import { reviewDataTypeRef } from '../tools/phases/review-page.ts';
+import { researchModule } from '../tools/phases/research.ts';
+import { designModuleStructure } from '../tools/phases/design-doc-structure.ts';
+import { writeModuleOverview } from '../tools/phases/write-doc.ts';
+import { integrateModuleReference } from '../tools/phases/integrate-module.ts';
+import { reviewModuleRef } from '../tools/phases/review-page.ts';
 
 /**
  * Every agent's own phase tools — model-callable, but delegating their real work

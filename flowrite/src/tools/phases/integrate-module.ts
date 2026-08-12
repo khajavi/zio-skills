@@ -1,9 +1,9 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { integrateOutput } from './integrate.ts';
-import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/run-context.ts';
-import { delegate } from '../shared/delegate.ts';
+import { isPhaseSkipped } from '../../shared/skip-phases.ts';
+import { authorHint } from '../../shared/run-context.ts';
+import { delegate } from '../../shared/delegate.ts';
 
 /**
  * Wire a finished module reference into the Docusaurus site under the Reference

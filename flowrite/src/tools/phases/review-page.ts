@@ -1,15 +1,15 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/run-context.ts';
-import { delegate } from '../shared/delegate.ts';
+import { isPhaseSkipped } from '../../shared/skip-phases.ts';
+import { authorHint } from '../../shared/run-context.ts';
+import { delegate } from '../../shared/delegate.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
 // (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:
 // the SKILL.md files point at these.
-import rulesMarkdown from '../skills/writing-style/references/rules.md';
-import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md';
-import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md';
-import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md';
+import rulesMarkdown from '../../skills/writing-style/references/rules.md';
+import dataTypeChecklistDoc from '../../skills/data-type-ref-checklist/references/checklist.md';
+import moduleChecklistDoc from '../../skills/module-ref-checklist/references/checklist.md';
+import tutorialChecklistDoc from '../../skills/tutorial-checklist/references/checklist.md';
 
 /**
  * Per-item pass/fail from a checklist review. `passed` is true only when every item passes.

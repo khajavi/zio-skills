@@ -1,9 +1,9 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { authorHint, getRepoPath } from '../shared/run-context.ts';
-import { readResearchCache, writeResearchCache } from '../shared/research-cache.ts';
-import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { delegate } from '../shared/delegate.ts';
+import { authorHint, getRepoPath } from '../../shared/run-context.ts';
+import { readResearchCache, writeResearchCache } from '../../shared/research-cache.ts';
+import { isPhaseSkipped } from '../../shared/skip-phases.ts';
+import { delegate } from '../../shared/delegate.ts';
 
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.

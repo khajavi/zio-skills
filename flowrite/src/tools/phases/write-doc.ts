@@ -2,21 +2,21 @@ import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
 import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } from './research.ts';
 import { dataTypeStructureSchema, moduleStructureSchema, tutorialStructureSchema } from './design-doc-structure.ts';
-import { isPhaseSkipped } from '../shared/skip-phases.ts';
-import { authorHint } from '../shared/run-context.ts';
-import { delegate } from '../shared/delegate.ts';
+import { isPhaseSkipped } from '../../shared/skip-phases.ts';
+import { authorHint } from '../../shared/run-context.ts';
+import { delegate } from '../../shared/delegate.ts';
 // Each kind's structure template, injected into the generic drafter's task (a subagent's skills
 // cannot vary per delegated task). Same single-source-of-truth split as writing-style rules: the
 // SKILL.md files point here.
-import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
-import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
-import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
+import dataTypeStructureDoc from '../../skills/data-type-ref-structure/references/structure.md';
+import moduleStructureDoc from '../../skills/module-ref-structure/references/structure.md';
+import tutorialStructureDoc from '../../skills/tutorial-structure/references/structure.md';
 // TEMPORARY: flue does not package nested skill files, so the drafter cannot read
 // writing-style/references/rules.md at runtime (read_skill_resource 404s) — see
 // https://github.com/withastro/flue/discussions/100. We inject the rules into the drafter prompt at
 // compile time instead. REVERT once flue supports nested skills: drop this import + injection and let
 // the writing-style skill supply the rules.
-import writingStyleRules from '../skills/writing-style/references/rules.md';
+import writingStyleRules from '../../skills/writing-style/references/rules.md';
 
 /**
  * The write phase: draft one page and put it on disk.

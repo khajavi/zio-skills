@@ -57,7 +57,7 @@ The interesting engineering therefore moves out of `.ts` files and into:
 - **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
-- **phase tools** (`src/phases/*.ts`) — a research/write/verify/integrate step, each
+- **phase tools** (`src/tools/phases/*.ts`) — a research/write/verify/integrate step, each
   delegating to a specialized role with a `valibot` result schema,
 - **roles** (`src/subagents/*`) — generic delegates (researcher, drafter, reviewer…)
   reused across every writer.
@@ -249,10 +249,10 @@ diff behavior across iterations of the prompt.
 ```
 src/
   agents/        # one writer (.ts) + one identity (.md) per kind of document
-  phases/        # research / write / verify / integrate steps (+ result schemas)
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
   tools/         # gh query, method-coverage, todo tools
+    phases/      # research / write / verify / integrate steps (+ result schemas)
   shared/        # model tiers, token/component tracking, caching, skip-phases
 fixtures/
   tinyoptics/          # the ZIO optics library used as the test target

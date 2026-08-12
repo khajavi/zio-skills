@@ -1,7 +1,7 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { authorHint } from '../shared/run-context.ts';
-import { delegate } from '../shared/delegate.ts';
+import { authorHint } from '../../shared/run-context.ts';
+import { delegate } from '../../shared/delegate.ts';
 
 export const resolveReviewCommentsOutput = v.object({
   path: v.pipe(v.string(), v.description('Path to the resolved article, relative to the repo root')),
