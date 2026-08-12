@@ -1,5 +1,5 @@
 import { defineSubagent } from '@flue/runtime';
-import { TIERS } from '../shared/models.ts';
+import { TIERS } from '../runtime/models.ts';
 import instructions from './style-checker.md';
 
 /**

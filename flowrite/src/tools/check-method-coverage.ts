@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { getRepoPath } from '../shared/run-context.ts';
+import { getRepoPath } from '../runtime/run-context.ts';
 
 const execFileAsync = promisify(execFile);
 

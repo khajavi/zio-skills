@@ -141,7 +141,7 @@ Implementation is mostly Markdown and schemas:
 - Wire it all into the agent function shown above, and declare what a run needs
   with its `initialData` static.
 
-Model choice is centralized in `src/shared/models.ts` as **tiers**, each
+Model choice is centralized in `src/runtime/models.ts` as **tiers**, each
 env-overridable per run — so the same agent runs on cheap models under test and
 capable ones in production without a code change:
 
@@ -253,7 +253,7 @@ src/
   skills/        # structure templates, checklists, mdoc + writing-style rules
   tools/         # gh query, method-coverage, todo tools
     phases/      # research / write / verify / integrate steps (+ result schemas)
-  shared/        # model tiers, token/component tracking, caching, skip-phases
+  runtime/       # composition, model tiers, token/component tracking, caching
 fixtures/
   tinyoptics/          # the ZIO optics library used as the test target
   tinyoptics-archive/  # archived flue.log per run, for diffing behavior

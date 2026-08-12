@@ -35,6 +35,18 @@ import { styleFixer } from '../subagents/style-fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
+/**
+ * How a docs writer is assembled: the hooks the agent module calls, and the creation data it accepts.
+ *
+ * This is not an agent — it declares no `'use agent'` and has no durable identity of its own. It is
+ * the composition the one real agent (`src/agent.ts`) calls into, split out because the setup divides
+ * cleanly in two: `useRunBasics` runs on EVERY render including the classification turn, while
+ * `useDocsWriter` runs only once the kind is known.
+ *
+ * It was called docs-writer.ts, which is also the agent's filename — two editor tabs with the same
+ * label, one of them the agent and one of them this.
+ */
+
 const ROLES = [
   researcher,
   designer,
@@ -192,6 +204,16 @@ const SHARED_DIRECTIVE =
   `against the review any more, so reporting it accurately is on you.`;
 
 /**
+ * Declare the nine role delegates. Called by useRunBasics, so every render has the full roster —
+ * including the classification gate, whose render is the baseline snapshot phase tools inherit.
+ *
+ * Order matters and is not obvious: see the call site for the measurements.
+ */
+export function useRoles(): void {
+  for (const role of ROLES) useSubagent(role);
+}
+
+/**
  * Shared composition for the writing branch of a docs writer: the role delegates, the guarded
  * phase tools, the kind's skills, the gh tool, the run reporter and the usage summary. Returns the
  * instructions for the caller to return as its own.
@@ -203,16 +225,6 @@ const SHARED_DIRECTIVE =
  * an agent's durable identity is its own exported function name — the agent must declare that
  * function itself rather than receive one from a factory.
  */
-/**
- * Declare the nine role delegates. Called by useRunBasics, so every render has the full roster —
- * including the classification gate, whose render is the baseline snapshot phase tools inherit.
- *
- * Order matters and is not obvious: see the call site for the measurements.
- */
-export function useRoles(): void {
-  for (const role of ROLES) useSubagent(role);
-}
-
 export function useDocsWriter(
   opts: {
     /** Log prefix for the end-of-run usage summary, e.g. 'write-data-type-ref'. */

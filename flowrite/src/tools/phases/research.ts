@@ -1,9 +1,9 @@
 import { type FlueHarness, type FlueLogger, defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { authorHint, getRepoPath } from '../../shared/run-context.ts';
-import { readResearchCache, writeResearchCache } from '../../shared/research-cache.ts';
-import { isPhaseSkipped } from '../../shared/skip-phases.ts';
-import { delegate } from '../../shared/delegate.ts';
+import { authorHint, getRepoPath } from '../../runtime/run-context.ts';
+import { readResearchCache, writeResearchCache } from '../../runtime/research-cache.ts';
+import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
+import { delegate } from '../../runtime/delegate.ts';
 
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.
@@ -277,7 +277,7 @@ const SKIPPED = '(skipped — phase already done)';
  * Research one subject by delegating to the generic `researcher` subagent.
  *
  * The delegation is not incidental — see design-doc-structure.ts for why a phase must not do its own
- * work in the calling agent's conversation, and ../shared/delegate.ts for how the role is selected now
+ * work in the calling agent's conversation, and ../runtime/delegate.ts for how the role is selected now
  * that `harness.session()` is gone. The per-kind focus and result schema are supplied at the call site.
  *
  * Three behaviours live here rather than three times over:

@@ -1,7 +1,7 @@
 import { defineSubagent, useSkill } from '@flue/runtime';
 import writingStyle from '../skills/writing-style/SKILL.md';
 import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
-import { TIERS } from '../shared/models.ts';
+import { TIERS } from '../runtime/models.ts';
 import instructions from './drafter.md';
 
 /**

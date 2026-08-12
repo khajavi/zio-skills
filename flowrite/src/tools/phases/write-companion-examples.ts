@@ -1,8 +1,8 @@
 import { defineTool } from '@flue/runtime';
 import * as v from 'valibot';
-import { isPhaseSkipped } from '../../shared/skip-phases.ts';
-import { authorHint } from '../../shared/run-context.ts';
-import { delegate } from '../../shared/delegate.ts';
+import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
+import { authorHint } from '../../runtime/run-context.ts';
+import { delegate } from '../../runtime/delegate.ts';
 
 export const writeCompanionExamplesOutput = v.object({
   skipped: v.boolean(),

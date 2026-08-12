@@ -14,8 +14,8 @@ import {
   docsWriterFields,
   useDocsWriter,
   useRunBasics,
-} from '../shared/docs-writer.ts';
-import { installVerboseObserver } from '../shared/verbose-observer.ts';
+} from '../runtime/composition.ts';
+import { installVerboseObserver } from '../runtime/verbose-observer.ts';
 
 // skills — mdoc-conventions is shared by all three; writing-style comes from the shared baseline.
 import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
