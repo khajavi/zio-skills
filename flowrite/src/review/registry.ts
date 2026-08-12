@@ -1,5 +1,6 @@
 import type { Check } from './check.ts';
 import { CODE_CHECKS } from './code/index.ts';
+import { referencesCheck } from './code/references.ts';
 import { coverageCheck } from './coverage.ts';
 import { checklistCheck, llmStyleCheck } from './llm.ts';
 
@@ -33,6 +34,10 @@ export interface KindReview {
 export function buildChecks(kind: KindReview): Check[] {
   return [
     ...CODE_CHECKS,
+    // Not in CODE_CHECKS because that list drives `applyFixes` and holds only style rules — this one
+    // checks the world outside the page and can never repair itself. Still `kind: 'code'`, so it costs
+    // nothing and re-runs on every narrowed pass.
+    referencesCheck,
     ...kind.coverageTypes.map((typeName) => coverageCheck(typeName, kind.pagePathFor(typeName))),
     llmStyleCheck,
     checklistCheck(kind),
