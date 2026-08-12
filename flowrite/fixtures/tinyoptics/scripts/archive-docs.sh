@@ -166,8 +166,12 @@ git clean -fdq -- .
 # for that page. Deliberately not `git clean -fdx`: target/ and .flowrite/cache hold sbt and research
 # caches worth keeping, and wiping them slows every following run for no measurement benefit.
 rm -f mdoc-*.log
-# Dead state: review no longer edits pages, so there is nothing to diff a pre-review snapshot against.
-rm -rf .flowrite/pre-review
+# Everything under .flowrite/ except the caches is scratch a run left behind — including files the MODEL
+# invented (an old module run left REVIEW_SUMMARY.txt, optics-module-review.md and a copied checklist
+# that survived every reset for two days). A stale review summary sitting in the workspace is something
+# the next agent can read as its own prior work. `cache/` is kept on purpose: research results are
+# expensive and reusable across runs.
+find .flowrite -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} + 2>/dev/null || true
 base_count="$(copy_tree "$dest/tinyoptics-base")"
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"
