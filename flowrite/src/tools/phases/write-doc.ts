@@ -185,7 +185,24 @@ export const writeDataTypeReference = defineTool({
   description: 'Write the data type reference markdown to docs/reference/<type>.md and return its path and content.',
   harness: true,
   input: v.object({
-    plan: dataTypePlanSchema,
+    /**
+     * Optional, and that is a bug fix rather than a convenience.
+     *
+     * A data-type run mounts `design_data_type_plan`, so a plan always arrives. A MODULE run does
+     * not mount it — `KINDS.module.tools` has never included it — yet mounts this tool for its
+     * per-type subpages. While `plan` was required with no way to produce one, the model satisfied
+     * the schema by inventing a plan from whatever was in its context, and once in fifteen calls it
+     * reached for the wrong type's: `write-module-ref-turn3` handed the drafter `Lens`'s research
+     * with `Iso`'s plan, naming `to`, `from`, `reverse` and `asLens` — four methods Lens does not
+     * have. Nothing caught it, because `dataTypePlanSchema` validates the shape and never that the
+     * plan describes the same type as the research beside it.
+     *
+     * Optional turns a silently wrong value into an honestly absent one: the subpage drafter now
+     * works from the research and `moduleContext`, which is all the fabricated plan ever amounted
+     * to. Mounting a real design phase per subpage is the other fix and costs a design delegation
+     * per documented type; see PHASE-HANDOFF-PLAN.md §6.
+     */
+    plan: v.optional(dataTypePlanSchema),
     researchAnswers: dataTypeResearchSchema,
     // Optional, for module-ref hierarchical subpages. When absent, this tool behaves
     // byte-identically to a standalone data-type-ref run.
@@ -230,10 +247,22 @@ export const writeDataTypeReference = defineTool({
           ``,
           ...styleRules(),
           ``,
-          `Plan to follow exactly — the optional sections to include, the`,
-          `construction order, and the Core Operations category grouping are already`,
-          `decided; write the page to match this plan:`,
-          JSON.stringify(data.plan),
+          // A plan when the design phase produced one; otherwise say so plainly. The absent branch
+          // is what a module subpage takes — do not invite the drafter to reconstruct a plan, or it
+          // improvises the structure the template already specifies.
+          ...(data.plan
+            ? [
+                `Plan to follow exactly — the optional sections to include, the`,
+                `construction order, and the Core Operations category grouping are already`,
+                `decided; write the page to match this plan:`,
+                JSON.stringify(data.plan),
+              ]
+            : [
+                `No plan accompanies this page: decide the section applicability, the construction`,
+                `order and the Core Operations grouping yourself, from the template above and the`,
+                `research below. Include a section when the research has real content for it, and`,
+                `omit it otherwise.`,
+              ]),
           ``,
           `Research answers (ground every fact in this — real signatures, imports, and examples;`,
           `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
