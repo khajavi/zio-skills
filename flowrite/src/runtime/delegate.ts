@@ -1,5 +1,6 @@
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import type * as v from 'valibot';
+import { note } from './log.ts';
 
 // "conversation stream contract": a corrupted subagent conversation record
 // mid-task; a fresh attempt starts clean.
@@ -24,7 +25,7 @@ export async function withTransientRetry<T>(log: FlueLogger, label: string, op: 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (attempt >= 3 || !TRANSIENT.test(message)) throw error;
-      log.info(`${label} failed with transient error (attempt ${attempt}/3), retrying: ${message}`);
+      note(log, `${label} failed with transient error (attempt ${attempt}/3), retrying: ${message}`);
       await new Promise((resolve) => setTimeout(resolve, attempt * 5_000));
     }
   }

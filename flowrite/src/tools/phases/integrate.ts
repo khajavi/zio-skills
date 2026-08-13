@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { note } from '../../runtime/log.ts';
 
 /**
  * The integrate phase: wire a finished page into the Docusaurus site — sidebars.js, docs/index.md,
@@ -52,11 +53,11 @@ async function integratePage(opts: {
   prompt: string[];
 }): Promise<v.InferOutput<typeof integrateOutput>> {
   if (isPhaseSkipped('integrate')) {
-    opts.log.info('Skipping integration (skipPhases)');
+    note(opts.log, 'Skipping integration (skipPhases)');
     return { skipped: true, summary: 'Skipped by request.' };
   }
 
-  opts.log.info(`Integrating ${opts.integrating} into docs site: ${opts.path}`);
+  note(opts.log, `Integrating ${opts.integrating} into docs site: ${opts.path}`);
   return await delegate({
     harness: opts.harness,
     log: opts.log,

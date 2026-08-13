@@ -21,6 +21,7 @@ import tutorialTemplateDoc from '../../skills/tutorial-structure/references/stru
 // delegate's accumulated context. The file remains the single source of truth: it is imported here,
 // never copied.
 import writingStyleRules from '../../skills/writing-style/references/rules.md';
+import { note } from '../../runtime/log.ts';
 
 /**
  * The write phase: draft one page and put it on disk.
@@ -133,11 +134,11 @@ async function writeDoc(opts: {
   // Resume support: the page already exists on disk — return it as-is so later phases get the real
   // path/content. Fails loudly if the id does not match an existing file.
   if (isPhaseSkipped('write')) {
-    opts.log.info(`Skipping draft (skipPhases) — using existing ${opts.path}`);
+    note(opts.log, `Skipping draft (skipPhases) — using existing ${opts.path}`);
     return { path: opts.path, content: await opts.harness.sandbox.readFile(opts.path) };
   }
 
-  opts.log.info(`Writing ${opts.writing}: ${opts.path}`);
+  note(opts.log, `Writing ${opts.writing}: ${opts.path}`);
   const draft = await delegate({
     harness: opts.harness,
     log: opts.log,
@@ -279,7 +280,8 @@ export const writeDataTypeReference = defineTool({
       // Logged rather than silent for two reasons: a discarded input that leaves no trace cannot be
       // debugged, and the count measures whether the instruction ever starts landing. A run with no
       // discard lines is one where the model finally stopped composing plans it cannot design.
-      log.info(
+      note(
+        log,
         `Discarding the plan sent for ${data.researchAnswers.typeName}: a module subpage has no ` +
           `design phase, so this plan was composed rather than designed.`,
       );

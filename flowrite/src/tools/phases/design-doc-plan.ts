@@ -10,6 +10,7 @@ import { delegate } from '../../runtime/delegate.ts';
 import dataTypeTemplateDoc from '../../skills/data-type-ref-structure/references/structure.md';
 import moduleTemplateDoc from '../../skills/module-ref-structure/references/structure.md';
 import tutorialTemplateDoc from '../../skills/tutorial-structure/references/structure.md';
+import { note } from '../../runtime/log.ts';
 
 /**
  * The design phase: turn one kind's research findings into a validated plan.
@@ -195,11 +196,11 @@ async function designPlan<S extends v.GenericSchema>(opts: {
 }): Promise<v.InferOutput<S>> {
   // Resume support — see research.ts.
   if (isPhaseSkipped('design')) {
-    opts.log.info('Skipping design (skipPhases)');
+    note(opts.log, 'Skipping design (skipPhases)');
     return opts.skipDefault;
   }
 
-  opts.log.info(`Designing ${opts.designing}`);
+  note(opts.log, `Designing ${opts.designing}`);
   return await delegate({
     harness: opts.harness,
     log: opts.log,

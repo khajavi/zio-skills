@@ -4,6 +4,7 @@ import { authorHint, getRepoPath } from '../../runtime/run-context.ts';
 import { readResearchCache, writeResearchCache } from '../../runtime/research-cache.ts';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { note } from '../../runtime/log.ts';
 
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.
@@ -305,7 +306,7 @@ async function researchSubject<S extends v.GenericSchema>(opts: {
   prompt: string[];
 }): Promise<v.InferOutput<S>> {
   if (isPhaseSkipped('research')) {
-    opts.log.info('Skipping research (skipPhases)');
+    note(opts.log, 'Skipping research (skipPhases)');
     return opts.skipDefault;
   }
 
@@ -314,12 +315,12 @@ async function researchSubject<S extends v.GenericSchema>(opts: {
   if (cached) {
     const parsed = v.safeParse(opts.result, cached);
     if (parsed.success) {
-      opts.log.info(`Research cache hit for "${opts.cacheTopic}"`);
+      note(opts.log, `Research cache hit for "${opts.cacheTopic}"`);
       return parsed.output;
     }
   }
 
-  opts.log.info(`Researching ${opts.researching}`);
+  note(opts.log, `Researching ${opts.researching}`);
   const research = await delegate({
     harness: opts.harness,
     log: opts.log,
