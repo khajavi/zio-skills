@@ -191,11 +191,6 @@ async function designPlan<S extends v.GenericSchema>(opts: {
   /** Template name as the prompt cites it, e.g. 'data-type-ref-structure'. */
   templateName: string;
   templateDoc: string;
-  /**
-   * Called with whatever this phase returns, fresh or the skip default. Only the module design sets
-   * it, to record the plan the module write phase must draft from; see phase-ledger.ts.
-   */
-  onResult?: (plan: v.InferOutput<S>) => void;
   /** Per-kind planning instructions, between the template and the research payload. */
   guidance: string[];
   researchAnswers: unknown;
@@ -203,7 +198,6 @@ async function designPlan<S extends v.GenericSchema>(opts: {
   // Resume support — see research.ts.
   if (isPhaseSkipped('design')) {
     note(opts.log, 'Skipping design (skipPhases)');
-    opts.onResult?.(opts.skipDefault);
     return opts.skipDefault;
   }
 
@@ -304,60 +298,63 @@ export const designModulePlan = defineTool({
   }),
   output: modulePlanSchema,
   async run({ harness, data, log }) {
-    return {
-      output: await designPlan({
-        harness,
-        log,
-        label: 'designer (module)',
-        result: modulePlanSchema,
-        skipDefault: {
-          shape: data.shapeOverride ?? 'single-core',
-          layout: data.layoutOverride ?? 'flat',
-          layoutRationale: '(skipped — phase already done)',
-          optionalSections: {
-            motivation: false,
-            installation: false,
-            overview: false,
-            howTheyWorkTogether: false,
-            commonPatterns: false,
-            integration: false,
-            runningExamples: false,
-          },
-          typeGroups: [],
-          comparisons: [],
-          notes: '(skipped — phase already done)',
+    // Recorded here rather than through a callback inside designPlan: every path out of that
+    // function converges on its return value, so there is no branch left to forget. An earlier
+    // version passed an `onResult` hook and wired it into the skip branch ONLY — the success path
+    // recorded nothing, so write_module_overview refused a plan that had in fact been designed.
+    // tinytally's first run caught it: design finished at log line 420, the write at 430 was
+    // refused twice, and the model then wrote the page by hand.
+    const plan = await designPlan({
+      harness,
+      log,
+      label: 'designer (module)',
+      result: modulePlanSchema,
+      skipDefault: {
+        shape: data.shapeOverride ?? 'single-core',
+        layout: data.layoutOverride ?? 'flat',
+        layoutRationale: '(skipped — phase already done)',
+        optionalSections: {
+          motivation: false,
+          installation: false,
+          overview: false,
+          howTheyWorkTogether: false,
+          commonPatterns: false,
+          integration: false,
+          runningExamples: false,
         },
-        // Recorded so write_module_overview can draft from the designed plan rather than from
-        // whatever the model relays; see phase-ledger.ts for what turn7 relayed instead.
-        onResult: (plan) => recordModulePlan(data.moduleName, plan),
-        designing: `module-reference plan for: ${data.moduleName}`,
-        task: `Design the plan for a "${data.moduleName}" module reference page.`,
-        templateName: 'module-ref-structure',
-        templateDoc: moduleTemplateDoc,
-        guidance: [
-          data.shapeOverride
-            ? `The caller REQUIRES the "${data.shapeOverride}" shape — set shape to it and derive layout ` +
-              `(single-core/dsl → flat, core-family/multi-domain → hierarchical).`
-            : data.layoutOverride
-              ? `The caller REQUIRES the "${data.layoutOverride}" layout — set layout to it, set the shape that ` +
-                `matches, and explain briefly.`
-              : `CLASSIFY THE MODULE'S SHAPE FIRST (see "Classify the module first"): run the discriminator + ` +
-                `operational test, set "shape", then derive layout (single-core/dsl → flat, core-family/` +
-                `multi-domain → hierarchical). If the shape is genuinely uncertain after the test, do NOT guess ` +
-                `silently — set your best-effort shape and FLAG the ambiguity explicitly in "notes" so the agent can halt and ask.`,
-          ``,
-          `Decide which module-level sections apply. Organize EVERY type into named groups in reading order.`,
-          `For a core-type shape each group is a domain concern the types share (what they do together), e.g.`,
-          `for an HTTP module "Routing", "Http Messages", "Endpoints". For a "dsl" shape group by TASK/`,
-          `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
-          `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
-          `minimal page); this is per-type depth, independent of its group.`,
-          `Assign an entry-point/singleton object (e.g. trace/log/metric) to the sub-domain it serves; it`,
-          `anchors that sub-domain's index.`,
-        ],
-        researchAnswers: data.researchAnswers,
-      }),
-    };
+        typeGroups: [],
+        comparisons: [],
+        notes: '(skipped — phase already done)',
+      },
+      designing: `module-reference plan for: ${data.moduleName}`,
+      task: `Design the plan for a "${data.moduleName}" module reference page.`,
+      templateName: 'module-ref-structure',
+      templateDoc: moduleTemplateDoc,
+      guidance: [
+        data.shapeOverride
+          ? `The caller REQUIRES the "${data.shapeOverride}" shape — set shape to it and derive layout ` +
+            `(single-core/dsl → flat, core-family/multi-domain → hierarchical).`
+          : data.layoutOverride
+            ? `The caller REQUIRES the "${data.layoutOverride}" layout — set layout to it, set the shape that ` +
+              `matches, and explain briefly.`
+            : `CLASSIFY THE MODULE'S SHAPE FIRST (see "Classify the module first"): run the discriminator + ` +
+              `operational test, set "shape", then derive layout (single-core/dsl → flat, core-family/` +
+              `multi-domain → hierarchical). If the shape is genuinely uncertain after the test, do NOT guess ` +
+              `silently — set your best-effort shape and FLAG the ambiguity explicitly in "notes" so the agent can halt and ask.`,
+        ``,
+        `Decide which module-level sections apply. Organize EVERY type into named groups in reading order.`,
+        `For a core-type shape each group is a domain concern the types share (what they do together), e.g.`,
+        `for an HTTP module "Routing", "Http Messages", "Endpoints". For a "dsl" shape group by TASK/`,
+        `composition concern (recipes) instead — the types still appear (they inform the page) but get NO`,
+        `per-type pages. Separately, tag each type "core" (documented comprehensively) or "supporting" (a`,
+        `minimal page); this is per-type depth, independent of its group.`,
+        `Assign an entry-point/singleton object (e.g. trace/log/metric) to the sub-domain it serves; it`,
+        `anchors that sub-domain's index.`,
+      ],
+      researchAnswers: data.researchAnswers,
+    });
+    recordModulePlan(data.moduleName, plan);
+    return { output: plan };
   },
 });
 
