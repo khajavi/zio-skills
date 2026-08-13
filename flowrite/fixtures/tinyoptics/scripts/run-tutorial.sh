@@ -34,7 +34,7 @@ request="Please write a tutorial on $topic."
 # Flue 2 invocation — see run-data-type-ref.sh for why each flag and env var is here.
 (cd "$flowrite_root" && exec env \
   NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
-  FLUE_VERBOSE_TOOLS=1 \
+  FLUE_VERBOSE_TOOLS="${FLUE_VERBOSE_TOOLS:-1}" \
   ./node_modules/.bin/flue run src/agent.ts \
   --env .env.testing -m "$request" --data "$input") \
   > "$log" 2>&1 &

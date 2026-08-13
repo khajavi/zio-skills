@@ -29,7 +29,6 @@ import { drafter } from '../subagents/drafter.ts';
 import { reviewer } from '../subagents/reviewer.ts';
 import { examplesBuilder } from '../subagents/examples-builder.ts';
 import { docsIntegrator } from '../subagents/docs-integrator.ts';
-import { reviewResolver } from '../subagents/review-resolver.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
@@ -45,15 +44,7 @@ import { createGhQueryTool } from '../tools/repo-tools.ts';
  * label, one of them the agent and one of them this.
  */
 
-const ROLES = [
-  researcher,
-  designer,
-  drafter,
-  reviewer,
-  examplesBuilder,
-  docsIntegrator,
-  reviewResolver,
-];
+const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator];
 
 const skipPhase = v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review']);
 
@@ -142,9 +133,8 @@ export function useRunBasics(schema: v.GenericSchema, request: string, kind: Doc
   // MUST come after useSandbox. Declared before it, the roles never reach a phase tool's harness
   // conversation: every phase gave up with "No subagents are currently available. The system context
   // explicitly states \"Available Agents: None\"", while the root agent's own roster looked fine (a
-  // probe confirmed all nine declared on every render — the roster was nine roles then, seven now).
-  // One delegation happened in a whole run,
-  // against 24 in the equivalent pre-merge run.
+  // probe confirmed every role declared on every render — the roster was nine roles then, six now).
+  // One delegation happened in a whole run, against 24 in the equivalent pre-merge run.
   //
   // Isolated by measurement, one variable at a time, because two candidates were confounded at
   // first — position relative to useSandbox, and position relative to the useTool calls:
@@ -201,7 +191,7 @@ const SHARED_DIRECTIVE =
   `against the review any more, so reporting it accurately is on you.`;
 
 /**
- * Declare the seven role delegates. Called by useRunBasics, so every render has the full roster —
+ * Declare every role delegate. Called by useRunBasics, so every render has the full roster —
  * including the classification gate, whose render is the baseline snapshot phase tools inherit.
  *
  * Order matters and is not obvious: see the call site for the measurements.

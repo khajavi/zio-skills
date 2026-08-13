@@ -4,6 +4,8 @@ import { authorHint, getRepoPath } from '../../runtime/run-context.ts';
 import { readResearchCache, writeResearchCache } from '../../runtime/research-cache.ts';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { note } from '../../runtime/log.ts';
+import { recordResearch } from './research-ledger.ts';
 
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.
@@ -301,11 +303,18 @@ async function researchSubject<S extends v.GenericSchema>(opts: {
   cacheTopic: string;
   /** What the phase announces it is researching, e.g. 'data type: Prism'. */
   researching: string;
+  /**
+   * Called with whatever this phase returns, however it was obtained — fresh, from cache, or the skip
+   * default. Only the data-type research sets it, to record the payload the write phase must draft
+   * from; see research-ledger.ts.
+   */
+  onResult?: (research: v.InferOutput<S>) => void;
   /** The task lines; `authorHint()` is appended. */
   prompt: string[];
 }): Promise<v.InferOutput<S>> {
   if (isPhaseSkipped('research')) {
-    opts.log.info('Skipping research (skipPhases)');
+    note(opts.log, 'Skipping research (skipPhases)');
+    opts.onResult?.(opts.skipDefault);
     return opts.skipDefault;
   }
 
@@ -314,12 +323,13 @@ async function researchSubject<S extends v.GenericSchema>(opts: {
   if (cached) {
     const parsed = v.safeParse(opts.result, cached);
     if (parsed.success) {
-      opts.log.info(`Research cache hit for "${opts.cacheTopic}"`);
+      note(opts.log, `Research cache hit for "${opts.cacheTopic}"`);
+      opts.onResult?.(parsed.output);
       return parsed.output;
     }
   }
 
-  opts.log.info(`Researching ${opts.researching}`);
+  note(opts.log, `Researching ${opts.researching}`);
   const research = await delegate({
     harness: opts.harness,
     log: opts.log,
@@ -329,6 +339,7 @@ async function researchSubject<S extends v.GenericSchema>(opts: {
     prompt: opts.prompt.join('\n') + authorHint(),
   });
   writeResearchCache(repoPath, opts.cacheTopic, research);
+  opts.onResult?.(research);
   return research;
 }
 
@@ -370,6 +381,10 @@ export const researchDataType = defineTool({
           scalaVersionNotes: null,
           groundingDetail: SKIPPED,
         },
+        // Recorded so write_data_type_reference can draft from what research returned instead of from
+        // what the model relays. A cache hit and a skipped phase both count as success: the first is
+        // real research from an earlier run, the second an explicit human decision to resume.
+        onResult: recordResearch,
         cacheTopic: `data-type-ref::${data.typeName}`,
         researching: `data type: ${data.typeName}`,
         prompt: [

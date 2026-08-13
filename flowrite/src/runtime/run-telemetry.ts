@@ -58,6 +58,14 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  /**
+   * Repeat phase calls the memo answered from an earlier identical call, per phase.
+   *
+   * Needed because `phaseCalls` counts `tool_start` and so includes them: the model really did call
+   * the tool, and the guard really did answer without doing the work. Only the memoizable phases can
+   * appear here — see phase-guard.ts's MEMOIZABLE.
+   */
+  memoHits: Readonly<Record<string, number>>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
@@ -85,6 +93,53 @@ const TOOL_ERROR_THRESHOLD = 3;
  */
 const reviewRepeatLimit = () => maxReviewRounds();
 
+/**
+ * The phases that run once per documented type, so a count above one proves nothing.
+ *
+ * A hierarchical module reference researches and drafts a subpage per core type. `write-module-ref-turn5`
+ * did four of each — entirely correct work — and tripped `phase-repeat` twice for it. A flag that fires
+ * on a clean run teaches the reader to skim past all the flags, so the count check is wrong here and
+ * `perTypePairing` watches these two instead.
+ */
+const PER_TYPE_PHASES: readonly string[] = ['research_data_type', 'write_data_type_reference'];
+
+/**
+ * Every drafted subpage should have exactly one successful research call behind it.
+ *
+ * This is the signal the count check was standing in front of. `phaseCalls` counts `tool_start`, so it
+ * includes attempts that failed; subtracting `phaseFailures` leaves the research that actually returned
+ * an API surface. On turn5 that arithmetic is 4 − 1 = 3 successful research calls against 4 drafted
+ * pages, so one subpage was written with no research of its own — invisible under a rule that only
+ * asked whether a phase ran more than once.
+ *
+ * Both directions are worth a flag, and they mean opposite things: fewer research results than pages is
+ * a grounding problem, more is a delegation paid for and thrown away.
+ */
+function perTypePairing(activity: ActivityReport, memoHits: Readonly<Record<string, number>>): RunFlag[] {
+  const attempted = activity.phaseCalls['research_data_type'] ?? 0;
+  const failed = activity.phaseFailures['research_data_type'] ?? 0;
+  // Repeats collapsed by the phase memo did no work, so they are not research. `phaseCalls` counts
+  // `tool_start` and cannot see the difference — the model did call the tool, the guard answered from
+  // the first call's result. Without this term turn9's shape reads as 8 research calls for 4 pages.
+  const collapsed = memoHits['research_data_type'] ?? 0;
+  const researched = attempted - failed - collapsed;
+  const drafted = activity.phaseCalls['write_data_type_reference'] ?? 0;
+  if (researched === drafted) return [];
+
+  return [
+    {
+      code: 'research-draft-mismatch',
+      phase: 'write_data_type_reference',
+      detail:
+        researched < drafted
+          ? `${drafted} page(s) drafted from ${researched} successful research call(s) — a page was ` +
+            `written without its own API surface`
+          : `${researched} successful research call(s) but only ${drafted} page(s) drafted — ` +
+            `research paid for and never used`,
+    },
+  ];
+}
+
 const money = (n: number) => `$${n.toFixed(4)}`;
 
 function median(values: number[]): number {
@@ -100,15 +155,17 @@ function median(values: number[]): number {
  * the first property the tests pin.
  */
 export function computeFlags(input: FlagInput): RunFlag[] {
-  const { phases, activity, refusals, reportCalls } = input;
+  const { phases, activity, refusals, memoHits, reportCalls } = input;
   const flags: RunFlag[] = [];
   // The synthetic bucket for turns outside any phase — it is not a phase and must not be judged
   // like one (it has no delegates, so it would always trip own-exceeds-delegate).
   const real = phases.filter((p) => !p.phase.startsWith('('));
 
   for (const [phase, calls] of Object.entries(activity.phaseCalls)) {
-    // Review may repeat up to its budget; every other phase runs once. See reviewRepeatLimit.
+    // Review may repeat up to its budget; the per-type phases have their own check below; every
+    // other phase runs once. See reviewRepeatLimit and PER_TYPE_PHASES.
     const isReview = phase.startsWith('review');
+    if (!isReview && PER_TYPE_PHASES.includes(phase)) continue;
     const limit = isReview ? reviewRepeatLimit() : 1;
     if (calls > limit) {
       flags.push({
@@ -120,6 +177,8 @@ export function computeFlags(input: FlagInput): RunFlag[] {
       });
     }
   }
+
+  flags.push(...perTypePairing(activity, memoHits));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
@@ -216,8 +275,9 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  memoHits: Readonly<Record<string, number>>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals } = input;
+  const { totals, components, phases, activity, refusals, memoHits } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -243,6 +303,7 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
+      memoHits,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };

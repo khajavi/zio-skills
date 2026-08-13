@@ -36,6 +36,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
 5. **Write per-type subpages (hierarchical only).** For EACH type in the plan's `typeGroups` (each
    group has a `label` and its `types`, each with a `kind`):
    a. Call `research_data_type` with the type name for its full public API.
+      A subpage has no design phase: omit `plan` entirely and let the drafter decide the sections
+      from the template and the research. Never reuse another type's plan or compose one yourself.
    b. Call `write_data_type_reference` with that research AND `outputDir` set to
       `docs/reference/<module-kebab>` so the subpage lands under the module directory, AND
       `moduleContext` describing how this type relates to its siblings (from the module research

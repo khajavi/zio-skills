@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { note } from '../../runtime/log.ts';
 
 export const writeCompanionExamplesOutput = v.object({
   skipped: v.boolean(),
@@ -25,11 +26,11 @@ export const writeCompanionExamples = defineTool({
   output: writeCompanionExamplesOutput,
   async run({ harness, data, log }) {
     if (isPhaseSkipped('write-examples')) {
-      log.info('Skipping companion examples (skipPhases)');
+      note(log, 'Skipping companion examples (skipPhases)');
       return { output: { skipped: true, summary: 'Skipped by request.' } };
     }
 
-    log.info(`Building companion examples for: ${data.pagePath}`);
+    note(log, `Building companion examples for: ${data.pagePath}`);
     // Delegates to the examples_builder subagent — see design-doc-plan.ts
     // for why the calling agent must not build the examples itself.
     const result = await delegate({

@@ -7,6 +7,7 @@
 // renders).
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as v from 'valibot';
 
 import { DOC_KINDS, KINDS } from './agent.ts';
 
@@ -50,6 +51,42 @@ test('no kind mounts the same skill twice', () => {
   }
 });
 
+test('a mounted write tool has its plan producer, or its plan is optional', () => {
+  // The invariant that was missing when a module run shipped a wrong page. `KINDS.module.tools`
+  // mounted `write_data_type_reference` without `design_data_type_plan` while `plan` was required,
+  // so the model — unable to call any tool that produces one — satisfied the schema by inventing a
+  // plan, and once in fifteen calls reached for another type's (see write-doc.ts's `plan` comment).
+  //
+  // A required field no component can produce is the defect, and it is checkable here, for free:
+  // either the phase that produces the value is mounted alongside its consumer, or the consumer
+  // accepts its absence. Nothing in between is safe, because the model's way out of "required but
+  // unproducible" is fabrication rather than an error.
+  const PLAN_PRODUCER: Record<string, string> = {
+    write_data_type_reference: 'design_data_type_plan',
+    write_module_overview: 'design_module_plan',
+    write_tutorial_draft: 'design_tutorial_plan',
+  };
+
+  for (const kind of DOC_KINDS) {
+    const mounted = KINDS[kind].tools.map((tool) => tool.name);
+    for (const tool of KINDS[kind].tools) {
+      const producer = PLAN_PRODUCER[tool.name];
+      if (!producer || mounted.includes(producer)) continue;
+
+      const entries = (tool.input as { entries?: Record<string, v.GenericSchema> }).entries;
+      const plan = entries?.plan;
+      assert.ok(plan, `${kind}: ${tool.name} takes no plan field — update PLAN_PRODUCER`);
+      // Semantic rather than structural: asks valibot whether absence parses, so v.optional,
+      // v.nullish and any future wrapper all answer correctly.
+      assert.ok(
+        v.safeParse(plan, undefined).success,
+        `${kind} mounts ${tool.name} without ${producer}, and its plan is required — the model ` +
+          `can only satisfy that by inventing one. Mount ${producer}, or make plan optional.`,
+      );
+    }
+  }
+});
+
 test('check_method_coverage is a plain tool, never a guarded one', () => {
   // The distinction is load-bearing. Everything in `tools` is wrapped by guardPhase, which refuses a
   // call made from inside another phase — correct for phase tools, wrong for this one: it starts no
@@ -67,15 +104,16 @@ test('check_method_coverage is a plain tool, never a guarded one', () => {
   // selective by design — coverage is not a defect there, and offering the tool would invite a
   // check that should fail.
   for (const kind of ['data-type', 'module'] as const) {
-    const config = KINDS[kind];
-    assert.ok('plainTools' in config, `${kind} should offer plain tools`);
     assert.deepEqual(
-      config.plainTools.map((t) => t.name),
+      KINDS[kind].plainTools.map((t) => t.name),
       ['check_method_coverage'],
       kind,
     );
   }
-  assert.ok(!('plainTools' in KINDS.tutorial), 'tutorial should not offer method coverage');
+  // Empty, not absent. Every row carries every field now, so this asserts what the agent offers
+  // rather than which keys the literal happens to spell — the previous `!('plainTools' in …)` passed
+  // for a reason the model never sees.
+  assert.deepEqual(KINDS.tutorial.plainTools, [], 'tutorial should not offer method coverage');
 });
 
 test('the module escape hatches reach the directive', () => {

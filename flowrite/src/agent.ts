@@ -1,5 +1,5 @@
 'use agent';
-import { type AgentProps, useDelivery, usePersistentState, useTool } from '@flue/runtime';
+import { useDelivery, usePersistentState, useTool } from '@flue/runtime';
 import * as v from 'valibot';
 
 // instructions — one per kind. These files are the real per-kind content and are unchanged by the
@@ -26,16 +26,11 @@ import moduleRefChecklist from './skills/module-ref-checklist/SKILL.md';
 import tutorialStructure from './skills/tutorial-structure/SKILL.md';
 import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 
-// phase tools
-import { researchDataType } from './tools/phases/research.ts';
-import { designDataTypePlan } from './tools/phases/design-doc-plan.ts';
-import { writeDataTypeReference } from './tools/phases/write-doc.ts';
-import { researchModule } from './tools/phases/research.ts';
-import { designModulePlan } from './tools/phases/design-doc-plan.ts';
-import { writeModuleOverview } from './tools/phases/write-doc.ts';
-import { researchTutorialTopic } from './tools/phases/research.ts';
-import { designTutorialPlan } from './tools/phases/design-doc-plan.ts';
-import { writeTutorialDraft } from './tools/phases/write-doc.ts';
+// phase tools — one statement per module. The three-imports-per-module shape this replaced was a
+// leftover from the merge, when research/design/write were nine files instead of three.
+import { researchDataType, researchModule, researchTutorialTopic } from './tools/phases/research.ts';
+import { designDataTypePlan, designModulePlan, designTutorialPlan } from './tools/phases/design-doc-plan.ts';
+import { writeDataTypeReference, writeModuleOverview, writeTutorialDraft } from './tools/phases/write-doc.ts';
 import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
 import { integrateDataTypeReference, integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
 
@@ -137,6 +132,9 @@ export const KINDS = {
       integrateTutorial,
       reviewPage,
     ],
+    // Empty rather than absent: every row carries every field, so the call site reads
+    // `config.plainTools` like any other. A missing key made the union type reject the property.
+    plainTools: [],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified tutorial for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → integrate → review).`,
@@ -186,7 +184,7 @@ const GATE_INSTRUCTIONS = [
  *     -m "Please write reference documentation for the Chunk data type" \
  *     --data '{"projectPath":"/path/to/checkout"}'
  */
-export function DocsWriter(_props: AgentProps) {
+export function DocsWriter() {
   const [kind, setKind] = usePersistentState<DocKind | null>('docKind', null);
   const [subject, setSubject] = usePersistentState<string | null>('subject', null);
   const [storedRequest, setRequest] = usePersistentState<string | null>('request', null);
@@ -284,12 +282,25 @@ export function DocsWriter(_props: AgentProps) {
     // Spread because `as const` makes these readonly and useDocsWriter takes mutable arrays.
     skills: [...config.skills],
     tools: [...config.tools],
-    // `in` rather than optional-chaining: KINDS is `as const`, so the tutorial variant has no
-    // plainTools key at all and the union type does not admit the property.
-    plainTools: 'plainTools' in config ? [...config.plainTools] : [],
+    plainTools: [...config.plainTools],
     runDirective: config.directive(subject, facts),
   });
 }
 
+/**
+ * The durable identity, pinned rather than inherited from the function name.
+ *
+ * Without this static, storage is keyed by the identifier `DocsWriter`, so renaming the function
+ * orphans every conversation under the old key — which already happened here: run.db still holds
+ * `DataTypeRefWriter` and `ModuleRefWriter` streams from before the three writers merged, reachable
+ * by no name this code exports. `agentName` is the documented fix (agent-api.md, "Agent statics"):
+ * the source name and the storage key move independently from now on.
+ *
+ * Must be a string literal — build targets derive durable identifiers from it before any user code
+ * runs. Setting it now retires the 19 `DocsWriter` streams in the cache database, which costs
+ * nothing: no run script passes `--id`, so every run opens a fresh conversation and none of them
+ * were ever continued.
+ */
+DocsWriter.agentName = 'docs-writer';
 DocsWriter.initialData = initialData;
 DocsWriter.durability = docsWriterDurability;

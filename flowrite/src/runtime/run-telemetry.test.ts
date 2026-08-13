@@ -51,6 +51,7 @@ const input = (over: Partial<FlagInput> = {}): FlagInput => ({
   ],
   activity: activity(),
   refusals: [],
+  memoHits: {},
   reportCalls: 1,
   ...over,
 });
@@ -61,11 +62,69 @@ test('a clean run produces no flags at all', () => {
   assert.deepEqual(computeFlags(input()), []);
 });
 
-test('a phase that ran twice is flagged', () => {
+test('a once-per-run phase that ran twice is flagged', () => {
   // Keeps a review call in the override so the assertion stays about the repeat, not about the
   // review-not-run flag a review-less phaseCalls map would also trip.
-  const flags = codes({ activity: activity({ phaseCalls: { research_data_type: 3, review_data_type_ref: 1 } }) });
+  //
+  // design_module_plan rather than research_data_type: a module run designs its plan exactly once,
+  // while the per-type phases legitimately repeat and are checked by pairing instead.
+  const flags = codes({ activity: activity({ phaseCalls: { design_module_plan: 3, review_page: 1 } }) });
   assert.deepEqual(flags, ['phase-repeat']);
+});
+
+test('a module run researching and drafting four subpages is not a repeat', () => {
+  // The false positive this replaced: write-module-ref-turn5's own counts, which tripped phase-repeat
+  // twice for four types documented correctly. A flag that fires on a clean run gets every flag
+  // ignored.
+  assert.deepEqual(
+    codes({
+      activity: activity({
+        phaseCalls: {
+          research_module: 1,
+          design_module_plan: 1,
+          write_module_overview: 1,
+          research_data_type: 4,
+          write_data_type_reference: 4,
+          review_page: 1,
+        },
+      }),
+    }),
+    [],
+  );
+});
+
+test('a page drafted without successful research is flagged', () => {
+  // turn5's real arithmetic: 4 research calls, 1 of which errored, against 4 drafted pages. phaseCalls
+  // counts tool_start, so the failure is inside the 4 — leaving one subpage with no API surface behind
+  // it. This is what the count check was standing in front of.
+  const flags = computeFlags(
+    input({
+      activity: activity({
+        phaseCalls: { research_data_type: 4, write_data_type_reference: 4, review_page: 1 },
+        phaseFailures: { research_data_type: 1 },
+      }),
+    }),
+  );
+  assert.deepEqual(
+    flags.map((f) => f.code).sort(),
+    ['phase-failed', 'research-draft-mismatch'],
+    'the failure and the unpaired page are separate facts',
+  );
+  const mismatch = flags.find((f) => f.code === 'research-draft-mismatch')!;
+  assert.match(mismatch.detail, /4 page\(s\) drafted from 3 successful research call\(s\)/);
+  assert.match(mismatch.detail, /without its own API surface/);
+});
+
+test('research paid for and never drafted is flagged the other way round', () => {
+  const flags = computeFlags(
+    input({
+      activity: activity({
+        phaseCalls: { research_data_type: 4, write_data_type_reference: 2, review_page: 1 },
+      }),
+    }),
+  );
+  assert.deepEqual(flags.map((f) => f.code), ['research-draft-mismatch']);
+  assert.match(flags[0]!.detail, /research paid for and never used/);
 });
 
 test('one review round is unremarkable — it is the whole budget', () => {

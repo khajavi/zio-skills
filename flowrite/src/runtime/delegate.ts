@@ -1,5 +1,6 @@
 import type { FlueHarness, FlueLogger } from '@flue/runtime';
 import type * as v from 'valibot';
+import { note } from './log.ts';
 
 // "conversation stream contract": a corrupted subagent conversation record
 // mid-task; a fresh attempt starts clean.
@@ -10,6 +11,16 @@ import type * as v from 'valibot';
 // stalled delegation failed the whole phase instead of being retried once.
 const TRANSIENT =
   /connection error|econnreset|etimedout|fetch failed|socket hang up|conversation stream contract|request timed out|stream idle/i;
+
+/**
+ * A delegate that finished without producing schema-valid data.
+ *
+ * `harness.prompt` rejects with `ResultUnavailableError` "when the model gives up or exhausts its
+ * follow-up attempts" (reference/agent-api.md), which the calling agent then sees as the tool error
+ * `The agent gave up: …`. Distinct from TRANSIENT: nothing dropped, the delegation ran to completion
+ * and produced prose where a `finish` call was required.
+ */
+const GAVE_UP = /gave up|result ?unavailable|no structured answer/i;
 
 /**
  * A harness prompt has no durable retry (see concepts/durable-execution: "not
@@ -24,7 +35,7 @@ export async function withTransientRetry<T>(log: FlueLogger, label: string, op: 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (attempt >= 3 || !TRANSIENT.test(message)) throw error;
-      log.info(`${label} failed with transient error (attempt ${attempt}/3), retrying: ${message}`);
+      note(log, `${label} failed with transient error (attempt ${attempt}/3), retrying: ${message}`);
       await new Promise((resolve) => setTimeout(resolve, attempt * 5_000));
     }
   }
@@ -57,12 +68,33 @@ export async function delegate<S extends v.GenericSchema>(opts: {
   result: S;
 }): Promise<v.InferOutput<S>> {
   const { harness, log, label, role, prompt, result } = opts;
-  const { data } = await withTransientRetry(log, label, () =>
-    harness.prompt(
+  const ask = (text: string) => withTransientRetry(log, label, () => harness.prompt(text, { result }));
+
+  try {
+    const { data } = await ask(
       `Delegate the task below to the "${role}" subagent using the task tool. ` +
         `Do not carry it out yourself, and pass the task through verbatim.\n\n${prompt}`,
-      { result },
-    ),
-  );
-  return data;
+    );
+    return data;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!GAVE_UP.test(message)) throw error;
+
+    // ONE retry, and no backoff: a delegate that answered in prose is not waiting on a resource, so
+    // sleeping changes nothing. One rather than TRANSIENT's three because an attempt here is a whole
+    // delegation — turn5's research give-up burned 141s — and a task that is genuinely impossible
+    // would burn that twice before failing anyway.
+    //
+    // The retry does not repeat the task. Repeated `harness.prompt` calls continue the same scratch
+    // conversation (reference/agent-api.md), so the prompt above and the failure are both still in
+    // context; re-sending the whole task would duplicate a payload the conversation already holds.
+    // What was missing was the `finish` call, so that is what this asks for.
+    note(log, `${label} gave up without a schema-valid result, retrying once: ${message}`);
+    const { data } = await ask(
+      `The "${role}" subagent did not return data matching the required schema. Delegate the SAME ` +
+        `task to it again with the task tool, and tell it to end with a single finish call whose ` +
+        `arguments match the schema exactly — prose does not count. Do not carry out the task yourself.`,
+    );
+    return data;
+  }
 }
