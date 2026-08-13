@@ -67,15 +67,16 @@ test('check_method_coverage is a plain tool, never a guarded one', () => {
   // selective by design — coverage is not a defect there, and offering the tool would invite a
   // check that should fail.
   for (const kind of ['data-type', 'module'] as const) {
-    const config = KINDS[kind];
-    assert.ok('plainTools' in config, `${kind} should offer plain tools`);
     assert.deepEqual(
-      config.plainTools.map((t) => t.name),
+      KINDS[kind].plainTools.map((t) => t.name),
       ['check_method_coverage'],
       kind,
     );
   }
-  assert.ok(!('plainTools' in KINDS.tutorial), 'tutorial should not offer method coverage');
+  // Empty, not absent. Every row carries every field now, so this asserts what the agent offers
+  // rather than which keys the literal happens to spell — the previous `!('plainTools' in …)` passed
+  // for a reason the model never sees.
+  assert.deepEqual(KINDS.tutorial.plainTools, [], 'tutorial should not offer method coverage');
 });
 
 test('the module escape hatches reach the directive', () => {
