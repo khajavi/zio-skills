@@ -169,6 +169,53 @@ const followTemplate = (task: string, templateName: string, templateDoc: string)
   templateDoc,
 ];
 
+/** What `planBlock` and `isSubpage` need from a `write_data_type_reference` call. */
+interface DataTypePageInput {
+  plan?: v.InferOutput<typeof dataTypePlanSchema>;
+  moduleContext?: string;
+}
+
+/**
+ * True when this page is a module reference's per-type subpage rather than a standalone reference.
+ *
+ * `moduleContext` is the marker: set on every subpage call in `write-module-ref-turn5`, absent on
+ * every standalone data-type call, and a caller has no reason to send it otherwise. `outputDir` is
+ * not a reliable marker — a standalone run may legitimately redirect its output.
+ */
+const isSubpage = (data: DataTypePageInput): boolean => data.moduleContext !== undefined;
+
+/**
+ * The plan section of a drafter prompt: the plan when one was designed, an explicit statement of its
+ * absence otherwise.
+ *
+ * Takes the whole input rather than a plan, so the discard rule and the prompt text cannot disagree.
+ * They did, briefly, while this was being written: the branch tested the filtered value and the body
+ * serialized the unfiltered one, which `tsc` cannot catch because both are in scope and well-typed.
+ * One function over one argument removes the second variable that made the mistake possible.
+ *
+ * A module subpage has no design phase behind it — `KINDS.module.tools` mounts no
+ * `design_data_type_plan` — so any plan arriving with one was composed by the model, not designed.
+ * See the `plan` field's own comment for what that cost in write-module-ref-turn3.
+ */
+export function planBlock(data: DataTypePageInput): string[] {
+  const plan = isSubpage(data) ? undefined : data.plan;
+  return plan
+    ? [
+        `Plan to follow exactly — the optional sections to include, the`,
+        `construction order, and the Core Operations category grouping are already`,
+        `decided; write the page to match this plan:`,
+        JSON.stringify(plan),
+      ]
+    : [
+        // Do not invite the drafter to reconstruct a plan: the template above already specifies the
+        // structure, and asking for one back would re-create the improvisation this removes.
+        `No plan accompanies this page: decide the section applicability, the construction`,
+        `order and the Core Operations grouping yourself, from the template above and the`,
+        `research below. Include a section when the research has real content for it, and`,
+        `omit it otherwise.`,
+      ];
+}
+
 /** The injected writing-style rules block. TEMP — see the `writingStyleRules` import. */
 const styleRules = (): string[] => [
   `Writing-style rules — apply every rule to the prose you write:`,
@@ -197,10 +244,19 @@ export const writeDataTypeReference = defineTool({
      * have. Nothing caught it, because `dataTypePlanSchema` validates the shape and never that the
      * plan describes the same type as the research beside it.
      *
-     * Optional turns a silently wrong value into an honestly absent one: the subpage drafter now
-     * works from the research and `moduleContext`, which is all the fabricated plan ever amounted
-     * to. Mounting a real design phase per subpage is the other fix and costs a design delegation
-     * per documented type; see PHASE-HANDOFF-PLAN.md §6.
+     * Optional, but optionality alone changed nothing, and `run()` is where the fix actually lives.
+     * `v.optional` is a permission, not a prohibition: the field is still advertised in the schema,
+     * so a model that has just read the research fills it in regardless. Measured on
+     * `write-module-ref-turn5`, the run that tested exactly this — 4 of 4 subpage calls supplied a
+     * plan, and the present-plan branch of the prompt executed every time. An instruction in
+     * module-ref.md telling it to omit the field was ignored, like the "do not cd into the repo"
+     * directive that turn20 ignored 38 times in 107 bash calls.
+     *
+     * So `run()` discards it for subpages. Optional stays because the schema must permit what the
+     * code then enforces; a required field the tool ignores would be a lie to the model.
+     *
+     * Mounting a real design phase per subpage is the other fix and costs a design delegation per
+     * documented type; see PHASE-HANDOFF-PLAN.md §6.
      */
     plan: v.optional(dataTypePlanSchema),
     researchAnswers: dataTypeResearchSchema,
@@ -218,6 +274,17 @@ export const writeDataTypeReference = defineTool({
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, data, log }) {
     const id = toKebabCase(data.researchAnswers.typeName);
+
+    if (isSubpage(data) && data.plan) {
+      // Logged rather than silent for two reasons: a discarded input that leaves no trace cannot be
+      // debugged, and the count measures whether the instruction ever starts landing. A run with no
+      // discard lines is one where the model finally stopped composing plans it cannot design.
+      log.info(
+        `Discarding the plan sent for ${data.researchAnswers.typeName}: a module subpage has no ` +
+          `design phase, so this plan was composed rather than designed.`,
+      );
+    }
+
     return {
       output: await writeDoc({
         harness,
@@ -247,22 +314,7 @@ export const writeDataTypeReference = defineTool({
           ``,
           ...styleRules(),
           ``,
-          // A plan when the design phase produced one; otherwise say so plainly. The absent branch
-          // is what a module subpage takes — do not invite the drafter to reconstruct a plan, or it
-          // improvises the structure the template already specifies.
-          ...(data.plan
-            ? [
-                `Plan to follow exactly — the optional sections to include, the`,
-                `construction order, and the Core Operations category grouping are already`,
-                `decided; write the page to match this plan:`,
-                JSON.stringify(data.plan),
-              ]
-            : [
-                `No plan accompanies this page: decide the section applicability, the construction`,
-                `order and the Core Operations grouping yourself, from the template above and the`,
-                `research below. Include a section when the research has real content for it, and`,
-                `omit it otherwise.`,
-              ]),
+          ...planBlock(data),
           ``,
           `Research answers (ground every fact in this — real signatures, imports, and examples;`,
           `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
