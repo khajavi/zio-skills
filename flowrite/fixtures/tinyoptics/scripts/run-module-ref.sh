@@ -45,8 +45,8 @@ request="Please write module reference documentation for the $module_name module
 # Flue 2 invocation — see run-data-type-ref.sh for why each flag and env var is here.
 (cd "$flowrite_root" && exec env \
   NODE_USE_ENV_PROXY=1 no_proxy=localhost,127.0.0.1 \
-  FLUE_VERBOSE_TOOLS=1 MAX_REVIEW_CALLS=1 MAX_FIX_ROUNDS=1 \
-  ./node_modules/.bin/flue run src/agents/docs-writer.ts \
+  FLUE_VERBOSE_TOOLS=1 \
+  ./node_modules/.bin/flue run src/agent.ts \
   --env .env.testing -m "$request" --data "$input") \
   > "$log" 2>&1 &
 flue_pid=$!
@@ -63,7 +63,7 @@ cleanup() {
   kill -TERM "$flue_pid" 2>/dev/null
   kill -KILL "$flue_pid" 2>/dev/null
   # flue spawns sbt/java as its own children — kill them too.
-  pkill -9 -f "flue.mjs run src/agents/docs-writer.ts" 2>/dev/null
+  pkill -9 -f "flue.mjs run src/agent.ts" 2>/dev/null
   pkill -9 -f "sbt-launch" 2>/dev/null
   bash scripts/archive-docs.sh "$log" write-module-ref
   rm -f "$log"

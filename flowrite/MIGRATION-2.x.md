@@ -31,7 +31,7 @@ is used rather than a code-driven orchestrator.
 ## Running it
 
 ```bash
-flue run src/agents/docs-writer.ts --env .env.testing \
+flue run src/agent.ts --env .env.testing \
   --id dtr-Chunk \
   -m "Please write reference documentation for the Chunk data type" \
   --data '{"projectPath":"/path/to/checkout"}'

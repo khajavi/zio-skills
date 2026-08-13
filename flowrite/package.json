@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
     "test": "node --import ./test-setup/md-imports.mjs --test"
   },
   "keywords": [],
@@ -23,7 +25,9 @@
   },
   "devDependencies": {
     "@flue/cli": "2.0.3",
+    "@flue/vite": "^2.0.3",
     "@types/node": "^26.1.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1"
   }
 }

@@ -1,10 +1,10 @@
 import { defineSubagent } from '@flue/runtime';
-import { TIERS } from '../shared/models.ts';
+import { TIERS } from '../runtime/models.ts';
 import instructions from './designer.md';
 
 /**
- * Generic documentation structure-planner, shared across document kinds. Declares
- * no tools or delegates of its own — see design-tutorial-structure.ts for why that
+ * Generic documentation planner, shared across document kinds. Declares
+ * no tools or delegates of its own — see design-doc-plan.ts for why that
  * matters: a narrow delegate cannot see or re-invoke the design phase tool itself,
  * avoiding runaway self-recursion.
  *
@@ -19,6 +19,6 @@ export function Designer() {
 export const designer = defineSubagent({
   name: 'designer',
   ...TIERS.designer,
-  description: 'Turns research findings into a validated structural plan for a documentation page.',
+  description: 'Turns research findings into a validated plan for a documentation page.',
   agent: Designer,
 });

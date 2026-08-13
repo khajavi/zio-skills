@@ -24,7 +24,7 @@ The code is just the wrapper. The writer reads a plain request, decides what kin
 is, and then every capability it has is a thing you *hand it*, not a branch you write:
 
 ```ts
-// src/agents/docs-writer.ts
+// src/agent.ts
 'use agent';
 export function DocsWriter() {
   const [kind] = usePersistentState<DocKind | null>('docKind', null);
@@ -42,7 +42,7 @@ export function DocsWriter() {
   });
 }
 
-// useDocsWriter is a custom hook — it declares the skills, the guarded phase tools, and the nine
+// useDocsWriter is a custom hook — it declares the skills, the guarded phase tools, and the seven
 // shared roles with useSubagent.
 ```
 
@@ -54,10 +54,10 @@ in the loop, reality always diverges).
 
 The interesting engineering therefore moves out of `.ts` files and into:
 
-- **instructions** (`src/agents/*.md`) — who the agent is and how it should behave,
+- **instructions** (`src/instructions/*.md`) — who the agent is and how it should behave,
 - **skills** (`src/skills/*/SKILL.md`) — expertise loaded on demand (structure
   templates, checklists, `mdoc` conventions, writing-style rules),
-- **phase tools** (`src/phases/*.ts`) — a research/write/verify/integrate step, each
+- **phase tools** (`src/tools/phases/*.ts`) — a research/write/verify/integrate step, each
   delegating to a specialized role with a `valibot` result schema,
 - **roles** (`src/subagents/*`) — generic delegates (researcher, drafter, reviewer…)
   reused across every writer.
@@ -76,7 +76,7 @@ Ask for what you want in plain words — the writer works out which kind it is a
 is, and mounts only that kind's phase tools:
 
 ```bash
-flue run src/agents/docs-writer.ts --id dtr-Chunk \
+flue run src/agent.ts --id dtr-Chunk \
   -m "Please write reference documentation for the Chunk data type" \
   --data '{"projectPath":"/path/to/checkout"}'
 ```
@@ -127,18 +127,21 @@ prescribed sequence of moves.
 
 Implementation is mostly Markdown and schemas:
 
-- Write the kind's identity in `src/agents/data-type-ref-writer.md`, and add its row to `KINDS`.
+- Write the kind's identity in `src/instructions/data-type-ref.md`, and add its row to `KINDS`.
 - Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
   (what "done" means), reusing `mdoc-conventions` and `writing-style`.
-- Write the phase tools (`research-data-type.ts`, `write-data-type-reference.ts`, …),
-  each defining a `valibot` result schema and delegating to a generic role
-  with a kind-specific prompt. The research schema alone — constructors,
-  `coreOperations`, `subtypesOrVariants`, per-fact `source` — *is* the spec that
-  keeps the writer honest.
+- Add the kind's phase tools to the existing phase modules — `research.ts`,
+  `design-doc-plan.ts`, `write-doc.ts` — each defining a `valibot` result
+  schema and delegating to a generic role with a kind-specific prompt. One
+  module per phase, one tool per kind inside it: the shared body is already
+  there, so a fourth kind is a schema, a prompt and a config object rather than
+  three new files. The research schema alone — constructors, `coreOperations`,
+  `subtypesOrVariants`, per-fact `source` — *is* the spec that keeps the writer
+  honest.
 - Wire it all into the agent function shown above, and declare what a run needs
   with its `initialData` static.
 
-Model choice is centralized in `src/shared/models.ts` as **tiers**, each
+Model choice is centralized in `src/runtime/models.ts` as **tiers**, each
 env-overridable per run — so the same agent runs on cheap models under test and
 capable ones in production without a code change:
 
@@ -156,7 +159,7 @@ cents:
 
 ```bash
 # .env.testing selects cheap models; --data points at the tinyoptics fixture
-flue run src/agents/docs-writer.ts \
+flue run src/agent.ts \
   --env .env.testing --id dtr-Prism \
   -m "Please write reference documentation for the Prism data type" \
   --data '{ "projectPath": "fixtures/tinyoptics" }'
@@ -184,6 +187,10 @@ info write-tutorial component usage: [ … per-component call counts, tokens, co
 
 The **component usage** line is the money view — it breaks spend down by subagent,
 action, skill, and tool, so you can see exactly where the tokens went:
+
+Some role names below are historical — this is real output from an archived run, and
+`style_checker` and `tutorial_drafter` no longer exist (the three writers merged into
+one, and the style loop was removed). The shape of the view is the point.
 
 | component | calls | cost |
 |-----------|-------|------|
@@ -245,12 +252,15 @@ diff behavior across iterations of the prompt.
 
 ```
 src/
-  agents/        # one writer (.ts) + one identity (.md) per kind of document
-  phases/        # research / write / verify / integrate steps (+ result schemas)
+  agent.ts       # the one agent: classifies the request, then mounts that kind's tools
+  app.ts         # HTTP route map — what makes the agent servable
+  db.ts          # conversation storage (data/flue.db)
+  instructions/  # one identity (.md) per kind of document
   subagents/     # generic delegate roles, shared across every writer
   skills/        # structure templates, checklists, mdoc + writing-style rules
-  tools/         # gh query, method-coverage, todo tools
-  shared/        # model tiers, token/component tracking, caching, skip-phases
+  tools/         # gh query, method-coverage
+    phases/      # research / write / verify / integrate steps (+ result schemas)
+  runtime/       # composition, model tiers, token/component tracking, caching
 fixtures/
   tinyoptics/          # the ZIO optics library used as the test target
   tinyoptics-archive/  # archived flue.log per run, for diffing behavior
@@ -263,10 +273,19 @@ pnpm install
 cp .env.testing.example .env.testing   # add ANTHROPIC_API_KEY
 
 # run against the bundled fixture (cheap models)
-flue run src/agents/docs-writer.ts --env .env.testing \
+flue run src/agent.ts --env .env.testing \
   --id dtr-Prism \
   -m "Please write reference documentation for the Prism data type" \
   --data '{ "projectPath": "fixtures/tinyoptics" }'
+```
+
+`flue run` is how flowrite is actually used — it invokes the agent directly and never
+touches `app.ts`. The server build exists for when you want the agent reachable over
+HTTP instead:
+
+```bash
+pnpm build   # bundles src/app.ts into dist/ (Vite + the flue plugin)
+pnpm dev     # the same app on a dev server
 ```
 
 Flue's own docs ship with the packages — read them directly rather than guessing at

@@ -8,3 +8,4 @@ dist/
 fixtures/tinyoptics-archive/
 fixtures/tinyoptics/website/docs/*
 .flowrite/
+data/

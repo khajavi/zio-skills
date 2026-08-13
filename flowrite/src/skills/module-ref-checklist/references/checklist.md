@@ -34,15 +34,16 @@ not attempt to re-count members here.
 
 - Every core type discovered in research is documented (flat section or hierarchical subpage) — none dropped.
 - Relationships and composition shown in the narrative reflect the real source, not invented links.
-- Writing style is checked mechanically rule-by-rule before this checklist runs — do not re-verify
-  the `writing-style` rules here.
+- The writing style rules are evaluated in the same review pass — report their violations as
+  failing items too.
 - mdoc verification reports zero `[error]` lines for the page (flat) or the whole directory
   (hierarchical) — mandatory before done.
 
 ## Review Cadence
 
-- Fix EVERY failing item in a single editing pass — do not call this checklist again until all are addressed.
-- Only re-review to confirm the fixes, not to discover the next issue one at a time.
-- The review action enforces a hard call cap. When it reports the cap is reached, note remaining
-  issues as known limitations and finish anyway — never keep calling it. If those remaining items are
-  still failing, say so in the final summary; do not claim the module fully passed when it did not.
+- Fix every failing item in one editing pass.
+- The run has a bounded number of review rounds and the review tool's description states how many.
+  With the default of one there is no confirming pass, so treat the first review as the only one:
+  fix what it reports, then finish.
+- Name every item you could not fix in the final summary, and report the run as failed when any
+  remain. An unverified fix is not a pass.

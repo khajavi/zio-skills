@@ -96,10 +96,11 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
     jq . <<<"$insights" > "$dest/insights.json"
   fi
 
-  # The review's own pass/fail, emitted by report_run_result from the recorded review rather than
-  # from the model's summary prose. Kept as its own file so "did this run actually pass?" is a
-  # lookup, not a reading-comprehension exercise over a sentence the model wrote about its own work
-  # (two runs described a failing page as complete before the verdict became data).
+  # The run's pass/fail, as report_run_result was told it. Kept as its own file so "did this run
+  # pass?" is a lookup rather than a reading-comprehension exercise over a paragraph — but it is the
+  # model's own account now, not an independent record: the recorded review it used to be checked
+  # against was removed. Two runs have described a failing page as complete, so when a turn matters,
+  # confirm this against the review output in flue.log.
   verdict_line="$(grep "$workflow_label run verdict:" "$dest/flue.log" | tail -1 || true)"
   verdict="${verdict_line#*run verdict: }"
   if [ -n "$verdict" ] && jq -e . >/dev/null 2>&1 <<<"$verdict"; then
@@ -161,6 +162,17 @@ final_count="$(copy_tree "$dest/tinyoptics-final")"
 git reset -q -- .
 git checkout -- .
 git clean -fdq -- .
+# git ignores these (`.gitignore`: *.log), so `git clean` without -x leaves them behind — and a stale
+# mdoc-<subject>.log from an earlier run reads to the next agent as evidence that mdoc already passed
+# for that page. Deliberately not `git clean -fdx`: target/ and .flowrite/cache hold sbt and research
+# caches worth keeping, and wiping them slows every following run for no measurement benefit.
+rm -f mdoc-*.log
+# Everything under .flowrite/ except the caches is scratch a run left behind — including files the MODEL
+# invented (an old module run left REVIEW_SUMMARY.txt, optics-module-review.md and a copied checklist
+# that survived every reset for two days). A stale review summary sitting in the workspace is something
+# the next agent can read as its own prior work. `cache/` is kept on purpose: research results are
+# expensive and reusable across runs.
+find .flowrite -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} + 2>/dev/null || true
 base_count="$(copy_tree "$dest/tinyoptics-base")"
 
 changed="$(grep -c '^diff --git' "$dest/changes.patch" || true)"

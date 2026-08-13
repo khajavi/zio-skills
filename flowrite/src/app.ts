@@ -1,0 +1,18 @@
+import { createAgentRouter } from '@flue/runtime/routing';
+import { DocsWriter } from './agent.ts';
+
+/**
+ * The route map.
+ *
+ * Flue mounts nothing on its own — "Registering an agent … makes it addressable inside your
+ * application; serving it over HTTP is a separate, explicit decision" (guide/routing) — so this file
+ * is what makes the writer reachable over HTTP.
+ *
+ * flowrite's own runs do not go through here. They are `flue run src/agent.ts`, which invokes the
+ * agent directly and never reads this module. It exists so that `vite build` produces a server, and so
+ * channels, schedules and the SDK have something to talk to when they are wanted.
+ *
+ * One route, mounted at the root, because there is one agent. A second agent means a Hono instance
+ * with a `route(...)` per agent, as the guide's example shows.
+ */
+export default createAgentRouter(DocsWriter);
