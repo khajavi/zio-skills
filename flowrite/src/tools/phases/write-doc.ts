@@ -22,6 +22,7 @@ import tutorialTemplateDoc from '../../skills/tutorial-structure/references/stru
 // never copied.
 import writingStyleRules from '../../skills/writing-style/references/rules.md';
 import { note } from '../../runtime/log.ts';
+import { operationNames, requireResearch } from './research-ledger.ts';
 
 /**
  * The write phase: draft one page and put it on disk.
@@ -276,13 +277,28 @@ export const writeDataTypeReference = defineTool({
   async run({ harness, data, log }) {
     const id = toKebabCase(data.researchAnswers.typeName);
 
+    // The page is drafted from what research_data_type returned, not from what arrived here. The two
+    // are normally the same object relayed through the model's conversation; when they are not, the
+    // relayed one is the invention — turn5 supplied a whole payload for a type whose research had
+    // errored. Throws when nothing is on record, which is the case that used to be filled in.
+    const research = requireResearch(data.researchAnswers.typeName);
+    const relayed = operationNames(data.researchAnswers).join(', ');
+    const recorded = operationNames(research).join(', ');
+    if (relayed !== recorded) {
+      note(
+        log,
+        `Relayed research for ${research.typeName} does not match what the research phase returned — ` +
+          `drafting from the recorded findings. relayed: [${relayed}]; recorded: [${recorded}]`,
+      );
+    }
+
     if (isSubpage(data) && data.plan) {
       // Logged rather than silent for two reasons: a discarded input that leaves no trace cannot be
       // debugged, and the count measures whether the instruction ever starts landing. A run with no
       // discard lines is one where the model finally stopped composing plans it cannot design.
       note(
         log,
-        `Discarding the plan sent for ${data.researchAnswers.typeName}: a module subpage has no ` +
+        `Discarding the plan sent for ${research.typeName}: a module subpage has no ` +
           `design phase, so this plan was composed rather than designed.`,
       );
     }
@@ -321,7 +337,8 @@ export const writeDataTypeReference = defineTool({
           `Research answers (ground every fact in this — real signatures, imports, and examples;`,
           `never substitute general knowledge; groundingDetail carries verbatim detail to copy exactly.`,
           `Document EVERY constructor and core operation listed):`,
-          JSON.stringify(data.researchAnswers),
+          // `research`, never `data.researchAnswers` — see requireResearch above.
+          JSON.stringify(research),
           // Module-ref subpage recontextualization: when this type is a member of a module, thread
           // its sibling relationships through each section.
           ...(data.moduleContext
