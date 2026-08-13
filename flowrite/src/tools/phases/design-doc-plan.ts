@@ -4,6 +4,7 @@ import { dataTypeResearchSchema, moduleResearchSchema, tutorialResearchSchema } 
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { recordModulePlan } from './phase-ledger.ts';
 // Each kind's structure template, injected into the generic designer's task (a subagent's skills
 // cannot vary per delegated task, so the kind-specific template rides in the prompt). Same
 // single-source-of-truth split as writing-style/references/rules.md: the SKILL.md files point here.
@@ -190,6 +191,11 @@ async function designPlan<S extends v.GenericSchema>(opts: {
   /** Template name as the prompt cites it, e.g. 'data-type-ref-structure'. */
   templateName: string;
   templateDoc: string;
+  /**
+   * Called with whatever this phase returns, fresh or the skip default. Only the module design sets
+   * it, to record the plan the module write phase must draft from; see phase-ledger.ts.
+   */
+  onResult?: (plan: v.InferOutput<S>) => void;
   /** Per-kind planning instructions, between the template and the research payload. */
   guidance: string[];
   researchAnswers: unknown;
@@ -197,6 +203,7 @@ async function designPlan<S extends v.GenericSchema>(opts: {
   // Resume support — see research.ts.
   if (isPhaseSkipped('design')) {
     note(opts.log, 'Skipping design (skipPhases)');
+    opts.onResult?.(opts.skipDefault);
     return opts.skipDefault;
   }
 
@@ -320,6 +327,9 @@ export const designModulePlan = defineTool({
           comparisons: [],
           notes: '(skipped — phase already done)',
         },
+        // Recorded so write_module_overview can draft from the designed plan rather than from
+        // whatever the model relays; see phase-ledger.ts for what turn7 relayed instead.
+        onResult: (plan) => recordModulePlan(data.moduleName, plan),
         designing: `module-reference plan for: ${data.moduleName}`,
         task: `Design the plan for a "${data.moduleName}" module reference page.`,
         templateName: 'module-ref-structure',

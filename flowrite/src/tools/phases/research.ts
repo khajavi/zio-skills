@@ -5,7 +5,7 @@ import { readResearchCache, writeResearchCache } from '../../runtime/research-ca
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { delegate } from '../../runtime/delegate.ts';
 import { note } from '../../runtime/log.ts';
-import { recordResearch } from './research-ledger.ts';
+import { recordResearch } from './phase-ledger.ts';
 
 /**
  * The research phase: read the checkout and return structured findings for one kind of document.

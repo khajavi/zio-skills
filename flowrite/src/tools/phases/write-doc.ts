@@ -22,7 +22,7 @@ import tutorialTemplateDoc from '../../skills/tutorial-structure/references/stru
 // never copied.
 import writingStyleRules from '../../skills/writing-style/references/rules.md';
 import { note } from '../../runtime/log.ts';
-import { operationNames, requireResearch } from './research-ledger.ts';
+import { operationNames, planShape, requireModulePlan, requireResearch } from './phase-ledger.ts';
 
 /**
  * The write phase: draft one page and put it on disk.
@@ -372,24 +372,49 @@ export const writeModuleOverview = defineTool({
     'Write the module reference module-level page (flat: whole page with inline type sections; hierarchical: index.md narrative + subpage links) and return its path and content.',
   harness: true,
   input: v.object({
+    /**
+     * Accepted, and then ignored in favour of the plan the design phase recorded.
+     *
+     * Required rather than optional, unlike `write_data_type_reference.plan`: a module page always has
+     * a design phase behind it, so asking for the plan is honest — the tool just does not trust this
+     * copy of it. `run()` reads the recorded one and logs any divergence.
+     *
+     * turn7 is why: this call was issued in the same turn as `design_module_plan`, and the model filled
+     * the field itself while the designer was still working. The plan decides `shape`, `layout` and
+     * `typeGroups`, so an invented one mis-shapes the index page and every subpage after it.
+     */
     plan: modulePlanSchema,
     researchAnswers: moduleResearchSchema,
   }),
   output: v.object({ path: v.string(), content: v.string() }),
   async run({ harness, data, log }) {
     const moduleKebab = toKebabCase(data.researchAnswers.moduleName);
-    const isFlat = data.plan.layout === 'flat';
+
+    // The page is written from the plan the design phase produced, not from the one that arrived here.
+    // turn7 issued this call in the same turn as design_module_plan and filled the field itself while
+    // the designer was still working — 147 seconds before it returned. Throws when design has not run,
+    // which is the case that used to be papered over.
+    const plan = requireModulePlan(data.researchAnswers.moduleName);
+    if (planShape(plan) !== planShape(data.plan)) {
+      note(
+        log,
+        `Relayed plan for ${data.researchAnswers.moduleName} does not match the designed one — ` +
+          `writing from the designed plan. relayed: ${planShape(data.plan)}; designed: ${planShape(plan)}`,
+      );
+    }
+
+    const isFlat = plan.layout === 'flat';
     // flat -> docs/reference/<module>.md (id = <module>); hierarchical -> the module dir's index
     // (id = index) with subpages alongside it.
     const layoutInstruction =
-      data.plan.layout === 'hierarchical'
+      plan.layout === 'hierarchical'
         ? [
             `This is a HIERARCHICAL module reference: write ONLY the index.md — the module-level narrative`,
             `plus an Overview that introduces each core type in 2-3 sentences and links to its subpage with`,
             `a relative path "./<type-kebab>.md". Do NOT document the types' full APIs here; each type gets`,
             `its own subpage written separately.`,
           ]
-        : data.plan.shape === 'dsl'
+        : plan.shape === 'dsl'
           ? [
               `This is a DSL module reference: write ONE page in a single file, organized BY TASK/composition`,
               `— sections are recipes ("Building X", "Combining Y and Z") showing how the types compose to`,
@@ -412,7 +437,7 @@ export const writeModuleOverview = defineTool({
         label: 'drafter (module overview)',
         path: isFlat ? `docs/reference/${moduleKebab}.md` : `docs/reference/${moduleKebab}/index.md`,
         id: isFlat ? moduleKebab : 'index',
-        writing: `module overview (${data.plan.layout})`,
+        writing: `module overview (${plan.layout})`,
         guidance: {
           title: 'The module title, e.g. "HTTP Model" — this is the page title',
           purpose: 'module reference purpose',
@@ -435,7 +460,7 @@ export const writeModuleOverview = defineTool({
           ``,
           `Plan to follow exactly (layout, which sections to include, and the type order are`,
           `already decided; write the page to match this plan):`,
-          JSON.stringify(data.plan),
+          JSON.stringify(plan),
           ``,
           `Research answers (ground every fact and relationship in this — real signatures, imports, and`,
           `examples; never substitute general knowledge; groundingDetail carries verbatim detail to copy`,

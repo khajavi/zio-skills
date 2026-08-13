@@ -1,7 +1,9 @@
 import type * as v from 'valibot';
 import type { dataTypeResearchSchema } from './research.ts';
+import type { modulePlanSchema } from './design-doc-plan.ts';
 
 type DataTypeResearch = v.InferOutput<typeof dataTypeResearchSchema>;
+type ModulePlan = v.InferOutput<typeof modulePlanSchema>;
 
 /**
  * What `research_data_type` actually returned this run, keyed by type name.
@@ -54,9 +56,10 @@ export function requireResearch(typeName: string): DataTypeResearch {
   return recorded;
 }
 
-/** Reset the ledger. Tests only — module state with no other seam. */
-export function __resetResearchLedgerForTests(): void {
+/** Reset every record. Tests only — module state with no other seam. */
+export function __resetPhaseLedgerForTests(): void {
   ledger.clear();
+  modulePlans.clear();
 }
 
 /**
@@ -68,3 +71,59 @@ export function __resetResearchLedgerForTests(): void {
  */
 export const operationNames = (research: DataTypeResearch): string[] =>
   [...new Set(research.coreOperations.map((op) => op.name))].sort();
+
+/**
+ * The plan `design_module_plan` actually returned, keyed by module name.
+ *
+ * Same rule as the research above, on the field that decides the most: a module plan carries `shape`,
+ * `layout` and `typeGroups`, so it determines which subpages exist, how they group, and what the index
+ * page says. A subpage plan mis-shapes one page; this one mis-shapes the whole reference, starting with
+ * the page a reader lands on first.
+ *
+ * Measured on `write-module-ref-turn7`: the model issued `write_module_overview` and
+ * `design_module_plan` in the SAME turn — write started at log line 58, design finished at line 709,
+ * 147 seconds later — and filled `write_module_overview.plan` itself in the meantime. Its own thinking
+ * mentioned only `design_module_plan`, so this was not deliberate reordering; the field was required, so
+ * it was filled. `write-module-ref-turn9` got the order right, which makes it intermittent rather than
+ * fixed: the profile that survives review and ships.
+ *
+ * Not covered by the phase memo in phase-guard.ts, deliberately — `write_*` is excluded there because a
+ * redraft after review arrives with the same plan and research.
+ */
+const modulePlans = new Map<string, ModulePlan>();
+
+/** Record the plan a successful `design_module_plan` call produced. */
+export function recordModulePlan(moduleName: string, plan: ModulePlan): void {
+  modulePlans.set(key(moduleName), plan);
+}
+
+/**
+ * The recorded plan for a module, or a refusal.
+ *
+ * The message is the only prompt the model gets here, so it names the next action. A model that has
+ * just read the module research can compose a plausible `shape`/`layout`/`typeGroups` — that is exactly
+ * what turn7 did — so telling it to wait for the design phase has to be explicit.
+ */
+export function requireModulePlan(moduleName: string): ModulePlan {
+  const recorded = modulePlans.get(key(moduleName));
+  if (!recorded) {
+    throw new Error(
+      `No designed plan is on record for the "${moduleName}" module, so there is nothing to write the ` +
+        `module page from. Call design_module_plan with moduleName "${moduleName}" and WAIT for it to ` +
+        `return before writing — do not compose the plan yourself. The plan decides the layout, the ` +
+        `shape and the type groups, so an invented one mis-shapes every subpage that follows.`,
+    );
+  }
+  return recorded;
+}
+
+/**
+ * A short summary of a plan's decisions, for comparing what the model relayed against what was designed.
+ *
+ * The three fields that change the output: the layout picks the file structure, the shape drives the
+ * page body, and the group labels decide the subpage roster. Deliberately not a deep comparison — the
+ * model reserializes the plan on its way through the conversation, so ordering and formatting drift for
+ * reasons that mean nothing.
+ */
+export const planShape = (plan: ModulePlan): string =>
+  `${plan.shape}/${plan.layout}/[${plan.typeGroups.map((g) => g.label).join('|')}]`;
