@@ -51,6 +51,7 @@ const input = (over: Partial<FlagInput> = {}): FlagInput => ({
   ],
   activity: activity(),
   refusals: [],
+  memoHits: {},
   reportCalls: 1,
   ...over,
 });

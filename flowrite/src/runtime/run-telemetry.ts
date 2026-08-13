@@ -58,6 +58,14 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  /**
+   * Repeat phase calls the memo answered from an earlier identical call, per phase.
+   *
+   * Needed because `phaseCalls` counts `tool_start` and so includes them: the model really did call
+   * the tool, and the guard really did answer without doing the work. Only the memoizable phases can
+   * appear here — see phase-guard.ts's MEMOIZABLE.
+   */
+  memoHits: Readonly<Record<string, number>>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
@@ -107,10 +115,14 @@ const PER_TYPE_PHASES: readonly string[] = ['research_data_type', 'write_data_ty
  * Both directions are worth a flag, and they mean opposite things: fewer research results than pages is
  * a grounding problem, more is a delegation paid for and thrown away.
  */
-function perTypePairing(activity: ActivityReport): RunFlag[] {
+function perTypePairing(activity: ActivityReport, memoHits: Readonly<Record<string, number>>): RunFlag[] {
   const attempted = activity.phaseCalls['research_data_type'] ?? 0;
   const failed = activity.phaseFailures['research_data_type'] ?? 0;
-  const researched = attempted - failed;
+  // Repeats collapsed by the phase memo did no work, so they are not research. `phaseCalls` counts
+  // `tool_start` and cannot see the difference — the model did call the tool, the guard answered from
+  // the first call's result. Without this term turn9's shape reads as 8 research calls for 4 pages.
+  const collapsed = memoHits['research_data_type'] ?? 0;
+  const researched = attempted - failed - collapsed;
   const drafted = activity.phaseCalls['write_data_type_reference'] ?? 0;
   if (researched === drafted) return [];
 
@@ -143,7 +155,7 @@ function median(values: number[]): number {
  * the first property the tests pin.
  */
 export function computeFlags(input: FlagInput): RunFlag[] {
-  const { phases, activity, refusals, reportCalls } = input;
+  const { phases, activity, refusals, memoHits, reportCalls } = input;
   const flags: RunFlag[] = [];
   // The synthetic bucket for turns outside any phase — it is not a phase and must not be judged
   // like one (it has no delegates, so it would always trip own-exceeds-delegate).
@@ -166,7 +178,7 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
-  flags.push(...perTypePairing(activity));
+  flags.push(...perTypePairing(activity, memoHits));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
@@ -263,8 +275,9 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  memoHits: Readonly<Record<string, number>>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals } = input;
+  const { totals, components, phases, activity, refusals, memoHits } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -290,6 +303,7 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
+      memoHits,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };
