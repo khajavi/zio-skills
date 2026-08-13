@@ -1,9 +1,9 @@
 ## Writing Flue Agents
 Read https://flueframework.com/start.md then help create flue agents
 
-## Never commit anything under fixtures/tinyoptics/
+## Never commit anything under fixtures/tinyoptics/ or fixtures/tinytally/
 
-The fixture is a from-scratch baseline: sparse starter docs, no generated examples,
+Each fixture is a from-scratch baseline: sparse starter docs, no generated examples,
 a clean `build.sbt`. Every run is measured against it, so committing a run's output
 destroys it — later runs stop exercising the empty-start path, and quality can no
 longer be judged against a known baseline.
@@ -11,17 +11,30 @@ longer be judged against a known baseline.
 A run writes far more than docs. All of it is output, none of it is committed:
 
 - `docs/` — pages, `index.md`, `sidebars.js`
-- `examples/` and `tinyoptics-examples/` — generated `.scala`, `project/build.properties`
+- `examples/` and `<fixture>-examples/` — generated `.scala`, `project/build.properties`
 - `build.sbt` — the integrate phase edits it (`mdocVariables`, subprojects)
+- `website/docs/` and `website/build/` — mdoc output and the Docusaurus build
 
 ✅ `bash scripts/archive-docs.sh <log> <label>` — snapshots the whole run to
-`fixtures/tinyoptics-archive/<label>-turn<N>/` and resets the fixture
+`fixtures/<fixture>-archive/<label>-turn<N>/` and resets the fixture
 ❌ `git add -A` after a run — sweeps generated pages, examples and build edits into
 whatever you commit next
 
-Treat `fixtures/tinyoptics/` as read-only from git's point of view. Archive first,
+Treat both fixture directories as read-only from git's point of view. Archive first,
 then stage source paths explicitly (`git add src/ README.md`). Never `git add -A`
 while run output is in the working tree — it has already caused two history rewrites.
+
+## Which fixture to run
+
+`tinytally` (2 types × 3 methods) for everything that does not need scale: verifying a
+fix, checking a phase's behaviour, reproducing a defect. Its API names are invented, so a
+model that fabricates instead of reading produces something visibly wrong.
+
+`tinyoptics` (4 types × ~6 methods) when the finding depends on size — cost curves,
+context bloat, how a long module run degrades. It cost $3.30 for one module run.
+
+Build the site with `npm run build`, never `pnpm build`: this repo is a pnpm workspace, so
+`pnpm run` auto-installs against the outer workspace and dies before Docusaurus starts.
 
 ## Autonomous Agent Best Practices
 
