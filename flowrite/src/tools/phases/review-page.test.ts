@@ -21,14 +21,65 @@ function withBudget(value: string | undefined, fn: () => void): void {
   if (value === undefined) delete process.env.MAX_REVIEW_ROUNDS;
   else process.env.MAX_REVIEW_ROUNDS = value;
   __resetReviewRoundsForTests();
+  // Also clear the recorded review: consumeReviewRound reads it to decide whether a confirming round
+  // is owed, so a failing outcome left by an earlier test would grant one and make a budget assertion
+  // pass for the wrong reason. Order-independence here is the point.
+  __resetLastReviewForTests();
   try {
     fn();
   } finally {
     if (previous === undefined) delete process.env.MAX_REVIEW_ROUNDS;
     else process.env.MAX_REVIEW_ROUNDS = previous;
     __resetReviewRoundsForTests();
+    __resetLastReviewForTests();
   }
 }
+
+/** A recorded review with `failing` items failing and one passing. */
+function reviewed(failing: string[]): void {
+  __setLastReviewForTests({
+    state: 'reviewed',
+    items: [
+      { item: 'something that passed', pass: true, issue: '' },
+      ...failing.map((item) => ({ item, pass: false, issue: 'broken' })),
+    ],
+  });
+}
+
+test('a failing review earns one confirming round, so fixes can be recorded as verified', () => {
+  // #67: recordedVerdict() returns the LAST outcome, and a refused call records none — so under a hard
+  // budget of one, a run that repaired every finding still filed the pre-fix verdict.
+  // write-module-ref-turn4 fixed 5 of 6 items, filed all 6, then claimed "production-ready" in prose.
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    reviewed(['Layout matches auto-rule']);
+    consumeReviewRound(); // the confirming round, granted because the last review failed
+    __setLastReviewForTests({ state: 'reviewed', items: [{ item: 'all good', pass: true, issue: '' }] });
+    assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
+  });
+});
+
+test('the confirming round is granted once, so a page that stays broken cannot loop', () => {
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    reviewed(['still broken']);
+    consumeReviewRound();
+    // Second round failed too. No further round: the run ends reporting failed rather than re-reviewing.
+    reviewed(['still broken']);
+    assert.throws(() => consumeReviewRound(), /plus the confirming round, all used/);
+    assert.deepEqual(recordedVerdict(), { verdict: 'failed', failingItems: ['still broken'] });
+  });
+});
+
+test('a clean review earns no confirming round — there is nothing to confirm', () => {
+  // The round is conditional so a correct run pays nothing for it. Reviewing again after a pass would
+  // spend the most expensive phase in the run to re-learn what it already knows.
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    __setLastReviewForTests({ state: 'reviewed', items: [{ item: 'all good', pass: true, issue: '' }] });
+    assert.throws(() => consumeReviewRound(), /budget for this run is spent/);
+  });
+});
 
 test('the default budget is one round', () => {
   withBudget(undefined, () => {

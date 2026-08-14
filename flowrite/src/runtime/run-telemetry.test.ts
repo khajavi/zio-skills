@@ -161,16 +161,23 @@ test('one review round is unremarkable — it is the whole budget', () => {
   assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_data_type_ref: 1 } }) }), []);
 });
 
-test('review rounds beyond the budget mean the cap did not hold', () => {
-  // Under the default budget of one, a second round should be impossible: consumeReviewRound throws
-  // before delegating. So this flag no longer reports a slow-converging loop — it reports that the cap
-  // was bypassed, which is a defect in the cap rather than in the page.
-  for (const calls of [2, 4, 7]) {
+test('a second review round is the earned confirming pass, not a repeat', () => {
+  // The default budget is one round, and a run whose review failed earns ONE more so it can record that
+  // its fixes worked. That second round is correct behaviour, so flagging it would report the fix for
+  // #67 as a defect — the same false-positive shape this flag already had for refused calls.
+  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 2 } }) }), []);
+});
+
+test('review rounds beyond budget-plus-confirmation mean the cap did not hold', () => {
+  // Three rounds cannot happen: consumeReviewRound throws before delegating once the budget and the one
+  // confirming round are spent. So this flag reports that the cap was bypassed, a defect in the cap
+  // rather than in the page.
+  for (const calls of [3, 4, 7]) {
     const flags = computeFlags(
       input({ activity: activity({ phaseCalls: { review_module_ref: calls } }) }),
     );
     assert.deepEqual(flags.map((f) => f.code), ['phase-repeat'], `${calls} rounds should flag`);
-    assert.match(flags[0]!.detail, /against a budget of 1 — the review cap did not hold/);
+    assert.match(flags[0]!.detail, /against a ceiling of 2 .* the review cap did not hold/);
   }
 });
 
@@ -180,8 +187,9 @@ test('raising MAX_REVIEW_ROUNDS raises the flag threshold with it', () => {
   const previous = process.env.MAX_REVIEW_ROUNDS;
   process.env.MAX_REVIEW_ROUNDS = '3';
   try {
-    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 3 } }) }), []);
-    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 4 } }) }), [
+    // Budget 3 plus the one confirming round: 4 is legitimate, 5 is not.
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 4 } }) }), []);
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_module_ref: 5 } }) }), [
       'phase-repeat',
     ]);
   } finally {
@@ -262,9 +270,10 @@ test('the review cap holding is not reported as the cap failing', () => {
   );
 });
 
-test('a review that really ran twice past its budget still flags', () => {
-  // The other side of the subtraction: two rounds that both did work is the cap genuinely not holding.
-  const flags = codes({ activity: activity({ phaseCalls: { review_page: 2 } }) });
+test('rounds that really ran past the ceiling still flag', () => {
+  // The other side of the subtraction: rounds that all did work are the cap genuinely not holding. Three
+  // rather than two, because two is now the earned confirming round — only the third is unreachable.
+  const flags = codes({ activity: activity({ phaseCalls: { review_page: 3 } }) });
   assert.ok(flags.includes('phase-repeat'), `expected phase-repeat in ${flags.join(', ')}`);
 });
 

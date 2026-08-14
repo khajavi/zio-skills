@@ -50,10 +50,11 @@ differs. Do not mechanically follow steps that no longer fit.
    the types the tutorial teaches.
 8. **Review.** Call `review_page` with the tutorial path. It evaluates the tutorial against the
    tutorial-checklist and every writing style rule, and reports per-item pass/fail.
-   Review reports; you fix. Review rounds are budgeted — the tool's description says how many the
-   run allows, and by default it is one, so there is no confirming pass. Fix every failing item, then
-   finish; name anything still failing in your summary. The verdict is taken from what the review
-   returned, so you do not report it.
+   Review reports; you fix. Review rounds are budgeted — the tool's description says how many. When a
+   review reports failing items, fix them ALL and call review once more: the verdict is whatever the
+   last review found, so that confirming round is what records the tutorial as passing. A review that
+   reported nothing needs no confirmation. Name anything still failing in your summary. The verdict is
+   taken from what the review returned, so you do not report it.
 9. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema

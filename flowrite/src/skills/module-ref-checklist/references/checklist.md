@@ -47,7 +47,8 @@ not attempt to re-count members here.
 
 - Fix every failing item in one editing pass.
 - The run has a bounded number of review rounds and the review tool's description states how many.
-  With the default of one there is no confirming pass, so treat the first review as the only one:
-  fix what it reports, then finish.
+  When a review reports failing items, fix them all and call review ONCE more: that confirming round
+  is what records the page as passing, since the verdict is whatever the last review found. A review
+  that reported nothing needs no confirmation — finish instead.
 - Name every item you could not fix in the final summary, and report the run as failed when any
   remain. An unverified fix is not a pass.

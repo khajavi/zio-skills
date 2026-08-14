@@ -77,9 +77,19 @@ export const reviewSchema = v.object({
  */
 let roundsUsed = 0;
 
-/** Reset the round counter. Tests only — the counter is module state with no other seam. */
+/**
+ * Whether the one confirming round has been spent.
+ *
+ * Separate from `roundsUsed` because it is granted on a condition rather than budgeted: see
+ * `consumeReviewRound`. One per run, never two, so a review that keeps failing cannot spend rounds
+ * forever.
+ */
+let confirmingUsed = false;
+
+/** Reset the round counters. Tests only — they are module state with no other seam. */
 export function __resetReviewRoundsForTests(): void {
   roundsUsed = 0;
+  confirmingUsed = false;
 }
 
 /**
@@ -123,9 +133,11 @@ export function __setLastReviewForTests(outcome: ReviewOutcome | null): void {
  * review at all — which is how a page written past a refused phase (#49) stops being filable as
  * passing.
  *
- * "Reviewed, failures found, fixes unverified" reports as `failed`, and that is deliberate. The cap
- * can leave a run unable to confirm its own repairs; `failed` is then the honest record, because
- * nothing observed the fixed page. A verdict may not claim more than the evidence.
+ * "Reviewed, failures found, fixes unverified" reports as `failed`, and that is deliberate: nothing
+ * observed the fixed page, and a verdict may not claim more than the evidence. What changed is how a
+ * run earns better evidence — `consumeReviewRound` grants one confirming round after a failing review,
+ * so a run that repairs everything can be observed doing it. `failed` now means the page was still
+ * failing when last looked at, not merely that the budget ran out first.
  */
 export function recordedVerdict(): {
   verdict: 'passed' | 'failed' | 'not-reviewed';
@@ -147,11 +159,15 @@ export function recordedVerdict(): {
  */
 function reviewBudgetNote(): string {
   const budget = maxReviewRounds();
-  return budget === 1
-    ? 'This run allows ONE review round: there is no confirming pass, so fix what it reports and ' +
-        'finish rather than calling review again.'
-    : `This run allows ${budget} review rounds in total; when they are spent, fix what was reported ` +
-        `and finish rather than calling review again.`;
+  const rounds =
+    budget === 1 ? 'This run allows ONE review round' : `This run allows ${budget} review rounds`;
+  // The confirming round only helps if the model knows to spend it. It is conditional, so say what
+  // unlocks it: a review that found nothing has nothing to confirm, and calling again there is refused.
+  return (
+    `${rounds}. If a review reports failing items, fix them all and then call review ONCE more — that ` +
+    `confirming round is what lets the run record the page as passing, since the verdict is whatever ` +
+    `the last review found. A review that reported nothing needs no confirmation: finish instead.`
+  );
 }
 
 /**
@@ -164,16 +180,39 @@ function reviewBudgetNote(): string {
  */
 export function consumeReviewRound(): void {
   const budget = maxReviewRounds();
-  if (roundsUsed >= budget) {
-    throw new Error(
-      `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}, all used). ` +
-        `Do not call review again. Fix what the last review reported, then file report_run_result. ` +
-        `The verdict comes from the review itself, so it will record what the last review found — ` +
-        `name what you fixed and anything still wrong in your summary and your closing reply, and do ` +
-        `not describe an unverified page as complete.`,
-    );
+  if (roundsUsed < budget) {
+    roundsUsed++;
+    return;
   }
-  roundsUsed++;
+
+  // The budget is spent. Grant ONE confirming round when the last review found failures, because
+  // without it a run that repairs everything can never record that it did: `recordedVerdict()` returns
+  // the last outcome, the refused call records none, so the verdict permanently predates the fixes.
+  // write-module-ref-turn4 fixed 5 of 6 items and still filed all 6 — then wrote "production-ready and
+  // passes all technical verification" in prose, contradicting the verdict it could not change. So the
+  // mechanism meant to stop optimistic self-reporting was manufacturing the motive for it.
+  //
+  // Conditional, not budgeted, and that is the point: a clean first review needs no confirmation and
+  // pays nothing, while a failing one buys evidence about the fixed page rather than an assumption.
+  // `confirmingUsed` caps it at one — a second failing round ends the run, so a page that cannot be
+  // repaired still reports `failed` instead of looping. Worst case is two rounds, and only when the
+  // first one found something.
+  const lastFailed =
+    lastOutcome?.state === 'reviewed' && lastOutcome.items.some((item) => !item.pass);
+  if (!confirmingUsed && lastFailed) {
+    confirmingUsed = true;
+    roundsUsed++;
+    return;
+  }
+
+  throw new Error(
+    `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}` +
+      `${confirmingUsed ? ' plus the confirming round' : ''}, all used). Do not call review again. ` +
+      `Fix what the last review reported, then file report_run_result. The verdict comes from the ` +
+      `review itself, so it will record what the last review found — name what you fixed and anything ` +
+      `still wrong in your summary and your closing reply, and do not describe an unverified page as ` +
+      `complete.`,
+  );
 }
 
 // The per-kind checklist table moved to runtime/kind-docs.ts, alongside the structure templates and

@@ -1,6 +1,6 @@
 import type { ActivityReport, ComponentUsage, PhaseUsage } from './component-usage.ts';
 import type { TokenUsageTotals } from './token-usage.ts';
-import { maxReviewRounds } from './run-context.ts';
+import { reviewRoundCap } from './run-context.ts';
 
 /**
  * The end-of-run report: what the run cost, what it did, and what looks wrong.
@@ -72,11 +72,15 @@ const TOOL_ERROR_THRESHOLD = 3;
  * watcher. `maxReviewRounds()` now enforces a hard cap (default 1), which made a static 6 unreachable
  * — a flag that can never fire is worse than no flag, because it reads as coverage that is not there.
  *
- * Reading the same function the cap reads keeps the two in step: raise `MAX_REVIEW_ROUNDS` and the
+ * Reading a function derived from the cap keeps the two in step: raise `MAX_REVIEW_ROUNDS` and the
  * threshold rises with it, so the flag still means "more rounds than this run was allowed" rather than
  * "more than some number I hardcoded". If it ever fires, the cap has been bypassed.
+ *
+ * `reviewRoundCap()`, not `maxReviewRounds()`: a run whose first review failed earns one confirming
+ * round, so a correct run CAN review budget+1 times. Reading the budget here would report that earned
+ * round as a bypass — the same false positive this flag already had once for refused calls.
  */
-const reviewRepeatLimit = () => maxReviewRounds();
+const reviewRepeatLimit = () => reviewRoundCap();
 
 /**
  * Phases exempt from the repeat check because they legitimately run per documented type.
@@ -179,7 +183,8 @@ export function computeFlags(input: FlagInput): RunFlag[] {
         code: 'phase-repeat',
         phase,
         detail: isReview
-          ? `ran ${ran}× against a budget of ${limit} — the review cap did not hold`
+          ? `ran ${ran}× against a ceiling of ${limit} (the budget plus one confirming round) — ` +
+            `the review cap did not hold`
           : `ran ${ran}× — repeated work, or a phase re-entered after failing`,
       });
     }
