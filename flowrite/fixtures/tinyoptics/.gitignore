@@ -1,7 +1,0 @@
-target/
-.bsp/
-.metals/
-.bloop/
-.idea/
-.remember/
-*.tmp.*
