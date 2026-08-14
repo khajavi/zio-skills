@@ -125,6 +125,9 @@ when relevant.
      high-level alternative to prefer (writing-style rule 26).
 2. Motivation / Use Case (if applicable)
    - What problem the module solves and why use it over alternatives; advantages as bullets.
+   - Draw it from the history findings that give a REASON the module is factored this way. Retell
+     them in your own words; never quote a commit or cite a PR number on the page. The other findings
+     there belong in the sections they describe. No finding gives a reason: no Motivation section.
 3. Installation (if applicable — top-level module only)
    - `libraryDependencies += "dev.zio" %% "<module>" % "@VERSION@"` (`%%%` for cross-platform).
 4. Overview (hierarchical) / optional for flat

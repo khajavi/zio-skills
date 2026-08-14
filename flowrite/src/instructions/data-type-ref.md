@@ -23,11 +23,15 @@ reality differs. Do not mechanically follow steps that no longer fit.
    verbatim signature and a short real usage snippet, subtypes or variants, worthwhile comparisons,
    the imports and sbt dependency, and a closing grounding-detail section of verbatim excerpts.
    Reference pages are exhaustive: an omitted operation is a defect.
+   Ask for **what the commit history states** too: it is the only source for why the type is shaped
+   this way, what a member used to be called, and where a platform differs.
    Read the file it wrote before going on. If it is missing or thin, say so and delegate again rather
    than filling the gap yourself.
 3. **Design.** Delegate to the `designer` subagent with the `task` tool, naming the research file to
    read. Ask which optional sections apply, the construction order, and how the operations group into
-   ordered Core Operations categories. The reference-page template is already in its instructions.
+   ordered Core Operations categories. Motivation applies only when a history finding gives a REASON —
+   counting findings is not the test, since a rename and a platform note motivate nothing. The
+   reference-page template is already in its instructions.
 4. **Write.** Delegate to the `drafter` subagent with the `task` tool. Give it the research file path,
    the plan from step 3, and the exact page path `docs/reference/<type-kebab>.md`. It writes the file
    itself, frontmatter included; the template and the writing-style rules are already in its

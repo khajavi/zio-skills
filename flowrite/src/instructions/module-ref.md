@@ -26,6 +26,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
    representative snippet. Not exhaustive per method — that happens per type later. The heart of it is
    **how the types work together**: base the workflow on a real multi-type test and cite that test.
    Ask for named module patterns, integration points, imports, the sbt dependency, and grounding detail.
+   Ask for **what the commit history states** too: it is the only source for why the module is factored
+   this way, which types it gained or extracted, and where a platform differs.
    Read the file it wrote before going on.
 3. **Design.** Delegate to the `designer` subagent with the `task` tool, naming the research file.
    Ask for the **shape** (`single-core` / `core-family` / `multi-domain` / `dsl`, classified by reader
@@ -33,7 +35,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
    core-family/multi-domain → hierarchical), which module-level sections apply, and the type order
    grouped into labelled groups. If the run requested a specific shape or layout, say so in the prompt
    and have it honour that. Ask it to apply the adapter / homogeneous-family / supportive-type
-   modifiers where they hold, and to say plainly when the shape is genuinely uncertain.
+   modifiers where they hold, and to say plainly when the shape is genuinely uncertain. Motivation
+   applies only when a history finding gives a REASON the module is factored this way.
 4. **Write the module page.** Delegate to the `drafter` subagent with the `task` tool, giving it the
    research file path, the plan from step 3, and the exact page path. What the page is depends on the
    plan's layout, so tell it which:

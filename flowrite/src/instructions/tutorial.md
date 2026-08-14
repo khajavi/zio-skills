@@ -25,7 +25,9 @@ differs. Do not mechanically follow steps that no longer fit.
    factory methods the learner actually uses, the simplest possible "hello world", the incremental
    complexity layers after it, the points where printed output lets the learner confirm the code
    behaved as claimed, the single core insight the whole tutorial drives toward, imports, the sbt
-   dependency, and grounding detail. Read the file it wrote before going on.
+   dependency, and grounding detail. Ask for **what the commit history states** too: it is the only
+   source for why the concept works this way and which usages the compiler rejects.
+   Read the file it wrote before going on.
 3. **Design the plan.** Delegate to the `designer` subagent with the `task` tool, naming the research
    file, for an ordered section plan. The tutorial template and its section-design rules are already in
    its instructions.
