@@ -47,7 +47,8 @@ differs. Do not mechanically follow steps that no longer fit.
    tutorial-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Review rounds are budgeted — the tool's description says how many the
    run allows, and by default it is one, so there is no confirming pass. Fix every failing item, then
-   finish; name anything still failing in your summary and report the run as failed.
+   finish; name anything still failing in your summary. The verdict is taken from what the review
+   returned, so you do not report it.
 9. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema

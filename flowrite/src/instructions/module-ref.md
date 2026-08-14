@@ -73,7 +73,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
    documented type to confirm every public member is documented. Review rounds are budgeted across the
    whole run — the tool's description says how many, and by default it is one, so there is no confirming
    pass and an index plus its subpages share the same budget. Fix every failing item, then finish; name
-   anything still failing in your summary and report the run as failed.
+   anything still failing in your summary. The verdict is taken from what the review returned, so you
+   do not report it.
 10. **Retrospective.** In your final result, alongside the path and summary, report the real obstacles
     you hit this run (per phase), how you resolved each, and — where you can name one — a concrete
     instruction/tool/schema change that would prevent it next time. Report only friction you actually
