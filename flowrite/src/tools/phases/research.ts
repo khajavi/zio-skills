@@ -33,6 +33,53 @@ export const sourceRef = v.pipe(
   ),
 );
 
+/**
+ * Why the API is shaped this way, read out of the repo's own history.
+ *
+ * Source and tests state WHAT a type does; they never state what it was weighed against. That
+ * argument lives in commit messages, PR bodies and issue threads — zio-blocks 7c49fb9, the commit
+ * this field was added for, spends 1239 lines explaining why `.await` is lexically gated and why
+ * `&&`/`||` had to be rewritten to `if`. Without somewhere structured to put it, that reasoning
+ * either never gets gathered or gets buried in `groundingDetail` next to the signatures.
+ *
+ * Empty is a legitimate answer and deliberately not validated against. A repo whose history says
+ * nothing about a type must be able to say so: requiring an entry would make the model produce one,
+ * which is the fabrication mode phase-ledger.ts documents. What IS validated is `provenance` — a
+ * claim sourced to "the source code" or to a guessed number is not history, and the check catches it
+ * without a second model pass.
+ */
+export const designRationale = v.pipe(
+  v.array(
+    v.object({
+      claim: v.pipe(
+        v.string(),
+        v.description('The design decision or behaviour this explains, e.g. "`.await` is a compile error outside `Async.async`"'),
+      ),
+      why: v.pipe(v.string(), v.description('The reason the authors gave for it, in their terms')),
+      provenance: v.pipe(
+        v.string(),
+        v.description('Exactly where it was read: "commit <shortSha>", "PR #<n>", or "issue #<n>" — never a guess'),
+      ),
+      quote: v.pipe(
+        v.string(),
+        v.description('Verbatim excerpt from that commit message / PR body / issue that states the reason'),
+      ),
+    }),
+  ),
+  v.check(
+    (items) => items.every((i) => /^(commit [0-9a-f]{7,40}|PR #\d+|issue #\d+)$/.test(i.provenance)),
+    'Re-run this phase and set every designRationale "provenance" to the history item you actually ' +
+      'read it from, in one of exactly these forms: "commit <shortSha>", "PR #<n>", or "issue #<n>". ' +
+      'A fact read from source or tests is not design rationale — drop it rather than citing a file ' +
+      'path, and return an empty array if history says nothing about this type.',
+  ),
+  v.description(
+    'Design rationale mined from commit messages, PR bodies and linked issues — WHY the type is ' +
+      'shaped this way, its tradeoffs and rejected alternatives. Empty only if history genuinely ' +
+      'says nothing about it; never invent an entry.',
+  ),
+);
+
 // API-surface-shaped research, in contrast to the tutorial schema's narrative/pedagogical shape. A
 // reference page is organized by the type's public API, so the researcher enumerates it exhaustively.
 export const dataTypeResearchSchema = v.object({
@@ -122,6 +169,7 @@ export const dataTypeResearchSchema = v.object({
     v.description('true if the type is a top-level module type warranting an Installation section'),
   ),
   scalaVersionNotes: v.nullable(v.pipe(v.string(), v.description('Any Scala 2 vs 3 differences, or null'))),
+  designRationale,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
@@ -203,11 +251,13 @@ export const moduleResearchSchema = v.object({
     v.array(v.string()),
     v.description('Every repo-relative source file read during research (deduped); the paths cited in `source` fields.'),
   ),
+  designRationale,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
-      'Verbatim supporting detail — real signatures, scaladoc excerpts, snippets from source/tests/examples. ' +
-        'The drafter grounds every fact and relationship in this; never let general knowledge substitute for it.',
+      'Verbatim supporting detail — real signatures, scaladoc excerpts, snippets from ' +
+        'source/tests/examples/commit and PR history. The drafter grounds every fact and relationship ' +
+        'in this; never let general knowledge substitute for it.',
     ),
   ),
 });
@@ -262,6 +312,7 @@ export const tutorialResearchSchema = v.object({
   scalaVersionNotes: v.nullable(
     v.pipe(v.string(), v.description('Any Scala 2 vs 3 differences, or null if none')),
   ),
+  designRationale,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
@@ -379,6 +430,7 @@ export const researchDataType = defineTool({
           sbtDependency: SKIPPED,
           isTopLevelModuleType: false,
           scalaVersionNotes: null,
+          designRationale: [],
           groundingDetail: SKIPPED,
         },
         // Recorded so write_data_type_reference can draft from what research returned instead of from
@@ -398,6 +450,11 @@ export const researchDataType = defineTool({
           `to the repo-relative location you actually read it from, as "path:L<start>-L<end>"`,
           `(e.g. "src/main/scala/optics/Prism.scala:L40-L41"). List every file you read in`,
           `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
+          ``,
+          `Then mine the repo's history for WHY the type is shaped this way — run git_history on the`,
+          `files you read, follow the PRs and issues those commits name, and record what you find in`,
+          `"designRationale". Source and tests say what the type does; only history says what it was`,
+          `weighed against. Return an empty array if history says nothing about this type.`,
         ],
       }),
     };
@@ -439,6 +496,7 @@ export const researchModule = defineTool({
           sbtDependency: SKIPPED,
           isTopLevelModule: false,
           sourceFiles: [],
+          designRationale: [],
           groundingDetail: SKIPPED,
         },
         cacheTopic: `module-ref::${data.moduleName}`,
@@ -463,6 +521,11 @@ export const researchModule = defineTool({
           `For every type set its "source" to the repo-relative location you actually read it`,
           `from, as "path:L<start>-L<end>". List every file you read in "sourceFiles". Never`,
           `guess a path or line — cite only a file you opened.`,
+          ``,
+          `Then mine the repo's history for WHY the module is factored this way — run git_history on`,
+          `the files you read, follow the PRs and issues those commits name, and record what you find`,
+          `in "designRationale". Module-level rationale (why these types are separate, why one wraps`,
+          `another) matters most here. Return an empty array if history says nothing about it.`,
         ],
       }),
     };
@@ -504,6 +567,7 @@ export const researchTutorialTopic = defineTool({
           sourceFiles: [],
           sbtDependency: SKIPPED,
           scalaVersionNotes: null,
+          designRationale: [],
           groundingDetail: SKIPPED,
         },
         // Unnamespaced, unlike the other two, because that is the key the existing tutorial caches
@@ -517,6 +581,11 @@ export const researchTutorialTopic = defineTool({
           `to the repo-relative location you actually read it from, as "path:L<start>-L<end>"`,
           `(e.g. "src/main/scala/optics/Lens.scala:L12-L20"), and list every file you read in`,
           `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
+          ``,
+          `Then mine the repo's history for WHY the concept works this way — run git_history on the`,
+          `files you read, follow the PRs and issues those commits name, and record what you find in`,
+          `"designRationale". A tutorial's motivation and its gotchas both come from there. Return an`,
+          `empty array if history says nothing about this topic.`,
         ],
       }),
     };
