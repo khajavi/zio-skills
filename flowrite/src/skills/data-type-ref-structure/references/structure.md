@@ -42,11 +42,13 @@ Keep them in this order.
      homogeneous lists (e.g. `given` instances) to one commented line + a sentence noting more exist.
 2. Motivation / Use Case (if applicable)
    - The problem and why this type solves it, told as a short realistic scenario.
-   - Draw it from the research's `designRationale` — the reasons the library's own commits and PRs
-     give. Retell them in your own words; never quote a commit or cite a PR number on the page.
+   - Draw it from the `historyFindings` that give a REASON — what the library's own commits and PRs
+     say the type is for. Retell them in your own words; never quote a commit or cite a PR number on
+     the page. (The other findings there — renames, caveats, platform notes — belong in the sections
+     they describe, not here.)
    - ✅ "Tracking a running total across fibers needs the update to be atomic, so `Ledger` …"
      ❌ "This type is useful when you need to track totals." (a motivation with nothing behind it)
-   - No `designRationale` entries means no Motivation section. Omit it rather than inventing one.
+   - No finding gives a reason: no Motivation section. Omit it rather than inventing one.
 3. Usage (required)
    - Core capabilities in one `mdoc:reset` block (~10-20 lines) so a reader grasps the idea without reading on.
 4. Installation (if applicable — top-level module types only)

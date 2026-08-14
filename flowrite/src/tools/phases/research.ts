@@ -34,49 +34,59 @@ export const sourceRef = v.pipe(
 );
 
 /**
- * Why the API is shaped this way, read out of the repo's own history.
+ * Everything the repo's own history says about this subject — a fourth research source, alongside
+ * source, tests and examples.
  *
- * Source and tests state WHAT a type does; they never state what it was weighed against. That
- * argument lives in commit messages, PR bodies and issue threads — zio-blocks 7c49fb9, the commit
- * this field was added for, spends 1239 lines explaining why `.await` is lexically gated and why
- * `&&`/`||` had to be rewritten to `if`. Without somewhere structured to put it, that reasoning
- * either never gets gathered or gets buried in `groundingDetail` next to the signatures.
+ * Deliberately open-ended. Source states what a type does today and tests state how it composes;
+ * neither can state what it was weighed against, what it used to be called, which usages are
+ * rejected, or which platform behaves differently. zio-blocks 7c49fb9 — the commit this field was
+ * added for — carries all four in one 1239-line message, and only one of them is a rationale.
+ *
+ * Which is why an entry is a `finding` and not a claim-plus-reason. An earlier shape here was
+ * `{ claim, why, … }`, and it quietly narrowed the field to rationale alone: a rename has no `why`
+ * to fill in, so it either got contorted into one or went unrecorded. A finding carries its own
+ * reason when it has one.
  *
  * Empty is a legitimate answer and deliberately not validated against. A repo whose history says
- * nothing about a type must be able to say so: requiring an entry would make the model produce one,
- * which is the fabrication mode phase-ledger.ts documents. What IS validated is `provenance` — a
- * claim sourced to "the source code" or to a guessed number is not history, and the check catches it
- * without a second model pass.
+ * nothing about a subject must be able to say so: requiring an entry would make the model produce
+ * one, which is the fabrication mode phase-ledger.ts documents. What IS validated is `provenance` —
+ * a fact sourced to "the source code" or to a guessed number is not history, and the check catches
+ * it without a second model pass.
  */
-export const designRationale = v.pipe(
+export const historyFindings = v.pipe(
   v.array(
     v.object({
-      claim: v.pipe(
+      finding: v.pipe(
         v.string(),
-        v.description('The design decision or behaviour this explains, e.g. "`.await` is a compile error outside `Async.async`"'),
+        v.description(
+          'One thing history states about this subject, in full. A reason ("`.await` is gated to a ' +
+            'compile error outside `Async.async`, so a suspension cannot escape the block"), a rename ' +
+            '("the eager driver was `.unsafeRunSync` before this"), a constraint, a platform ' +
+            'difference, a version-conditional dependency, a claimed property — whatever is there.',
+        ),
       ),
-      why: v.pipe(v.string(), v.description('The reason the authors gave for it, in their terms')),
       provenance: v.pipe(
         v.string(),
         v.description('Exactly where it was read: "commit <shortSha>", "PR #<n>", or "issue #<n>" — never a guess'),
       ),
       quote: v.pipe(
         v.string(),
-        v.description('Verbatim excerpt from that commit message / PR body / issue that states the reason'),
+        v.description('Verbatim excerpt from that commit message / PR body / issue that states it'),
       ),
     }),
   ),
   v.check(
     (items) => items.every((i) => /^(commit [0-9a-f]{7,40}|PR #\d+|issue #\d+)$/.test(i.provenance)),
-    'Re-run this phase and set every designRationale "provenance" to the history item you actually ' +
+    'Re-run this phase and set every historyFindings "provenance" to the history item you actually ' +
       'read it from, in one of exactly these forms: "commit <shortSha>", "PR #<n>", or "issue #<n>". ' +
-      'A fact read from source or tests is not design rationale — drop it rather than citing a file ' +
-      'path, and return an empty array if history says nothing about this type.',
+      'A fact read from source or tests does not belong here — drop it rather than citing a file ' +
+      'path, and return an empty array if history says nothing about this subject.',
   ),
   v.description(
-    'Design rationale mined from commit messages, PR bodies and linked issues — WHY the type is ' +
-      'shaped this way, its tradeoffs and rejected alternatives. Empty only if history genuinely ' +
-      'says nothing about it; never invent an entry.',
+    'Everything the commit history, PR bodies and linked issues state about this subject: design ' +
+      'reasons and rejected alternatives, renames and deprecations, constraints and gotchas, platform ' +
+      'and version differences, claimed properties — anything a documentation author could not learn ' +
+      'from source or tests. Empty only if history genuinely says nothing; never invent an entry.',
   ),
 );
 
@@ -169,7 +179,7 @@ export const dataTypeResearchSchema = v.object({
     v.description('true if the type is a top-level module type warranting an Installation section'),
   ),
   scalaVersionNotes: v.nullable(v.pipe(v.string(), v.description('Any Scala 2 vs 3 differences, or null'))),
-  designRationale,
+  historyFindings,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
@@ -251,7 +261,7 @@ export const moduleResearchSchema = v.object({
     v.array(v.string()),
     v.description('Every repo-relative source file read during research (deduped); the paths cited in `source` fields.'),
   ),
-  designRationale,
+  historyFindings,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
@@ -312,7 +322,7 @@ export const tutorialResearchSchema = v.object({
   scalaVersionNotes: v.nullable(
     v.pipe(v.string(), v.description('Any Scala 2 vs 3 differences, or null if none')),
   ),
-  designRationale,
+  historyFindings,
   groundingDetail: v.pipe(
     v.string(),
     v.description(
@@ -430,7 +440,7 @@ export const researchDataType = defineTool({
           sbtDependency: SKIPPED,
           isTopLevelModuleType: false,
           scalaVersionNotes: null,
-          designRationale: [],
+          historyFindings: [],
           groundingDetail: SKIPPED,
         },
         // Recorded so write_data_type_reference can draft from what research returned instead of from
@@ -441,7 +451,7 @@ export const researchDataType = defineTool({
         researching: `data type: ${data.typeName}`,
         prompt: [
           `Research the ZIO data type "${data.typeName}" in this library checkout so an API`,
-          `reference page can be written accurately from real source, tests, and examples.`,
+          `reference page can be written accurately from real source, tests, examples and history.`,
           `Enumerate the FULL public API: every companion constructor/factory, every public`,
           `method (with its real signature), predefined instances, subtypes, and worthwhile`,
           `comparisons. Reference pages must be exhaustive — do not omit operations.`,
@@ -451,12 +461,13 @@ export const researchDataType = defineTool({
           `(e.g. "src/main/scala/optics/Prism.scala:L40-L41"). List every file you read in`,
           `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
           ``,
-          `Then read the commit history of the files you read and follow the PRs and issues those`,
-          `commits name. Source and tests say what the type does; only history says what it was`,
-          `weighed against, what a member was renamed from, which usages are rejected, and which`,
-          `platform behaves differently. Put the reasons in "designRationale" (empty array if history`,
-          `says nothing) and fold the rest into the fields it belongs to — "caveats", "keyProperties",`,
-          `"scalaVersionNotes", "sbtDependency", "groundingDetail".`,
+          `Then research the type's HISTORY as a source in its own right: read the commit history of`,
+          `the files you read and follow the PRs and issues those commits name. Source and tests state`,
+          `what the type is today; history is the only place that states everything else about it.`,
+          `Record every such finding in "historyFindings" — empty array only if history genuinely says`,
+          `nothing — and fold each into the field it also belongs to ("caveats", "keyProperties",`,
+          `"scalaVersionNotes", "sbtDependency", "groundingDetail"). Do not narrow this to design`,
+          `reasons: report whatever history states about this type.`,
         ],
       }),
     };
@@ -498,7 +509,7 @@ export const researchModule = defineTool({
           sbtDependency: SKIPPED,
           isTopLevelModule: false,
           sourceFiles: [],
-          designRationale: [],
+          historyFindings: [],
           groundingDetail: SKIPPED,
         },
         cacheTopic: `module-ref::${data.moduleName}`,
@@ -524,12 +535,13 @@ export const researchModule = defineTool({
           `from, as "path:L<start>-L<end>". List every file you read in "sourceFiles". Never`,
           `guess a path or line — cite only a file you opened.`,
           ``,
-          `Then read the commit history of the files you read and follow the PRs and issues those`,
-          `commits name. Put the reasons in "designRationale" — module-level rationale (why these types`,
-          `are separate, why one wraps another) matters most here; empty array if history says nothing.`,
-          `A commit's file list is also a type inventory: use it to confirm you found every member type`,
-          `and to tell core exports from internals. Fold anything else history states — renames,`,
-          `platform differences, dependencies — into the field it belongs to.`,
+          `Then research the module's HISTORY as a source in its own right: read the commit history of`,
+          `the files you read and follow the PRs and issues those commits name. Record everything it`,
+          `states about the module in "historyFindings" — empty array only if it genuinely says nothing.`,
+          `Module-level findings are the ones to look hardest for: why these types are separate, why one`,
+          `wraps another, which were extracted from which, what moved to another module. A commit's file`,
+          `list is also a type inventory — use it to confirm you found every member type and to tell`,
+          `core exports from internals. Do not narrow this to design reasons.`,
         ],
       }),
     };
@@ -571,7 +583,7 @@ export const researchTutorialTopic = defineTool({
           sourceFiles: [],
           sbtDependency: SKIPPED,
           scalaVersionNotes: null,
-          designRationale: [],
+          historyFindings: [],
           groundingDetail: SKIPPED,
         },
         // Unnamespaced, unlike the other two, because that is the key the existing tutorial caches
@@ -586,11 +598,12 @@ export const researchTutorialTopic = defineTool({
           `(e.g. "src/main/scala/optics/Lens.scala:L12-L20"), and list every file you read in`,
           `"sourceFiles". Never guess a path or line — cite only a file you opened.`,
           ``,
-          `Then read the commit history of the files you read and follow the PRs and issues those`,
-          `commits name. A tutorial's motivation and its gotchas both come from there: put the reasons`,
-          `in "designRationale" (empty array if history says nothing) and fold the rest into the field`,
-          `it belongs to — a rename the learner must not be taught, a platform that behaves differently,`,
-          `a version-conditional dependency.`,
+          `Then research the topic's HISTORY as a source in its own right: read the commit history of`,
+          `the files you read and follow the PRs and issues those commits name. Record everything it`,
+          `states in "historyFindings" — empty array only if it genuinely says nothing. A tutorial's`,
+          `motivation comes from there, and so does every trap worth warning a learner about: a rename`,
+          `they must not be taught, a platform that behaves differently, a usage the compiler rejects.`,
+          `Do not narrow this to design reasons.`,
         ],
       }),
     };
