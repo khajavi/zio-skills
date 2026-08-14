@@ -62,13 +62,6 @@ export interface FlagInput {
   reportCalls: number;
 }
 
-/**
- * Tunable, not settled: a phase whose own turns average this many times the median phase is flagged
- * as context-bloated. 3× was chosen because it flags the review phase (85k tokens/turn against
- * 8-21k elsewhere) and nothing else in the runs measured so far. Revisit with more data.
- */
-const BLOAT_MULTIPLE = 3;
-
 /** Tunable: one failed `edit` is a stale match, several is a loop. */
 const TOOL_ERROR_THRESHOLD = 3;
 
@@ -152,11 +145,6 @@ function perTypePairing(activity: ActivityReport): RunFlag[] {
 
 const money = (n: number) => `$${n.toFixed(4)}`;
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-}
 
 /**
  * Derive the flags. Pure: same input, same flags, no runtime needed.
@@ -177,13 +165,18 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     const isReview = phase.startsWith('review');
     if (!isReview && PER_TYPE_PHASES.includes(phase)) continue;
     const limit = isReview ? reviewRepeatLimit() : 1;
-    if (calls > limit) {
+    // A refused call is not a run. `phaseCalls` counts `tool_start`, so the round the budget REFUSED
+    // is in there — which made this flag fire on every run where the cap worked, reporting "the review
+    // cap did not hold" as the direct result of the cap holding. Observed in turns 1, 2 and 3 of the
+    // tinytally data-type archive, all three of them correct runs.
+    const ran = calls - (activity.phaseFailures[phase] ?? 0);
+    if (ran > limit) {
       flags.push({
         code: 'phase-repeat',
         phase,
         detail: isReview
-          ? `ran ${calls}× against a budget of ${limit} — the review cap did not hold`
-          : `ran ${calls}× — repeated work, or a phase re-entered after failing`,
+          ? `ran ${ran}× against a budget of ${limit} — the review cap did not hold`
+          : `ran ${ran}× — repeated work, or a phase re-entered after failing`,
       });
     }
   }
@@ -239,25 +232,19 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
-  // Needs at least three phases for a median to mean anything; a one- or two-phase run has no
-  // baseline to be an outlier against.
-  const perTurn = real.filter((p) => p.ownTurns > 0).map((p) => p.ownTokens / p.ownTurns);
-  if (perTurn.length >= 3) {
-    const mid = median(perTurn);
-    for (const phase of real) {
-      if (phase.ownTurns === 0) continue;
-      const rate = phase.ownTokens / phase.ownTurns;
-      if (rate > mid * BLOAT_MULTIPLE) {
-        flags.push({
-          code: 'context-bloat',
-          phase: phase.phase,
-          detail:
-            `${Math.round(rate / 1000)}k tokens per own turn, ${(rate / mid).toFixed(1)}× the ` +
-            `median phase — every turn re-sends everything accumulated before it`,
-        });
-      }
-    }
-  }
+  // The context-bloat flag is gone, and it is worth saying why rather than leaving it dormant.
+  //
+  // It compared each phase's tokens-per-own-turn against the median across phases, needing at least
+  // three to have a baseline at all. Own turns belong to a scratch conversation, and there is one
+  // phase tool left — so the population is `review_page` plus `(orchestration)`, the guard never
+  // clears, and the flag could not fire again. A check that cannot fire reads as coverage that is not
+  // there, which is the same trap `reviewRepeatLimit`'s comment describes.
+  //
+  // The phenomenon it watched is real and has not gone away: the root conversation grows, and it was
+  // 43% of the last measured run. But one row cannot be an outlier against itself, and inventing a
+  // fixed tokens-per-turn threshold would be a number with nothing behind it. `tokensPerOwnTurn` is
+  // in the table for a reader to judge; when there is enough data to justify a threshold, it can come
+  // back as a rule about the orchestration row specifically.
 
   if (reportCalls > 1) {
     flags.push({

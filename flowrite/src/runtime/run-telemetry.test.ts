@@ -39,13 +39,16 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
 });
 
 const input = (over: Partial<FlagInput> = {}): FlagInput => ({
+  // Stage rows as a converted run produces them: one per role, delegate-only, because no relay sits in
+  // front of them any more. `review_page` would be the one row carrying both halves.
   phases: [
-    phase('research_data_type'),
-    phase('design_data_type_plan'),
-    phase('write_data_type_reference'),
-    // The synthetic bucket is always present in a real run, and must never be judged as a phase:
-    // it has no delegates, so it would trip own-exceeds-delegate on every single run.
-    phase('(between phases)', { delegateTurns: 0, delegateTokens: 0, delegateCost: 0, ownCost: 0.2 }),
+    phase('researcher'),
+    phase('designer'),
+    phase('drafter'),
+    // The synthetic bucket is always present in a real run, and must never be judged as a stage: it is
+    // own-only, so it would trip own-exceeds-delegate on every single run. Named '(orchestration)' since
+    // it now holds the root agent's whole contribution rather than the gaps between phase tools.
+    phase('(orchestration)', { delegateTurns: 0, delegateTokens: 0, delegateCost: 0, ownCost: 0.2 }),
   ],
   activity: activity(),
   refusals: [],
@@ -164,12 +167,14 @@ test('raising MAX_REVIEW_ROUNDS raises the flag threshold with it', () => {
 
 test('a failed phase is flagged with what it spent', () => {
   const flags = computeFlags(
-    input({ activity: activity({ phaseFailures: { design_data_type_plan: 2 } }) }),
+    input({ activity: activity({ phaseFailures: { designer: 2 } }) }),
   );
   assert.equal(flags.length, 1);
   assert.equal(flags[0]!.code, 'phase-failed');
   assert.match(flags[0]!.detail, /2 call\(s\) ended in error/);
-  assert.match(flags[0]!.detail, /\$0\.1100/); // the phase's real cost, not a guess
+  // The stage's real cost, looked up from the row, not a guess. Keyed on a role now that stage rows are
+  // roles — a failure attributed to a name with no row would silently report $0.0000.
+  assert.match(flags[0]!.detail, /\$0\.1100/);
 });
 
 test('guard refusals and give-ups are flagged', () => {
@@ -193,40 +198,49 @@ test('a run that never reviewed its page is flagged', () => {
   );
 });
 
-test('a phase outspending its own delegates is flagged', () => {
-  // The measured shape of the review phase: $1.67 coordinating, $0.99 delegated.
-  const phases = input().phases.map((p) =>
-    p.phase === 'write_data_type_reference' ? { ...p, ownCost: 1.667, delegateCost: 0.989 } : p,
-  );
+test('a stage outspending its own delegates is flagged', () => {
+  // The measured shape of the review phase: $1.67 coordinating, $0.99 delegated. `review_page` is the
+  // only stage that can still trip this — it is the last row with both halves, since every other stage
+  // is a bare delegation with no relay in front of it.
+  const phases = [
+    ...input().phases,
+    phase('review_page', { ownCost: 1.667, delegateCost: 0.989 }),
+  ];
   const flags = computeFlags(input({ phases }));
   assert.deepEqual(flags.map((f) => f.code), ['own-exceeds-delegate']);
-  assert.equal(flags[0]!.phase, 'write_data_type_reference');
+  assert.equal(flags[0]!.phase, 'review_page');
 });
 
-test('a context-bloated phase is flagged, and only that phase', () => {
-  // 85k tokens/turn against a 10k median — the review phase's real profile.
-  const phases = input().phases.map((p) =>
-    p.phase === 'write_data_type_reference'
-      ? { ...p, ownTurns: 38, ownTokens: 38 * 85_000, ownCost: 0.05 }
-      : { ...p, ownTurns: 2, ownTokens: 20_000 },
+/*
+ * The two context-bloat tests that stood here are gone with the flag (see run-telemetry.ts).
+ *
+ * They pinned a real threshold — 85k tokens/turn against a 10k median, and the requirement that three
+ * phases exist before a median means anything. Own turns belong to a scratch conversation, and one
+ * phase tool is left, so the population is `review_page` plus `(orchestration)` and the three-phase
+ * guard can never clear. Keeping tests for a flag that cannot fire would assert the guard, not the
+ * behaviour.
+ */
+
+test('the review cap holding is not reported as the cap failing', () => {
+  // `phaseCalls` counts tool_start, so the round the budget REFUSED is in the count. Unsubtracted, this
+  // flag fired on every correct run — turns 1, 2 and 3 of the tinytally data-type archive all recorded
+  // "the review cap did not hold" as the direct result of it holding.
+  assert.deepEqual(
+    codes({
+      activity: activity({
+        phaseCalls: { review_page: 2 },
+        phaseFailures: { review_page: 1 },
+      }),
+    }),
+    ['phase-failed'],
+    'the refused round is worth one flag, not two, and not this one',
   );
-  const flags = computeFlags(input({ phases }));
-  assert.deepEqual(flags.map((f) => f.code), ['context-bloat']);
-  assert.equal(flags[0]!.phase, 'write_data_type_reference');
-  assert.match(flags[0]!.detail, /85k tokens per own turn/);
 });
 
-test('bloat needs at least three phases to have a baseline', () => {
-  // A one-phase run has no median to be an outlier against, so a huge single phase must not flag.
-  // This is the only threshold that depends on the rest of the run, so it is the only one that can
-  // misfire on a short run.
-  const flags = codes({
-    phases: [phase('research_data_type', { ownTurns: 1, ownTokens: 900_000 })],
-    activity: activity({ phaseCalls: { research_data_type: 1 } }),
-  });
-  // Asserts the absence of this one flag rather than of all flags: a research-only run legitimately
-  // trips review-not-run, and that has nothing to do with the threshold under test.
-  assert.ok(!flags.includes('context-bloat'), `unexpected bloat flag in ${flags.join(', ')}`);
+test('a review that really ran twice past its budget still flags', () => {
+  // The other side of the subtraction: two rounds that both did work is the cap genuinely not holding.
+  const flags = codes({ activity: activity({ phaseCalls: { review_page: 2 } }) });
+  assert.ok(flags.includes('phase-repeat'), `expected phase-repeat in ${flags.join(', ')}`);
 });
 
 test('a refiled report is flagged', () => {

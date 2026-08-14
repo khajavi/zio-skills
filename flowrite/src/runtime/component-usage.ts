@@ -24,15 +24,31 @@ export interface ComponentUsage {
 }
 
 /**
- * What one phase of the pipeline cost, end to end.
+ * What one stage of the pipeline cost, end to end.
  *
- * `own` is the phase's own harness conversation — the turns that decide what to ask for and read
- * the results back. `delegate` is what its roles spent. The distinction is the interesting one: in a
- * measured run the review phase's own conversation cost $1.67 against $0.99 for all three of its
- * roles, so the expensive part was the coordination, not the reviewing.
+ * A stage is a phase tool when one is open, otherwise the ROLE that ran the turn, otherwise the
+ * writer's own orchestration. That three-way rule is what keeps this table informative now that the
+ * pipeline runs on `task` delegations: with only `review_page` left as a phase tool, keying rows on
+ * phase tools alone filed research, design, write and integrate into one synthetic bucket worth 72%
+ * of the run — every cost still recorded, none of it attributable.
+ *
+ * `own` and `delegate` no longer split every row, and the asymmetry is the point:
+ *
+ *  - `review_page` has BOTH, because it still has a scratch conversation relaying to a role. This is
+ *    the comparison worth keeping — in a measured run the review phase's own conversation cost $1.67
+ *    against $0.99 for all three of its roles, so the coordination outweighed the reviewing.
+ *  - a role's row is delegate-only: there is no relay in front of it any more.
+ *  - `(orchestration)` is own-only: the root agent's turns between delegations.
  */
 export interface PhaseUsage {
-  /** Phase tool name, or '(between phases)' for the writer's own turns outside any phase. */
+  /**
+   * Phase tool name, role name, or '(orchestration)' for the writer's own turns.
+   *
+   * Was '(between phases)', which described the old shape — turns outside any phase tool. It now
+   * holds the root agent's whole contribution rather than the gaps between phases, so the label
+   * changed with the meaning. Archived runs from before this carry the old name; a reader comparing
+   * them should know the two are not the same quantity.
+   */
   phase: string;
   ownTurns: number;
   ownTokens: number;
@@ -134,7 +150,9 @@ export function trackComponentUsage(): ComponentUsageTracker {
   const subagentByTaskId = new Map<string, string>();
 
   const phases = new Map<string, PhaseUsage>();
-  const BETWEEN = '(between phases)';
+  // Parenthesised on purpose: computeFlags and scripts/run-report.mjs both treat a leading '(' as
+  // "synthetic, do not judge as a stage", since this row has no delegate half to compare against.
+  const ORCHESTRATION = '(orchestration)';
   // Open phase tools, innermost last. Phase tools only — see the note above on why including
   // ordinary tools makes this report zeros.
   const openPhases: string[] = [];
@@ -229,10 +247,16 @@ export function trackComponentUsage(): ComponentUsageTracker {
       entry.tokens += u.totalTokens;
       entry.cost += u.cost.total;
 
-      // Same turn, filed a second way: by which phase was running. With parallel phase calls this
-      // credits the most recently started one, so a module run's concurrent per-type phases are
-      // approximate; sequential runs are exact.
-      const phase = phaseEntry(openPhases.at(-1) ?? BETWEEN);
+      // Same turn, filed a second way: by the stage it belongs to.
+      //
+      // A phase tool wins when one is open, so `review_page`'s own relay turns and its reviewer's
+      // turns land on the same row and stay comparable. A delegated turn with no phase open is filed
+      // under its ROLE — that is every stage now that research/design/write/integrate reach their
+      // roles with `task`. Everything else is the root agent's own work.
+      //
+      // With parallel calls this credits the most recently started phase, so a module run's
+      // concurrent per-type work is approximate; sequential runs are exact.
+      const phase = phaseEntry(openPhases.at(-1) ?? role ?? ORCHESTRATION);
       if (role) {
         phase.delegateTurns += 1;
         phase.delegateTokens += u.totalTokens;
