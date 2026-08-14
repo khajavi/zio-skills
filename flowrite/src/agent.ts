@@ -29,25 +29,13 @@ import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 // files, the per-type subpage loop when a module comes out hierarchical. Both would be dead weight in
 // an instruction file that rides on every turn.
 import companionExamples from './skills/companion-examples/SKILL.md';
-// module-subpages is deliberately not imported: the module kind is back on phase tools, and
-// module-ref.md spells its per-type loop out inline again — mounting the skill too would deliver the
-// same rules twice, which is the waste 600f48a removed. The file stays for when module is retried.
+import moduleSubpages from './skills/module-subpages/SKILL.md';
 
-// Phase tools. `data-type` and `tutorial` mount only `review_page` — their other phases are `task`
-// delegations now, since each wrapped a delegation in a `harness: true` scratch conversation that never
-// resets (agent-api.md:402) and so paid two relay turns to reach a role reachable directly with the
-// built-in `task` tool (guide/subagents.md:40,46).
-//
-// `module` mounts the full set again. Its conversion regressed in a way the others did not — see the
-// KINDS row — and the tools it needs back are exactly the ones that pinned the design plan.
-//
-// review_page is common to all three, because TypeScript has to hold the reviewer's result for
-// recordedVerdict(); a `task` delegation returns prose that nothing can check.
-import { researchModule, researchDataType } from './tools/phases/research.ts';
-import { designModulePlan } from './tools/phases/design-doc-plan.ts';
-import { writeModuleOverview, writeDataTypeReference } from './tools/phases/write-doc.ts';
-import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
-import { integrateModuleReference } from './tools/phases/integrate.ts';
+// The one remaining phase tool. The other thirteen were deleted: each wrapped a delegation in a
+// `harness: true` scratch conversation that never resets (agent-api.md:402), so the writer paid two
+// relay turns per phase to reach a role it can reach directly with the built-in `task` tool
+// (guide/subagents.md:40,46). review_page stays because TypeScript has to hold the reviewer's result
+// for recordedVerdict() — a `task` delegation returns prose that nothing can check.
 import { reviewPage } from './tools/phases/review-page.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
@@ -101,31 +89,11 @@ export const KINDS = {
   module: {
     label: 'write-module-ref',
     instructions: moduleRefMd,
-    // The ONLY kind still on phase tools, reverted after write-module-ref-turn3.
-    //
-    // That run reversed its own layout decision mid-flight: the designer chose hierarchical, and the
-    // writer then announced that "the auto-rule requires flat layout for modules with only 2 core
-    // types" — a rule that appears nowhere in module-ref-structure or module-ref.md, which map layout
-    // from SHAPE and carry no type-count threshold at all. It shipped hierarchical anyway while its
-    // retrospective claimed twice that it had converted to flat.
-    //
-    // `requireModulePlan` and `planShape` are what made that impossible: the write phase read the
-    // layout from the plan the designer actually returned, so the model could neither invent a rule nor
-    // quietly act on one. I described them in the conversion plan as relay comparators, which was half
-    // right — one of them was also pinning a DECISION, and nothing in the skills-only shape does.
-    //
-    // data-type and tutorial stay converted. Module alone regressed, so module alone reverts.
-    skills: [mdocConventions, moduleRefStructure, moduleRefChecklist],
-    tools: [
-      researchModule,
-      designModulePlan,
-      writeModuleOverview,
-      researchDataType,
-      writeDataTypeReference,
-      writeCompanionExamples,
-      integrateModuleReference,
-      reviewPage,
-    ],
+    // module-subpages carries the per-type loop that module-ref.md used to spell out inline. A module
+    // only reaches it when the design comes back hierarchical, which is what makes it a skill rather
+    // than instruction prose: a flat module never needs it.
+    skills: [mdocConventions, moduleRefStructure, moduleRefChecklist, moduleSubpages, companionExamples],
+    tools: [reviewPage],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
     directive: (subject: string, facts: DirectiveFacts) =>
