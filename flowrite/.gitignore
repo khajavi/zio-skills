@@ -6,6 +6,7 @@ dist/
 .flue-vite/
 .flue-vite.wrangler.jsonc
 fixtures/tinyoptics-archive/
+fixtures/tinytally-archive/
 fixtures/tinyoptics/website/docs/*
 .flowrite/
 data/
