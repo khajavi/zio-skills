@@ -49,7 +49,7 @@ is a finding — design reasons are one kind among many. Each entry carries the 
 
 | Finding | Also belongs in |
 | --- | --- |
-| Why it is shaped this way; what was rejected | Motivation |
+| Why it is shaped this way for the people who use it; what was rejected | Motivation |
 | A rename or removal (`.unsafeRunSync` → `.block`) | grounding detail, for a migration note |
 | Rejected usages, platform behaviour ("throws on JS") | that member's caveats |
 | A Scala 2 vs 3 divergence | the Scala version notes |
@@ -59,6 +59,8 @@ is a finding — design reasons are one kind among many. Each entry carries the 
 | Which test proves which behaviour | read that test and cite it |
 
 - ✅ findings about the subject ❌ CI, dep bumps, release chores, formatting — touching the file is not enough
+- ✅ a reason that changes what a user writes ❌ a reason about the repo's own work — fixtures, test
+  coverage, tooling, the docs pipeline. A true reason aimed at maintainers is still not a finding.
 - ✅ record that a member was renamed ❌ document the old name (source is the authority for what exists)
 - ✅ "history says nothing about this subject" ❌ an invented finding, indistinguishable downstream
 

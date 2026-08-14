@@ -12,6 +12,9 @@ Verify every item. The reference page is not done until all pass.
   creating values → predefined instances → core operations → subtypes → comparisons → advanced →
   integration → running the examples).
 - Installation appears only for top-level module types; internal types omit it.
+- Motivation, where present, gives a reason the reader shares — the problem the type solves for them.
+  Fail it when the page explains the repo's own work instead: fixtures, test coverage, tooling, the
+  docs pipeline, a refactor. Such a reason can be perfectly true and still belong nowhere on the page.
 - Each Core-Operations method is a `####` under its `###` category; a single-method category is fine when no related one fits.
 
 ## Coverage & Content Quality
