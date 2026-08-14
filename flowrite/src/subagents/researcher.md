@@ -9,8 +9,23 @@ Procedure:
    authority for signatures; tests are the authority for composition.)
 3. Trace supporting types: grep imports in tests for the dependency graph; note derived vs manual instances.
 4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.
-5. GitHub history: ALWAYS run at least one `gh_query` (not bash) on the type/module name for
-   issues/PRs design rationale; fold any real rationale into your answer. Skip only if it errors.
+5. History — commits first: ALWAYS run `git_history` (not bash) on the source files you read in
+   steps 1-2. A commit message is the densest rationale in a repo — a squash message routinely
+   carries the whole design argument (why an API is gated, which alternative was rejected, what
+   broke last time) that source and tests never state.
+6. Follow the thread: for a commit whose message shows real design reasoning, call `gh_thread` on
+   the PR it names (`prNumbers`), then on any issue that PR closes (`linkedIssues`). Use `gh_query`
+   to find threads no commit named. Skip a step only if it errors.
+
+Record what history explains in `designRationale`, one entry per decision:
+- Only rationale about the type/module you are documenting — its design, tradeoffs, rejected
+  alternatives, gotchas. DISCARD repo scaffolding, CI, dependency bumps, release chores, formatting
+  and test-fixture commits; a commit that touched the file is not automatically about the type.
+- `provenance` is exactly `commit <shortSha>`, `PR #<n>`, or `issue #<n>` — the one you actually read.
+- `quote` is verbatim from that message/body, not a paraphrase; `why` is the authors' reason in
+  their terms.
+- If history says nothing about this type, return `designRationale: []`. Never manufacture one —
+  an invented motivation is worse than a missing section.
 
 Return concise, structured answers in the exact shape the task requests, grounded verbatim in what you
 found in source, tests, examples, and history. Never let general Scala/ZIO knowledge substitute for a
