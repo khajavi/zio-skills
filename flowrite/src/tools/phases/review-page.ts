@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { type DocKind, authorHint, docKind, maxReviewRounds } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
+import { note } from '../../runtime/log.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
 // (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:
 // the SKILL.md files point at these.
@@ -80,6 +81,62 @@ export function __resetReviewRoundsForTests(): void {
 }
 
 /**
+ * What the last review of this run concluded, so `report_run_result` can state the verdict rather
+ * than ask the model for it.
+ *
+ * This is NOT the check registry removed on 2026-08-12, and reinstates none of it: the `reviewer`
+ * role is still the only judge, no code grades the page, and nothing here re-checks anything. It
+ * remembers one answer the reviewer already gave.
+ *
+ * It exists because the alternative was measured and failed. tinytally turn1: the reviewer returned
+ * 14 items, every one `pass: false`; the round budget then refused a confirming pass, telling the
+ * model in as many words to file `reviewVerdict "failed"` with those items. It filed
+ * `{"passed": true, "failingItems": []}` — the inverse — and `verdict.json` recorded that as the
+ * run's outcome. Three runs of the same defect are on record now, so the verdict stopped being
+ * something to ask for.
+ *
+ * Module state, like `roundsUsed` above: one OS process per run, one page per run.
+ */
+type ReviewOutcome =
+  | { state: 'skipped' }
+  | { state: 'reviewed'; items: v.InferOutput<typeof reviewSchema>['items'] };
+
+let lastOutcome: ReviewOutcome | null = null;
+
+/** Reset the recorded review. Tests only — module state with no other seam. */
+export function __resetLastReviewForTests(): void {
+  lastOutcome = null;
+}
+
+/** Record what a review concluded. Tests only; the phase records on its own path. */
+export function __setLastReviewForTests(outcome: ReviewOutcome | null): void {
+  lastOutcome = outcome;
+}
+
+/**
+ * The run's verdict, derived from what the reviewer actually returned.
+ *
+ * A skipped review counts as `not-reviewed`, not as `passed`: skipping is a human decision to resume
+ * a run, and it produces no evidence about the page. Same for a run where the model never called
+ * review at all — which is how a page written past a refused phase (#49) stops being filable as
+ * passing.
+ *
+ * "Reviewed, failures found, fixes unverified" reports as `failed`, and that is deliberate. The cap
+ * can leave a run unable to confirm its own repairs; `failed` is then the honest record, because
+ * nothing observed the fixed page. A verdict may not claim more than the evidence.
+ */
+export function recordedVerdict(): {
+  verdict: 'passed' | 'failed' | 'not-reviewed';
+  failingItems: string[];
+} {
+  if (lastOutcome === null || lastOutcome.state === 'skipped') {
+    return { verdict: 'not-reviewed', failingItems: [] };
+  }
+  const failingItems = lastOutcome.items.filter((item) => !item.pass).map((item) => item.item);
+  return { verdict: failingItems.length === 0 ? 'passed' : 'failed', failingItems };
+}
+
+/**
  * The budget, stated in every review tool's description.
  *
  * Derived from the same function the enforcement uses, so raising `MAX_REVIEW_ROUNDS` changes what the
@@ -108,9 +165,10 @@ export function consumeReviewRound(): void {
   if (roundsUsed >= budget) {
     throw new Error(
       `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}, all used). ` +
-        `Do not call review again. Fix what the last review reported, then file report_run_result ` +
-        `with reviewVerdict "failed" and every still-failing item in failingItems — name them in your ` +
-        `summary and your reply too. Do not describe an unverified page as complete.`,
+        `Do not call review again. Fix what the last review reported, then file report_run_result. ` +
+        `The verdict comes from the review itself, so it will record what the last review found — ` +
+        `name what you fixed and anything still wrong in your summary and your closing reply, and do ` +
+        `not describe an unverified page as complete.`,
     );
   }
   roundsUsed++;
@@ -158,6 +216,9 @@ export const reviewPage = defineTool({
   output: reviewSchema,
   async run({ harness, data, log }) {
     if (isPhaseSkipped('review')) {
+      // Recorded as skipped rather than as a pass: the synthetic item below keeps the chain wired
+      // for the model, but it is not evidence, so recordedVerdict() reports "not-reviewed".
+      lastOutcome = { state: 'skipped' };
       return {
         output: { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] },
       };
@@ -169,14 +230,14 @@ export const reviewPage = defineTool({
 
     const checklistDoc = CHECKLISTS[docKind()];
     const content = await harness.sandbox.readFile(data.path);
-    return {
-      output: await delegate({
-        harness,
-        log,
-        label: 'reviewer',
-        role: 'reviewer',
-        result: reviewSchema,
-        prompt: [
+    note(log, `Reviewing ${data.path} against the ${docKind()} checklist and the writing style rules`);
+    const review = await delegate({
+      harness,
+      log,
+      label: 'reviewer',
+      role: 'reviewer',
+      result: reviewSchema,
+      prompt: [
           `Evaluate the page below against every item in this checklist:`,
           ``,
           checklistDoc,
@@ -189,10 +250,22 @@ export const reviewPage = defineTool({
           // of the page under review.
           authorHint(),
           ``,
-          `--- PAGE (${data.path}) ---`,
-          content,
-        ].join('\n'),
-      }),
-    };
+        `--- PAGE (${data.path}) ---`,
+        content,
+      ].join('\n'),
+    });
+
+    // Recorded BEFORE returning, on the path that actually runs. design-doc-plan.ts shipped this
+    // same recording wired into its skip branch only, so a successful phase recorded nothing and the
+    // next phase refused work that had in fact been done (9870589). One place, one path.
+    lastOutcome = { state: 'reviewed', items: review.items };
+
+    // The review phase logged nothing at all until now, so `grep 'flowrite:'` showed a run jumping
+    // from integrate straight to the closing report (#53). The counts are what a reader wants: how
+    // many items the reviewer judged, and how many it failed.
+    const failed = review.items.filter((item) => !item.pass).length;
+    note(log, `Review of ${data.path}: ${review.items.length - failed}/${review.items.length} items passed`);
+
+    return { output: review };
   },
 });

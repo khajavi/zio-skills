@@ -183,12 +183,12 @@ export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempt
 const SHARED_DIRECTIVE =
   `Your shell already starts in the repo root of the library checkout — use relative paths ` +
   `for every command; do not cd into the repo. ` +
-  `When the work is done, call report_run_result once with the final page path, the review's ` +
-  `verdict, a one-line summary, and a run retrospective: the real obstacles you hit this run and ` +
-  `how you resolved them (empty if it went smoothly — never invent friction). ` +
-  `A page with any failing checklist item is "failed" — pass those items to failingItems, and name ` +
-  `what is still wrong in the summary and in your closing reply. Nothing cross-checks the verdict ` +
-  `against the review any more, so reporting it accurately is on you.`;
+  `When the work is done, call report_run_result once with the final page path, a one-line summary, ` +
+  `and a run retrospective: the real obstacles you hit this run and how you resolved them (empty if ` +
+  `it went smoothly — never invent friction). ` +
+  `The verdict is taken from what the review returned, so you do not report it — say in the summary ` +
+  `and in your closing reply what you fixed and anything still wrong, and never describe a page with ` +
+  `failing items as complete.`;
 
 /**
  * Declare every role delegate. Called by useRunBasics, so every render has the full roster —
