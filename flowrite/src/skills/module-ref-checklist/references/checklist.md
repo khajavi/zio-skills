@@ -20,8 +20,9 @@ not attempt to re-count members here.
 
 ## Layout & Structure
 
-- The layout matches the auto-rule: flat single page for ≤ 4 core types or always-together types;
-  hierarchical index + subpages for ≥ 5 core types or ≥ 3 rich self-contained types.
+- The layout matches the shape the design chose: `single-core` and `dsl` are one flat page,
+  `core-family` and `multi-domain` are an index plus subpages. Check that consistency only — the shape
+  follows reader intent and is the design phase's call, so a type count is never grounds to fail a page.
 - Flat: every core and supporting type has an `##` section, in a sensible order; each covers every
   public member grouped concisely (one example per operation group).
 - Hierarchical: the index links to every type subpage; the Overview introduces each core type in

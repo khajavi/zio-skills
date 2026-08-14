@@ -30,10 +30,11 @@ DSL, or one page for a multi-core module), wasting the run.
 | `dsl`           | no dominant core; co-equal types combined into a DSL | flat         | one page organized **by task**, NO per-type sections | "how do I build X?"   |
 
 `layout` is only the **file structure** (one page vs index+subpages) — `single-core` and `dsl` share
-`flat` and differ solely in body organization (by-type vs by-task, keyed off `shape`). The core-type
-layout is a count sub-decision: one dominant type (+ light supporting cast) → `single-core`; several
-peers in one domain (≥ 5, or ≥ 3 with rich self-contained APIs) → `core-family`; those peers spanning
-≥ 2 sub-domains → `multi-domain`.
+`flat` and differ solely in body organization (by-type vs by-task, keyed off `shape`). Inside the
+core-type branch, ask which type a reader comes for: one dominant type the rest support →
+`single-core`; two or more peers where no single type carries the domain → `core-family`; those peers
+spanning ≥ 2 sub-domains → `multi-domain`. Two co-equal types already make a family — judge dominance,
+and let the type count stay out of it.
 
 ## Layout: Flat vs. Hierarchical
 
