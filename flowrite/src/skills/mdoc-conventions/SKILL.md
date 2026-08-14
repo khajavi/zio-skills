@@ -90,6 +90,9 @@ A common mistake to watch out for.
 
 mdoc compiles against the docs project's `.dependsOn(...)`. If the documented module is missing there, add it to build.sbt (match sibling style, e.g. `<module>.jvm`) and reload — never downgrade real code to plain ```` ```scala ```` over a missing dependency.
 
+**A build's gap is fixed in the build, never in the page.** `key not found: VERSION` means the docs project defines no `mdocVariables`, so add `mdocVariables += "VERSION" -> version.value` there and re-run:
+✅ `mdocVariables += "VERSION" -> version.value` in build.sbt ❌ writing `% "0.1.0"` into the page (it reads as fixed, and it breaks writing-style rule 25)
+
 ## Verifying
 
 Always compile scoped to the files you touched, never the whole docs set
