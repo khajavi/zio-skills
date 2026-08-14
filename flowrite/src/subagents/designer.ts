@@ -6,9 +6,7 @@ import instructions from './designer.md';
 
 /**
  * Generic documentation planner, shared across document kinds. Declares
- * no tools or delegates of its own — see design-doc-plan.ts for why that
- * matters: a narrow delegate cannot see or re-invoke the design phase tool itself,
- * avoiding runaway self-recursion.
+ * no tools or delegates of its own, so it cannot re-enter the pipeline that called it.
  *
  * The kind's structure template is read here, at this render, via `docKind()` — see drafter.ts for
  * why that beats both a skill mount and a caller-pasted prompt. The result SCHEMA still comes from

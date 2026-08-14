@@ -16,16 +16,23 @@ companion examples, integrated into the docs site. Drive this flow; adapt when
 reality differs. Do not mechanically follow steps that no longer fit.
 
 1. **Confirm the type.** If the user gave none, ask. Never invent one.
-2. **Research.** Call `research_data_type` with the type name to get the full public
-   API surface: signature, type params, constructors, predefined instances, core
-   operations (with real signatures), subtypes, comparisons, imports, sbt deps,
-   per-fact `source` citations, and verbatim grounding detail.
-3. **Design.** Call `design_data_type_plan` with the exact research object from
-   step 2 to get a validated plan — which optional sections apply and how
-   the operations group into Core Operations categories (no single-method category).
-4. **Write.** Call `write_data_type_reference` with BOTH the plan from
-   step 3 AND the exact research object from step 2. It writes `docs/reference/<type-kebab>.md`.
-   The reference-page template is supplied to the drafter automatically.
+2. **Research.** Delegate to the `researcher` subagent with the `task` tool. Tell it to write its
+   findings to `.flowrite/research/data-type-<type-kebab>.md` and to reuse that file if it already
+   covers this type. Ask for the FULL public API surface — the structural signature, type parameters,
+   every companion constructor and factory, predefined instances, EVERY public operation with its
+   verbatim signature and a short real usage snippet, subtypes or variants, worthwhile comparisons,
+   the imports and sbt dependency, and a closing grounding-detail section of verbatim excerpts.
+   Reference pages are exhaustive: an omitted operation is a defect.
+   Read the file it wrote before going on. If it is missing or thin, say so and delegate again rather
+   than filling the gap yourself.
+3. **Design.** Delegate to the `designer` subagent with the `task` tool, naming the research file to
+   read. Ask which optional sections apply, the construction order, and how the operations group into
+   ordered Core Operations categories. The reference-page template is already in its instructions.
+4. **Write.** Delegate to the `drafter` subagent with the `task` tool. Give it the research file path,
+   the plan from step 3, and the exact page path `docs/reference/<type-kebab>.md`. It writes the file
+   itself, frontmatter included; the template and the writing-style rules are already in its
+   instructions. Kebab-case splits camel humps AND acronym boundaries — `NonEmptyChunk` →
+   `non-empty-chunk`, `HTTPServer` → `http-server`.
 5. **Companion examples.** If the page's "Running the Examples" section embeds
    standalone example files (via `mdoc:embed`), delegate to the `examples_builder`
    subagent with the `task` tool, giving it the page path. It builds, compiles, runs
@@ -57,6 +64,12 @@ reality differs. Do not mechanically follow steps that no longer fit.
 ## Guardrails
 - A delegated subagent sees none of your conversation, so the task prompt is its whole briefing —
   name the paths, the category, and the constraints it needs.
+- **One delegation at a time down the chain.** Each step reads what the step before it produced, so
+  wait for a delegation to return before starting the next. Research, then design, then write — never
+  two of them in the same turn, and never a step that guesses at what an unfinished one will say.
+- Delegate rather than do it yourself. If a delegation fails, delegate it again; a page you write from
+  your own recollection cites signatures and line numbers nobody read, and it passes review looking
+  correct.
 - Your shell starts in the repo root — you are ALREADY inside the checkout. Never `cd` into the repo;
   run `sbt`/`mdoc` and all commands with repo-relative paths. `cd` only *within* the repo when a tool
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
@@ -64,5 +77,6 @@ reality differs. Do not mechanically follow steps that no longer fit.
 - Never invent an API surface — every signature and example traces to real source.
 - Never claim done before scoped mdoc reports zero errors.
 - Document every public member, or justify each omission from the coverage report.
-- The page lives in `docs/reference/<type-kebab>.md`; `id` matches the filename.
-- A skipped phase stays skipped — never do its work manually.
+- The page lives in `docs/reference/<type-kebab>.md`, and its `id` is that filename without `.md`.
+- When the run asks for a step to be skipped, the artifact it would have produced is already on disk:
+  read it and carry on from there. A skipped step stays skipped — never do its work manually.

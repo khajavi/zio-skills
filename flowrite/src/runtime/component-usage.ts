@@ -1,44 +1,17 @@
 import { observe, type FlueEvent } from '@flue/runtime';
 import { getRepoPath } from './run-context.ts';
-import { researchTutorialTopic } from '../tools/phases/research.ts';
-import { designTutorialPlan } from '../tools/phases/design-doc-plan.ts';
-import { writeTutorialDraft } from '../tools/phases/write-doc.ts';
-import { writeCompanionExamples } from '../tools/phases/write-companion-examples.ts';
-import { integrateTutorial } from '../tools/phases/integrate.ts';
-import { researchDataType } from '../tools/phases/research.ts';
-import { designDataTypePlan } from '../tools/phases/design-doc-plan.ts';
-import { writeDataTypeReference } from '../tools/phases/write-doc.ts';
-import { integrateDataTypeReference, integrateModuleReference } from '../tools/phases/integrate.ts';
 import { reviewPage } from '../tools/phases/review-page.ts';
-import { researchModule } from '../tools/phases/research.ts';
-import { designModulePlan } from '../tools/phases/design-doc-plan.ts';
-import { writeModuleOverview } from '../tools/phases/write-doc.ts';
 
 /**
- * Every agent's own phase tools — model-callable, but delegating their real work
- * to a role. Reported under the 'phase' category to separate them from the generic
- * tools; Flue 2 has no Actions concept, these are ordinary `harness: true` tools.
+ * The phase tools, reported under their own category to separate them from generic tools.
+ *
+ * One entry now. This was a list of fifteen, and the pipeline's stages were readable off it — which is
+ * also why deleting the other thirteen took the 'phase' category's usefulness with them: the stages are
+ * `task` delegations now, and `task` is one tool name whatever role it reaches. The per-stage view moved
+ * to the 'subagent' category, which names the role that actually ran; see perTypePairing in
+ * run-telemetry.ts.
  */
-const PHASE_TOOLS = new Set(
-  [
-    researchTutorialTopic,
-    designTutorialPlan,
-    writeTutorialDraft,
-    writeCompanionExamples,
-    integrateTutorial,
-    reviewPage,
-    researchDataType,
-    designDataTypePlan,
-    writeDataTypeReference,
-    integrateDataTypeReference,
-    reviewPage,
-    researchModule,
-    designModulePlan,
-    writeModuleOverview,
-    integrateModuleReference,
-    reviewPage,
-  ].map((a) => a.name),
-);
+const PHASE_TOOLS = new Set([reviewPage].map((a) => a.name));
 
 export type ComponentCategory = 'phase' | 'subagent' | 'tool' | 'skill' | 'agent';
 
@@ -89,8 +62,16 @@ export interface ActivityReport {
   phaseFailures: Record<string, number>;
   /** Skills the model activated, in the order first seen. */
   skills: string[];
-  /** Phase tool call counts, so a repeated phase is visible. */
+  /** Phase tool call counts, so a repeated phase is visible. Only `review_page` remains. */
   phaseCalls: Record<string, number>;
+  /**
+   * Delegations per role, from `task_start`.
+   *
+   * The pipeline's stages are readable here now that they are `task` calls rather than phase tools:
+   * `task` is one tool name whatever role it reaches, so `tools` cannot tell research from drafting but
+   * this can. Counts ATTEMPTS — a delegation that failed still appears.
+   */
+  delegations: Record<string, number>;
   cdViolations: number;
 }
 
@@ -282,6 +263,7 @@ export function trackComponentUsage(): ComponentUsageTracker {
     phaseFailures: Object.fromEntries(phaseFailures),
     skills: [...components.values()].filter((c) => c.category === 'skill').map((c) => c.name),
     phaseCalls: byCategory('phase'),
+    delegations: byCategory('subagent'),
     cdViolations,
   });
 

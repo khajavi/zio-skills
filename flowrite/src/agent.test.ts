@@ -7,7 +7,6 @@
 // renders).
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import * as v from 'valibot';
 
 import { DOC_KINDS, KINDS } from './agent.ts';
 
@@ -51,39 +50,23 @@ test('no kind mounts the same skill twice', () => {
   }
 });
 
-test('a mounted write tool has its plan producer, or its plan is optional', () => {
-  // The invariant that was missing when a module run shipped a wrong page. `KINDS.module.tools`
-  // mounted `write_data_type_reference` without `design_data_type_plan` while `plan` was required,
-  // so the model — unable to call any tool that produces one — satisfied the schema by inventing a
-  // plan, and once in fifteen calls reached for another type's (see write-doc.ts's `plan` comment).
+test('review_page is the only harness tool any kind mounts', () => {
+  // Replaces a test that guarded "a required field no component can produce": KINDS.module once mounted
+  // write_data_type_reference without design_data_type_plan while `plan` was required, so the model
+  // satisfied the schema by inventing a plan and once reached for another type's. That defect needs a
+  // tool ARGUMENT to fabricate, and the tools that took one are gone — the test had become vacuous,
+  // looping over an empty list and passing for the wrong reason.
   //
-  // A required field no component can produce is the defect, and it is checkable here, for free:
-  // either the phase that produces the value is mounted alongside its consumer, or the consumer
-  // accepts its absence. Nothing in between is safe, because the model's way out of "required but
-  // unproducible" is fabrication rather than an error.
-  const PLAN_PRODUCER: Record<string, string> = {
-    write_data_type_reference: 'design_data_type_plan',
-    write_module_overview: 'design_module_plan',
-    write_tutorial_draft: 'design_tutorial_plan',
-  };
-
+  // What is worth pinning instead is the shape that replaced it. Every stage is a `task` delegation now,
+  // and exactly one harness tool remains: review_page, because TypeScript has to hold the reviewer's
+  // result for recordedVerdict(). A second harness tool reappearing is either a mistake or a decision
+  // that belongs in the plan, and either way it should not arrive quietly.
   for (const kind of DOC_KINDS) {
-    const mounted = KINDS[kind].tools.map((tool) => tool.name);
-    for (const tool of KINDS[kind].tools) {
-      const producer = PLAN_PRODUCER[tool.name];
-      if (!producer || mounted.includes(producer)) continue;
-
-      const entries = (tool.input as { entries?: Record<string, v.GenericSchema> }).entries;
-      const plan = entries?.plan;
-      assert.ok(plan, `${kind}: ${tool.name} takes no plan field — update PLAN_PRODUCER`);
-      // Semantic rather than structural: asks valibot whether absence parses, so v.optional,
-      // v.nullish and any future wrapper all answer correctly.
-      assert.ok(
-        v.safeParse(plan, undefined).success,
-        `${kind} mounts ${tool.name} without ${producer}, and its plan is required — the model ` +
-          `can only satisfy that by inventing one. Mount ${producer}, or make plan optional.`,
-      );
-    }
+    assert.deepEqual(
+      KINDS[kind].tools.map((tool) => tool.name),
+      ['review_page'],
+      `${kind} should mount review_page and nothing else`,
+    );
   }
 });
 

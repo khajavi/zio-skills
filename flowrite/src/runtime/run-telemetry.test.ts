@@ -29,13 +29,11 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   phaseFailures: {},
   skills: ['writing-style'],
   // A real clean run reviews its page, so the default fixture does too — otherwise every case
-  // would trip the review-not-run flag.
-  phaseCalls: {
-    research_data_type: 1,
-    design_data_type_plan: 1,
-    write_data_type_reference: 1,
-    review_data_type_ref: 1,
-  },
+  // would trip the review-not-run flag. `review_page` is the only phase tool left; the stages that
+  // used to appear here are `task` delegations now and show up in `delegations` instead.
+  phaseCalls: { review_page: 1 },
+  // One research delegation per drafted page is the balanced shape perTypePairing looks for.
+  delegations: { researcher: 1, designer: 1, drafter: 1 },
   cdViolations: 0,
   ...over,
 });
@@ -51,7 +49,6 @@ const input = (over: Partial<FlagInput> = {}): FlagInput => ({
   ],
   activity: activity(),
   refusals: [],
-  memoHits: {},
   reportCalls: 1,
   ...over,
 });
@@ -72,59 +69,64 @@ test('a once-per-run phase that ran twice is flagged', () => {
   assert.deepEqual(flags, ['phase-repeat']);
 });
 
-test('a module run researching and drafting four subpages is not a repeat', () => {
-  // The false positive this replaced: write-module-ref-turn5's own counts, which tripped phase-repeat
-  // twice for four types documented correctly. A flag that fires on a clean run gets every flag
-  // ignored.
+test('a module run researching and drafting five pages is not a repeat', () => {
+  // The false positive this replaced: write-module-ref-turn5's counts tripped phase-repeat twice for
+  // four types documented correctly. A flag that fires on a clean run gets every flag ignored.
+  // A hierarchical module delegates once for the module plus once per type, and drafts the index plus
+  // each subpage — balanced, so silent.
   assert.deepEqual(
     codes({
       activity: activity({
-        phaseCalls: {
-          research_module: 1,
-          design_module_plan: 1,
-          write_module_overview: 1,
-          research_data_type: 4,
-          write_data_type_reference: 4,
-          review_page: 1,
-        },
+        phaseCalls: { review_page: 1 },
+        delegations: { researcher: 5, designer: 1, drafter: 5, docs_integrator: 1, reviewer: 1 },
       }),
     }),
     [],
   );
 });
 
-test('a page drafted without successful research is flagged', () => {
-  // turn5's real arithmetic: 4 research calls, 1 of which errored, against 4 drafted pages. phaseCalls
-  // counts tool_start, so the failure is inside the 4 — leaving one subpage with no API surface behind
-  // it. This is what the count check was standing in front of.
+test('a page drafted without a research delegation is flagged', () => {
   const flags = computeFlags(
     input({
       activity: activity({
-        phaseCalls: { research_data_type: 4, write_data_type_reference: 4, review_page: 1 },
-        phaseFailures: { research_data_type: 1 },
+        phaseCalls: { review_page: 1 },
+        delegations: { researcher: 3, drafter: 4 },
       }),
     }),
   );
-  assert.deepEqual(
-    flags.map((f) => f.code).sort(),
-    ['phase-failed', 'research-draft-mismatch'],
-    'the failure and the unpaired page are separate facts',
-  );
-  const mismatch = flags.find((f) => f.code === 'research-draft-mismatch')!;
-  assert.match(mismatch.detail, /4 page\(s\) drafted from 3 successful research call\(s\)/);
-  assert.match(mismatch.detail, /without its own API surface/);
+  assert.deepEqual(flags.map((f) => f.code), ['research-draft-mismatch']);
+  assert.match(flags[0]!.detail, /4 page\(s\) drafted from 3 research delegation\(s\)/);
+  assert.match(flags[0]!.detail, /without its own API surface/);
 });
 
 test('research paid for and never drafted is flagged the other way round', () => {
   const flags = computeFlags(
     input({
       activity: activity({
-        phaseCalls: { research_data_type: 4, write_data_type_reference: 2, review_page: 1 },
+        phaseCalls: { review_page: 1 },
+        delegations: { researcher: 4, drafter: 2 },
       }),
     }),
   );
   assert.deepEqual(flags.map((f) => f.code), ['research-draft-mismatch']);
   assert.match(flags[0]!.detail, /research paid for and never used/);
+});
+
+test('a balanced count with a failed delegation is flagged as possibly hollow', () => {
+  // The precision this conversion cost, pinned so it is not mistaken for coverage. turn5's real shape
+  // was 4 research calls with 1 failure against 4 drafted pages; `task_start` counts attempts, so the
+  // pairing reads balanced and only the failure count reveals that a page has no API surface behind it.
+  const flags = computeFlags(
+    input({
+      activity: activity({
+        phaseCalls: { review_page: 1 },
+        delegations: { researcher: 4, drafter: 4 },
+        toolErrors: { task: 1 },
+      }),
+    }),
+  );
+  assert.ok(flags.some((f) => f.code === 'delegation-failures'));
+  assert.match(flags.find((f) => f.code === 'delegation-failures')!.detail, /can still hide a page/);
 });
 
 test('one review round is unremarkable — it is the whole budget', () => {

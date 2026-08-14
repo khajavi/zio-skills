@@ -25,18 +25,17 @@ import moduleRefStructure from './skills/module-ref-structure/SKILL.md';
 import moduleRefChecklist from './skills/module-ref-checklist/SKILL.md';
 import tutorialStructure from './skills/tutorial-structure/SKILL.md';
 import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
+// Conditional bulk, activated only by the runs that need it: the sbt examples build when a page embeds
+// files, the per-type subpage loop when a module comes out hierarchical. Both would be dead weight in
+// an instruction file that rides on every turn.
+import companionExamples from './skills/companion-examples/SKILL.md';
+import moduleSubpages from './skills/module-subpages/SKILL.md';
 
-// phase tools — one statement per module. The three-imports-per-module shape this replaced was a
-// leftover from the merge, when research/design/write were nine files instead of three.
-import { researchDataType, researchModule, researchTutorialTopic } from './tools/phases/research.ts';
-import { designDataTypePlan, designModulePlan, designTutorialPlan } from './tools/phases/design-doc-plan.ts';
-import { writeDataTypeReference, writeModuleOverview, writeTutorialDraft } from './tools/phases/write-doc.ts';
-import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
-// integrateDataTypeReference is deliberately not imported: `data-type` reaches docs_integrator with
-// `task` now, and no other kind mounts it. Its export stays in integrate.ts so reverting this change
-// is one import line rather than a resurrection.
-import { integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
-
+// The one remaining phase tool. The other thirteen were deleted: each wrapped a delegation in a
+// `harness: true` scratch conversation that never resets (agent-api.md:402), so the writer paid two
+// relay turns per phase to reach a role it can reach directly with the built-in `task` tool
+// (guide/subagents.md:40,46). review_page stays because TypeScript has to hold the reviewer's result
+// for recordedVerdict() — a `task` delegation returns prose that nothing can check.
 import { reviewPage } from './tools/phases/review-page.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
@@ -79,17 +78,8 @@ export const KINDS = {
   'data-type': {
     label: 'write-data-type-ref',
     instructions: dataTypeRefMd,
-    skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
-    // The examples and integrate phases are gone from this row. Both were pure prompt wrappers: they
-    // injected no reference doc and did nothing beyond a skip check and one log line, and their
-    // prompts only restated what examples-builder.md:59-62 and docs-integrator.md:3-4 already tell
-    // those roles. So the harness tool bought a relay and nothing else — and a relay is two turns of
-    // a scratch conversation that never resets (agent-api.md:402). The writer reaches both roles with
-    // the built-in `task` tool instead: always present, resolving against whatever useSubagent
-    // declared (guide/subagents.md:40,46). Same roles, same delegations, one less conversation.
-    //
-    // writeCompanionExamples stays imported for `module` and `tutorial`, which still mount it.
-    tools: [researchDataType, designDataTypePlan, writeDataTypeReference, reviewPage],
+    skills: [mdocConventions, dataTypeStructure, dataTypeChecklist, companionExamples],
+    tools: [reviewPage],
     plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
@@ -99,28 +89,19 @@ export const KINDS = {
   module: {
     label: 'write-module-ref',
     instructions: moduleRefMd,
-    // Deliberately reuses three data-type tools: a hierarchical module reference builds a subpage
-    // per core type through exactly the same phases. This overlap predates the merge — it is why
-    // the three "separate" agents were never actually separate.
-    skills: [mdocConventions, moduleRefStructure, moduleRefChecklist],
-    tools: [
-      researchModule,
-      designModulePlan,
-      writeModuleOverview,
-      researchDataType,
-      writeDataTypeReference,
-      writeCompanionExamples,
-      integrateModuleReference,
-      reviewPage,
-    ],
+    // module-subpages carries the per-type loop that module-ref.md used to spell out inline. A module
+    // only reaches it when the design comes back hierarchical, which is what makes it a skill rather
+    // than instruction prose: a flat module never needs it.
+    skills: [mdocConventions, moduleRefStructure, moduleRefChecklist, moduleSubpages, companionExamples],
+    tools: [reviewPage],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
     directive: (subject: string, facts: DirectiveFacts) =>
       `Write a complete, compile-verified module reference for the module: ${subject}. ` +
       (facts.shapeOverride
-        ? `Classify this module as the "${facts.shapeOverride}" shape (pass it as shapeOverride to design). `
+        ? `Classify this module as the "${facts.shapeOverride}" shape — tell the designer to use it. `
         : '') +
-      (facts.layout ? `Use the "${facts.layout}" layout (pass it as layoutOverride to design). ` : '') +
+      (facts.layout ? `Use the "${facts.layout}" layout — tell the designer to use it. ` : '') +
       `Run the full flow (research → design → write module page → per-type subpages if ` +
       `hierarchical → examples → mdoc verify → integrate → review; review covers per-type method ` +
       `coverage + writing style + the module checklist).`,
@@ -128,15 +109,8 @@ export const KINDS = {
   tutorial: {
     label: 'write-tutorial',
     instructions: tutorialMd,
-    skills: [mdocConventions, tutorialStructure, tutorialChecklist],
-    tools: [
-      researchTutorialTopic,
-      designTutorialPlan,
-      writeTutorialDraft,
-      writeCompanionExamples,
-      integrateTutorial,
-      reviewPage,
-    ],
+    skills: [mdocConventions, tutorialStructure, tutorialChecklist, companionExamples],
+    tools: [reviewPage],
     // Empty rather than absent: every row carries every field, so the call site reads
     // `config.plainTools` like any other. A missing key made the union type reject the property.
     plainTools: [],

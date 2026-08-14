@@ -7,8 +7,7 @@ import instructions from './drafter.md';
 
 /**
  * Generic documentation-prose writer, shared across document kinds. Declares no
- * tools or delegates of its own — see design-doc-plan.ts for why that
- * matters.
+ * tools or delegates of its own, so it cannot re-enter the pipeline that called it.
  *
  * The kind's section template and the writing-style rules are read HERE, at this render, rather than
  * pasted into every delegation prompt by the calling phase tool. `docKind()` is reachable from a

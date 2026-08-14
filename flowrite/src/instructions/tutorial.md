@@ -18,31 +18,34 @@ examples, integrated into the docs site. Drive this flow; adapt when reality
 differs. Do not mechanically follow steps that no longer fit.
 
 1. **Confirm the topic.** If the user gave none, ask. Never invent one.
-2. **Research.** Call the `research_tutorial_topic` action with the topic to get
-   structured findings: the one concept taught, prerequisites, post-tutorial
-   abilities, each core type's role, composition order, the "hello world"
-   starting point, incremental complexity layers, verifiable outputs, the core
-   insight, imports, sbt deps, and verbatim grounding detail.
-3. **Design the plan.** Call the `design_tutorial_plan` action with the
-   exact object from step 2 (pass it through unchanged) to get an ordered section
-   plan. Load the `tutorial-structure` skill for the template and section-design
-   rules.
-4. **Write.** Call `write_tutorial_draft` with BOTH the structure from step 3
-   AND the exact research object from step 2 — never with structure alone; the
-   structure says what to cover, the research object's `groundingDetail` grounds
-   every import, signature, and example in reality. Load `writing-style` (prose,
-   Scala version rules) and `mdoc-conventions` (mdoc modifiers, admonitions)
-   skills. One concept per section; concept-before-code; explain every block;
-   show output; never branch; limit scope aggressively.
-5. **Companion examples.** Call `write_companion_examples` with the tutorial
-   path.
+2. **Research.** Delegate to the `researcher` subagent with the `task` tool. Tell it to write its
+   findings to `.flowrite/research/tutorial-<id>.md` and to reuse that file if it already covers this
+   topic. Ask for: the ONE concept the tutorial teaches, prerequisites, what the learner can do
+   afterwards, each core type's role, the composition order concepts should be introduced in, the
+   factory methods the learner actually uses, the simplest possible "hello world", the incremental
+   complexity layers after it, the points where printed output lets the learner confirm the code
+   behaved as claimed, the single core insight the whole tutorial drives toward, imports, the sbt
+   dependency, and grounding detail. Read the file it wrote before going on.
+3. **Design the plan.** Delegate to the `designer` subagent with the `task` tool, naming the research
+   file, for an ordered section plan. The tutorial template and its section-design rules are already in
+   its instructions.
+4. **Write.** Delegate to the `drafter` subagent with the `task` tool. Give it the research file path,
+   the plan from step 3, and the exact page path `docs/guides/<id>.md`. It writes the file itself,
+   frontmatter included. Say in the prompt what a tutorial demands beyond the template: one concept per
+   section, concept before code, explain every block, show output, never branch, and limit scope
+   aggressively.
+5. **Companion examples.** If the tutorial embeds standalone example files (via `mdoc:embed` — a
+   "Putting It Together" section does), load the `companion-examples` skill and follow it. Do this
+   BEFORE mdoc verify. Skip if the tutorial relies only on inline mdoc blocks.
 6. **Verify mdoc.** Ensure the docs project's `.dependsOn(...)` includes the documented module
    (add if missing — see mdoc-conventions). Compile
    the tutorial: `sbt "docs/mdoc --in docs/guides/<id>.md --out
    website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
    pair for any other docs file you touched, never all docs. Fix every `[error]` before
    continuing. Mandatory before you call the tutorial done.
-7. **Integrate.** Call `integrate_tutorial` with the tutorial path.
+7. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the tutorial
+   path and the **Guides** category (not Reference), and ask it to link out to the reference pages for
+   the types the tutorial teaches.
 8. **Review.** Call `review_page` with the tutorial path. It evaluates the tutorial against the
    tutorial-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Review rounds are budgeted — the tool's description says how many the
@@ -56,6 +59,12 @@ differs. Do not mechanically follow steps that no longer fit.
    encountered; leave it empty if the run went smoothly. Never invent obstacles.
 
 ## Guardrails
+- A delegated subagent sees none of your conversation, so the task prompt is its whole briefing —
+  name the paths and the constraints it needs.
+- **One delegation at a time down the chain.** Each step reads what the step before it produced, so wait
+  for a delegation to return before starting the next — research, then design, then write.
+- Delegate rather than do it yourself. If a delegation fails, delegate it again; a tutorial written from
+  your own recollection cites signatures nobody read, and it passes review looking correct.
 - Your shell starts in the repo root — you are ALREADY inside the checkout. Never `cd` into the repo;
   run `sbt`/`mdoc` and all commands with repo-relative paths. `cd` only *within* the repo when a tool
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
@@ -63,5 +72,8 @@ differs. Do not mechanically follow steps that no longer fit.
 - Never branch the learning path.
 - Never claim done before scoped mdoc reports zero errors.
 - Keep scope on the single learning objective; cut anything else.
-- The tutorial file lives in `docs/guides/<id>.md`; `id` matches the filename.
-- A skipped phase stays skipped — never do its work manually.
+- The tutorial file lives in `docs/guides/<id>.md`, and its `id` is that filename without `.md`. The id
+  is kebab-case and specific to this tutorial's actual angle — `compositional-fiberref-updates`, not
+  `differ`.
+- When the run asks for a step to be skipped, the artifact it would have produced is already on disk:
+  read it and carry on from there. A skipped step stays skipped — never do its work manually.

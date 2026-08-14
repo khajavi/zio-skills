@@ -58,14 +58,6 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  /**
-   * Repeat phase calls the memo answered from an earlier identical call, per phase.
-   *
-   * Needed because `phaseCalls` counts `tool_start` and so includes them: the model really did call
-   * the tool, and the guard really did answer without doing the work. Only the memoizable phases can
-   * appear here — see phase-guard.ts's MEMOIZABLE.
-   */
-  memoHits: Readonly<Record<string, number>>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
@@ -94,47 +86,65 @@ const TOOL_ERROR_THRESHOLD = 3;
 const reviewRepeatLimit = () => maxReviewRounds();
 
 /**
- * The phases that run once per documented type, so a count above one proves nothing.
+ * Phases exempt from the repeat check because they legitimately run per documented type.
  *
- * A hierarchical module reference researches and drafts a subpage per core type. `write-module-ref-turn5`
- * did four of each — entirely correct work — and tripped `phase-repeat` twice for it. A flag that fires
- * on a clean run teaches the reader to skim past all the flags, so the count check is wrong here and
- * `perTypePairing` watches these two instead.
+ * Empty now: the per-type phases were `research_data_type` and `write_data_type_reference`, and both are
+ * deleted — a hierarchical module reference reaches those roles with `task` instead. `review_page` is the
+ * only phase tool left and it has its own budget check, so nothing needs exempting. Kept as a named
+ * constant rather than inlined, because a fourth document kind adding a per-type phase would want it.
  */
-const PER_TYPE_PHASES: readonly string[] = ['research_data_type', 'write_data_type_reference'];
+const PER_TYPE_PHASES: readonly string[] = [];
 
 /**
- * Every drafted subpage should have exactly one successful research call behind it.
+ * Every drafted page should have exactly one research delegation behind it.
  *
- * This is the signal the count check was standing in front of. `phaseCalls` counts `tool_start`, so it
- * includes attempts that failed; subtracting `phaseFailures` leaves the research that actually returned
- * an API surface. On turn5 that arithmetic is 4 − 1 = 3 successful research calls against 4 drafted
- * pages, so one subpage was written with no research of its own — invisible under a rule that only
- * asked whether a phase ran more than once.
+ * The signal the old repeat-count check was standing in front of: on `write-module-ref-turn5` four
+ * research calls with one failure produced three real API surfaces against four drafted pages, so a
+ * subpage was written with no research of its own — invisible to a rule that only asked whether a phase
+ * ran more than once.
  *
  * Both directions are worth a flag, and they mean opposite things: fewer research results than pages is
  * a grounding problem, more is a delegation paid for and thrown away.
  */
-function perTypePairing(activity: ActivityReport, memoHits: Readonly<Record<string, number>>): RunFlag[] {
-  const attempted = activity.phaseCalls['research_data_type'] ?? 0;
-  const failed = activity.phaseFailures['research_data_type'] ?? 0;
-  // Repeats collapsed by the phase memo did no work, so they are not research. `phaseCalls` counts
-  // `tool_start` and cannot see the difference — the model did call the tool, the guard answered from
-  // the first call's result. Without this term turn9's shape reads as 8 research calls for 4 pages.
-  const collapsed = memoHits['research_data_type'] ?? 0;
-  const researched = attempted - failed - collapsed;
-  const drafted = activity.phaseCalls['write_data_type_reference'] ?? 0;
-  if (researched === drafted) return [];
+function perTypePairing(activity: ActivityReport): RunFlag[] {
+  // Counted per ROLE, not per phase tool. The phase tools this used to read are gone, and `task` is one
+  // tool name whatever role it reaches, so the delegation counts are the only place the stages are still
+  // distinguishable.
+  //
+  // Weaker than the version it replaces, in a way worth knowing before trusting a clean result:
+  // `task_start` counts attempts, so a researcher that ran and gave up still counts as a delegation.
+  // That is exactly turn5's shape — 4 research calls, 1 failed, 4 pages drafted — and this arithmetic
+  // now reads it as balanced. It still catches the grosser fault, a page drafted with no research
+  // delegation behind it at all, and it reports failed delegations alongside so the reader can see when
+  // the balance is hollow.
+  const researched = activity.delegations['researcher'] ?? 0;
+  const drafted = activity.delegations['drafter'] ?? 0;
+  const failedDelegations = activity.toolErrors['task'] ?? 0;
+
+  if (researched === drafted) {
+    return failedDelegations === 0
+      ? []
+      : [
+          {
+            code: 'delegation-failures',
+            phase: 'task',
+            detail:
+              `${researched} research and ${drafted} draft delegation(s), but ${failedDelegations} ` +
+              `delegation(s) failed — a balanced count can still hide a page written from a research ` +
+              `call that returned nothing`,
+          },
+        ];
+  }
 
   return [
     {
       code: 'research-draft-mismatch',
-      phase: 'write_data_type_reference',
+      phase: 'drafter',
       detail:
         researched < drafted
-          ? `${drafted} page(s) drafted from ${researched} successful research call(s) — a page was ` +
+          ? `${drafted} page(s) drafted from ${researched} research delegation(s) — a page was ` +
             `written without its own API surface`
-          : `${researched} successful research call(s) but only ${drafted} page(s) drafted — ` +
+          : `${researched} research delegation(s) but only ${drafted} page(s) drafted — ` +
             `research paid for and never used`,
     },
   ];
@@ -155,7 +165,7 @@ function median(values: number[]): number {
  * the first property the tests pin.
  */
 export function computeFlags(input: FlagInput): RunFlag[] {
-  const { phases, activity, refusals, memoHits, reportCalls } = input;
+  const { phases, activity, refusals, reportCalls } = input;
   const flags: RunFlag[] = [];
   // The synthetic bucket for turns outside any phase — it is not a phase and must not be judged
   // like one (it has no delegates, so it would always trip own-exceeds-delegate).
@@ -178,7 +188,7 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
-  flags.push(...perTypePairing(activity, memoHits));
+  flags.push(...perTypePairing(activity));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
@@ -275,9 +285,8 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  memoHits: Readonly<Record<string, number>>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals, memoHits } = input;
+  const { totals, components, phases, activity, refusals } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -303,7 +312,6 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
-      memoHits,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };
