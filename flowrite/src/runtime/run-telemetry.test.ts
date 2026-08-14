@@ -34,6 +34,9 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   phaseCalls: { review_page: 1 },
   // One research delegation per drafted page is the balanced shape perTypePairing looks for.
   delegations: { researcher: 1, designer: 1, drafter: 1 },
+  // Pages, which is what the pairing compares against — NOT delegations.drafter, since one drafter
+  // delegation can write several pages.
+  pagesWritten: 1,
   cdViolations: 0,
   ...over,
 });
@@ -82,6 +85,7 @@ test('a module run researching and drafting five pages is not a repeat', () => {
       activity: activity({
         phaseCalls: { review_page: 1 },
         delegations: { researcher: 5, designer: 1, drafter: 5, docs_integrator: 1, reviewer: 1 },
+        pagesWritten: 5,
       }),
     }),
     [],
@@ -94,6 +98,7 @@ test('a page drafted without a research delegation is flagged', () => {
       activity: activity({
         phaseCalls: { review_page: 1 },
         delegations: { researcher: 3, drafter: 4 },
+        pagesWritten: 4,
       }),
     }),
   );
@@ -108,11 +113,30 @@ test('research paid for and never drafted is flagged the other way round', () =>
       activity: activity({
         phaseCalls: { review_page: 1 },
         delegations: { researcher: 4, drafter: 2 },
+        pagesWritten: 2,
       }),
     }),
   );
   assert.deepEqual(flags.map((f) => f.code), ['research-draft-mismatch']);
   assert.match(flags[0]!.detail, /research paid for and never used/);
+});
+
+test('batching several pages into one drafter delegation is not a mismatch', () => {
+  // write-module-ref-turn4: 3 researcher delegations (module + 2 types) and 3 pages written, but the
+  // model asked for both subpages in ONE drafter delegation. Reading delegations.drafter announced
+  // "3 research delegation(s) but only 2 page(s) drafted — research paid for and never used" while all
+  // three pages sat on disk. Pages are what the flag names, so pages are what it counts; the batching
+  // itself is a separate concern the module-subpages skill states as a rule.
+  assert.deepEqual(
+    codes({
+      activity: activity({
+        phaseCalls: { review_page: 1 },
+        delegations: { researcher: 3, designer: 1, drafter: 1 },
+        pagesWritten: 3,
+      }),
+    }),
+    [],
+  );
 });
 
 test('a balanced count with a failed delegation is flagged as possibly hollow', () => {
@@ -124,6 +148,7 @@ test('a balanced count with a failed delegation is flagged as possibly hollow', 
       activity: activity({
         phaseCalls: { review_page: 1 },
         delegations: { researcher: 4, drafter: 4 },
+        pagesWritten: 4,
         toolErrors: { task: 1 },
       }),
     }),

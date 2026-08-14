@@ -22,6 +22,13 @@ For EACH type in the plan's `typeGroups` — each group has a `label` and its `t
    - how this type relates to its siblings, from the module research's relationships,
    - its group `label`, and its `kind`.
 
+**One delegation per type, both steps.** Give each type its own researcher call and its own drafter
+call, even when two types look small enough to batch:
+✅ two drafter delegations, one per subpage ❌ one delegation asking for "TWO per-type subpages"
+Batching is where a subpage picks up its sibling's API: a module run handed the drafter `Lens`'s
+research alongside `Iso`'s plan and produced a page naming four methods `Lens` does not have. Two types
+is where batching looks safe; four is where it stops being.
+
 **There is no design step for a subpage.** No plan exists for it, and none should be invented: the
 drafter decides the sections from the structure template and the research it was given. Never reuse
 another type's plan — a module run once handed the drafter `Lens`'s research alongside `Iso`'s plan and

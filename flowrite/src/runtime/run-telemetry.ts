@@ -111,7 +111,11 @@ function perTypePairing(activity: ActivityReport): RunFlag[] {
   // delegation behind it at all, and it reports failed delegations alongside so the reader can see when
   // the balance is hollow.
   const researched = activity.delegations['researcher'] ?? 0;
-  const drafted = activity.delegations['drafter'] ?? 0;
+  // Pages, not drafter delegations. A module run batched both subpages into ONE delegation, and this
+  // flag then announced "3 research delegation(s) but only 2 page(s) drafted — research paid for and
+  // never used" while all 3 pages sat on disk. Counting writes to docs/ keeps the flag measuring the
+  // thing it names; how the drafting was organized is `delegations['drafter']`, reported separately.
+  const drafted = activity.pagesWritten;
   const failedDelegations = activity.toolErrors['task'] ?? 0;
 
   if (researched === drafted) {

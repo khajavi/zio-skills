@@ -88,6 +88,15 @@ export interface ActivityReport {
    * this can. Counts ATTEMPTS — a delegation that failed still appears.
    */
   delegations: Record<string, number>;
+  /**
+   * Distinct doc pages written, by path.
+   *
+   * Separate from `delegations['drafter']` because they answer different questions and a module run
+   * made them diverge: one drafter delegation wrote BOTH subpages, so the delegation count said 2
+   * where 3 pages existed. Count pages when asking what the run produced, delegations when asking
+   * how it was organized.
+   */
+  pagesWritten: number;
   cdViolations: number;
 }
 
@@ -183,6 +192,8 @@ export function trackComponentUsage(): ComponentUsageTracker {
   // bash commands that cd into the repo, against SHARED_DIRECTIVE's "do not cd into the repo".
   // An earlier run did it 76 times.
   let cdViolations = 0;
+  // Distinct doc pages written, by path — a page rewritten during review fixes counts once.
+  const pagesWritten = new Set<string>();
 
   const unsubscribe = observe((event: FlueEvent) => {
     if (event.type === 'tool_start' && PHASE_TOOLS.has(event.toolName)) openPhases.push(event.toolName);
@@ -215,6 +226,15 @@ export function trackComponentUsage(): ComponentUsageTracker {
         repoPath = undefined;
       }
       if (repoPath && command.includes(`cd ${repoPath}`)) cdViolations += 1;
+    }
+
+    // Pages written, counted from the write itself rather than from a delegation. One drafter
+    // delegation can produce several pages — a module run batched both subpages into one — so a
+    // delegation count answers "how often did we ask" and this answers "how many pages exist".
+    // Read defensively for the same reason as the bash block above.
+    if (event.type === 'tool_start' && event.toolName === 'write') {
+      const path = String((event.args as { path?: unknown } | undefined)?.path ?? '');
+      if (/(^|\/)docs\/.*\.mdx?$/.test(path)) pagesWritten.add(path);
     }
 
     if (event.type === 'tool_start') {
@@ -288,6 +308,7 @@ export function trackComponentUsage(): ComponentUsageTracker {
     skills: [...components.values()].filter((c) => c.category === 'skill').map((c) => c.name),
     phaseCalls: byCategory('phase'),
     delegations: byCategory('subagent'),
+    pagesWritten: pagesWritten.size,
     cdViolations,
   });
 

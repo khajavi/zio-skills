@@ -123,6 +123,12 @@ if (r.roles.length) {
 const tools = Object.entries(r.activity.tools).sort((a, b) => b[1] - a[1]);
 if (tools.length) console.log(`\nactivity   ${tools.map(([n, c]) => `${n} ${c}`).join('   ')}`);
 if (r.activity.skills.length) console.log(`skills     ${r.activity.skills.join(', ')}`);
+// Pages next to the delegations that produced them: when they disagree, one delegation wrote several
+// pages. Older archives predate the counter, so print it only when present.
+if (r.activity.pagesWritten !== undefined) {
+  const drafter = r.activity.delegations?.drafter ?? 0;
+  console.log(`pages      ${r.activity.pagesWritten} written from ${drafter} drafter delegation(s)`);
+}
 const errors = Object.entries(r.activity.toolErrors);
 if (errors.length) console.log(`errors     ${errors.map(([n, c]) => `${n} ${c}`).join('   ')}`);
 
