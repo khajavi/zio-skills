@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { ToolDefinition } from '@flue/runtime';
+import { note } from './log.ts';
 
 /**
  * Stops a phase tool from running inside another phase.
@@ -57,24 +58,86 @@ function refuse(name: string, parent: string, advice: string): never {
   throw new Error(`"${name}" cannot run inside the "${parent}" phase. ${advice}`);
 }
 
-/*
- * The memo that used to live here is gone with the phases it served.
+/**
+ * Phases whose result is a function of their input, so a second call with the same input can return
+ * the first call's result instead of doing the work again.
  *
- * It existed for `write-module-ref-turn9`: the model issued a batch of phase tools in one turn, this
- * guard refused the ones that looked nested, and the model re-fired the WHOLE batch — `research_data_type`
- * ran 8 times for 4 types and the run cost $3.30 against turn5's $2.17 for the same output. Memoizing
- * made a repeat free instead of an error, so the model's recovery strategy stopped being expensive.
+ * The problem this solves, from `write-module-ref-turn9`: the model issues a batch of phase tools in
+ * one turn, this guard refuses the ones that look nested, and the model then re-fires the WHOLE batch
+ * — including the calls that had already succeeded. `research_data_type` ran 8 times for 4 types,
+ * `design_module_plan` 3 times, and the run cost $3.30 against turn5's $2.17 for the same output. A
+ * refusal leaves the model no way to keep the half of its batch that worked, so it repeats everything.
  *
- * Both halves of that are moot now. There is one phase tool left, so a batch of them cannot be refused
- * in the first place, and nothing dedupes a `task` delegation — a memo is only reachable through a tool
- * wrapper, and delegations no longer go through one. Duplicate research is therefore possible again and
- * nothing collapses it; `perTypePairing` in run-telemetry.ts is what would notice, by comparing research
- * delegations against drafted pages.
+ * Memoizing rather than forbidding is the point: a repeat becomes free instead of an error, so the
+ * model's recovery strategy stops being expensive and nothing has to be explained to it.
  *
- * `review_page` was excluded from the memo anyway, for a reason worth keeping in view: a second round is
- * supposed to re-read a page the writer has since fixed, and returning the first verdict is the exact bug
- * an earlier `MAX_REVIEW_CALLS=1` shipped.
+ * Deliberately NOT every phase. Each exclusion is a case where a repeat means something:
+ *
+ *  - `review_page` — a second round is supposed to re-read a page the writer has since fixed.
+ *    Returning the first verdict is the exact bug an earlier `MAX_REVIEW_CALLS=1` shipped: a page went
+ *    out whose recorded verdict still named a rule the writer had already fixed.
+ *  - `write_*` — a redraft after review feedback arrives with the same plan and research, since
+ *    neither changed. Memoizing would return the old page and silently discard the fix.
+ *  - `integrate_*` and `write_companion_examples` — side effects on the site and on disk, which a
+ *    caller may legitimately want re-applied after a page changes underneath them.
+ *
+ * Research and design are safe because their output is derived from their input by contract: research
+ * already keeps a SQLite cache across runs for exactly that reason, and a plan is a function of the
+ * research it was given.
  */
+const MEMOIZABLE: ReadonlySet<string> = new Set([
+  'research_data_type',
+  'research_module',
+  'research_tutorial_topic',
+  'design_data_type_plan',
+  'design_module_plan',
+  'design_tutorial_plan',
+]);
+
+/**
+ * In-flight and completed memoizable phase calls, keyed by tool name and input.
+ *
+ * The PROMISE is stored, not the resolved value, and that is what handles turn9's shape: the four
+ * concurrent `research_data_type` calls arrive in one batch, so a duplicate within the same batch has
+ * nothing to return yet — it awaits the first call instead of starting a second delegation.
+ *
+ * Module state, like the other per-run counters here: one OS process per run.
+ */
+const memo = new Map<string, Promise<unknown>>();
+
+/** How many calls each phase answered from an earlier identical call. */
+const hits = new Map<string, number>();
+
+/**
+ * Repeat calls collapsed per phase, for the end-of-run report.
+ *
+ * `phaseCalls` counts `tool_start`, so a collapsed repeat still shows up there — the model did call
+ * the tool. Without this count the research/draft pairing in run-telemetry.ts would read 8 research
+ * calls against 4 pages and report work that was never actually done.
+ */
+export function memoHits(): Readonly<Record<string, number>> {
+  return Object.fromEntries(hits);
+}
+
+/** Reset the memo. Tests only — module state with no other seam. */
+export function __resetPhaseMemoForTests(): void {
+  memo.clear();
+  hits.clear();
+}
+
+/**
+ * A key that does not depend on the order the model happened to serialize its arguments in.
+ *
+ * The input arrives as generated JSON, so two identical calls can differ in key order. Sorting keys
+ * recursively makes those equal; arrays keep their order, since a reordered array is a different
+ * request (`constructionOrder` is exactly that).
+ */
+function stableKey(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(stableKey).join(',')}]`;
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1));
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableKey(v)}`).join(',')}}`;
+}
 
 // `?? {}` only satisfies the erased type: a tool with no output schema may return void
 // synchronously, which is legal, but `Promise<void>` is not — and wrapping makes every return a
@@ -104,7 +167,29 @@ export function guardPhase(tool: ToolDefinition): ToolDefinition {
             `call this phase next.`,
         );
       }
-      return normalize(await activePhase.run(tool.name, async () => tool.run(ctx)));
+      if (!MEMOIZABLE.has(tool.name)) {
+        return normalize(await activePhase.run(tool.name, async () => tool.run(ctx)));
+      }
+
+      const { data, log } = ctx as { data: unknown; log: Parameters<typeof note>[0] };
+      const key = `${tool.name}:${stableKey(data)}`;
+      const started = memo.get(key);
+      if (started) {
+        hits.set(tool.name, (hits.get(tool.name) ?? 0) + 1);
+        note(log, `${tool.name} already ran with these arguments — returning that result unchanged.`);
+        return normalize(await started);
+      }
+
+      const running = activePhase.run(tool.name, async () => tool.run(ctx));
+      memo.set(key, running);
+      try {
+        return normalize(await running);
+      } catch (error) {
+        // Failures are not memoized: a refused or errored phase must stay retryable, and turn9's
+        // whole problem was a model unable to make progress after a refusal.
+        memo.delete(key);
+        throw error;
+      }
     },
   };
 }

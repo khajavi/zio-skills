@@ -81,12 +81,14 @@ const reviewRepeatLimit = () => maxReviewRounds();
 /**
  * Phases exempt from the repeat check because they legitimately run per documented type.
  *
- * Empty now: the per-type phases were `research_data_type` and `write_data_type_reference`, and both are
- * deleted — a hierarchical module reference reaches those roles with `task` instead. `review_page` is the
- * only phase tool left and it has its own budget check, so nothing needs exempting. Kept as a named
- * constant rather than inlined, because a fourth document kind adding a per-type phase would want it.
+ * Live again for the module kind. A hierarchical module reference researches and drafts a subpage per
+ * core type, so `write-module-ref-turn5` did four of each — entirely correct work — and tripped
+ * `phase-repeat` twice for it. A flag that fires on a clean run teaches the reader to skim past all the
+ * flags, so the count check is wrong for these two and `perTypePairing` watches them instead.
+ *
+ * data-type and tutorial mount neither of these any more, so for those kinds this list is inert.
  */
-const PER_TYPE_PHASES: readonly string[] = [];
+const PER_TYPE_PHASES: readonly string[] = ['research_data_type', 'write_data_type_reference'];
 
 /**
  * Every drafted page should have exactly one research delegation behind it.
