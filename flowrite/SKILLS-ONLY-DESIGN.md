@@ -169,28 +169,44 @@ the path. This is better than returning prose through the conversation on four c
 
 ### 2.2 What each old phase becomes
 
+**The subagents stay.** What goes is the harness-tool layer wrapping them — the scratch conversation,
+the schemas, the relay. Every role keeps its own instructions, model and fresh context, and the root
+agent reaches it with the built-in `task` tool instead of through a phase tool.
+
 | old phase | becomes |
 |---|---|
 | `research_data_type` | `task` → `researcher`, which writes `.flowrite/research/<type>.md` |
-| `design_data_type_plan` | the agent plans the page itself, guided by `data-type-ref-structure` |
-| `write_data_type_reference` | the agent writes the file with the built-in `write` tool |
-| `write_companion_examples` | the agent writes the examples and builds them with `bash` |
+| `design_data_type_plan` | `task` → `designer` |
+| `write_data_type_reference` | `task` → `drafter` |
+| `write_companion_examples` | `task` → `examplesBuilder` |
 | mdoc verify | unchanged — already agent-driven `bash` |
-| `integrate_data_type_reference` | the agent edits `sidebars.js` / `index.md` with `edit` |
-| `review_page` | the agent self-reviews against `data-type-ref-checklist` + `check_method_coverage` |
+| `integrate_data_type_reference` | `task` → `docsIntegrator` |
+| `review_page` | `task` → `reviewer` |
 
-Five subagents stop being used on this path: `designer`, `drafter`, `examplesBuilder`,
-`docsIntegrator`, `reviewer`. They stay **declared**, because `module-ref` and `tutorial` still use
-them, and because deleting a role and its caller in one change makes a bad outcome unattributable.
+So the delegation count is unchanged and the **relay** is what disappears: today a phase's scratch
+conversation spends two turns per delegation relaying work it then re-sends on every later turn
+(38 turns for 17 delegations, 18,671 → 143,214 tokens). The root agent calling `task` directly spends
+one tool call.
+
+### 2.3 Why the roles are not folded into the agent
+
+An earlier draft of this file had five of them stop being used, with the agent doing the work and
+reviewing its own page. That is rejected: separate roles are what give per-subject context isolation
+and independent judgement. Isolated researchers are what kept `Ledger`'s methods off `Window`'s page,
+and a reviewer with its own clean context judges a page the author cannot judge — tinytally turn1 had
+the author file `passed` over 14 failures the independent reviewer had just reported.
+
+Delegation was never the expensive part. The wrapper around it was.
 
 ---
 
 ## 3. Decisions taken — do not re-open
 
-1. **Keep one subagent: `researcher`, haiku/low.** Reached with the built-in `task`, no harness tool,
-   no schema. Research was $0.60 of a $3.30 run; the same reading at sonnet@high costs several times
-   that. It also preserves per-type context isolation, which is what kept `Ledger`'s methods off
-   `Window`'s page.
+1. **Keep every subagent.** `researcher`, `designer`, `drafter`, `examplesBuilder`, `docsIntegrator`
+   and `reviewer` all stay, each reached with the built-in `task` — no harness tool, no schema.
+   Stated 2026-08-14: separate agents for drafting, reviewing and researching are wanted. This also
+   keeps model tiering (`researcher` on haiku/low was $0.0977 of turn1's $0.7935) and keeps review
+   independent of the author.
 2. **Keep deterministic plain tools.** `check_method_coverage` and `gh_query` are not harness tools,
    so they are outside the objection, and code beats prose for a countable check.
 3. **data-type-ref only.** One variable.
@@ -380,11 +396,21 @@ Runs use haiku via `--env .env.testing`, need `NODE_USE_ENV_PROXY=1` and
 
 ### 5.3 The two risks to watch, named in advance
 
-**Self-review replaces an independent reviewer.** The agent now judges its own page. This project
-has already measured that model self-assessment under-reports (#52: `report_run_result` filed fewer
-failing items than the reviewer returned, 7 of 7 runs). If review quality collapses, the fallback is
-one line in the skill — delegate the review to `reviewer` with `task`, same as research. That keeps
-the architecture and restores independence.
+**The verdict is now evidence, and it will read worse.** `d700d2b` made `report_run_result` derive the
+verdict from what the reviewer returned rather than accept one, so a run that hits the round cap with
+failures records `failed` instead of `passed`. Expect the skills-only run's `verdict.json` to look
+worse than older archives while describing the same or better pages — the older ones were self-reported
+and turn1's was the inverse of its review. Compare coverage and fabrication across the A/B, and read
+verdicts only against other post-`d700d2b` runs.
+
+**One deterministic seam disappears.** `recordedVerdict()` works because `review_page` is a harness
+tool, so TypeScript holds the reviewer's result. Once review is a direct `task` delegation, the root
+agent gets prose and nothing in TypeScript observes it — so the verdict becomes self-reported again by
+construction. This is unresolved, and it is the one place where dropping harness tools costs something
+real rather than dissolving a problem. Options, none chosen yet: keep `review_page` as the last
+harness tool; have `reviewer` write its findings to a file the way `researcher` will, and parse that;
+or accept a self-reported verdict and rely on `check_method_coverage` as the only hard gate. Decide
+before converting review, not after.
 
 **One growing conversation.** Design, writing, integration and review all land in the root
 conversation now. Research does not (`subagents.md:44`), which is the expensive part — but a
