@@ -32,7 +32,10 @@ import { researchDataType, researchModule, researchTutorialTopic } from './tools
 import { designDataTypePlan, designModulePlan, designTutorialPlan } from './tools/phases/design-doc-plan.ts';
 import { writeDataTypeReference, writeModuleOverview, writeTutorialDraft } from './tools/phases/write-doc.ts';
 import { writeCompanionExamples } from './tools/phases/write-companion-examples.ts';
-import { integrateDataTypeReference, integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
+// integrateDataTypeReference is deliberately not imported: `data-type` reaches docs_integrator with
+// `task` now, and no other kind mounts it. Its export stays in integrate.ts so reverting this change
+// is one import line rather than a resurrection.
+import { integrateModuleReference, integrateTutorial } from './tools/phases/integrate.ts';
 
 import { reviewPage } from './tools/phases/review-page.ts';
 
@@ -77,14 +80,16 @@ export const KINDS = {
     label: 'write-data-type-ref',
     instructions: dataTypeRefMd,
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist],
-    tools: [
-      researchDataType,
-      designDataTypePlan,
-      writeDataTypeReference,
-      writeCompanionExamples,
-      integrateDataTypeReference,
-      reviewPage,
-    ],
+    // The examples and integrate phases are gone from this row. Both were pure prompt wrappers: they
+    // injected no reference doc and did nothing beyond a skip check and one log line, and their
+    // prompts only restated what examples-builder.md:59-62 and docs-integrator.md:3-4 already tell
+    // those roles. So the harness tool bought a relay and nothing else — and a relay is two turns of
+    // a scratch conversation that never resets (agent-api.md:402). The writer reaches both roles with
+    // the built-in `task` tool instead: always present, resolving against whatever useSubagent
+    // declared (guide/subagents.md:40,46). Same roles, same delegations, one less conversation.
+    //
+    // writeCompanionExamples stays imported for `module` and `tutorial`, which still mount it.
+    tools: [researchDataType, designDataTypePlan, writeDataTypeReference, reviewPage],
     plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
