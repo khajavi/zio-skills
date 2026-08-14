@@ -5,12 +5,11 @@ import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 import { recordModulePlan } from './phase-ledger.ts';
-// Each kind's structure template, injected into the generic designer's task (a subagent's skills
-// cannot vary per delegated task, so the kind-specific template rides in the prompt). Same
-// single-source-of-truth split as writing-style/references/rules.md: the SKILL.md files point here.
-import dataTypeTemplateDoc from '../../skills/data-type-ref-structure/references/structure.md';
-import moduleTemplateDoc from '../../skills/module-ref-structure/references/structure.md';
-import tutorialTemplateDoc from '../../skills/tutorial-structure/references/structure.md';
+// The kind's structure template arrives through the designer's own render now — `Designer()` reads
+// `docKind()` and returns it with its instructions (runtime/kind-docs.ts). The claim this comment used
+// to make, that "a subagent's skills cannot vary per delegated task", is true on its own axis and was
+// the wrong conclusion: a role cannot see WHICH call is delegating to it, but the run's kind is fixed
+// for the whole run and reachable from run-context's module holder, which exists for exactly this.
 import { note } from '../../runtime/log.ts';
 
 /**
@@ -188,10 +187,12 @@ async function designPlan<S extends v.GenericSchema>(opts: {
   designing: string;
   /** First prompt line, e.g. 'Design the plan for a "Prism" data type reference page.' */
   task: string;
-  /** Template name as the prompt cites it, e.g. 'data-type-ref-structure'. */
-  templateName: string;
-  templateDoc: string;
-  /** Per-kind planning instructions, between the template and the research payload. */
+  /**
+   * Per-kind planning instructions, between the task and the research payload.
+   *
+   * `templateName` and `templateDoc` used to sit here. The designer's own render supplies the
+   * template now (`Designer()` reads `docKind()`), so passing it would deliver it twice.
+   */
   guidance: string[];
   researchAnswers: unknown;
 }): Promise<v.InferOutput<S>> {
@@ -211,10 +212,6 @@ async function designPlan<S extends v.GenericSchema>(opts: {
     prompt:
       [
         opts.task,
-        ``,
-        `Follow this ${opts.templateName} template exactly:`,
-        ``,
-        opts.templateDoc,
         ``,
         ...opts.guidance,
         `Ground every choice in these research answers:`,
@@ -261,8 +258,6 @@ export const designDataTypePlan = defineTool({
         },
         designing: `reference-page plan for: ${data.typeName}`,
         task: `Design the plan for a "${data.typeName}" data type reference page.`,
-        templateName: 'data-type-ref-structure',
-        templateDoc: dataTypeTemplateDoc,
         guidance: [
           `Decide which optional sections apply, order the constructors, and group EVERY`,
           `public operation into ordered Core Operations categories (a single-method`,
@@ -328,8 +323,6 @@ export const designModulePlan = defineTool({
       },
       designing: `module-reference plan for: ${data.moduleName}`,
       task: `Design the plan for a "${data.moduleName}" module reference page.`,
-      templateName: 'module-ref-structure',
-      templateDoc: moduleTemplateDoc,
       guidance: [
         data.shapeOverride
           ? `The caller REQUIRES the "${data.shapeOverride}" shape — set shape to it and derive layout ` +
@@ -386,8 +379,6 @@ export const designTutorialPlan = defineTool({
         },
         designing: `tutorial plan for: ${data.topic}`,
         task: `Design a learning-oriented tutorial plan for "${data.topic}".`,
-        templateName: 'tutorial-structure',
-        templateDoc: tutorialTemplateDoc,
         guidance: [],
         researchAnswers: data.researchAnswers,
       }),

@@ -5,22 +5,18 @@ import { dataTypePlanSchema, modulePlanSchema, tutorialPlanSchema } from './desi
 import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
-// Each kind's structure template, injected into the generic drafter's task (a subagent's skills
-// cannot vary per delegated task). Same single-source-of-truth split as writing-style rules: the
-// SKILL.md files point here.
-import dataTypeTemplateDoc from '../../skills/data-type-ref-structure/references/structure.md';
-import moduleTemplateDoc from '../../skills/module-ref-structure/references/structure.md';
-import tutorialTemplateDoc from '../../skills/tutorial-structure/references/structure.md';
-// The writing-style rules, injected into the drafter prompt at compile time.
+// The kind's structure template and the writing-style rules no longer arrive from here. Both are
+// returned by the drafter's own render (`Drafter()` in subagents/drafter.ts, via runtime/kind-docs.ts),
+// which reads `docKind()` and needs no argument from a caller.
 //
-// This was a workaround: flue beta.9 did not package nested skill files, so the drafter could not read
-// writing-style/references/rules.md at runtime. That is fixed — 2.0.3 packages a skill's whole
-// directory and adds `read_skill_resource`, verified with a probe on 2026-08-12 — but the injection
-// stays, deliberately. The whole injected corpus across a worst-case run is ~9,500 tokens, about $0.01,
-// while activating a skill and reading a resource costs three tool round-trips that each re-send the
-// delegate's accumulated context. The file remains the single source of truth: it is imported here,
-// never copied.
-import writingStyleRules from '../../skills/writing-style/references/rules.md';
+// The reason for injecting them here is worth keeping, because it still rules out the obvious
+// alternative: the whole injected corpus is ~9,500 tokens (~$0.01), while activating a skill and
+// reading its resource costs the delegate three tool round-trips that each re-send its accumulated
+// context — measured as 2 wasted round-trips in write-data-type-ref-turn20 and 5 in
+// write-module-ref-turn5 before 600f48a. So mounting is out. What changed is that a role's render can
+// deliver a doc for free, which is neither injection nor a mount, and the writer is about to stop being
+// a phase tool at all — leaving the MODEL as the only party that could paste a template, which it
+// would paraphrase.
 import { note } from '../../runtime/log.ts';
 import { operationNames, planShape, requireModulePlan, requireResearch } from './phase-ledger.ts';
 
@@ -162,14 +158,15 @@ async function writeDoc(opts: {
   return { path: opts.path, content };
 }
 
-/** The four lines every drafter prompt opens with: what to write, and the template to follow. */
-const followTemplate = (task: string, templateName: string, templateDoc: string): string[] => [
-  task,
-  ``,
-  `Follow this ${templateName} template and its drafting rules exactly:`,
-  ``,
-  templateDoc,
-];
+/**
+ * The line every drafter prompt opens with: what to write.
+ *
+ * This used to paste the kind's structure template too. The drafter's own render now supplies it
+ * (`Drafter()` reads `docKind()` and returns `structureBlock(kind)` with its instructions), so
+ * pasting it here would deliver it twice — the same double delivery that cost the drafter an
+ * activation round-trip per call before 600f48a.
+ */
+const openWith = (task: string): string[] => [task];
 
 /** What `planBlock` and `isSubpage` need from a `write_data_type_reference` call. */
 interface DataTypePageInput {
@@ -217,13 +214,6 @@ export function planBlock(data: DataTypePageInput): string[] {
         `omit it otherwise.`,
       ];
 }
-
-/** The injected writing-style rules block. TEMP — see the `writingStyleRules` import. */
-const styleRules = (): string[] => [
-  `Writing-style rules — apply every rule to the prose you write:`,
-  ``,
-  writingStyleRules,
-];
 
 /** The closing constraint the `description` field's own guidance repeats. */
 const DESCRIPTION_LENGTH = `The finish result's "description" must be 50-150 characters.`;
@@ -324,13 +314,7 @@ export const writeDataTypeReference = defineTool({
             'opening definition prose (NO heading). No preamble, no surrounding code fence.',
         },
         prompt: [
-          ...followTemplate(
-            `Write a complete ZIO data type reference page as Docusaurus markdown.`,
-            'data-type-ref-structure',
-            dataTypeTemplateDoc,
-          ),
-          ``,
-          ...styleRules(),
+          ...openWith(`Write a complete ZIO data type reference page as Docusaurus markdown.`),
           ``,
           ...planBlock(data),
           ``,
@@ -448,15 +432,9 @@ export const writeModuleOverview = defineTool({
             'definition prose (NO heading). No preamble, no surrounding code fence.',
         },
         prompt: [
-          ...followTemplate(
-            `Write a ZIO MODULE reference page as Docusaurus markdown.`,
-            'module-ref-structure',
-            moduleTemplateDoc,
-          ),
+          ...openWith(`Write a ZIO MODULE reference page as Docusaurus markdown.`),
           ``,
           ...layoutInstruction,
-          ``,
-          ...styleRules(),
           ``,
           `Plan to follow exactly (layout, which sections to include, and the type order are`,
           `already decided; write the page to match this plan):`,
@@ -517,13 +495,7 @@ export const writeTutorialDraft = defineTool({
             'first heading/prose. No preamble, no surrounding code fence.',
         },
         prompt: [
-          ...followTemplate(
-            `Write a complete learning-oriented tutorial as Docusaurus markdown.`,
-            'tutorial-structure',
-            tutorialTemplateDoc,
-          ),
-          ``,
-          ...styleRules(),
+          ...openWith(`Write a complete learning-oriented tutorial as Docusaurus markdown.`),
           ``,
           `Topic: ${data.topic}`,
           ``,

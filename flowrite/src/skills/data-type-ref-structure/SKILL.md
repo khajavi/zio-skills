@@ -5,5 +5,6 @@ description: The section template and drafting rules for a ZIO data type referen
 
 # Data Type Reference Structure
 
-The full 12-section template and the per-method drafting rules are provided verbatim in your task
-input (single source of truth: `references/structure.md`). Follow it when writing a reference page.
+The full 12-section template and the per-method drafting rules are provided verbatim in your
+instructions or your task input (single source of truth: `references/structure.md`). Follow it when
+writing a reference page.

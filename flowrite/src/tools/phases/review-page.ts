@@ -4,13 +4,15 @@ import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { type DocKind, authorHint, docKind, maxReviewRounds } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 import { note } from '../../runtime/log.ts';
-// Each kind's checklist and the writing-style rules, injected into the generic reviewer's task
-// (skills are role-owned and cannot vary per delegated task). Same source-of-truth split as before:
-// the SKILL.md files point at these.
-import rulesMarkdown from '../../skills/writing-style/references/rules.md';
-import dataTypeChecklistDoc from '../../skills/data-type-ref-checklist/references/checklist.md';
-import moduleChecklistDoc from '../../skills/module-ref-checklist/references/checklist.md';
-import tutorialChecklistDoc from '../../skills/tutorial-checklist/references/checklist.md';
+// Each kind's checklist and the writing-style rules, injected into the generic reviewer's task.
+//
+// These stay injected rather than moving to the reviewer's render, unlike the drafter's and designer's
+// templates. The reason is the round budget: a run may review more than once, and a second round
+// re-reads a page the writer has since fixed. Delivering the checklist through the render would be
+// equivalent, but the reviewer is also the one role whose result TypeScript still holds
+// (`recordedVerdict()`), so leaving its prompt assembly alone keeps that seam undisturbed while the
+// other phases convert. Revisit when review converts.
+import { CHECKLISTS, STYLE_RULES } from '../../runtime/kind-docs.ts';
 
 /**
  * The review phase: a simple LLM review.
@@ -174,19 +176,11 @@ export function consumeReviewRound(): void {
   roundsUsed++;
 }
 
-/**
- * The only thing the review prompt needs per kind: which checklist to judge against.
- *
- * This table briefly also carried a `noun` ("data type reference page") for the opening line and a
- * `label` ("REFERENCE PAGE") for the content fence. Both were dropped as pure restatement — each
- * checklist opens by naming its own kind (`# Data Type Reference Review Checklist`), three lines
- * below where the noun said it, and the fence already carries the page's path.
- */
-const CHECKLISTS: Record<DocKind, string> = {
-  'data-type': dataTypeChecklistDoc,
-  module: moduleChecklistDoc,
-  tutorial: tutorialChecklistDoc,
-};
+// The per-kind checklist table moved to runtime/kind-docs.ts, alongside the structure templates and
+// the style rules, so the three-way maps live in one place rather than one per consumer. It briefly
+// also carried a `noun` ("data type reference page") and a `label` ("REFERENCE PAGE"); both were
+// dropped as pure restatement — each checklist opens by naming its own kind, and the fence below
+// already carries the page's path.
 
 /**
  * Review the page at `path` against its kind's checklist and the writing style rules.
@@ -245,7 +239,7 @@ export const reviewPage = defineTool({
           `Also check it against every one of these writing style rules, reporting each violation as a`,
           `failing item named "writing-style rule <N>" with the line and a specific, actionable issue:`,
           ``,
-          rulesMarkdown,
+          STYLE_RULES,
           // Before the content delimiter, so the hint reads as reviewer guidance rather than as part
           // of the page under review.
           authorHint(),
