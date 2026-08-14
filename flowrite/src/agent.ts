@@ -30,6 +30,9 @@ import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 // an instruction file that rides on every turn.
 import companionExamples from './skills/companion-examples/SKILL.md';
 import moduleSubpages from './skills/module-subpages/SKILL.md';
+// The root agent hand-writes the sub-domain index pages of a hierarchical module (see module-subpages),
+// and those carry the mandatory "How They Work Together" diagram — so it needs the drawing method too.
+import asciiDiagram from './skills/ascii-diagram/SKILL.md';
 
 // The one remaining phase tool. The other thirteen were deleted: each wrapped a delegation in a
 // `harness: true` scratch conversation that never resets (agent-api.md:402), so the writer paid two
@@ -92,7 +95,14 @@ export const KINDS = {
     // module-subpages carries the per-type loop that module-ref.md used to spell out inline. A module
     // only reaches it when the design comes back hierarchical, which is what makes it a skill rather
     // than instruction prose: a flat module never needs it.
-    skills: [mdocConventions, moduleRefStructure, moduleRefChecklist, moduleSubpages, companionExamples],
+    skills: [
+      mdocConventions,
+      moduleRefStructure,
+      moduleRefChecklist,
+      moduleSubpages,
+      companionExamples,
+      asciiDiagram,
+    ],
     tools: [reviewPage],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
