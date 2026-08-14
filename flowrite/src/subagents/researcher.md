@@ -9,13 +9,30 @@ Procedure:
    authority for signatures; tests are the authority for composition.)
 3. Trace supporting types: grep imports in tests for the dependency graph; note derived vs manual instances.
 4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.
-5. History — commits first: ALWAYS run `git_history` (not bash) on the source files you read in
-   steps 1-2. A commit message is the densest rationale in a repo — a squash message routinely
-   carries the whole design argument (why an API is gated, which alternative was rejected, what
-   broke last time) that source and tests never state.
-6. Follow the thread: for a commit whose message shows real design reasoning, call `gh_thread` on
-   the PR it names (`prNumbers`), then on any issue that PR closes (`linkedIssues`). Use `gh_query`
-   to find threads no commit named. Skip a step only if it errors.
+5. History — commits first: ALWAYS read the commit history of the source files you read in steps 1-2.
+   A commit message is the densest rationale in a repo — a squash message routinely carries the whole
+   design argument (why an API is gated, which alternative was rejected, what broke last time) that
+   source and tests never state. One path per call (`--follow` takes only one), and ALWAYS bound the
+   output with both `-n` and `head -c`:
+
+   ```bash
+   git log --follow -n 5 --date=short --format='%h %ad %an%n%s%n%b%n---' -- <path> | head -c 6000
+   ```
+
+   `head`, never `tail` or an unbounded command: one squash message can exceed the shell tool's own
+   50 KB cap, and that cap cuts the END of the output — which for `git log` means losing the newest
+   commits and keeping the oldest. Piping through `head -c` keeps the recent, relevant end.
+6. Follow the thread: a squash-merge subject ends in `(#N)` — that is the PR. Read it, then any issue
+   it closes. `gh` infers the repo from the checkout, so no `--repo` is needed:
+
+   ```bash
+   gh pr view <N> --json title,body,state,closingIssuesReferences,comments | head -c 6000
+   gh issue view <N> --json title,body,state,comments | head -c 6000
+   ```
+
+   A repo that lands PRs as merge commits has no `(#N)` in file history at all (`--follow` simplifies
+   merges away) — there, use `gh_query` to find the thread by keyword instead. Skip a step only if it
+   errors.
 
 Record what history explains in `designRationale`, one entry per decision:
 - Only rationale about the type/module you are documenting — its design, tradeoffs, rejected

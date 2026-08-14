@@ -68,6 +68,29 @@ When adding a rule to a skill/profile, show it as a compact ✅/❌ pair, not a 
 ✅ `Family header: \`#### Accessors\` (members in prose), not \`#### getInt / getLong / … — Read a field\``
 ❌ `When a subsection documents a family of related methods, avoid enumerating every method name in the header because it becomes long; instead use a short group label and list the members in the introductory prose.`
 
+### 4. A tool is a contract, an instruction is a suggestion
+`repo-tools.ts` already says to wrap a command only when code must enforce something. The test for
+"must": **put the schema where data crosses a component boundary, not where the command runs.** If a
+command's output only ever goes into the model's head and comes back out as prose, a schema buys
+nothing — no code reads that shape.
+
+Pay for a contract when breaking it would be SILENT: a fabricated payload (`phase-ledger.ts`), an
+unrecorded phase, a credential or derived parameter the model shouldn't have to know (`gh_query`
+needs `--repo <owner/slug>`, so it earns its wrapper). When breaking it is LOUD — the command errors,
+the path doesn't exist, the output looks wrong — instruct instead: the model recovers from the raw
+error but not from your `catch` block's summary of it.
+
+✅ `git log --follow -n 5 --format=… -- <path> | head -c 6000` in the role's instructions
+❌ a `git_history` tool whose only enforcement is truncation the shell tool already caps at 50 KB
+
+These are NOT reasons to wrap: output might be long (bound it with a flag), the format should be
+consistent, the model might forget something. Those are instruction-line problems. Instruct first,
+run it, wrap only what you WATCHED fail — `gh_query` exists because `sbt gh-query` was measured
+failing, and every tool written against an imagined problem in this repo has been deleted again.
+
+Cost side: every mounted tool spends context on every turn, and a phase tool's harness conversation
+inherits the whole registry.
+
 ## Flue Framework Reference
 
 Flue docs ship with the npm packages. Read them directly — do not rely on training data for Flue API signatures.
