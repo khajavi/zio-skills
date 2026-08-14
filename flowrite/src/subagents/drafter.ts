@@ -1,6 +1,7 @@
 import { defineSubagent, useSkill } from '@flue/runtime';
 import mdocConventions from '../skills/mdoc-conventions/SKILL.md';
 import asciiDiagram from '../skills/ascii-diagram/SKILL.md';
+import markdownTable from '../skills/markdown-table/SKILL.md';
 import { TIERS } from '../runtime/models.ts';
 import { docKind } from '../runtime/run-context.ts';
 import { structureBlock, styleBlock } from '../runtime/kind-docs.ts';
@@ -22,9 +23,9 @@ import instructions from './drafter.md';
  *
  * `mdoc-conventions` is still MOUNTED rather than returned, because its content lives in its
  * `SKILL.md` with no `references/` file behind it — the mount is its only delivery path. `ascii-diagram`
- * is mounted for the same reason and stays a mount rather than joining the returned blocks: only some
- * pages contain a diagram, so its body should load on the model's decision rather than ride every
- * drafting delegation.
+ * and `markdown-table` are mounted for the same reason, and stay mounts rather than joining the returned
+ * blocks: only some pages contain a diagram or a table, so their bodies should load on the model's
+ * decision rather than ride every drafting delegation.
  *
  * `writing-style` must stay unmounted here, and now for a sharper reason than before. It was
  * double delivery when write-doc.ts pasted the rules into the prompt: the mounted `SKILL.md` is a
@@ -40,6 +41,7 @@ import instructions from './drafter.md';
 export function Drafter() {
   useSkill(mdocConventions);
   useSkill(asciiDiagram);
+  useSkill(markdownTable);
   const kind = docKind();
   return [instructions, ``, structureBlock(kind), ``, styleBlock()].join('\n');
 }

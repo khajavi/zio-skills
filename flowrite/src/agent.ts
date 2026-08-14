@@ -31,8 +31,10 @@ import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
 import companionExamples from './skills/companion-examples/SKILL.md';
 import moduleSubpages from './skills/module-subpages/SKILL.md';
 // The root agent hand-writes the sub-domain index pages of a hierarchical module (see module-subpages),
-// and those carry the mandatory "How They Work Together" diagram — so it needs the drawing method too.
+// and those carry the mandatory "How They Work Together" diagram and a type roster — so it needs the
+// drawing and tabulating methods itself, not only through the drafter.
 import asciiDiagram from './skills/ascii-diagram/SKILL.md';
+import markdownTable from './skills/markdown-table/SKILL.md';
 
 // The one remaining phase tool. The other thirteen were deleted: each wrapped a delegation in a
 // `harness: true` scratch conversation that never resets (agent-api.md:402), so the writer paid two
@@ -102,6 +104,7 @@ export const KINDS = {
       moduleSubpages,
       companionExamples,
       asciiDiagram,
+      markdownTable,
     ],
     tools: [reviewPage],
     // Module references carry per-type subpages, so coverage applies to each of them.
