@@ -10,10 +10,11 @@ Procedure:
 3. Trace supporting types: grep imports in tests for the dependency graph; note derived vs manual instances.
 4. Find real-world patterns: glob **/examples/**/*.scala and integration tests.
 5. History — commits first: ALWAYS read the commit history of the source files you read in steps 1-2.
-   A commit message is the densest rationale in a repo — a squash message routinely carries the whole
-   design argument (why an API is gated, which alternative was rejected, what broke last time) that
-   source and tests never state. One path per call (`--follow` takes only one), and ALWAYS bound the
-   output with both `-n` and `head -c`:
+   A commit message is the densest documentation in a repo — a squash message routinely carries the
+   whole design argument (why an API is gated, which alternative was rejected, what broke last time)
+   AND the facts source cannot state at all (what a member was renamed from, which usages are
+   rejected, which platform throws). One path per call (`--follow` takes only one), and ALWAYS bound
+   the output with both `-n` and `head -c`:
 
    ```bash
    git log --follow -n 5 --date=short --format='%h %ad %an%n%s%n%b%n---' -- <path> | head -c 6000
@@ -33,6 +34,23 @@ Procedure:
    A repo that lands PRs as merge commits has no `(#N)` in file history at all (`--follow` simplifies
    merges away) — there, use `gh_query` to find the thread by keyword instead. Skip a step only if it
    errors.
+
+History feeds the WHOLE answer, not just `designRationale`. Read each message for all of it:
+- **Renames, deprecations, removals** ("Rename `.unsafeRunSync` -> `.block`"). Current source is the
+  authority for what exists — but only history tells you a member USED to be called something else,
+  which is the one fact a remembered API gets confidently wrong. Never document the old name; note
+  the change in `groundingDetail` so the author can write a migration note.
+- **Constraints invisible in source** — explicitly unsupported usage, platform-conditional behaviour
+  ("safe on JVM, throws on JS"), compile-time-only markers. These belong in the affected member's
+  `caveats`.
+- **Deliberate Scala 2 vs 3 divergence** ("the two backends diverge here by design") -> `scalaVersionNotes`.
+- **Version-conditional dependencies** ("scala-reflect on 2.13, dotty-cps-async on 3") -> `sbtDependency`.
+- **Claimed properties and support matrix** ("zero-allocation", "green on 2.13/3.3/3.8 x JVM/JS") -> `keyProperties`.
+- **The type inventory and its tiers** — a commit's file list names the module's types, and a path
+  under `internal/` or a `private[...]` addition tells you which are building blocks rather than
+  end-user API.
+- **Which test proves what** ("AsyncRewriteSpec proves non-blocking rewrite + gating") — go read that
+  test and cite it, rather than picking a test yourself.
 
 Record what history explains in `designRationale`, one entry per decision:
 - Only rationale about the type/module you are documenting — its design, tradeoffs, rejected
