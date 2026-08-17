@@ -277,6 +277,35 @@ test('rounds that really ran past the ceiling still flag', () => {
   assert.ok(flags.includes('phase-repeat'), `expected phase-repeat in ${flags.join(', ')}`);
 });
 
+test('a refused review round is not a failed phase', () => {
+  // Since the confirming round, the healthy shape of a run that fixed something is: round 1 fails,
+  // round 2 confirms, a third attempt is REFUSED. That refusal arrives as isError, so phaseFailures
+  // counts it — and flagging it reported tinyproject turn1, a correct run, as "1 call(s) ended in
+  // error; the phase spent $0.3054", billing the cap for the phase's entire cost.
+  //
+  // Third instance of one bug class: phase-repeat subtracts refusals, reviewRepeatLimit reads the
+  // ceiling, and this one was missed both times.
+  assert.deepEqual(
+    codes({
+      activity: activity({ phaseCalls: { review_page: 3 }, phaseFailures: { review_page: 1 } }),
+      refusedCalls: { review_page: 1 },
+    }),
+    [],
+  );
+});
+
+test('a real phase error still flags when a refusal is also present', () => {
+  // Subtraction, not suppression: two errors of which one was refused leaves one worth reporting.
+  const flags = computeFlags(
+    input({
+      activity: activity({ phaseCalls: { review_page: 3 }, phaseFailures: { review_page: 2 } }),
+      refusedCalls: { review_page: 1 },
+    }),
+  );
+  assert.deepEqual(flags.map((f) => f.code), ['phase-failed']);
+  assert.match(flags[0]!.detail, /1 call\(s\) ended in error/);
+});
+
 test('a refiled report is flagged', () => {
   assert.deepEqual(codes({ reportCalls: 2 }), ['report-refiled']);
 });

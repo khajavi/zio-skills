@@ -55,6 +55,15 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  /**
+   * Calls a phase REFUSED, by tool name — not failures.
+   *
+   * Both arrive as `isError`, so `phaseFailures` counts them together, but they mean opposite things: a
+   * refusal is a cap working. Since the confirming round landed, the healthy shape of a run that fixed
+   * something is round 1, round 2, then a third attempt refused — so without this the report flags every
+   * correct module run as having a failed phase, and bills the refusal for the phase's whole cost.
+   */
+  refusedCalls?: Record<string, number>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
@@ -188,11 +197,14 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   flags.push(...perTypePairing(activity));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
+    // A refused call is not a failure — see `refusedCalls`. `phase-repeat` above subtracts the same way.
+    const errored = failed - (input.refusedCalls?.[phase] ?? 0);
+    if (errored <= 0) continue;
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
     flags.push({
       code: 'phase-failed',
       phase,
-      detail: `${failed} call(s) ended in error; the phase spent ${money(cost)} in total`,
+      detail: `${errored} call(s) ended in error; the phase spent ${money(cost)} in total`,
     });
   }
 
@@ -267,8 +279,9 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  refusedCalls?: Record<string, number>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals } = input;
+  const { totals, components, phases, activity, refusals, refusedCalls } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -294,6 +307,7 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
+      refusedCalls,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };
