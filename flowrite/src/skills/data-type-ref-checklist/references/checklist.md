@@ -12,6 +12,9 @@ Verify every item. The reference page is not done until all pass.
   creating values → predefined instances → core operations → subtypes → comparisons → advanced →
   integration → running the examples).
 - Installation appears only for top-level module types; internal types omit it.
+- Motivation, where present, gives a reason the reader shares — the problem the type solves for them.
+  Fail it when the page explains the repo's own work instead: fixtures, test coverage, tooling, the
+  docs pipeline, a refactor. Such a reason can be perfectly true and still belong nowhere on the page.
 - Each Core-Operations method is a `####` under its `###` category; a single-method category is fine when no related one fits.
 
 ## Coverage & Content Quality
@@ -40,7 +43,8 @@ Verify every item. The reference page is not done until all pass.
 
 - Fix every failing item in one editing pass.
 - The run has a bounded number of review rounds and the review tool's description states how many.
-  With the default of one there is no confirming pass, so treat the first review as the only one:
-  fix what it reports, then finish.
+  When a review reports failing items, fix them all and call review ONCE more: that confirming round
+  is what records the page as passing, since the verdict is whatever the last review found. A review
+  that reported nothing needs no confirmation — finish instead.
 - Name every item you could not fix in the final summary, and report the run as failed when any
   remain. An unverified fix is not a pass.

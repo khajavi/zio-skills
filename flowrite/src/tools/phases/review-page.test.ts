@@ -6,7 +6,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { __resetReviewRoundsForTests, consumeReviewRound } from './review-page.ts';
+import {
+  __resetLastReviewForTests,
+  __resetReviewRoundsForTests,
+  __setLastReviewForTests,
+  consumeReviewRound,
+  recordedVerdict,
+} from './review-page.ts';
 import { docKind, maxReviewRounds, setRunContext } from '../../runtime/run-context.ts';
 
 /** Run `fn` with MAX_REVIEW_ROUNDS set to `value`, restoring the environment afterwards. */
@@ -15,14 +21,65 @@ function withBudget(value: string | undefined, fn: () => void): void {
   if (value === undefined) delete process.env.MAX_REVIEW_ROUNDS;
   else process.env.MAX_REVIEW_ROUNDS = value;
   __resetReviewRoundsForTests();
+  // Also clear the recorded review: consumeReviewRound reads it to decide whether a confirming round
+  // is owed, so a failing outcome left by an earlier test would grant one and make a budget assertion
+  // pass for the wrong reason. Order-independence here is the point.
+  __resetLastReviewForTests();
   try {
     fn();
   } finally {
     if (previous === undefined) delete process.env.MAX_REVIEW_ROUNDS;
     else process.env.MAX_REVIEW_ROUNDS = previous;
     __resetReviewRoundsForTests();
+    __resetLastReviewForTests();
   }
 }
+
+/** A recorded review with `failing` items failing and one passing. */
+function reviewed(failing: string[]): void {
+  __setLastReviewForTests({
+    state: 'reviewed',
+    items: [
+      { item: 'something that passed', pass: true, issue: '' },
+      ...failing.map((item) => ({ item, pass: false, issue: 'broken' })),
+    ],
+  });
+}
+
+test('a failing review earns one confirming round, so fixes can be recorded as verified', () => {
+  // #67: recordedVerdict() returns the LAST outcome, and a refused call records none — so under a hard
+  // budget of one, a run that repaired every finding still filed the pre-fix verdict.
+  // write-module-ref-turn4 fixed 5 of 6 items, filed all 6, then claimed "production-ready" in prose.
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    reviewed(['Layout matches auto-rule']);
+    consumeReviewRound(); // the confirming round, granted because the last review failed
+    __setLastReviewForTests({ state: 'reviewed', items: [{ item: 'all good', pass: true, issue: '' }] });
+    assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
+  });
+});
+
+test('the confirming round is granted once, so a page that stays broken cannot loop', () => {
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    reviewed(['still broken']);
+    consumeReviewRound();
+    // Second round failed too. No further round: the run ends reporting failed rather than re-reviewing.
+    reviewed(['still broken']);
+    assert.throws(() => consumeReviewRound(), /plus the confirming round, all used/);
+    assert.deepEqual(recordedVerdict(), { verdict: 'failed', failingItems: ['still broken'] });
+  });
+});
+
+test('a clean review earns no confirming round — there is nothing to confirm', () => {
+  // The round is conditional so a correct run pays nothing for it. Reviewing again after a pass would
+  // spend the most expensive phase in the run to re-learn what it already knows.
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    __setLastReviewForTests({ state: 'reviewed', items: [{ item: 'all good', pass: true, issue: '' }] });
+    assert.throws(() => consumeReviewRound(), /budget for this run is spent/);
+  });
+});
 
 test('the default budget is one round', () => {
   withBudget(undefined, () => {
@@ -40,11 +97,63 @@ test('the refusal tells the model what to do instead', () => {
     assert.throws(() => consumeReviewRound(), (error: Error) => {
       assert.match(error.message, /Do not call review again/);
       assert.match(error.message, /report_run_result/);
-      assert.match(error.message, /reviewVerdict "failed"/);
-      assert.match(error.message, /failingItems/);
+      // It must NOT ask for a verdict any more: the verdict is derived from the review, and an
+      // instruction to file one names arguments the tool no longer accepts. turn1 followed the old
+      // wording's shape and filed the opposite of what the review returned.
+      assert.doesNotMatch(error.message, /reviewVerdict/);
+      assert.doesNotMatch(error.message, /failingItems/);
+      assert.match(error.message, /verdict comes from the review itself/);
       return true;
     });
   });
+});
+
+// recordedVerdict(): the run's outcome, derived from what the reviewer returned rather than from what
+// the model says it returned. See self-report.test.ts for the report side of the same fix.
+test('a review whose every item passes reads as passed', () => {
+  __resetLastReviewForTests();
+  __setLastReviewForTests({
+    state: 'reviewed',
+    items: [
+      { item: 'Structure', pass: true, issue: null },
+      { item: 'Coverage', pass: true, issue: null },
+    ],
+  });
+
+  assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
+});
+
+test('a review with one failure reads as failed and names it', () => {
+  __resetLastReviewForTests();
+  __setLastReviewForTests({
+    state: 'reviewed',
+    items: [
+      { item: 'Structure', pass: true, issue: null },
+      { item: 'writing-style rule 12 @ Core Operations', pass: false, issue: 'bare subheader' },
+    ],
+  });
+
+  assert.deepEqual(recordedVerdict(), {
+    verdict: 'failed',
+    failingItems: ['writing-style rule 12 @ Core Operations'],
+  });
+});
+
+test('no review reads as not-reviewed, which is not the same as failed', () => {
+  // A run that never reviewed has no evidence either way. Collapsing that into "failed" would be as
+  // wrong as collapsing it into "passed" — the archive keeps the three states apart.
+  __resetLastReviewForTests();
+
+  assert.deepEqual(recordedVerdict(), { verdict: 'not-reviewed', failingItems: [] });
+});
+
+test('a skipped review reads as not-reviewed, not as passed', () => {
+  // The skip branch returns a synthetic passing item so the phase chain stays wired for the model.
+  // That item is not evidence, and a resumed run must not inherit a pass it never earned.
+  __resetLastReviewForTests();
+  __setLastReviewForTests({ state: 'skipped' });
+
+  assert.deepEqual(recordedVerdict(), { verdict: 'not-reviewed', failingItems: [] });
 });
 
 test('MAX_REVIEW_ROUNDS raises the budget, and it still binds', () => {

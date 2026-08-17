@@ -13,6 +13,9 @@ not attempt to re-count members here.
 - A **"How They Work Together"** section is present — this is the centerpiece. It shows the typical
   workflow / data flow (numbered steps) AND an ASCII diagram of the type relationships. A module
   reference missing this section FAILS.
+- Motivation, where present, gives a reason the reader shares — the problem the module solves for them.
+  Fail it when the page explains the repo's own work instead: fixtures, test coverage, tooling, the
+  docs pipeline, a refactor. Such a reason can be perfectly true and still belong nowhere on the page.
 - Common Patterns are documented when the module has named patterns (decision trees / multi-type
   composition), with realistic cross-type examples — not just single-type snippets.
 - Integration Points explain how the types relate internally and to other modules, with
@@ -20,8 +23,9 @@ not attempt to re-count members here.
 
 ## Layout & Structure
 
-- The layout matches the auto-rule: flat single page for ≤ 4 core types or always-together types;
-  hierarchical index + subpages for ≥ 5 core types or ≥ 3 rich self-contained types.
+- The layout matches the shape the design chose: `single-core` and `dsl` are one flat page,
+  `core-family` and `multi-domain` are an index plus subpages. Check that consistency only — the shape
+  follows reader intent and is the design phase's call, so a type count is never grounds to fail a page.
 - Flat: every core and supporting type has an `##` section, in a sensible order; each covers every
   public member grouped concisely (one example per operation group).
 - Hierarchical: the index links to every type subpage; the Overview introduces each core type in
@@ -43,7 +47,8 @@ not attempt to re-count members here.
 
 - Fix every failing item in one editing pass.
 - The run has a bounded number of review rounds and the review tool's description states how many.
-  With the default of one there is no confirming pass, so treat the first review as the only one:
-  fix what it reports, then finish.
+  When a review reports failing items, fix them all and call review ONCE more: that confirming round
+  is what records the page as passing, since the verdict is whatever the last review found. A review
+  that reported nothing needs no confirmation — finish instead.
 - Name every item you could not fix in the final summary, and report the run as failed when any
   remain. An unverified fix is not a pass.

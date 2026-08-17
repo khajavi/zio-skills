@@ -1,19 +1,20 @@
 import { defineSubagent } from '@flue/runtime';
 import { TIERS } from '../runtime/models.ts';
+import { docKind } from '../runtime/run-context.ts';
+import { structureBlock } from '../runtime/kind-docs.ts';
 import instructions from './designer.md';
 
 /**
  * Generic documentation planner, shared across document kinds. Declares
- * no tools or delegates of its own — see design-doc-plan.ts for why that
- * matters: a narrow delegate cannot see or re-invoke the design phase tool itself,
- * avoiding runaway self-recursion.
+ * no tools or delegates of its own, so it cannot re-enter the pipeline that called it.
  *
- * The kind-specific structure template + result schema are injected at the
- * delegating `harness.prompt` call site (skills can't vary per call), so this role
- * stays document-kind-neutral.
+ * The kind's structure template is read here, at this render, via `docKind()` — see drafter.ts for
+ * why that beats both a skill mount and a caller-pasted prompt. The result SCHEMA still comes from
+ * the delegating call site, because that genuinely does vary per call and cannot be derived from the
+ * kind alone: a module design takes a layout override, a data-type design does not.
  */
 export function Designer() {
-  return instructions;
+  return [instructions, ``, structureBlock(docKind())].join('\n');
 }
 
 export const designer = defineSubagent({

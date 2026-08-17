@@ -62,6 +62,11 @@ When writing the tutorial from this structure:
 - You will receive both this structure and the research findings. The structure says WHAT to cover;
   the research findings (especially `groundingDetail`) carry the REAL imports, signatures, and examples —
   copy them exactly, never substitute general knowledge.
+- The findings' **history** section carries what the library's own commits and PRs state about this
+  concept: why it works this way, what a member used to be called, which usages the compiler rejects,
+  where a platform differs. Use each one where it belongs — the opening motivation, a gotcha you warn
+  the learner about, a version note — retold in your own words, never quoting a commit or citing a PR
+  number. Teach nothing a finding contradicts, and invent nothing when history said nothing.
 - Two fields carry planning intent, not text to copy: a **verifiable output** is realized by showing
   that output, not by writing the phrase; the **core insight** is built toward in the prose, not
   announced as a label.

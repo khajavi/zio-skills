@@ -6,5 +6,5 @@ description: The section template and drafting rules for a ZIO module reference 
 # Module Reference Structure
 
 The module-page template, the flat-vs-hierarchical layouts, and the per-type section shape are
-provided verbatim in your task input (single source of truth: `references/structure.md`). Follow it
-when planning or writing a module reference.
+provided verbatim in your instructions or your task input (single source of truth:
+`references/structure.md`). Follow it when planning or writing a module reference.

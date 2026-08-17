@@ -106,10 +106,13 @@ export function docKind(): DocKind {
  * times of 242s, 344s, 239s and 256s that showed no sign of converging. Each round also drags a fix
  * pass and another sbt/mdoc verify behind it, so rounds multiply rather than add.
  *
- * The cost of the default: with one round, the writer's fixes ship UNVERIFIED. That is a real
- * trade-off, not a free win. An earlier cap of 1 (`MAX_REVIEW_CALLS`) produced a measured bug — a page
- * shipped whose verdict still named a rule the writer had already fixed — though that specific failure
- * came from returning a cached verdict, and nothing caches one now.
+ * This is the budget, not the ceiling: `consumeReviewRound` grants one confirming round on top of it
+ * when a review found failures, so fixes are no longer forced to ship unverified. See
+ * `reviewRoundCap()` for the ceiling, and review-page.ts for why the extra round is conditional.
+ *
+ * An earlier hard cap of 1 (`MAX_REVIEW_CALLS`) produced a measured bug — a page shipped whose verdict
+ * still named a rule the writer had already fixed — though that failure came from returning a cached
+ * verdict, and nothing caches one now.
  *
  * Read from the environment rather than creation data because it is a cost knob for whoever launches
  * the run, like the model tiers in models.ts, not a fact about the document being written.
@@ -117,6 +120,19 @@ export function docKind(): DocKind {
 export function maxReviewRounds(): number {
   const raw = Number(process.env.MAX_REVIEW_ROUNDS);
   return Number.isInteger(raw) && raw > 0 ? raw : 1;
+}
+
+/**
+ * The most review rounds a run can possibly spend: the budget plus the one confirming round.
+ *
+ * Exists for the watchers, not the enforcement. `run-telemetry`'s repeat flag asks "did this run review
+ * more times than it was allowed", and reading `maxReviewRounds()` there would report every correct
+ * confirming round as the cap being bypassed — the same false positive its own comment records fixing
+ * once already, for refused calls. Enforcement stays in `consumeReviewRound`, which knows whether the
+ * extra round was earned; this only bounds it.
+ */
+export function reviewRoundCap(): number {
+  return maxReviewRounds() + 1;
 }
 
 /**

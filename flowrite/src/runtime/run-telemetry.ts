@@ -1,6 +1,6 @@
 import type { ActivityReport, ComponentUsage, PhaseUsage } from './component-usage.ts';
 import type { TokenUsageTotals } from './token-usage.ts';
-import { maxReviewRounds } from './run-context.ts';
+import { reviewRoundCap } from './run-context.ts';
 
 /**
  * The end-of-run report: what the run cost, what it did, and what looks wrong.
@@ -58,24 +58,9 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  /**
-   * Repeat phase calls the memo answered from an earlier identical call, per phase.
-   *
-   * Needed because `phaseCalls` counts `tool_start` and so includes them: the model really did call
-   * the tool, and the guard really did answer without doing the work. Only the memoizable phases can
-   * appear here — see phase-guard.ts's MEMOIZABLE.
-   */
-  memoHits: Readonly<Record<string, number>>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
-
-/**
- * Tunable, not settled: a phase whose own turns average this many times the median phase is flagged
- * as context-bloated. 3× was chosen because it flags the review phase (85k tokens/turn against
- * 8-21k elsewhere) and nothing else in the runs measured so far. Revisit with more data.
- */
-const BLOAT_MULTIPLE = 3;
 
 /** Tunable: one failed `edit` is a stale match, several is a loop. */
 const TOOL_ERROR_THRESHOLD = 3;
@@ -87,54 +72,80 @@ const TOOL_ERROR_THRESHOLD = 3;
  * watcher. `maxReviewRounds()` now enforces a hard cap (default 1), which made a static 6 unreachable
  * — a flag that can never fire is worse than no flag, because it reads as coverage that is not there.
  *
- * Reading the same function the cap reads keeps the two in step: raise `MAX_REVIEW_ROUNDS` and the
+ * Reading a function derived from the cap keeps the two in step: raise `MAX_REVIEW_ROUNDS` and the
  * threshold rises with it, so the flag still means "more rounds than this run was allowed" rather than
  * "more than some number I hardcoded". If it ever fires, the cap has been bypassed.
+ *
+ * `reviewRoundCap()`, not `maxReviewRounds()`: a run whose first review failed earns one confirming
+ * round, so a correct run CAN review budget+1 times. Reading the budget here would report that earned
+ * round as a bypass — the same false positive this flag already had once for refused calls.
  */
-const reviewRepeatLimit = () => maxReviewRounds();
+const reviewRepeatLimit = () => reviewRoundCap();
 
 /**
- * The phases that run once per documented type, so a count above one proves nothing.
+ * Phases exempt from the repeat check because they legitimately run per documented type.
  *
- * A hierarchical module reference researches and drafts a subpage per core type. `write-module-ref-turn5`
- * did four of each — entirely correct work — and tripped `phase-repeat` twice for it. A flag that fires
- * on a clean run teaches the reader to skim past all the flags, so the count check is wrong here and
- * `perTypePairing` watches these two instead.
+ * Empty now: the per-type phases were `research_data_type` and `write_data_type_reference`, and both are
+ * deleted — a hierarchical module reference reaches those roles with `task` instead. `review_page` is the
+ * only phase tool left and it has its own budget check, so nothing needs exempting. Kept as a named
+ * constant rather than inlined, because a fourth document kind adding a per-type phase would want it.
  */
-const PER_TYPE_PHASES: readonly string[] = ['research_data_type', 'write_data_type_reference'];
+const PER_TYPE_PHASES: readonly string[] = [];
 
 /**
- * Every drafted subpage should have exactly one successful research call behind it.
+ * Every drafted page should have exactly one research delegation behind it.
  *
- * This is the signal the count check was standing in front of. `phaseCalls` counts `tool_start`, so it
- * includes attempts that failed; subtracting `phaseFailures` leaves the research that actually returned
- * an API surface. On turn5 that arithmetic is 4 − 1 = 3 successful research calls against 4 drafted
- * pages, so one subpage was written with no research of its own — invisible under a rule that only
- * asked whether a phase ran more than once.
+ * The signal the old repeat-count check was standing in front of: on `write-module-ref-turn5` four
+ * research calls with one failure produced three real API surfaces against four drafted pages, so a
+ * subpage was written with no research of its own — invisible to a rule that only asked whether a phase
+ * ran more than once.
  *
  * Both directions are worth a flag, and they mean opposite things: fewer research results than pages is
  * a grounding problem, more is a delegation paid for and thrown away.
  */
-function perTypePairing(activity: ActivityReport, memoHits: Readonly<Record<string, number>>): RunFlag[] {
-  const attempted = activity.phaseCalls['research_data_type'] ?? 0;
-  const failed = activity.phaseFailures['research_data_type'] ?? 0;
-  // Repeats collapsed by the phase memo did no work, so they are not research. `phaseCalls` counts
-  // `tool_start` and cannot see the difference — the model did call the tool, the guard answered from
-  // the first call's result. Without this term turn9's shape reads as 8 research calls for 4 pages.
-  const collapsed = memoHits['research_data_type'] ?? 0;
-  const researched = attempted - failed - collapsed;
-  const drafted = activity.phaseCalls['write_data_type_reference'] ?? 0;
-  if (researched === drafted) return [];
+function perTypePairing(activity: ActivityReport): RunFlag[] {
+  // Counted per ROLE, not per phase tool. The phase tools this used to read are gone, and `task` is one
+  // tool name whatever role it reaches, so the delegation counts are the only place the stages are still
+  // distinguishable.
+  //
+  // Weaker than the version it replaces, in a way worth knowing before trusting a clean result:
+  // `task_start` counts attempts, so a researcher that ran and gave up still counts as a delegation.
+  // That is exactly turn5's shape — 4 research calls, 1 failed, 4 pages drafted — and this arithmetic
+  // now reads it as balanced. It still catches the grosser fault, a page drafted with no research
+  // delegation behind it at all, and it reports failed delegations alongside so the reader can see when
+  // the balance is hollow.
+  const researched = activity.delegations['researcher'] ?? 0;
+  // Pages, not drafter delegations. A module run batched both subpages into ONE delegation, and this
+  // flag then announced "3 research delegation(s) but only 2 page(s) drafted — research paid for and
+  // never used" while all 3 pages sat on disk. Counting writes to docs/ keeps the flag measuring the
+  // thing it names; how the drafting was organized is `delegations['drafter']`, reported separately.
+  const drafted = activity.pagesWritten;
+  const failedDelegations = activity.toolErrors['task'] ?? 0;
+
+  if (researched === drafted) {
+    return failedDelegations === 0
+      ? []
+      : [
+          {
+            code: 'delegation-failures',
+            phase: 'task',
+            detail:
+              `${researched} research and ${drafted} draft delegation(s), but ${failedDelegations} ` +
+              `delegation(s) failed — a balanced count can still hide a page written from a research ` +
+              `call that returned nothing`,
+          },
+        ];
+  }
 
   return [
     {
       code: 'research-draft-mismatch',
-      phase: 'write_data_type_reference',
+      phase: 'drafter',
       detail:
         researched < drafted
-          ? `${drafted} page(s) drafted from ${researched} successful research call(s) — a page was ` +
+          ? `${drafted} page(s) drafted from ${researched} research delegation(s) — a page was ` +
             `written without its own API surface`
-          : `${researched} successful research call(s) but only ${drafted} page(s) drafted — ` +
+          : `${researched} research delegation(s) but only ${drafted} page(s) drafted — ` +
             `research paid for and never used`,
     },
   ];
@@ -142,11 +153,6 @@ function perTypePairing(activity: ActivityReport, memoHits: Readonly<Record<stri
 
 const money = (n: number) => `$${n.toFixed(4)}`;
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-}
 
 /**
  * Derive the flags. Pure: same input, same flags, no runtime needed.
@@ -155,7 +161,7 @@ function median(values: number[]): number {
  * the first property the tests pin.
  */
 export function computeFlags(input: FlagInput): RunFlag[] {
-  const { phases, activity, refusals, memoHits, reportCalls } = input;
+  const { phases, activity, refusals, reportCalls } = input;
   const flags: RunFlag[] = [];
   // The synthetic bucket for turns outside any phase — it is not a phase and must not be judged
   // like one (it has no delegates, so it would always trip own-exceeds-delegate).
@@ -167,18 +173,24 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     const isReview = phase.startsWith('review');
     if (!isReview && PER_TYPE_PHASES.includes(phase)) continue;
     const limit = isReview ? reviewRepeatLimit() : 1;
-    if (calls > limit) {
+    // A refused call is not a run. `phaseCalls` counts `tool_start`, so the round the budget REFUSED
+    // is in there — which made this flag fire on every run where the cap worked, reporting "the review
+    // cap did not hold" as the direct result of the cap holding. Observed in turns 1, 2 and 3 of the
+    // tinytally data-type archive, all three of them correct runs.
+    const ran = calls - (activity.phaseFailures[phase] ?? 0);
+    if (ran > limit) {
       flags.push({
         code: 'phase-repeat',
         phase,
         detail: isReview
-          ? `ran ${calls}× against a budget of ${limit} — the review cap did not hold`
-          : `ran ${calls}× — repeated work, or a phase re-entered after failing`,
+          ? `ran ${ran}× against a ceiling of ${limit} (the budget plus one confirming round) — ` +
+            `the review cap did not hold`
+          : `ran ${ran}× — repeated work, or a phase re-entered after failing`,
       });
     }
   }
 
-  flags.push(...perTypePairing(activity, memoHits));
+  flags.push(...perTypePairing(activity));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
@@ -229,25 +241,19 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
-  // Needs at least three phases for a median to mean anything; a one- or two-phase run has no
-  // baseline to be an outlier against.
-  const perTurn = real.filter((p) => p.ownTurns > 0).map((p) => p.ownTokens / p.ownTurns);
-  if (perTurn.length >= 3) {
-    const mid = median(perTurn);
-    for (const phase of real) {
-      if (phase.ownTurns === 0) continue;
-      const rate = phase.ownTokens / phase.ownTurns;
-      if (rate > mid * BLOAT_MULTIPLE) {
-        flags.push({
-          code: 'context-bloat',
-          phase: phase.phase,
-          detail:
-            `${Math.round(rate / 1000)}k tokens per own turn, ${(rate / mid).toFixed(1)}× the ` +
-            `median phase — every turn re-sends everything accumulated before it`,
-        });
-      }
-    }
-  }
+  // The context-bloat flag is gone, and it is worth saying why rather than leaving it dormant.
+  //
+  // It compared each phase's tokens-per-own-turn against the median across phases, needing at least
+  // three to have a baseline at all. Own turns belong to a scratch conversation, and there is one
+  // phase tool left — so the population is `review_page` plus `(orchestration)`, the guard never
+  // clears, and the flag could not fire again. A check that cannot fire reads as coverage that is not
+  // there, which is the same trap `reviewRepeatLimit`'s comment describes.
+  //
+  // The phenomenon it watched is real and has not gone away: the root conversation grows, and it was
+  // 43% of the last measured run. But one row cannot be an outlier against itself, and inventing a
+  // fixed tokens-per-turn threshold would be a number with nothing behind it. `tokensPerOwnTurn` is
+  // in the table for a reader to judge; when there is enough data to justify a threshold, it can come
+  // back as a rule about the orchestration row specifically.
 
   if (reportCalls > 1) {
     flags.push({
@@ -275,9 +281,8 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
-  memoHits: Readonly<Record<string, number>>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals, memoHits } = input;
+  const { totals, components, phases, activity, refusals } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -303,7 +308,6 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
-      memoHits,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };

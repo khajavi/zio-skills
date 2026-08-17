@@ -3,12 +3,13 @@ import { TIERS } from '../runtime/models.ts';
 import instructions from './reviewer.md';
 
 /**
- * Generic documentation reviewer, shared across document kinds. Declares no tools
- * or delegates of its own — see design-doc-plan.ts for why that matters.
+ * Generic documentation reviewer, shared across document kinds. Declares no tools or delegates of its
+ * own, so it cannot re-enter the pipeline that called it.
  *
- * The kind-specific checklist is injected into the delegation prompt by the
- * calling phase tool (skills are role-owned and cannot vary per call), so this
- * role stays document-kind-neutral.
+ * Unlike the drafter and designer, this role does NOT read its checklist at render time: `review_page`
+ * is the last remaining phase tool, and it still pastes the kind's checklist into the delegation
+ * prompt. Leaving that alone is deliberate — it is the one role whose result TypeScript holds, for
+ * recordedVerdict().
  */
 export function Reviewer() {
   return instructions;

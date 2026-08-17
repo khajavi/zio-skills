@@ -1,7 +1,7 @@
 import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
-import { guardRefusals, memoHits } from './phase-guard.ts';
+import { guardRefusals } from './phase-guard.ts';
 import { buildRunReport } from './run-telemetry.ts';
 
 /**
@@ -54,7 +54,6 @@ function report(label: string): void {
         phases: state.components.phases(),
         activity: state.components.activity(),
         refusals: guardRefusals(),
-        memoHits: memoHits(),
       }),
     )}`,
   );

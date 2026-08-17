@@ -1,4 +1,11 @@
 import { observe } from '@flue/runtime';
+import { LOG_TAG } from './log.ts';
+
+/** One line of a delegation prompt, short enough to sit in a timeline. */
+function summarize(prompt: string): string {
+  const line = prompt.split('\n').find((l) => l.trim().length > 0)?.trim() ?? '(empty prompt)';
+  return line.length > 110 ? `${line.slice(0, 109)}…` : line;
+}
 
 /**
  * flue's built-in CLI printer only ever renders `tool ${event.toolName}`, never
@@ -38,6 +45,8 @@ export function installVerboseObserver(): void {
 
   const verbose = process.env.FLUE_VERBOSE_TOOLS === '1';
   const startedAt = new Map<string, number>();
+  // The timeline's own clock, so the verbose `task` branch deleting its entry cannot blank a duration.
+  const timelineStartedAt = new Map<string, number>();
   const seen = new Set<string>(); // `${type}:${id}` already logged this run
 
   /** True when this is a re-published copy forwarded from a child context. */
@@ -61,6 +70,28 @@ export function installVerboseObserver(): void {
       console.error(`[${event.level}] ${event.message}`);
       return;
     }
+    // The phase timeline, also always. Phases are `task` delegations now, so no TypeScript runs when
+    // one starts and nothing is left to call note(): deleting the phase tools took every phase's own
+    // log line with it, and a converted run logged nothing at all until review. That emptied
+    // `grep 'flowrite:' <log>`, which is the investigate-flowrite-log skill's primary view and the
+    // reason f2ab0c6 introduced the tag. Rebuilt from the events instead, which see every delegation
+    // whether or not a tool wraps it.
+    //
+    // Separate dedupe keys and a separate clock from the verbose lines below: sharing either would let
+    // this branch consume the key, or delete the timestamp, and silence the verbose copy. No `return`
+    // for the same reason — the verbose branches want these events too.
+    if (event.type === 'task_start' && !duplicate('timeline_start', event.taskId)) {
+      timelineStartedAt.set(event.taskId, Date.now());
+      console.error(`[info] ${LOG_TAG}: → ${event.agent ?? '(unnamed)'}: ${summarize(event.prompt)}`);
+    }
+    if (event.type === 'task' && !duplicate('timeline_end', event.taskId)) {
+      const start = timelineStartedAt.get(event.taskId);
+      timelineStartedAt.delete(event.taskId);
+      const took = start ? `${Math.round((Date.now() - start) / 1000)}s` : 'unknown time';
+      const outcome = event.isError ? 'FAILED' : 'done';
+      console.error(`[info] ${LOG_TAG}: ← ${event.agent ?? '(unnamed)'}: ${outcome} in ${took}`);
+    }
+
     // Before the verbose gate: the dedupe set fills up in every mode, so it has to be cleared in
     // every mode too.
     if (event.type === 'agent_end') {
