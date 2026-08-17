@@ -205,7 +205,7 @@ export function trackComponentUsage(): ComponentUsageTracker {
       }
       if (PHASE_TOOLS.has(event.toolName)) {
         // Remove the innermost occurrence, not the first: a module run can have the same phase open
-        // twice concurrently (one research_data_type per core type).
+        // twice concurrently (one review_page per page).
         const at = openPhases.lastIndexOf(event.toolName);
         if (at !== -1) openPhases.splice(at, 1);
       }

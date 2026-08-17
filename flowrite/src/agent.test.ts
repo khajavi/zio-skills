@@ -51,11 +51,10 @@ test('no kind mounts the same skill twice', () => {
 });
 
 test('review_page is the only harness tool any kind mounts', () => {
-  // Replaces a test that guarded "a required field no component can produce": KINDS.module once mounted
-  // write_data_type_reference without design_data_type_plan while `plan` was required, so the model
-  // satisfied the schema by inventing a plan and once reached for another type's. That defect needs a
-  // tool ARGUMENT to fabricate, and the tools that took one are gone — the test had become vacuous,
-  // looping over an empty list and passing for the wrong reason.
+  // Replaces a test that guarded "a required field no component can produce": a write phase was mounted
+  // without the design phase that fed its required `plan`, so the model satisfied the schema by inventing
+  // one, and once reached for another type's. That defect needs a tool ARGUMENT to fabricate, and the
+  // tools that took one are gone — the test had become vacuous, looping over an empty list.
   //
   // What is worth pinning instead is the shape that replaced it. Every stage is a `task` delegation now,
   // and exactly one harness tool remains: review_page, because TypeScript has to hold the reviewer's
