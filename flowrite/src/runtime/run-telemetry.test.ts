@@ -28,9 +28,9 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   toolErrors: {},
   phaseFailures: {},
   skills: ['writing-style'],
-  // A real clean run reviews its page, so the default fixture does too — otherwise every case
-  // would trip the review-not-run flag. `review_page` is the only phase tool left; the stages that
-  // used to appear here are `task` delegations now and show up in `delegations` instead.
+  // A real clean run reviews its page, so the default fixture does too — otherwise every case would
+  // trip the review-not-run flag. `review_page` is the only phase tool; other stages are `task`
+  // delegations and appear in `delegations` instead.
   phaseCalls: { review_page: 1 },
   // One research delegation per drafted page is the balanced shape perTypePairing looks for.
   delegations: { researcher: 1, designer: 1, drafter: 1 },

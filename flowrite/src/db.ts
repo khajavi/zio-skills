@@ -14,11 +14,9 @@ import { sqlite } from '@flue/runtime/node';
  *
  * `sqlite()` adds no dependency: it runs on Node's built-in `node:sqlite`.
  *
- * This is NOT where the research cache lives, and the distinction is the whole reason that cache owns
- * its own database. A Flue database holds the runtime's own durable state — conversation streams,
- * accepted submissions, attachments — and the guide is explicit that it is "not your application's
- * business data". The research cache that used to make this distinction matter was its own SQLite file
- * per documented checkout; research findings are plain markdown under `.flowrite/research/` now, which
- * keeps them out of here for the same reason and makes them readable by a human debugging a bad page.
+ * Runtime state only. A Flue database holds conversation streams, accepted submissions and
+ * attachments, and the guide is explicit that it is "not your application's business data" — so nothing
+ * flowrite produces belongs here. Research findings are plain markdown under `.flowrite/research/`,
+ * which also makes them readable by a human debugging a bad page.
  */
 export default sqlite('./data/flue.db');

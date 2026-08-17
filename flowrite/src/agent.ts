@@ -69,14 +69,8 @@ export type DirectiveFacts = Pick<RunFacts, 'layout' | 'shapeOverride'>;
 /**
  * Everything that differs between the three kinds of document, in one table.
  *
- * There used to be three agents — data-type-ref-writer.ts, module-ref-writer.ts,
- * tutorial-writer.ts — at 64, 87 and 61 lines, structurally identical: same imports, same
- * installVerboseObserver(), same useDocsWriter call, same durability. Only these five fields
- * differed, so they are now five fields rather than three files. The shape was inherited from
- * beta.9, where each kind was a `defineWorkflow` and a workflow was the unit of invocation; Flue 2
- * deleted workflows and the migration mapped one workflow to one agent mechanically.
- *
- * Adding a fourth kind is one row plus its .md, skills and phase tools — no change to the agent
+ * One table rather than one file per kind: the three were structurally identical and only these five
+ * fields differed. Adding a fourth kind is one row plus its .md and skills — no change to the agent
  * function and no new entry point.
  */
 export const KINDS = {

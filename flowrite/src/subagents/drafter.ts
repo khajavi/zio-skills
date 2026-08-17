@@ -27,13 +27,11 @@ import instructions from './drafter.md';
  * blocks: only some pages contain a diagram or a table, so their bodies should load on the model's
  * decision rather than ride every drafting delegation.
  *
- * `writing-style` must stay unmounted here, and now for a sharper reason than before. It was
- * double delivery when write-doc.ts pasted the rules into the prompt: the mounted `SKILL.md` is a
- * pointer saying "the complete numbered rule list is provided verbatim in your task input", so the
- * drafter spent an activation round-trip to be told the rules were in the prompt it was already
- * reading — 2 round-trips in write-data-type-ref-turn20, 5 in write-module-ref-turn5, each re-sending
- * this delegate's whole accumulated context. The rules now arrive through `styleBlock()` below, which
- * is the same delivery moved earlier, so mounting it would reintroduce exactly that waste.
+ * `writing-style` must stay unmounted here. Its `SKILL.md` is a pointer saying "the complete numbered
+ * rule list is provided verbatim in your task input", so mounting it costs an activation round-trip to
+ * be told the rules are in the prompt already being read — measured at 2 round-trips in
+ * write-data-type-ref-turn20 and 5 in write-module-ref-turn5, each re-sending this delegate's whole
+ * accumulated context. `styleBlock()` below is that delivery, so a mount would only re-add the waste.
  *
  * The root agent keeps its own `writing-style` mount (docs-author-base.ts): nothing delivers the rules
  * there, so for the root the mount is the only access, and it does activate it.

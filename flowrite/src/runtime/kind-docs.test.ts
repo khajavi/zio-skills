@@ -1,9 +1,8 @@
 // Per-kind reference docs reaching a role through its own render.
 //
-// Worth testing because the delivery route moved. The docs used to be pasted into every delegation
-// prompt by the calling phase tool; a role now reads `docKind()` at its own render and returns the
-// right one with its instructions. tsc checks that the call compiles, not that the correct document
-// arrives — and "the wrong kind's template, silently" is exactly the failure this route can produce.
+// Worth testing because a role reads `docKind()` at its own render and returns the matching document
+// with its instructions. tsc checks that the call compiles, not that the correct document arrives — and
+// "the wrong kind's template, silently" is exactly the failure this route can produce.
 //
 // `Designer()` is exercised directly because it calls no hooks. `Drafter()` calls `useSkill`, which
 // throws outside a render, so its content selection is covered through `structureBlock` and
@@ -37,8 +36,7 @@ test('the three structures are distinct documents', () => {
 });
 
 test('structureBlock frames the template as binding, and carries it verbatim', () => {
-  // The framing sentence used to come from followTemplate() in write-doc.ts. Losing it would leave
-  // the delegate an unlabelled wall of markdown.
+  // Without the framing sentence the delegate gets an unlabelled wall of markdown.
   const block = structureBlock('data-type');
   assert.match(block, /Follow this data-type structure template and its drafting rules exactly:/);
   assert.ok(block.includes(STRUCTURES['data-type']), 'the template must be included unmodified');
