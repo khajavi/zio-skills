@@ -47,12 +47,9 @@ export interface RunReport {
 /**
  * Deliberately carries no review verdict.
  *
- * It used to, from a module-level record of what the review actually returned. That record is gone,
- * so the only verdict left is the one the model reports to `report_run_result` — which lands in the
- * archive's `verdict.json` and is labelled there as self-reported. Piping it back into this report
- * would need a new module-state holder to carry it from the tool call to the end-of-run observer,
- * which is the holder that was just removed. So the report stays silent about pass/fail rather than
- * presenting a self-assessment in the place an independent one used to sit.
+ * This report is built from observed telemetry; the verdict is derived separately by
+ * `recordedVerdict()` in review-page.ts and filed by `report_run_result`, landing in the archive's
+ * `verdict.json`. Keeping them apart is what lets a reader compare the two.
  */
 export interface FlagInput {
   phases: PhaseUsage[];
@@ -85,10 +82,8 @@ const reviewRepeatLimit = () => reviewRoundCap();
 /**
  * Phases exempt from the repeat check because they legitimately run per documented type.
  *
- * Empty now: the per-type phases were `research_data_type` and `write_data_type_reference`, and both are
- * deleted — a hierarchical module reference reaches those roles with `task` instead. `review_page` is the
- * only phase tool left and it has its own budget check, so nothing needs exempting. Kept as a named
- * constant rather than inlined, because a fourth document kind adding a per-type phase would want it.
+ * Empty: `review_page` is the only phase tool and it has its own budget check, so nothing needs
+ * exempting. Kept as a named constant because a fourth document kind adding a per-type phase would.
  */
 const PER_TYPE_PHASES: readonly string[] = [];
 
@@ -241,19 +236,10 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
-  // The context-bloat flag is gone, and it is worth saying why rather than leaving it dormant.
-  //
-  // It compared each phase's tokens-per-own-turn against the median across phases, needing at least
-  // three to have a baseline at all. Own turns belong to a scratch conversation, and there is one
-  // phase tool left — so the population is `review_page` plus `(orchestration)`, the guard never
-  // clears, and the flag could not fire again. A check that cannot fire reads as coverage that is not
-  // there, which is the same trap `reviewRepeatLimit`'s comment describes.
-  //
-  // The phenomenon it watched is real and has not gone away: the root conversation grows, and it was
-  // 43% of the last measured run. But one row cannot be an outlier against itself, and inventing a
-  // fixed tokens-per-turn threshold would be a number with nothing behind it. `tokensPerOwnTurn` is
-  // in the table for a reader to judge; when there is enough data to justify a threshold, it can come
-  // back as a rule about the orchestration row specifically.
+  // No flag watches context growth. A median-based one needs three or more rows with own turns, and
+  // there are two — `review_page` and `(orchestration)` — so it could never fire, and a fixed
+  // tokens-per-turn threshold would be a number with nothing behind it. `tokensPerOwnTurn` is in the
+  // table for a reader to judge instead.
 
   if (reportCalls > 1) {
     flags.push({

@@ -29,7 +29,7 @@ const callerOf = (name: string, inner: () => unknown) =>
 
 const ctx = {} as Parameters<ToolDefinition['run']>[0];
 
-/** A context carrying tool input, for the memo — which keys on the arguments a call was made with. */
+/** A context carrying tool input and a logger, for calls that read either. */
 const ctxFor = (data: unknown) =>
   ({ data, log: { info: () => {}, warn: () => {}, error: () => {} } }) as unknown as Parameters<
     ToolDefinition['run']
@@ -47,15 +47,15 @@ test('a run-terminal tool is allowed at the root', async () => {
 });
 
 test('a run-terminal tool is refused inside a phase', async () => {
-  // The real failure: review_data_type_ref filed the run's verdict 40 minutes before its own
-  // review finished, because every phase inherits SHARED_DIRECTIVE's "call report_run_result".
+  // The real failure: a review phase filed the run's verdict 40 minutes before its own review
+  // finished, because every phase inherits SHARED_DIRECTIVE's "call report_run_result".
   const report = guardRootOnly(okTool('report_run_result'));
-  const phase = guardPhase(callerOf('review_data_type_ref', () => report.run(ctx)));
+  const phase = guardPhase(callerOf('review_page', () => report.run(ctx)));
 
   // Each thunk is `async` so it is a `() => Promise<unknown>`: a ToolDefinition's `run` may
   // legally return synchronously, so its bare call signature does not satisfy assert.rejects.
   await assert.rejects(async () => { await phase.run(ctx); }, (err: Error) => {
-    assert.match(err.message, /"report_run_result" cannot run inside the "review_data_type_ref"/);
+    assert.match(err.message, /"report_run_result" cannot run inside the "review_page"/);
     // Must tell the caller to return its result, NOT to delegate — delegating a report would
     // relocate the same mistake into a subagent.
     assert.match(err.message, /let the writer report/);
@@ -67,36 +67,38 @@ test('a run-terminal tool opens no phase frame', async () => {
   // If the report opened a frame, a phase call landing in the same async context afterwards would
   // read it and be refused as nested.
   const report = guardRootOnly(okTool('report_run_result'));
-  const phase = guardPhase(okTool('research_data_type'));
+  const phase = guardPhase(okTool('review_page'));
 
   await report.run(ctx);
-  assert.deepEqual(await phase.run(ctx), { output: 'research_data_type' });
+  assert.deepEqual(await phase.run(ctx), { output: 'review_page' });
 });
 
 test('a phase is refused inside another phase', async () => {
-  const inner = guardPhase(okTool('integrate_data_type_reference'));
-  const outer = guardPhase(callerOf('review_data_type_ref', () => inner.run(ctx)));
+  // `review_page` is the only phase tool today, so two DIFFERENT ones cannot arise in a real run. Kept
+  // because the guard is generic over names: a second phase tool must not escape it by being new.
+  const inner = guardPhase(okTool('a_second_phase'));
+  const outer = guardPhase(callerOf('review_page', () => inner.run(ctx)));
 
-  await assert.rejects(async () => { await outer.run(ctx); }, /cannot run inside the "review_data_type_ref"/);
+  await assert.rejects(async () => { await outer.run(ctx); }, /cannot run inside the "review_page"/);
 });
 
 test('a phase is refused inside itself', async () => {
-  // Seen in a real run — `review_data_type_ref` inside `review_data_type_ref`. Never intentional.
-  const self: ToolDefinition = guardPhase(callerOf('review_data_type_ref', () => self.run(ctx)));
+  // Seen in a real run — a review phase inside itself. Never intentional.
+  const self: ToolDefinition = guardPhase(callerOf('review_page', () => self.run(ctx)));
 
-  await assert.rejects(async () => { await self.run(ctx); }, /cannot run inside the "review_data_type_ref"/);
+  await assert.rejects(async () => { await self.run(ctx); }, /cannot run inside the "review_page"/);
 });
 
 test('concurrent phase calls from the root are all allowed', async () => {
-  // The reason the guard uses AsyncLocalStorage and not a boolean flag: the model legitimately
-  // issues several phase tools in one turn (four concurrent research_data_type calls in a real
-  // module run). A flag would refuse three of them and break the hierarchical layout.
+  // The reason the guard uses AsyncLocalStorage and not a boolean flag: the model legitimately issues
+  // several phase calls in one turn — a hierarchical module reviewing its index and each subpage. A flag
+  // would refuse all but the first.
   //
-  // Four DIFFERENT type names, because that is the real shape: distinct arguments are distinct work
-  // and must all run.
+  // Four DIFFERENT paths, because that is the real shape: distinct arguments are distinct work and must
+  // all run.
   let ran = 0;
   const phase = guardPhase(
-    fakeTool('research_data_type', async () => {
+    fakeTool('review_page', async () => {
       ran += 1;
       await new Promise((resolve) => setTimeout(resolve, 5));
       return { output: ran };
@@ -104,18 +106,10 @@ test('concurrent phase calls from the root are all allowed', async () => {
   );
 
   const results = await Promise.all(
-    ['Iso', 'Lens', 'Prism', 'Optional'].map((typeName) => phase.run(ctxFor({ typeName }))),
+    ['index', 'ledger', 'window', 'demo'].map((page) =>
+      phase.run(ctxFor({ path: `docs/reference/tally/${page}.md` })),
+    ),
   );
   assert.equal(results.length, 4);
   assert.equal(ran, 4);
 });
-
-/*
- * The memo tests that stood here are gone with the memo (see phase-guard.ts).
- *
- * They pinned real behaviour — a repeat returning the first result, a duplicate inside one batch
- * awaiting the first call rather than starting a second, key order not making a repeat look like new
- * work, a failure staying retryable, and review and write never collapsing. All of it only reachable
- * through a phase-tool wrapper, and there is one phase tool left. `task` delegations are not deduped by
- * anything, so duplicate research is possible again; run-telemetry's perTypePairing is what notices.
- */

@@ -5,11 +5,9 @@ import { reviewPage } from '../tools/phases/review-page.ts';
 /**
  * The phase tools, reported under their own category to separate them from generic tools.
  *
- * One entry now. This was a list of fifteen, and the pipeline's stages were readable off it — which is
- * also why deleting the other thirteen took the 'phase' category's usefulness with them: the stages are
- * `task` delegations now, and `task` is one tool name whatever role it reaches. The per-stage view moved
- * to the 'subagent' category, which names the role that actually ran; see perTypePairing in
- * run-telemetry.ts.
+ * One entry. The pipeline's stages are not readable here: they are `task` delegations, and `task` is one
+ * tool name whatever role it reaches. The per-stage view is the 'subagent' category, which names the role
+ * that actually ran; see perTypePairing in run-telemetry.ts.
  */
 const PHASE_TOOLS = new Set([reviewPage].map((a) => a.name));
 
@@ -207,7 +205,7 @@ export function trackComponentUsage(): ComponentUsageTracker {
       }
       if (PHASE_TOOLS.has(event.toolName)) {
         // Remove the innermost occurrence, not the first: a module run can have the same phase open
-        // twice concurrently (one research_data_type per core type).
+        // twice concurrently (one review_page per page).
         const at = openPhases.lastIndexOf(event.toolName);
         if (at !== -1) openPhases.splice(at, 1);
       }

@@ -7,11 +7,8 @@ import { note } from '../../runtime/log.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task.
 //
 // These stay injected rather than moving to the reviewer's render, unlike the drafter's and designer's
-// templates. The reason is the round budget: a run may review more than once, and a second round
-// re-reads a page the writer has since fixed. Delivering the checklist through the render would be
-// equivalent, but the reviewer is also the one role whose result TypeScript still holds
-// (`recordedVerdict()`), so leaving its prompt assembly alone keeps that seam undisturbed while the
-// other phases convert. Revisit when review converts.
+// templates: the reviewer is the one role whose result TypeScript holds (`recordedVerdict()`), so its
+// prompt is assembled here, beside the code that reads the answer.
 import { CHECKLISTS, STYLE_RULES } from '../../runtime/kind-docs.ts';
 
 /**
@@ -20,25 +17,19 @@ import { CHECKLISTS, STYLE_RULES } from '../../runtime/kind-docs.ts';
  * One delegation to the generic `reviewer` role per call — the kind's checklist, the writing-style
  * rules, and the page. The reviewer judges everything; the verdict is whatever it reports.
  *
- * This deliberately replaces a registry of code checks (15 mechanical style graders, a
- * reference-existence check, per-type method coverage, free-first triage, narrowed repeats, a payload
- * guard and a stall guard) — removed by direction on 2026-08-12: checking through code was not wanted,
- * a simple model-based review was. The verdict recorder outlived that removal by a few hours and then
- * went too, so nothing outside this function keeps the result: `report_run_result` takes the model's
- * word for what the review concluded.
+ * A registry of code checks (15 mechanical style graders, a reference-existence check, free-first
+ * triage, narrowed repeats, a payload guard and a stall guard) was removed by direction on 2026-08-12:
+ * checking through code was not wanted, a simple model-based review was.
  *
- * Known costs of this shape, measured before the registry existed: every call re-judges everything
- * (there is no cheap confirming pass), rules that are arithmetic — table padding, title case, line
- * counting — are judged by a model again, and a run's recorded pass/fail is now self-reported. The
- * first of those is why a run gets a bounded number of rounds — see maxReviewRounds().
+ * The cost of that shape is that every call re-judges the whole page, which is why a run gets a bounded
+ * number of rounds — see maxReviewRounds().
  */
 
 /**
  * Per-item pass/fail from a checklist review. `passed` is true only when every item passes.
  *
- * Lives here because the review phase is the only thing that produces or consumes it. It sat in a
- * shared schemas module back when there were three review tools in three files; they are one file
- * now, and `report_run_result` takes the verdict as the model's own claim rather than this shape.
+ * Lives here because the review phase is the only thing that produces it, and `recordedVerdict()`
+ * below is the only thing that reads it.
  */
 export const reviewSchema = v.object({
   passed: v.pipe(v.boolean(), v.description('true only when every checklist item passes')),
@@ -51,23 +42,6 @@ export const reviewSchema = v.object({
   ),
 });
 
-/**
- * The review phase: a simple LLM review.
- *
- * One delegation to the generic `reviewer` role per call — the kind's checklist, the writing-style
- * rules, and the page. The reviewer judges everything; the verdict is whatever it reports.
- *
- * This deliberately replaces a registry of code checks (15 mechanical style graders, a
- * reference-existence check, per-type method coverage, free-first triage, narrowed repeats, a payload
- * guard and a stall guard) — removed by direction on 2026-08-12: checking through code was not wanted,
- * a simple model-based review was. The verdict recorder outlived that removal by a few hours and then
- * went too, so nothing outside this function keeps the result: `report_run_result` takes the model's
- * word for what the review concluded.
- *
- * Known costs of this shape, measured before the registry existed: every call re-judges everything
- * (there is no cheap confirming pass), rules that are arithmetic — table padding, title case, line
- * counting — are judged by a model again, and a run's recorded pass/fail is now self-reported.
- */
 /**
  * Review rounds spent this run.
  *
@@ -288,9 +262,9 @@ export const reviewPage = defineTool({
       ].join('\n'),
     });
 
-    // Recorded BEFORE returning, on the path that actually runs. design-doc-plan.ts shipped this
-    // same recording wired into its skip branch only, so a successful phase recorded nothing and the
-    // next phase refused work that had in fact been done (9870589). One place, one path.
+    // Recorded BEFORE returning, on the path that actually runs — one place, one path. An earlier
+    // phase wired the same recording into its skip branch only, so a successful run recorded nothing
+    // and the next phase refused work that had in fact been done (9870589).
     lastOutcome = { state: 'reviewed', items: review.items };
 
     // The review phase logged nothing at all until now, so `grep 'flowrite:'` showed a run jumping

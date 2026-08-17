@@ -13,11 +13,11 @@ import writingStyleRules from '../skills/writing-style/references/rules.md';
 /**
  * The reference docs a role needs, keyed by document kind.
  *
- * These used to be imported by the phase tools and pasted into each delegation prompt, three times
- * over. The roles read them from here instead, at their own render — which is possible because
- * `docKind()` is reachable from a subagent render (see run-context.ts: the module holder exists
- * because "the readers are phase-tool bodies AND subagent renders", and the root render runs "before
- * every phase tool and subagent render … correctly ordered by construction").
+ * Imported here rather than by each consumer, so the three-way kind mapping lives in one place. Roles
+ * read them at their own render, which works because `docKind()` is reachable from a subagent render
+ * (see run-context.ts: the module holder exists because "the readers are phase-tool bodies AND subagent
+ * renders", and the root render runs "before every phase tool and subagent render … correctly ordered
+ * by construction").
  *
  * Why a role render and not `useSkill`: mounting costs the delegate three tool round-trips to
  * activate a skill and read its resource, each re-sending its whole accumulated context. That was
@@ -49,9 +49,8 @@ export const STYLE_RULES = writingStyleRules;
 /**
  * The template block a role prepends to its instructions.
  *
- * Keeps the framing sentence that `followTemplate` (write-doc.ts) and `designPlan`
- * (design-doc-plan.ts) used to supply, so the delegate is still told the template is binding rather
- * than being handed an unlabelled wall of markdown.
+ * Carries a framing sentence so the delegate is told the template is binding, rather than being handed
+ * an unlabelled wall of markdown.
  */
 export const structureBlock = (kind: DocKind): string =>
   [`Follow this ${kind} structure template and its drafting rules exactly:`, ``, STRUCTURES[kind]].join('\n');

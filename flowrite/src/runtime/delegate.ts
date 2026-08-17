@@ -44,12 +44,10 @@ export async function withTransientRetry<T>(log: FlueLogger, label: string, op: 
 /**
  * Delegate one phase to a named role and return its schema-validated result.
  *
- * This is the Flue 2 replacement for `session.task(prompt, { agent, result })`.
- * `harness.session()` is gone; the harness instead runs a scratch conversation —
- * separate from the agent's public one, fresh per tool call — that can reach the
- * agent's declared subagents through the `task` tool. So the role is selected by
- * instruction rather than by parameter, and the lead-in below is what makes the
- * scratch conversation delegate instead of answering by itself.
+ * The harness runs a scratch conversation — separate from the agent's public one, fresh per tool call —
+ * that reaches the agent's declared subagents through the `task` tool. So the role is selected by
+ * instruction rather than by parameter, and the lead-in below is what makes the scratch conversation
+ * delegate instead of answering by itself.
  *
  * `result` keeps its validate-and-re-ask behaviour, with one change worth knowing:
  * a rejection surfaces to the CALLING agent as a tool error rather than making the

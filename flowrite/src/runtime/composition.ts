@@ -234,9 +234,9 @@ export function useDocsWriter(
   },
 ): string {
   for (const skill of opts.skills) useSkill(skill);
-  // Guarded: a phase tool's harness conversation inherits every other phase tool, so without this
-  // a phase can re-enter the workflow until the delegation cap trips — which is how reviewer and
-  // style_checker became unreachable. See phase-guard.ts.
+  // Guarded: a phase tool's harness conversation inherits every other tool, so without this a phase
+  // can re-enter the pipeline until the delegation cap trips, leaving the review roles unreachable.
+  // See phase-guard.ts.
   for (const tool of opts.tools) useTool(guardPhase(tool));
   for (const tool of opts.plainTools ?? []) useTool(tool);
   // gh_query stays unguarded — an ordinary lookup any phase may legitimately need.
