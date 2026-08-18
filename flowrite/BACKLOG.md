@@ -8,7 +8,14 @@ phase-tool conversion. Ranked by whether the agent currently ships something wro
 
 ---
 
-## 1. A run invents artifacts to satisfy a check it broke
+## 1. A run invents artifacts to satisfy a check it broke — FIXED in `9406235`, unverified
+
+Fixed at the four sites that could each have prevented it (integrator prohibition broadened, the
+tutorial integrate step, "Where to Go Next", writing-style rule 7), plus a deterministic detector:
+`pages-outside-one-root` flags a run whose pages land under more than one docs root, and the report now
+prints every page path. **Not yet confirmed by a run** — the next tutorial run should write only under
+`docs/guides/`, and the flag must stay silent on a hierarchical module run's three pages under one root.
+
 
 **Evidence — `write-tutorial-turn1`.** A *tutorial* run shipped two stub *reference* pages,
 `docs/reference/tally/Ledger.md` and `Window.md`, and wired both into `sidebars.js`. The chain:
