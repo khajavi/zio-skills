@@ -18,11 +18,18 @@ invisible until the table renders wrong. Both problems are mechanical, so let a 
 2. Compute each column's width as the widest cell in that column, then pad every cell to it.
 3. Assert before emitting: every row has exactly `len(header)` cells, no cell contains a raw newline,
    and every `|` inside a cell is escaped. Print `TABLE CHECK: ok`, or the failures.
-4. Run it. Fix the **script** and rerun — never patch the rendered table.
-5. Paste only the verified output.
+4. Assert on the emitted lines too: every one the same `len()`, every one the same `|` count. Print
+   `LINE CHECK: aligned`, or the widths that differ.
+5. Run it. Fix the **script** and rerun — never patch the rendered table.
+6. Paste only the verified output.
 
-Holding the data as rows rather than strings is what makes the check possible: a row with a missing cell
-is a `len()` mismatch, which an assertion catches and a reader does not.
+Holding the data as rows rather than strings is what makes the first check possible: a row with a missing
+cell is a `len()` mismatch, which an assertion catches and a reader does not.
+
+The second check is what makes alignment a fact rather than a belief, and it must count characters with
+`len()`. A width function of your own that treats some characters as two columns will agree with the
+padding it produced — the check and the bug share an assumption, so the output passes while the source
+is ragged. `len()` cannot do that, because it is what a diff, an editor and a byte count all use.
 
 ## Syntax rules
 
@@ -87,7 +94,12 @@ line = lambda cells: "| " + " | ".join(
     c.rjust(w) if a == "right" else c.center(w) if a == "center" else c.ljust(w)
     for c, w, a in zip(cells, width, align)
 ) + " |"
-print("\n".join([line(header), "|" + "|".join(sep) + "|", *(line(r) for r in rows)]))
+
+out = [line(header), "|" + "|".join(sep) + "|", *(line(r) for r in rows)]
+lens, pipes = {len(l) for l in out}, {l.count("|") for l in out}
+print("LINE CHECK: aligned" if len(lens) == len(pipes) == 1
+      else f"LINE CHECK FAILED: widths={sorted(lens)} pipes={sorted(pipes)}")
+print("\n".join(out))
 ```
 
 The `|`-escaping check deliberately strips `\|` first, so an already-escaped pipe passes and a bare one
