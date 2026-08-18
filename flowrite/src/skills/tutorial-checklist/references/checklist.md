@@ -9,13 +9,19 @@ Verify every item. The tutorial is not done until all pass.
 - Learning objectives restated at the end in "What You've Learned".
 - Follows a strict linear path (no branching, no "alternatively").
 - Every section introduces exactly one new concept or builds incrementally.
-- No section is pure prose without a code example.
+- No section is pure prose without a code example — excepting Introduction, Background,
+  "What You've Learned" and "Where to Go Next", which are prose by design.
 - Every code example is explained.
 - Intermediate results are shown (printed or observed) after each major step.
 - The running example is simple and clearly demonstrates the core concepts.
 - Types and APIs are introduced only as needed (no front-loaded theory).
 - Warm, welcoming tone ("welcome", "let's", "notice that").
-- "Putting It Together" is a complete, self-contained, copy-paste-ready example.
+- "Putting It Together" is a complete, self-contained, copy-paste-ready example, delivered as an EMPTY
+  block fenced `scala mdoc:embed:<path-to-CompleteExample.scala>` — never code inlined in the page. Fail
+  this when the section inlines its example: the embedded file is what the examples build compiles and a
+  reader runs, so inlining ships code no build has verified as standalone.
+- "Running the Examples" embeds each concept's file the same way, inside a collapsible
+  `<details><summary>` with `:show-line-numbers`, and every embedded path exists.
 - A "Background" section, if present, explains motivation without code.
 - The writing style rules are evaluated in the same review pass — report their violations as failing items too.
 
