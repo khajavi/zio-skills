@@ -194,6 +194,29 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
+  // A run documents ONE thing, so its pages land under ONE docs root. Writing to both `guides/` and
+  // `reference/` means the run produced something it was not asked for — measured on
+  // write-tutorial-turn1, where the drafter linked to reference pages that did not exist and the
+  // integrator created stubs so the build would resolve. Kind-agnostic on purpose: it needs no
+  // knowledge of which kind is running, so it cannot drift out of step with one.
+  // Keyed off the LAST `docs/` segment: a write may arrive relative (`docs/guides/x.md`) or absolute
+  // (`/home/…/fixture/docs/guides/x.md`), and both must yield `guides`. A page directly in `docs/` has no
+  // root of its own and is skipped rather than counted as one.
+  const rootOf = (path: string): string | undefined => {
+    const after = path.split(/(?:^|\/)docs\//).pop() ?? '';
+    const head = after.split('/')[0] ?? '';
+    return head && !head.endsWith('.md') ? head : undefined;
+  };
+  const roots = [...new Set(activity.pagePaths.map(rootOf).filter((r): r is string => !!r))].sort();
+  if (roots.length > 1) {
+    flags.push({
+      code: 'pages-outside-one-root',
+      detail:
+        `pages written under ${roots.length} docs roots (${roots.join(', ')}) — one run documents one ` +
+        `thing, so the extra pages were not asked for: ${activity.pagePaths.join(', ')}`,
+    });
+  }
+
   flags.push(...perTypePairing(activity));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {

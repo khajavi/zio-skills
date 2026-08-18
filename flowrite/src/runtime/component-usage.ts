@@ -95,6 +95,13 @@ export interface ActivityReport {
    * how it was organized.
    */
   pagesWritten: number;
+  /**
+   * The distinct doc pages written, by path.
+   *
+   * Kept alongside the count because the count cannot show WHERE a run wrote. A tutorial run created two
+   * reference stubs to satisfy its own broken links; only the paths reveal that.
+   */
+  pagePaths: string[];
   cdViolations: number;
 }
 
@@ -307,6 +314,7 @@ export function trackComponentUsage(): ComponentUsageTracker {
     phaseCalls: byCategory('phase'),
     delegations: byCategory('subagent'),
     pagesWritten: pagesWritten.size,
+    pagePaths: [...pagesWritten],
     cdViolations,
   });
 

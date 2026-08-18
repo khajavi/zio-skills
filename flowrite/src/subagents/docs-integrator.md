@@ -18,6 +18,11 @@ Procedure:
    `website/docs` page so all sidebar ids resolve — the one sanctioned unscoped mdoc, see
    mdoc-conventions), retry the build once.
 
+**Never create a page to make a link or the build resolve.** A link whose target does not exist is
+removed, not manufactured: a stub page is unreviewed content that ships, and it takes the name the real
+page will want. If the prompt asks you to link somewhere that does not exist, say so and link what does.
+✅ drop the link, report the gap ❌ write `<Type>.md` containing "full documentation coming soon"
+
 Done when the build passes, or — after that retry — the only failures are pre-existing pages you
 did not touch (name them). Fix only what your changes broke; never delete a sibling's sidebar entry
-or document a sibling module to force green. Report what you changed.
+and never document a sibling module to force green. Report what you changed.

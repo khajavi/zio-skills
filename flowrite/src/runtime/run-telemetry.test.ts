@@ -37,6 +37,7 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   // Pages, which is what the pairing compares against — NOT delegations.drafter, since one drafter
   // delegation can write several pages.
   pagesWritten: 1,
+  pagePaths: ['docs/reference/ledger.md'],
   cdViolations: 0,
   ...over,
 });
@@ -304,6 +305,63 @@ test('a real phase error still flags when a refusal is also present', () => {
   );
   assert.deepEqual(flags.map((f) => f.code), ['phase-failed']);
   assert.match(flags[0]!.detail, /1 call\(s\) ended in error/);
+});
+
+test('pages under two docs roots mean the run produced something unasked for', () => {
+  // write-tutorial-turn1: the drafter linked to reference pages that did not exist, onBrokenLinks:'throw'
+  // made the build fail, and the integrator created two stubs so the link would resolve — unreviewed
+  // content, PascalCase against the kebab rule, taking the names the real pages want.
+  //
+  // Kind-agnostic by design: "one run, one docs root" needs no knowledge of which kind is running, so it
+  // cannot drift out of step with one the way a rule naming `guides/` would.
+  const flags = computeFlags(
+    input({
+      activity: activity({
+        pagesWritten: 3,
+        pagePaths: [
+          'docs/guides/ledger-window.md',
+          // Absolute, because that is the form turn1's writes actually took — the root must still resolve
+          // to `reference` rather than `home`.
+          '/home/u/repo/fixtures/tinyproject/docs/reference/tally/Ledger.md',
+          'docs/reference/tally/Window.md',
+        ],
+      }),
+    }),
+  );
+  assert.ok(flags.some((f) => f.code === 'pages-outside-one-root'));
+  assert.match(flags.find((f) => f.code === 'pages-outside-one-root')!.detail, /guides, reference/);
+});
+
+test('a hierarchical module writing an index and subpages stays under one root', () => {
+  // The shape this must NOT flag: three pages, one root, which is every correct module run.
+  assert.deepEqual(
+    codes({
+      activity: activity({
+        pagesWritten: 3,
+        pagePaths: [
+          'docs/reference/tally/index.md',
+          'docs/reference/tally/ledger.md',
+          'docs/reference/tally/window.md',
+        ],
+        delegations: { researcher: 3, designer: 1, drafter: 3 },
+      }),
+    }),
+    [],
+  );
+});
+
+test('a page directly in docs/ is not a second root', () => {
+  // docs/index.md has no root segment; counting it as one would flag every run that touches the index.
+  assert.deepEqual(
+    codes({
+      activity: activity({
+        pagesWritten: 2,
+        pagePaths: ['docs/index.md', 'docs/reference/tally/ledger.md'],
+        delegations: { researcher: 2, designer: 1, drafter: 1 },
+      }),
+    }),
+    [],
+  );
 });
 
 test('a refiled report is flagged', () => {

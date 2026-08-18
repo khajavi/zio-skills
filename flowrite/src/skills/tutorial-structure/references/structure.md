@@ -30,7 +30,8 @@ Design the section structure before writing a word. A tutorial is learning-orien
 6. What You've Learned
    - Objectives restated as achievements
 7. Where to Go Next
-   - Links to how-to guides and reference pages
+   - Links to how-to guides and reference pages THAT EXIST — check before linking, and write prose
+     without a link when none does. Never a placeholder to be resolved later.
 ```
 
 ## Section Design Rules

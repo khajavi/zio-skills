@@ -28,7 +28,10 @@ is a `len()` mismatch, which an assertion catches and a reader does not.
 
 - Header row, then a separator row of `---` per column, with `:` for alignment — `:---` left, `---:`
   right, `:---:` center. Right-align numeric columns, left-align everything else.
-- Pad the separator row to the same widths as the data.
+- The separator row carries no padding spaces of its own: its dashes fill the whole cell, including the
+  two columns the data rows spend on spaces either side. So a column of width `w` gets `w + 2` characters
+  between its pipes — `:` plus `w + 1` dashes when left-aligned, the mirror when right-aligned:
+  ✅ `|:---------|` ❌ `| :------- |`
 - Escape `|` inside a cell as `\|`, **including inside backticks**, where it still breaks the table.
 - Cells are single-line. Use `<br/>` for a forced break; a cell that wants a list or a code block means
   the table is the wrong container — use a definition list or headings.
@@ -71,12 +74,12 @@ bad += [(i, "unescaped |") for i, r in enumerate(rows) for c in r if "|" in c.re
 print("TABLE CHECK: ok" if not bad else f"TABLE CHECK FAILED: {bad}")
 
 width = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(header)]
-sep = ["-" * w for w in width]
-sep = [f":{s[1:]}" if a == "left" else f"{s[:-1]}:" for s, a in zip(sep, align)]
+# `w + 1` dashes, not `w - 1`: the separator also covers the spaces a data row pads with.
+sep = [f":{'-' * (w + 1)}" if a == "left" else f"{'-' * (w + 1)}:" for w, a in zip(width, align)]
 line = lambda cells: "| " + " | ".join(
     c.rjust(w) if a == "right" else c.ljust(w) for c, w, a in zip(cells, width, align)
 ) + " |"
-print("\n".join([line(header), "| " + " | ".join(sep) + " |", *(line(r) for r in rows)]))
+print("\n".join([line(header), "|" + "|".join(sep) + "|", *(line(r) for r in rows)]))
 ```
 
 The `|`-escaping check deliberately strips `\|` first, so an already-escaped pipe passes and a bare one
