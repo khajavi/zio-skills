@@ -42,7 +42,14 @@ form so it stops reaching for shortcode syntax.
 
 ---
 
-## 2. The examples phase has never run since the conversion
+## 2. The examples phase has never run since the conversion — FIXED in `c08c5d9`, unverified
+
+Both hedges removed: the write step now states the embed requirement as the template states it and says
+not to soften it, and step 5 is unconditional — a draft that came back inlined is a defect to fix, not a
+reason to skip the phase. The tutorial checklist gained items for the embed pattern and for every
+embedded path existing, so inlining fails review instead of passing as it did on turn1. **Not yet
+confirmed by a run** — the next tutorial run should delegate to `examples_builder`, leave `.scala` files
+under `tinyproject-examples/`, and carry embeds rather than inlined blocks.
 
 **Evidence — `write-tutorial-turn1`.** Four delegations: researcher, designer, drafter, docs_integrator.
 No `examples_builder`, and `tinyproject-examples/` contains no `.scala` file.
@@ -116,7 +123,10 @@ review, because no checklist item covers either. Meanwhile an item failed the pa
 > "Sections 1 (Introduction) and 11 (What You've Learned) are pure prose with no code examples.
 > **The checklist exempts only Background sections**"
 
-An introduction and a summary are legitimately code-free.
+An introduction and a summary are legitimately code-free. **That half is fixed in `c08c5d9`** — the item
+now exempts Introduction, Background, "What You've Learned" and "Where to Go Next" — and the missing
+embed item landed with it. What remains open here is the numbered-headings gap and the model-generated
+item list.
 
 Related, and measured across three runs: the reviewer **synthesises its own item list** — round 1
 enumerated 46 items, round 2 enumerated 44, the module run 41 — inventing per-section instances like
