@@ -26,12 +26,14 @@ is a `len()` mismatch, which an assertion catches and a reader does not.
 
 ## Syntax rules
 
-- Header row, then a separator row of `---` per column, with `:` for alignment — `:---` left, `---:`
-  right, `:---:` center. Right-align numeric columns, left-align everything else.
+- Header row, then a separator row of plain `---` per column. Left is what a renderer does anyway, so
+  an alignment marker on every column is noise: ✅ `|------|------|` ❌ `|:-----|:-----|`
+- Add a marker only where a column needs something other than the default — `---:` to right-align a
+  column of numbers, `:---:` to centre short flags. Mixed markers in one row are fine and are the signal
+  that those columns were chosen deliberately.
 - The separator row carries no padding spaces of its own: its dashes fill the whole cell, including the
-  two columns the data rows spend on spaces either side. So a column of width `w` gets `w + 2` characters
-  between its pipes — `:` plus `w + 1` dashes when left-aligned, the mirror when right-aligned:
-  ✅ `|:---------|` ❌ `| :------- |`
+  two columns the data rows spend on spaces either side. A column of width `w` gets `w + 2` characters
+  between its pipes: ✅ `|----------|` ❌ `| -------- |`
 - Escape `|` inside a cell as `\|`, **including inside backticks**, where it still breaks the table.
 - Cells are single-line. Use `<br/>` for a forced break; a cell that wants a list or a code block means
   the table is the wrong container — use a definition list or headings.
@@ -66,7 +68,7 @@ rows = [
     ["`tallyOf(name)`", "`Long`", "O(1)"],
     ["`absorb(that)`", "`Ledger`", "O(n)"],
 ]
-align = ["left", "left", "right"]
+align = [None, None, "right"]  # None is plain `---`; name one only where it is needed
 
 bad = [(i, len(r)) for i, r in enumerate(rows) if len(r) != len(header)]
 bad += [(i, "newline") for i, r in enumerate(rows) for c in r if "\n" in c]
@@ -74,10 +76,16 @@ bad += [(i, "unescaped |") for i, r in enumerate(rows) for c in r if "|" in c.re
 print("TABLE CHECK: ok" if not bad else f"TABLE CHECK FAILED: {bad}")
 
 width = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(header)]
-# `w + 1` dashes, not `w - 1`: the separator also covers the spaces a data row pads with.
-sep = [f":{'-' * (w + 1)}" if a == "left" else f"{'-' * (w + 1)}:" for w, a in zip(width, align)]
+
+def rule(w, a):  # w + 2, because the separator also covers the spaces a data row pads with
+    if a == "right":  return "-" * (w + 1) + ":"
+    if a == "center": return ":" + "-" * w + ":"
+    return "-" * (w + 2)
+
+sep = [rule(w, a) for w, a in zip(width, align)]
 line = lambda cells: "| " + " | ".join(
-    c.rjust(w) if a == "right" else c.ljust(w) for c, w, a in zip(cells, width, align)
+    c.rjust(w) if a == "right" else c.center(w) if a == "center" else c.ljust(w)
+    for c, w, a in zip(cells, width, align)
 ) + " |"
 print("\n".join([line(header), "|" + "|".join(sep) + "|", *(line(r) for r in rows)]))
 ```
