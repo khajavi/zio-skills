@@ -128,6 +128,8 @@ if (r.activity.skills.length) console.log(`skills     ${r.activity.skills.join('
 if (r.activity.pagesWritten !== undefined) {
   const drafter = r.activity.delegations?.drafter ?? 0;
   console.log(`pages      ${r.activity.pagesWritten} written from ${drafter} drafter delegation(s)`);
+  // The paths, not just the count: a run writing outside its own docs root is only visible here.
+  for (const path of r.activity.pagePaths ?? []) console.log(`           ${path}`);
 }
 const errors = Object.entries(r.activity.toolErrors);
 if (errors.length) console.log(`errors     ${errors.map(([n, c]) => `${n} ${c}`).join('   ')}`);

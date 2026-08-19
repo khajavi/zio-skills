@@ -49,6 +49,8 @@ export const reviewSchema = v.object({
  * fresh node), and a run documents one page. Counted across all three review tools on purpose — a
  * module run reviewing an index and then a subpage is still spending one budget.
  */
+const REVIEW_TOOL_NAME = 'review_page';
+
 let roundsUsed = 0;
 
 /**
@@ -60,10 +62,26 @@ let roundsUsed = 0;
  */
 let confirmingUsed = false;
 
+/**
+ * Rounds this tool refused because the budget was spent.
+ *
+ * Reported so the end-of-run report can tell a refusal apart from a failure. They arrive identically —
+ * `consumeReviewRound` throws, the runtime marks the call `isError`, and `phaseFailures` counts it — but
+ * a refusal is the cap working, and flagging it reads as review_page having broken. Same reason
+ * `guardRefusals()` exists in phase-guard.ts.
+ */
+let budgetRefusals = 0;
+
+/** Refused rounds, by tool name, for the run report. */
+export function reviewRefusals(): Record<string, number> {
+  return budgetRefusals > 0 ? { [REVIEW_TOOL_NAME]: budgetRefusals } : {};
+}
+
 /** Reset the round counters. Tests only — they are module state with no other seam. */
 export function __resetReviewRoundsForTests(): void {
   roundsUsed = 0;
   confirmingUsed = false;
+  budgetRefusals = 0;
 }
 
 /**
@@ -179,6 +197,7 @@ export function consumeReviewRound(): void {
     return;
   }
 
+  budgetRefusals += 1;
   throw new Error(
     `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}` +
       `${confirmingUsed ? ' plus the confirming round' : ''}, all used). Do not call review again. ` +
@@ -205,7 +224,7 @@ export function consumeReviewRound(): void {
  * run context rather than as a parameter the model could get wrong.
  */
 export const reviewPage = defineTool({
-  name: 'review_page',
+  name: REVIEW_TOOL_NAME,
   description:
     'Review the finished page against its document kind\'s checklist and the writing style rules; ' +
     'report per-item pass/fail. Fix the failures yourself. ' +

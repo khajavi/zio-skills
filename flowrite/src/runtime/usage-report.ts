@@ -2,6 +2,7 @@ import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
 import { guardRefusals } from './phase-guard.ts';
+import { reviewRefusals } from '../tools/phases/review-page.ts';
 import { buildRunReport } from './run-telemetry.ts';
 
 /**
@@ -54,6 +55,7 @@ function report(label: string): void {
         phases: state.components.phases(),
         activity: state.components.activity(),
         refusals: guardRefusals(),
+        refusedCalls: reviewRefusals(),
       }),
     )}`,
   );

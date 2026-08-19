@@ -40,8 +40,11 @@ not attempt to re-count members here.
 - Relationships and composition shown in the narrative reflect the real source, not invented links.
 - The writing style rules are evaluated in the same review pass — report their violations as
   failing items too.
-- mdoc verification reports zero `[error]` lines for the page (flat) or the whole directory
-  (hierarchical) — mandatory before done.
+- mdoc reports zero `[error]` lines — mandatory before done. `mdoc` is an sbt task, never a shell
+  binary, so run it through sbt with the whole task quoted as one argument:
+  `sbt "docs/mdoc --in docs/reference/<module-kebab>.md --out website/docs/reference/<module-kebab>.md"`
+  for a flat page, and one `--in`/`--out` pair per page for a hierarchical one (the index and every
+  subpage). A bare `mdoc` is not installed anywhere and reports nothing about the page.
 
 ## Review Cadence
 

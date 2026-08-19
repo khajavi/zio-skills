@@ -55,6 +55,15 @@ export interface FlagInput {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  /**
+   * Calls a phase REFUSED, by tool name — not failures.
+   *
+   * Both arrive as `isError`, so `phaseFailures` counts them together, but they mean opposite things: a
+   * refusal is a cap working. Since the confirming round landed, the healthy shape of a run that fixed
+   * something is round 1, round 2, then a third attempt refused — so without this the report flags every
+   * correct module run as having a failed phase, and bills the refusal for the phase's whole cost.
+   */
+  refusedCalls?: Record<string, number>;
   /** How many times `report_run_result` was called; >1 means a report was rejected and refiled. */
   reportCalls: number;
 }
@@ -185,14 +194,40 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     }
   }
 
+  // A run documents ONE thing, so its pages land under ONE docs root. Writing to both `guides/` and
+  // `reference/` means the run produced something it was not asked for — measured on
+  // write-tutorial-turn1, where the drafter linked to reference pages that did not exist and the
+  // integrator created stubs so the build would resolve. Kind-agnostic on purpose: it needs no
+  // knowledge of which kind is running, so it cannot drift out of step with one.
+  // Keyed off the LAST `docs/` segment: a write may arrive relative (`docs/guides/x.md`) or absolute
+  // (`/home/…/fixture/docs/guides/x.md`), and both must yield `guides`. A page directly in `docs/` has no
+  // root of its own and is skipped rather than counted as one.
+  const rootOf = (path: string): string | undefined => {
+    const after = path.split(/(?:^|\/)docs\//).pop() ?? '';
+    const head = after.split('/')[0] ?? '';
+    return head && !head.endsWith('.md') ? head : undefined;
+  };
+  const roots = [...new Set(activity.pagePaths.map(rootOf).filter((r): r is string => !!r))].sort();
+  if (roots.length > 1) {
+    flags.push({
+      code: 'pages-outside-one-root',
+      detail:
+        `pages written under ${roots.length} docs roots (${roots.join(', ')}) — one run documents one ` +
+        `thing, so the extra pages were not asked for: ${activity.pagePaths.join(', ')}`,
+    });
+  }
+
   flags.push(...perTypePairing(activity));
 
   for (const [phase, failed] of Object.entries(activity.phaseFailures)) {
+    // A refused call is not a failure — see `refusedCalls`. `phase-repeat` above subtracts the same way.
+    const errored = failed - (input.refusedCalls?.[phase] ?? 0);
+    if (errored <= 0) continue;
     const cost = real.find((p) => p.phase === phase)?.totalCost ?? 0;
     flags.push({
       code: 'phase-failed',
       phase,
-      detail: `${failed} call(s) ended in error; the phase spent ${money(cost)} in total`,
+      detail: `${errored} call(s) ended in error; the phase spent ${money(cost)} in total`,
     });
   }
 
@@ -267,8 +302,9 @@ export function buildRunReport(input: {
   phases: PhaseUsage[];
   activity: ActivityReport;
   refusals: readonly { tool: string; parent: string }[];
+  refusedCalls?: Record<string, number>;
 }): RunReport {
-  const { totals, components, phases, activity, refusals } = input;
+  const { totals, components, phases, activity, refusals, refusedCalls } = input;
   const runCost = phases.reduce((sum, p) => sum + p.totalCost, 0);
 
   return {
@@ -294,6 +330,7 @@ export function buildRunReport(input: {
       phases,
       activity,
       refusals,
+      refusedCalls,
       reportCalls: activity.tools['report_run_result'] ?? 0,
     }),
   };
