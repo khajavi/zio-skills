@@ -54,13 +54,31 @@ const REVIEW_TOOL_NAME = 'review_page';
 let roundsUsed = 0;
 
 /**
- * Whether the one confirming round has been spent.
+ * Confirming rounds granted so far.
  *
- * Separate from `roundsUsed` because it is granted on a condition rather than budgeted: see
- * `consumeReviewRound`. One per run, never two, so a review that keeps failing cannot spend rounds
- * forever.
+ * Separate from `roundsUsed` because they are granted on a condition rather than budgeted: see
+ * `consumeReviewRound`. Counted rather than a boolean because a round that reports items the previous
+ * round never mentioned did not confirm anything — it found more work — so the run earns another. The
+ * cap is what stops that from looping.
  */
-let confirmingUsed = false;
+let confirmingRounds = 0;
+
+/**
+ * Confirming rounds a run may earn.
+ *
+ * Three, not one: measured on two consecutive runs (zio-blocks async, tinyproject write-tutorial-turn3)
+ * where round 2 surfaced items round 1 had missed, spent the single grant, and left the verdict frozen
+ * on findings the run then repaired — `failed` recorded for a page whose failures were fixed and, on
+ * turn3, independently re-verified. Bounded so an unrepairable page still terminates as `failed`
+ * instead of reviewing forever.
+ */
+const MAX_CONFIRMING_ROUNDS = 3;
+
+/**
+ * The failing items of the review BEFORE `lastOutcome`, so `consumeReviewRound` can tell a
+ * confirmation from a fresh finding. `null` until a second review lands.
+ */
+let previousFailingItems: string[] | null = null;
 
 /**
  * Rounds this tool refused because the budget was spent.
@@ -80,7 +98,8 @@ export function reviewRefusals(): Record<string, number> {
 /** Reset the round counters. Tests only — they are module state with no other seam. */
 export function __resetReviewRoundsForTests(): void {
   roundsUsed = 0;
-  confirmingUsed = false;
+  confirmingRounds = 0;
+  previousFailingItems = null;
   budgetRefusals = 0;
 }
 
@@ -110,10 +129,29 @@ let lastOutcome: ReviewOutcome | null = null;
 /** Reset the recorded review. Tests only — module state with no other seam. */
 export function __resetLastReviewForTests(): void {
   lastOutcome = null;
+  previousFailingItems = null;
 }
 
 /** Record what a review concluded. Tests only; the phase records on its own path. */
 export function __setLastReviewForTests(outcome: ReviewOutcome | null): void {
+  recordReview(outcome);
+}
+
+/** The failing item names in an outcome; empty for a skip or for nothing recorded. */
+function failingItemsOf(outcome: ReviewOutcome | null): string[] {
+  if (outcome === null || outcome.state === 'skipped') return [];
+  return outcome.items.filter((item) => !item.pass).map((item) => item.item);
+}
+
+/**
+ * Record a review, keeping the one before it.
+ *
+ * The previous round's failing items are what make "this round confirmed the fixes" distinguishable
+ * from "this round found more" — see `consumeReviewRound`. Every write to `lastOutcome` goes through
+ * here so the two can never drift apart.
+ */
+function recordReview(outcome: ReviewOutcome | null): void {
+  previousFailingItems = failingItemsOf(lastOutcome);
   lastOutcome = outcome;
 }
 
@@ -138,7 +176,7 @@ export function recordedVerdict(): {
   if (lastOutcome === null || lastOutcome.state === 'skipped') {
     return { verdict: 'not-reviewed', failingItems: [] };
   }
-  const failingItems = lastOutcome.items.filter((item) => !item.pass).map((item) => item.item);
+  const failingItems = failingItemsOf(lastOutcome);
   return { verdict: failingItems.length === 0 ? 'passed' : 'failed', failingItems };
 }
 
@@ -155,10 +193,15 @@ function reviewBudgetNote(): string {
     budget === 1 ? 'This run allows ONE review round' : `This run allows ${budget} review rounds`;
   // The confirming round only helps if the model knows to spend it. It is conditional, so say what
   // unlocks it: a review that found nothing has nothing to confirm, and calling again there is refused.
+  // The renewal is stated too — a model that believes it is out of rounds stops fixing and starts
+  // explaining, which is the behaviour the frozen verdict produced.
   return (
     `${rounds}. If a review reports failing items, fix them all and then call review ONCE more — that ` +
     `confirming round is what lets the run record the page as passing, since the verdict is whatever ` +
-    `the last review found. A review that reported nothing needs no confirmation: finish instead.`
+    `the last review found. If that round raises NEW items instead of confirming your fixes, fix those ` +
+    `too and call review again: a round that found something new earns another. Rounds run out once a ` +
+    `review only repeats what the previous one said. A review that reported nothing needs no ` +
+    `confirmation: finish instead.`
   );
 }
 
@@ -177,8 +220,8 @@ export function consumeReviewRound(): void {
     return;
   }
 
-  // The budget is spent. Grant ONE confirming round when the last review found failures, because
-  // without it a run that repairs everything can never record that it did: `recordedVerdict()` returns
+  // The budget is spent. Grant a confirming round when the last review found failures, because
+  // without one a run that repairs everything can never record that it did: `recordedVerdict()` returns
   // the last outcome, the refused call records none, so the verdict permanently predates the fixes.
   // write-module-ref-turn4 fixed 5 of 6 items and still filed all 6 — then wrote "production-ready and
   // passes all technical verification" in prose, contradicting the verdict it could not change. So the
@@ -186,21 +229,38 @@ export function consumeReviewRound(): void {
   //
   // Conditional, not budgeted, and that is the point: a clean first review needs no confirmation and
   // pays nothing, while a failing one buys evidence about the fixed page rather than an assumption.
-  // `confirmingUsed` caps it at one — a second failing round ends the run, so a page that cannot be
-  // repaired still reports `failed` instead of looping. Worst case is two rounds, and only when the
-  // first one found something.
-  const lastFailed =
-    lastOutcome?.state === 'reviewed' && lastOutcome.items.some((item) => !item.pass);
-  if (!confirmingUsed && lastFailed) {
-    confirmingUsed = true;
+  //
+  // A grant is renewed only when the round that spent the last one reported items the round before it
+  // never mentioned. That round confirmed nothing — it found more work — and the page it judged is not
+  // the page the model went on to fix. Both runs on 2026-08-19 ended exactly there: round 2 raised
+  // items round 1 had missed, the single grant was gone, and the verdict froze on findings the run then
+  // repaired (tinyproject turn3 filed mdoc errors and a `var` that a re-run and a grep both show fixed).
+  // A round that merely repeats the previous round's items has confirmed what it can, so the run ends
+  // on it rather than paying for a third opinion.
+  const lastFailing = failingItemsOf(lastOutcome);
+  // Bound to a local so the null check narrows inside the closure — module state does not.
+  const previous = previousFailingItems;
+  const foundNewItems = previous !== null && lastFailing.some((item) => !previous.includes(item));
+  const renewable = confirmingRounds === 0 || foundNewItems;
+  if (lastFailing.length > 0 && renewable && confirmingRounds < MAX_CONFIRMING_ROUNDS) {
+    confirmingRounds++;
     roundsUsed++;
     return;
   }
 
   budgetRefusals += 1;
+  const spent =
+    confirmingRounds === 0
+      ? ''
+      : ` plus ${confirmingRounds} confirming round${confirmingRounds === 1 ? '' : 's'}`;
+  const why =
+    confirmingRounds >= MAX_CONFIRMING_ROUNDS
+      ? `The confirming rounds are exhausted.`
+      : `The last review repeated items the one before it already reported, so another round would ` +
+        `find the same page.`;
   throw new Error(
-    `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}` +
-      `${confirmingUsed ? ' plus the confirming round' : ''}, all used). Do not call review again. ` +
+    `The review budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}${spent}, ` +
+      `all used). ${why} Do not call review again. ` +
       `Fix what the last review reported, then file report_run_result. The verdict comes from the ` +
       `review itself, so it will record what the last review found — name what you fixed and anything ` +
       `still wrong in your summary and your closing reply, and do not describe an unverified page as ` +
@@ -244,7 +304,7 @@ export const reviewPage = defineTool({
     if (isPhaseSkipped('review')) {
       // Recorded as skipped rather than as a pass: the synthetic item below keeps the chain wired
       // for the model, but it is not evidence, so recordedVerdict() reports "not-reviewed".
-      lastOutcome = { state: 'skipped' };
+      recordReview({ state: 'skipped' });
       return {
         output: { passed: true, items: [{ item: 'Review', pass: true, issue: 'Skipped by request.' }] },
       };
@@ -284,7 +344,7 @@ export const reviewPage = defineTool({
     // Recorded BEFORE returning, on the path that actually runs — one place, one path. An earlier
     // phase wired the same recording into its skip branch only, so a successful run recorded nothing
     // and the next phase refused work that had in fact been done (9870589).
-    lastOutcome = { state: 'reviewed', items: review.items };
+    recordReview({ state: 'reviewed', items: review.items });
 
     // The review phase logged nothing at all until now, so `grep 'flowrite:'` showed a run jumping
     // from integrate straight to the closing report (#53). The counts are what a reader wants: how

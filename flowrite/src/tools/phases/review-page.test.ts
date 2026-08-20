@@ -59,15 +59,47 @@ test('a failing review earns one confirming round, so fixes can be recorded as v
   });
 });
 
-test('the confirming round is granted once, so a page that stays broken cannot loop', () => {
+test('a round that only repeats the previous findings ends the run, so a broken page cannot loop', () => {
   withBudget(undefined, () => {
     consumeReviewRound();
     reviewed(['still broken']);
     consumeReviewRound();
-    // Second round failed too. No further round: the run ends reporting failed rather than re-reviewing.
+    // Second round found the same item. It confirmed what it could, so no further round is owed: the
+    // run ends reporting failed rather than paying for a third opinion on an unchanged page.
     reviewed(['still broken']);
-    assert.throws(() => consumeReviewRound(), /plus the confirming round, all used/);
+    assert.throws(() => consumeReviewRound(), /plus 1 confirming round, all used/);
+    assert.throws(() => consumeReviewRound(), /repeated items the one before it already reported/);
     assert.deepEqual(recordedVerdict(), { verdict: 'failed', failingItems: ['still broken'] });
+  });
+});
+
+test('a confirming round that raises NEW items earns another, so the verdict can outlive the fixes', () => {
+  // #68, measured twice on 2026-08-19: round 2 surfaced items round 1 had missed, spent the single
+  // grant, and froze the verdict on findings the run then repaired. tinyproject turn3 filed mdoc errors
+  // and a `var` that a re-run and a grep both showed fixed. A round that finds new work confirmed
+  // nothing.
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    reviewed(['rule 17']);
+    consumeReviewRound(); // confirming round #1
+    reviewed(['rule 4', 'rule 8']); // not a confirmation — two items round 1 never mentioned
+    consumeReviewRound(); // renewed, because the last round found something new
+    __setLastReviewForTests({ state: 'reviewed', items: [{ item: 'all good', pass: true, issue: '' }] });
+    assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
+  });
+});
+
+test('renewal is capped, so a review that keeps finding new items still terminates', () => {
+  withBudget(undefined, () => {
+    consumeReviewRound();
+    // Every round raises an item no earlier round named, which is the shape that would loop forever.
+    for (const item of ['first', 'second', 'third']) {
+      reviewed([item]);
+      consumeReviewRound();
+    }
+    reviewed(['fourth']);
+    assert.throws(() => consumeReviewRound(), /confirming rounds are exhausted/);
+    assert.deepEqual(recordedVerdict(), { verdict: 'failed', failingItems: ['fourth'] });
   });
 });
 
