@@ -4,8 +4,10 @@ The prompt names the target category (e.g. "Guides" for a tutorial, "Reference" 
 and the cross-reference direction appropriate to the page's kind. Use them below.
 
 Procedure:
-1. sidebars.js (at `docs/sidebars.js` or `website/sidebars.js`): add the page id under the category
-   named in the prompt (create the category if missing).
+1. sidebars.js — the git-tracked one, found with `git ls-files "*sidebars.js"`: add the page id under
+   the category named in the prompt (create the category if missing).
+   ✅ the path `git ls-files` prints (`docs/sidebars.js`, `website/sidebars.js`)
+   ❌ `website/docs/sidebars.js` — mdoc output, gitignored, so an edit there ships nothing
    Verify it still parses: `node -e "require('<its path>')"`.
 2. docs/index.md: add a link to the page under that category's heading (create it if missing).
 3. Cross-reference: add at least two "See also" links between this page and related pages
