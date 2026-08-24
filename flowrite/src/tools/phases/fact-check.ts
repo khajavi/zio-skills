@@ -88,13 +88,30 @@ export type DriftReport = v.InferOutput<typeof driftSchema>;
 const FACT_CHECK_TOOL_NAME = 'fact_check_page';
 
 /**
- * Rounds spent, and whether the one confirming round is gone.
+ * Rounds spent against the budget.
  *
  * Module state, like the review phase's counters and for the same reason: one OS process per run
  * (each `run-*.sh` execs a fresh node), and a run documents one page.
  */
 let roundsUsed = 0;
-let confirmingUsed = false;
+
+/**
+ * Confirming rounds granted so far, and the ceiling on them.
+ *
+ * Counted rather than a boolean, mirroring the review phase after the same defect was measured there:
+ * a round that reports drifts the round before it never mentioned confirmed nothing — it found more
+ * work — so the run earns another. A single grant froze the verdict on findings the run then repaired.
+ * The cap is what stops the renewal from looping on a page that cannot be fixed.
+ */
+let confirmingRounds = 0;
+const MAX_CONFIRMING_ROUNDS = 3;
+
+/**
+ * The finding keys of the check BEFORE `lastOutcome`, so `consumeFactCheckRound` can tell a
+ * confirmation from a fresh finding. `null` until a second check lands.
+ */
+let previousFindingKeys: string[] | null = null;
+
 let budgetRefusals = 0;
 
 /** Refused rounds, by tool name, for the run report. */
@@ -105,7 +122,8 @@ export function factCheckRefusals(): Record<string, number> {
 /** Reset the round counters. Tests only — module state with no other seam. */
 export function __resetFactCheckRoundsForTests(): void {
   roundsUsed = 0;
-  confirmingUsed = false;
+  confirmingRounds = 0;
+  previousFindingKeys = null;
   budgetRefusals = 0;
 }
 
@@ -126,10 +144,46 @@ let lastOutcome: FactCheckOutcome | null = null;
 /** Reset the recorded fact-check. Tests only — module state with no other seam. */
 export function __resetLastFactCheckForTests(): void {
   lastOutcome = null;
+  previousFindingKeys = null;
 }
 
 /** Record what a fact-check concluded. Tests only; the phase records on its own path. */
 export function __setLastFactCheckForTests(outcome: FactCheckOutcome | null): void {
+  recordFactCheck(outcome);
+}
+
+/**
+ * A drift's identity across rounds: which member, and what kind of problem.
+ *
+ * Deliberately not the whole finding. `claim` is the page text and changes the moment the drift is
+ * fixed; `detail` and `fix` are model-authored prose that varies between rounds; `documented` is a
+ * page line number that shifts when anything above it is edited. `source` is the declaration's own
+ * location, which is stable while the source is — and the source is what the run is forbidden to
+ * touch. So "the same problem, reported again" survives the page being rewritten around it.
+ */
+function driftKey(drift: Drift): string {
+  return `${drift.kind}|${drift.source}`;
+}
+
+/** The finding keys in an outcome; empty for a skip or for nothing recorded. */
+function findingKeysOf(outcome: FactCheckOutcome | null): string[] {
+  if (outcome === null || outcome.state === 'skipped') return [];
+  const keys = outcome.drifts.map(driftKey);
+  // An incomplete check is a finding too — a round that could not look, then looked, found something
+  // new by any reading that matters.
+  if (outcome.incomplete !== null) keys.push('incomplete');
+  return keys;
+}
+
+/**
+ * Record a fact-check, keeping the one before it.
+ *
+ * The previous round's findings are what make "this round confirmed the fixes" distinguishable from
+ * "this round found more" — see `consumeFactCheckRound`. Every write to `lastOutcome` goes through
+ * here so the two can never drift apart.
+ */
+function recordFactCheck(outcome: FactCheckOutcome | null): void {
+  previousFindingKeys = findingKeysOf(lastOutcome);
   lastOutcome = outcome;
 }
 
@@ -194,19 +248,38 @@ export function consumeFactCheckRound(): void {
     return;
   }
 
-  const lastFoundDrift =
-    lastOutcome?.state === 'checked' &&
-    (lastOutcome.drifts.length > 0 || lastOutcome.incomplete !== null);
-  if (!confirmingUsed && lastFoundDrift) {
-    confirmingUsed = true;
+  // A grant is renewed only when the round that spent the last one reported drifts the round before it
+  // never mentioned. That round confirmed nothing — it found more work, and the page it judged is not
+  // the page the model went on to fix. A round that merely repeats the previous drifts has confirmed
+  // what it can, so the run ends on it rather than paying for a third opinion.
+  //
+  // Mirrors `consumeReviewRound` after the same defect was measured on two runs there. Not measured
+  // here — this phase has never run — but the mechanism is identical, and shipping the two gates with
+  // divergent budgets would mean knowingly keeping the bug in one of them.
+  const lastFindings = findingKeysOf(lastOutcome);
+  // Bound to a local so the null check narrows inside the closure — module state does not.
+  const previous = previousFindingKeys;
+  const foundNewDrifts = previous !== null && lastFindings.some((key) => !previous.includes(key));
+  const renewable = confirmingRounds === 0 || foundNewDrifts;
+  if (lastFindings.length > 0 && renewable && confirmingRounds < MAX_CONFIRMING_ROUNDS) {
+    confirmingRounds++;
     roundsUsed++;
     return;
   }
 
   budgetRefusals += 1;
+  const spent =
+    confirmingRounds === 0
+      ? ''
+      : ` plus ${confirmingRounds} confirming round${confirmingRounds === 1 ? '' : 's'}`;
+  const why =
+    confirmingRounds >= MAX_CONFIRMING_ROUNDS
+      ? `The confirming rounds are exhausted.`
+      : `The last check repeated drifts the one before it already reported, so another round would ` +
+        `find the same page.`;
   throw new Error(
-    `The fact-check budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}` +
-      `${confirmingUsed ? ' plus the confirming round' : ''}, all used). Do not call fact check again. ` +
+    `The fact-check budget for this run is spent (${budget} round${budget === 1 ? '' : 's'}${spent}, ` +
+      `all used). ${why} Do not call fact check again. ` +
       `Fix every drift the last check reported, then continue. The verdict comes from the check ` +
       `itself, so it will record what the last one found — name what you fixed and anything still ` +
       `wrong in your summary and your closing reply, and do not describe an unverified page as correct.`,
@@ -358,7 +431,10 @@ export const factCheckPage = defineTool({
     'a page that survives this is one the source actually supports. ' +
     'This run allows ONE fact-check round; if it reports drifts, fix them all and call it ONCE more — ' +
     'that confirming round is what lets the run record the page as correct, since the recorded ' +
-    'result is whatever the last check found. A check that reported nothing needs no confirmation.',
+    'result is whatever the last check found. If that round reports NEW drifts instead of confirming ' +
+    'your fixes, fix those too and call it again: a round that found something new earns another. ' +
+    'Rounds run out once a check only repeats what the previous one said. A check that reported ' +
+    'nothing needs no confirmation.',
   harness: true,
   input: v.object({
     path: v.pipe(
@@ -374,7 +450,7 @@ export const factCheckPage = defineTool({
     if (isPhaseSkipped('fact-check')) {
       // Recorded as skipped, never as clean. The returned report keeps the chain wired for the model,
       // but it is not evidence, so `recordedFactCheck()` reports `skipped` and gates nothing.
-      lastOutcome = { state: 'skipped' };
+      recordFactCheck({ state: 'skipped' });
       return {
         output: {
           clean: true,
@@ -420,7 +496,7 @@ export const factCheckPage = defineTool({
     // Recorded on the path that actually runs, in one place. The review phase carries a comment about
     // an earlier phase that recorded only in its skip branch, so a successful run recorded nothing and
     // the next phase refused work that had in fact been done.
-    lastOutcome = { state: 'checked', drifts: report.drifts, incomplete: report.incomplete };
+    recordFactCheck({ state: 'checked', drifts: report.drifts, incomplete: report.incomplete });
 
     const blocking = report.drifts.filter((drift) => drift.severity !== 'low').length;
     note(

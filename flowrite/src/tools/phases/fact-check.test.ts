@@ -45,14 +45,22 @@ function withBudget(value: string | undefined, fn: () => void): void {
   }
 }
 
-/** A drift of the given severity, with the citations a real one must carry. */
-function drift(severity: 'high' | 'medium' | 'low') {
+/**
+ * A drift of the given severity, with the citations a real one must carry.
+ *
+ * `source` is the identity across rounds (see `driftKey`), so it is a parameter: two drifts with the
+ * same source are the same problem reported twice, and two with different sources are not.
+ */
+function drift(
+  severity: 'high' | 'medium' | 'low',
+  source = 'tally/src/main/scala/tally/Ledger.scala:L24-L26',
+) {
   return {
     kind: 'contradicted' as const,
     severity,
     claim: 'Returns `Option[Ledger]`.',
     documented: 'docs/reference/ledger.md:42',
-    source: 'tally/src/main/scala/tally/Ledger.scala:L24-L26',
+    source,
     detail: 'the page says absorb returns Option[Ledger]; the source returns Ledger',
     fix: 'state the return type as Ledger',
   };
@@ -95,13 +103,63 @@ test('a check that found drift earns one confirming round, so fixes can be recor
   });
 });
 
-test('the confirming round is granted once, so a page that stays wrong cannot loop', () => {
+test('a round that repeats the same drift ends the run', () => {
+  // It confirmed what it could: the page it judged IS the page the model fixed, and it still reports
+  // the same problem. A third opinion would find the same page.
   withBudget(undefined, () => {
     consumeFactCheckRound();
     checked(drift('high'));
     consumeFactCheckRound();
     checked(drift('high'));
-    assert.throws(() => consumeFactCheckRound(), /plus the confirming round, all used/);
+    assert.throws(() => consumeFactCheckRound(), (error: Error) => {
+      assert.match(error.message, /plus 1 confirming round, all used/);
+      assert.match(error.message, /repeated drifts the one before it already reported/);
+      return true;
+    });
+  });
+});
+
+test('a round that finds NEW drifts earns another, so the verdict cannot freeze on repaired findings', () => {
+  // Mirrors the review-side defect measured on two runs: round 2 raises what round 1 missed, spends
+  // the single grant, and the verdict freezes on findings the run then repaired. A round that found
+  // something new confirmed nothing — the page it judged is not the page the model went on to fix.
+  withBudget(undefined, () => {
+    consumeFactCheckRound();
+    checked(drift('high', 'tally/src/main/scala/tally/Ledger.scala:L24-L26'));
+    consumeFactCheckRound(); // first confirming round
+    checked(drift('high', 'tally/src/main/scala/tally/Window.scala:L30-L32')); // a different member
+    consumeFactCheckRound(); // renewed, because that drift is new
+    checked();
+    reviewPassed();
+    assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
+  });
+});
+
+test('the renewal is capped, so a page that keeps producing new drifts still terminates', () => {
+  withBudget(undefined, () => {
+    consumeFactCheckRound();
+    // Each round finds a drift in a member no earlier round mentioned, so each renews the grant.
+    for (let i = 0; i < 3; i++) {
+      checked(drift('high', `tally/src/main/scala/tally/Type${i}.scala:L1-L2`));
+      consumeFactCheckRound();
+    }
+    checked(drift('high', 'tally/src/main/scala/tally/Type99.scala:L1-L2'));
+    assert.throws(() => consumeFactCheckRound(), /confirming rounds are exhausted/i);
+  });
+});
+
+test('an incomplete round counts as a finding for the renewal, not as a repeat', () => {
+  // A round that could not look, then looked and found something, has found something new by any
+  // reading that matters — the earlier round observed nothing to repeat.
+  withBudget(undefined, () => {
+    consumeFactCheckRound();
+    __setLastFactCheckForTests({ state: 'checked', drifts: [], incomplete: 'source root missing' });
+    consumeFactCheckRound();
+    checked(drift('high'));
+    consumeFactCheckRound(); // renewed: a real drift is new against an incomplete round
+    checked();
+    reviewPassed();
+    assert.deepEqual(recordedVerdict(), { verdict: 'passed', failingItems: [] });
   });
 });
 
