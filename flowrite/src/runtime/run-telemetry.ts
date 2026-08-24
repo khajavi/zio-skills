@@ -1,6 +1,6 @@
 import type { ActivityReport, ComponentUsage, PhaseUsage } from './component-usage.ts';
 import type { TokenUsageTotals } from './token-usage.ts';
-import { reviewRoundCap } from './run-context.ts';
+import { factCheckRoundCap, reviewRoundCap } from './run-context.ts';
 
 /**
  * The end-of-run report: what the run cost, what it did, and what looks wrong.
@@ -89,6 +89,20 @@ const TOOL_ERROR_THRESHOLD = 3;
 const reviewRepeatLimit = () => reviewRoundCap();
 
 /**
+ * The ceiling for a phase that owns a round budget, or null for a phase that should run once.
+ *
+ * Two phases have budgets now, and they are not interchangeable: `MAX_REVIEW_ROUNDS` and
+ * `MAX_FACT_CHECK_ROUNDS` are separate knobs, so reading the wrong one would report a correct run as a
+ * bypass. Matched on prefix because the key is the tool name — `review_page` today, plus the per-page
+ * review tools a fourth document kind might add.
+ */
+function budgetedRepeatLimit(phase: string): number | null {
+  if (phase.startsWith('review')) return reviewRepeatLimit();
+  if (phase.startsWith('fact_check')) return factCheckRoundCap();
+  return null;
+}
+
+/**
  * Phases exempt from the repeat check because they legitimately run per documented type.
  *
  * Empty: `review_page` is the only phase tool and it has its own budget check, so nothing needs
@@ -172,11 +186,11 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   const real = phases.filter((p) => !p.phase.startsWith('('));
 
   for (const [phase, calls] of Object.entries(activity.phaseCalls)) {
-    // Review may repeat up to its budget; the per-type phases have their own check below; every
-    // other phase runs once. See reviewRepeatLimit and PER_TYPE_PHASES.
-    const isReview = phase.startsWith('review');
-    if (!isReview && PER_TYPE_PHASES.includes(phase)) continue;
-    const limit = isReview ? reviewRepeatLimit() : 1;
+    // Review and fact-check may each repeat up to their own budget; the per-type phases have their own
+    // check below; every other phase runs once. See budgetedRepeatLimit and PER_TYPE_PHASES.
+    const budgeted = budgetedRepeatLimit(phase);
+    if (budgeted === null && PER_TYPE_PHASES.includes(phase)) continue;
+    const limit = budgeted ?? 1;
     // A refused call is not a run. `phaseCalls` counts `tool_start`, so the round the budget REFUSED
     // is in there — which made this flag fire on every run where the cap worked, reporting "the review
     // cap did not hold" as the direct result of the cap holding. Observed in turns 1, 2 and 3 of the
@@ -186,10 +200,11 @@ export function computeFlags(input: FlagInput): RunFlag[] {
       flags.push({
         code: 'phase-repeat',
         phase,
-        detail: isReview
-          ? `ran ${ran}× against a ceiling of ${limit} (the budget plus one confirming round) — ` +
-            `the review cap did not hold`
-          : `ran ${ran}× — repeated work, or a phase re-entered after failing`,
+        detail:
+          budgeted !== null
+            ? `ran ${ran}× against a ceiling of ${limit} (the budget plus one confirming round) — ` +
+              `the ${phase} cap did not hold`
+            : `ran ${ran}× — repeated work, or a phase re-entered after failing`,
       });
     }
   }
@@ -257,6 +272,13 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   // count, not a verdict, so it survives the verdict's removal.
   if (!Object.keys(activity.phaseCalls).some((phase) => phase.startsWith('review'))) {
     flags.push({ code: 'review-not-run', detail: 'no review phase ran for this page' });
+  }
+
+  // Same flag for the other gate, and it matters more than it looks: a run that never fact-checked
+  // records `not-reviewed`-style silence rather than a failure, so nothing else in the report would
+  // say the page's claims went unverified. An activity count, like the one above — not a verdict.
+  if (!Object.keys(activity.phaseCalls).some((phase) => phase.startsWith('fact_check'))) {
+    flags.push({ code: 'fact-check-not-run', detail: 'no fact-check phase ran for this page' });
   }
 
   for (const phase of real) {

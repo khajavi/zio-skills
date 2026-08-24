@@ -29,6 +29,7 @@ import { drafter } from '../subagents/drafter.ts';
 import { reviewer } from '../subagents/reviewer.ts';
 import { examplesBuilder } from '../subagents/examples-builder.ts';
 import { docsIntegrator } from '../subagents/docs-integrator.ts';
+import { factChecker } from '../subagents/fact-checker.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
@@ -44,9 +45,17 @@ import { createGhQueryTool } from '../tools/repo-tools.ts';
  * label, one of them the agent and one of them this.
  */
 
-const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator];
+const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator, factChecker];
 
-const skipPhase = v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review']);
+const skipPhase = v.picklist([
+  'research',
+  'design',
+  'write',
+  'write-examples',
+  'fact-check',
+  'integrate',
+  'review',
+]);
 
 /**
  * The creation-data fields every docs writer takes. Each writer spreads these into

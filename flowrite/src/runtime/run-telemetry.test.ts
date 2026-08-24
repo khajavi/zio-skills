@@ -28,10 +28,10 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   toolErrors: {},
   phaseFailures: {},
   skills: ['writing-style'],
-  // A real clean run reviews its page, so the default fixture does too — otherwise every case would
-  // trip the review-not-run flag. `review_page` is the only phase tool; other stages are `task`
-  // delegations and appear in `delegations` instead.
-  phaseCalls: { review_page: 1 },
+  // A real clean run runs both gates on its page, so the default fixture does too — otherwise every
+  // case would trip review-not-run and fact-check-not-run. These two are the only phase tools; other
+  // stages are `task` delegations and appear in `delegations` instead.
+  phaseCalls: { review_page: 1, fact_check_page: 1 },
   // One research delegation per drafted page is the balanced shape perTypePairing looks for.
   delegations: { researcher: 1, designer: 1, drafter: 1 },
   // Pages, which is what the pairing compares against — NOT delegations.drafter, since one drafter
@@ -72,7 +72,7 @@ test('a once-per-run phase that ran twice is flagged', () => {
   //
   // A non-review phase, so the limit is 1 rather than the review ceiling. `review_page` is the only
   // phase tool today, so this name is a stand-in for a future one — the rule is generic.
-  const flags = codes({ activity: activity({ phaseCalls: { a_second_phase: 3, review_page: 1 } }) });
+  const flags = codes({ activity: activity({ phaseCalls: { a_second_phase: 3, review_page: 1, fact_check_page: 1 } }) });
   assert.deepEqual(flags, ['phase-repeat']);
 });
 
@@ -84,7 +84,7 @@ test('a module run researching and drafting five pages is not a repeat', () => {
   assert.deepEqual(
     codes({
       activity: activity({
-        phaseCalls: { review_page: 1 },
+        phaseCalls: { review_page: 1, fact_check_page: 1 },
         delegations: { researcher: 5, designer: 1, drafter: 5, docs_integrator: 1, reviewer: 1 },
         pagesWritten: 5,
       }),
@@ -97,7 +97,7 @@ test('a page drafted without a research delegation is flagged', () => {
   const flags = computeFlags(
     input({
       activity: activity({
-        phaseCalls: { review_page: 1 },
+        phaseCalls: { review_page: 1, fact_check_page: 1 },
         delegations: { researcher: 3, drafter: 4 },
         pagesWritten: 4,
       }),
@@ -112,7 +112,7 @@ test('research paid for and never drafted is flagged the other way round', () =>
   const flags = computeFlags(
     input({
       activity: activity({
-        phaseCalls: { review_page: 1 },
+        phaseCalls: { review_page: 1, fact_check_page: 1 },
         delegations: { researcher: 4, drafter: 2 },
         pagesWritten: 2,
       }),
@@ -131,7 +131,7 @@ test('batching several pages into one drafter delegation is not a mismatch', () 
   assert.deepEqual(
     codes({
       activity: activity({
-        phaseCalls: { review_page: 1 },
+        phaseCalls: { review_page: 1, fact_check_page: 1 },
         delegations: { researcher: 3, designer: 1, drafter: 1 },
         pagesWritten: 3,
       }),
@@ -147,7 +147,7 @@ test('a balanced count with a failed delegation is flagged as possibly hollow', 
   const flags = computeFlags(
     input({
       activity: activity({
-        phaseCalls: { review_page: 1 },
+        phaseCalls: { review_page: 1, fact_check_page: 1 },
         delegations: { researcher: 4, drafter: 4 },
         pagesWritten: 4,
         toolErrors: { task: 1 },
@@ -159,14 +159,14 @@ test('a balanced count with a failed delegation is flagged as possibly hollow', 
 });
 
 test('one review round is unremarkable — it is the whole budget', () => {
-  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 1 } }) }), []);
+  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 1, fact_check_page: 1 } }) }), []);
 });
 
 test('a second review round is the earned confirming pass, not a repeat', () => {
   // The default budget is one round, and a run whose review failed earns ONE more so it can record that
   // its fixes worked. That second round is correct behaviour, so flagging it would report the fix for
   // #67 as a defect — the same false-positive shape this flag already had for refused calls.
-  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 2 } }) }), []);
+  assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 2, fact_check_page: 1 } }) }), []);
 });
 
 test('review rounds beyond budget-plus-confirmation mean the cap did not hold', () => {
@@ -175,10 +175,10 @@ test('review rounds beyond budget-plus-confirmation mean the cap did not hold', 
   // rather than in the page.
   for (const calls of [3, 4, 7]) {
     const flags = computeFlags(
-      input({ activity: activity({ phaseCalls: { review_page: calls } }) }),
+      input({ activity: activity({ phaseCalls: { review_page: calls, fact_check_page: 1 } }) }),
     );
     assert.deepEqual(flags.map((f) => f.code), ['phase-repeat'], `${calls} rounds should flag`);
-    assert.match(flags[0]!.detail, /against a ceiling of 2 .* the review cap did not hold/);
+    assert.match(flags[0]!.detail, /against a ceiling of 2 .* the review_page cap did not hold/);
   }
 });
 
@@ -189,8 +189,8 @@ test('raising MAX_REVIEW_ROUNDS raises the flag threshold with it', () => {
   process.env.MAX_REVIEW_ROUNDS = '3';
   try {
     // Budget 3 plus the one confirming round: 4 is legitimate, 5 is not.
-    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 4 } }) }), []);
-    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 5 } }) }), [
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 4, fact_check_page: 1 } }) }), []);
+    assert.deepEqual(codes({ activity: activity({ phaseCalls: { review_page: 5, fact_check_page: 1 } }) }), [
       'phase-repeat',
     ]);
   } finally {
@@ -223,12 +223,22 @@ test('cd-ing into the repo is flagged', () => {
   assert.deepEqual(codes({ activity: activity({ cdViolations: 76 }) }), ['cd-into-repo']);
 });
 
-test('a run that never reviewed its page is flagged', () => {
+test('a run that ran neither gate on its page is flagged for both', () => {
   // An activity count, not a verdict: the report no longer carries pass/fail, but "nothing reviewed
   // this page at all" is still visible from the phase calls and still worth saying.
+  //
+  // Both gates get their own flag because they answer different questions — is the page good, and is
+  // it true — and a run can legitimately skip one and not the other.
   assert.deepEqual(
     codes({ activity: activity({ phaseCalls: { a_second_phase: 1 } }) }),
-    ['review-not-run'],
+    ['review-not-run', 'fact-check-not-run'],
+  );
+});
+
+test('a run that reviewed but never fact-checked is flagged for the gate it skipped', () => {
+  assert.deepEqual(
+    codes({ activity: activity({ phaseCalls: { review_page: 1 } }) }),
+    ['fact-check-not-run'],
   );
 });
 
@@ -262,7 +272,7 @@ test('the review cap holding is not reported as the cap failing', () => {
   assert.deepEqual(
     codes({
       activity: activity({
-        phaseCalls: { review_page: 2 },
+        phaseCalls: { review_page: 2, fact_check_page: 1 },
         phaseFailures: { review_page: 1 },
       }),
     }),
@@ -274,7 +284,7 @@ test('the review cap holding is not reported as the cap failing', () => {
 test('rounds that really ran past the ceiling still flag', () => {
   // The other side of the subtraction: rounds that all did work are the cap genuinely not holding. Three
   // rather than two, because two is now the earned confirming round — only the third is unreachable.
-  const flags = codes({ activity: activity({ phaseCalls: { review_page: 3 } }) });
+  const flags = codes({ activity: activity({ phaseCalls: { review_page: 3, fact_check_page: 1 } }) });
   assert.ok(flags.includes('phase-repeat'), `expected phase-repeat in ${flags.join(', ')}`);
 });
 
@@ -288,7 +298,7 @@ test('a refused review round is not a failed phase', () => {
   // ceiling, and this one was missed both times.
   assert.deepEqual(
     codes({
-      activity: activity({ phaseCalls: { review_page: 3 }, phaseFailures: { review_page: 1 } }),
+      activity: activity({ phaseCalls: { review_page: 3, fact_check_page: 1 }, phaseFailures: { review_page: 1 } }),
       refusedCalls: { review_page: 1 },
     }),
     [],
@@ -299,7 +309,7 @@ test('a real phase error still flags when a refusal is also present', () => {
   // Subtraction, not suppression: two errors of which one was refused leaves one worth reporting.
   const flags = computeFlags(
     input({
-      activity: activity({ phaseCalls: { review_page: 3 }, phaseFailures: { review_page: 2 } }),
+      activity: activity({ phaseCalls: { review_page: 3, fact_check_page: 1 }, phaseFailures: { review_page: 2 } }),
       refusedCalls: { review_page: 1 },
     }),
   );

@@ -51,19 +51,27 @@ differs. Do not mechanically follow steps that no longer fit.
    website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
    pair for any other docs file you touched, never all docs. Fix every `[error]` before
    continuing. Mandatory before you call the tutorial done.
-7. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the tutorial
+7. **Fact check.** Call `fact_check_page` with the tutorial path. It reads the tutorial section by
+   section against the library's real source and reports every claim the source contradicts, an API
+   the library does not have, or a citation that no longer resolves. Fact check reports; you fix — by
+   correcting the tutorial to match the source, never the other way round. Drifts fail the run's
+   verdict, so this is not advisory. Rounds are budgeted like review's: when a check reports drifts,
+   fix them ALL and call it once more, since the recorded result is whatever the last check found. A
+   tutorial's prose is looser than a reference page's, but its claims are not: a step that names a
+   method the library lacks sends a learner nowhere.
+8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the tutorial
    path and the **Guides** category (not Reference). Ask it to link out to the reference pages for the
    types the tutorial teaches **that already exist** — check first, and say which they are. A tutorial
    run writes a tutorial: never ask for a reference page to be created, and never accept a stub written
    to make a link resolve.
-8. **Review.** Call `review_page` with the tutorial path. It evaluates the tutorial against the
+9. **Review.** Call `review_page` with the tutorial path. It evaluates the tutorial against the
    tutorial-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Review rounds are budgeted — the tool's description says how many. When a
    review reports failing items, fix them ALL and call review once more: the verdict is whatever the
    last review found, so that confirming round is what records the tutorial as passing. A review that
    reported nothing needs no confirmation. Name anything still failing in your summary. The verdict is
    taken from what the review returned, so you do not report it.
-9. **Retrospective.** In your final result, alongside the path and summary,
+10. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema
    change that would prevent it next time. Report only friction you actually
@@ -81,6 +89,8 @@ differs. Do not mechanically follow steps that no longer fit.
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
 - Never invent a topic — ask.
 - Never branch the learning path.
+- A drift is fixed by correcting the PAGE. Never edit the library's source, or a signature block's
+  fence, to make a reported drift go away: the source is the authority, and the page is what changes.
 - Never claim done before scoped mdoc reports zero errors.
 - Keep scope on the single learning objective; cut anything else.
 - The tutorial file lives in `docs/guides/<id>.md`, and its `id` is that filename without `.md`. The id

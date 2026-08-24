@@ -42,6 +42,11 @@ import markdownTable from './skills/markdown-table/SKILL.md';
 // (guide/subagents.md:40,46). review_page stays because TypeScript has to hold the reviewer's result
 // for recordedVerdict() — a `task` delegation returns prose that nothing can check.
 import { reviewPage } from './tools/phases/review-page.ts';
+// The second harness tool, and the reason is the same one that saved review_page: this phase gates the
+// verdict, so its result has to be data TypeScript holds rather than prose the model summarizes. A
+// `task` delegation cannot supply that — `defineSubagent` has no output schema. See the plan for the
+// decision, and agent.test.ts for the invariant that keeps a THIRD from arriving quietly.
+import { factCheckPage } from './tools/phases/fact-check.ts';
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
 // instead of waiting for the review phase to discover a gap.
@@ -78,12 +83,13 @@ export const KINDS = {
     label: 'write-data-type-ref',
     instructions: dataTypeRefMd,
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist, companionExamples],
-    tools: [reviewPage],
+    tools: [reviewPage, factCheckPage],
     plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
-      `Run the full flow (research → design → write → examples → mdoc verify → integrate → ` +
-      `review; review covers method coverage + writing style + the checklist).`,
+      `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
+      `integrate → review; fact check compares every claim against the source, and review covers ` +
+      `method coverage + writing style + the checklist).`,
   },
   module: {
     label: 'write-module-ref',
@@ -100,7 +106,7 @@ export const KINDS = {
       asciiDiagram,
       markdownTable,
     ],
-    tools: [reviewPage],
+    tools: [reviewPage, factCheckPage],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
     directive: (subject: string, facts: DirectiveFacts) =>
@@ -110,20 +116,22 @@ export const KINDS = {
         : '') +
       (facts.layout ? `Use the "${facts.layout}" layout — tell the designer to use it. ` : '') +
       `Run the full flow (research → design → write module page → per-type subpages if ` +
-      `hierarchical → examples → mdoc verify → integrate → review; review covers per-type method ` +
-      `coverage + writing style + the module checklist).`,
+      `hierarchical → examples → mdoc verify → fact check → integrate → review; fact check compares ` +
+      `every claim against the source, and review covers per-type method coverage + writing style + ` +
+      `the module checklist).`,
   },
   tutorial: {
     label: 'write-tutorial',
     instructions: tutorialMd,
     skills: [mdocConventions, tutorialStructure, tutorialChecklist, companionExamples],
-    tools: [reviewPage],
+    tools: [reviewPage, factCheckPage],
     // Empty rather than absent: every row carries every field, so the call site reads
     // `config.plainTools` like any other. A missing key made the union type reject the property.
     plainTools: [],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified tutorial for: ${subject}. ` +
-      `Run the full flow (research → design → write → examples → mdoc verify → integrate → review).`,
+      `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
+      `integrate → review; fact check compares every claim against the source).`,
   },
 } as const;
 

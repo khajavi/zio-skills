@@ -14,7 +14,7 @@ const effort = (value: string | undefined, fallback: ThinkingLevel): ThinkingLev
   (value as ThinkingLevel) ?? fallback;
 
 export const TIERS: Record<
-  'writer' | 'researcher' | 'examples' | 'integrator' | 'designer' | 'reviewer',
+  'writer' | 'researcher' | 'examples' | 'integrator' | 'designer' | 'reviewer' | 'factChecker',
   Tier
 > = {
   writer: {
@@ -40,5 +40,14 @@ export const TIERS: Record<
   reviewer: {
     model: process.env.REVIEWER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.REVIEWER_EFFORT, 'low'),
+  },
+  // Not the researcher's tier, though the work looks similar. Both read source, but a researcher's
+  // miss is recoverable downstream — the drafter can still be corrected — while this role's answer
+  // IS the gate: a fabricated drift fails a correct page, and a missed one passes a wrong page.
+  // Haiku was the obvious cheap choice and is deliberately not the default, because the whole value
+  // of the phase is that its evidence can be trusted without a second opinion.
+  factChecker: {
+    model: process.env.FACT_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.FACT_CHECKER_EFFORT, 'low'),
   },
 };
