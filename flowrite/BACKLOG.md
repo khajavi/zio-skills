@@ -143,6 +143,37 @@ be fixed rather than model-generated — a stable denominator is what makes the 
 
 ---
 
+## 6. The confirming round is spent by a round that finds new failures — FIXED, unverified
+
+`consumeReviewRound` now renews the grant when the round that spent the last one reported items the
+round before it never mentioned: that round confirmed nothing, it found more work. Capped at three
+confirming rounds, and a round that merely repeats the previous findings still ends the run. **Not yet
+confirmed by a run** — the next run whose second review raises new items should get a third round, and
+`verdict.json` should describe the page as the run left it.
+
+**Evidence — two runs on 2026-08-19, one fixture and one real repo.**
+
+| Run | Recorded verdict | The page as shipped |
+| --- | --- | --- |
+| zio-blocks async (`.env.production`) | `failed` — rules 4, 8, 17 | rule 8 fixed (0 dot-prefixed refs), rule 17 fixed (blocks split), rule 4 fixed but for one bullet |
+| `write-tutorial-turn3` | `failed` — 4 items | mdoc re-run reports `0 errors`; `var` gone (`foldLeft`); 2 of 4 items real |
+
+Both ran the same shape: round 1 failed, the confirming round was granted, and round 2 raised items
+round 1 had missed. The grant was gone, the third call was refused, and `recordedVerdict()` froze on
+findings the run then repaired.
+
+**Why it matters.** The verdict is the measurement layer every other finding is judged by — "fixed,
+unverified" becomes checkable only when a run's own record describes the page it actually left behind. A
+verdict that reports `failed` for a repaired page is indistinguishable from one reporting a real failure,
+so no trend can be read across turns.
+
+Both runs proposed this fix in their own retrospectives, independently:
+
+> "Allow one additional confirming round when the second review finds NEW failures not present in the
+> first review."
+
+---
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
@@ -151,7 +182,8 @@ Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
 - the frontmatter contract reproduced from prose, with its validator deleted
 - `@VERSION@` resolved by the build rather than hardcoded
 - a refused review round no longer reports as a failed phase (`e18c78d`)
-- the confirming round earns a post-fix verdict on all three kinds (`f15f64a`)
+- the confirming round earns a post-fix verdict on all three kinds (`f15f64a`) — held until a round
+  raised NEW items and spent the single grant; renewal added in finding 6 below
 - the `flowrite:` phase timeline, rebuilt from delegation events (`4a32380`)
 - `pagesWritten` caught finding 1 as `research-draft-mismatch`, counting pages rather than delegations
 
