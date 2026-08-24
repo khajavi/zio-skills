@@ -174,6 +174,61 @@ Both runs proposed this fix in their own retrospectives, independently:
 
 ---
 
+## 7. The fact-check gate ships with no live measurement — OPEN
+
+`fact_check_page` and the `fact_checker` role landed with the verdict wired to their result, and
+nothing has ever watched them run. The acceptance test exists and did not execute: the run on
+2026-08-24 died on turn 1, `tokens=0`, on
+
+```
+400 invalid_request_error "You have reached your specified API usage limits.
+You will regain access on 2026-09-01 at 00:00 UTC."
+```
+
+so the API refused the request before the phase started. What IS verified is local only — `tsc`
+clean, 97 unit tests, `vite build`, and the agent assembling far enough to open turn 1 on
+`claude-haiku-4-5`. Detection quality is entirely unmeasured.
+
+Do not read the green unit tests as evidence about the gate. They pin the budget arithmetic, the
+verdict folding and the section splitting — all the parts that do not involve a model. Whether the
+role finds a real drift, and whether it invents one on correct prose, is exactly what they cannot say.
+
+Run `bash test-fixtures/fact-check/verify.sh` when the key works. It plants a page carrying 5 known
+drifts and 4 correct claims and runs only the fact-check phase; the script's header documents each
+one and the pass criterion. The false-positive half is the half that matters — a gate that fails
+correct pages gets switched off, and then the real findings go unread with it.
+
+Three decisions are waiting on that run's evidence, all of them currently guesses:
+
+- `low` drifts are reported but do not fail the run, on the theory that `stale-citation` is where a
+  false positive is likeliest. If the run shows otherwise, `low` should gate too.
+- 8 chunks × 8,000 chars per round. Serial by necessity (a harness session runs one operation at a
+  time, so `Promise.all` over `harness.prompt` throws `SessionBusyError`), which makes this a
+  wall-clock budget as much as a token one, and nothing has measured it.
+- A hierarchical module run shares one budget across its index and every subpage. That may be too
+  tight; a module run is the case to watch.
+
+## 8. `skipPhases` never reached the model — FIXED in this branch, unverified
+
+Only `review_page` and `fact_check_page` are code-gated, so those were the only two phases a skip
+could ever stop. Research, design, write and integrate are prose-driven `task` delegations, and
+nothing put the skip list in front of the model — so `skipPhases: ["research","design","write"]`
+researched, designed and wrote anyway, while the run directive it was supposed to override went on
+naming the full flow.
+
+That directly contradicts the creation-data field's own description: "Skipping a head-phase prefix
+resumes a run whose artifacts already exist, e.g. `["research","design","write"]` runs only the
+examples/integrate/review tail."
+
+Found while trying to run the fact-check phase in isolation — which the field promised and could not
+deliver. It went unnoticed because nothing needed it: once the other thirteen phase tools were
+deleted, the only phases anyone actually skipped were the two still gated in code, so the
+enforcement surface moved out from under this field and nothing noticed.
+
+Fixed by `skippedPhases()` plus a `useInstruction` in `useDocsWriter` naming the skipped phases and
+saying their artifacts are already on disk. A phase gated in code refuses the call; a phase driven by
+prose needs the prose. Unverified for the same reason as finding 7 — no run has exercised it.
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
