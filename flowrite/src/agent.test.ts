@@ -50,21 +50,25 @@ test('no kind mounts the same skill twice', () => {
   }
 });
 
-test('review_page is the only harness tool any kind mounts', () => {
+test('review_page and fact_check_page are the only harness tools any kind mounts', () => {
   // Replaces a test that guarded "a required field no component can produce": a write phase was mounted
   // without the design phase that fed its required `plan`, so the model satisfied the schema by inventing
   // one, and once reached for another type's. That defect needs a tool ARGUMENT to fabricate, and the
   // tools that took one are gone — the test had become vacuous, looping over an empty list.
   //
   // What is worth pinning instead is the shape that replaced it. Every stage is a `task` delegation now,
-  // and exactly one harness tool remains: review_page, because TypeScript has to hold the reviewer's
-  // result for recordedVerdict(). A second harness tool reappearing is either a mistake or a decision
-  // that belongs in the plan, and either way it should not arrive quietly.
+  // and the harness tools are the exceptions: both hold a delegate's result in TypeScript because
+  // `recordedVerdict()` derives the run's verdict from them, and a `task` delegation returns prose that
+  // nothing can check.
+  //
+  // fact_check_page joined review_page deliberately — it gates the verdict on whether the page's claims
+  // survive contact with the source. A THIRD arriving is either a mistake or a decision that belongs in
+  // a plan, and either way it should not arrive quietly, which is what this list is for.
   for (const kind of DOC_KINDS) {
     assert.deepEqual(
       KINDS[kind].tools.map((tool) => tool.name),
-      ['review_page'],
-      `${kind} should mount review_page and nothing else`,
+      ['review_page', 'fact_check_page'],
+      `${kind} should mount review_page and fact_check_page, and nothing else`,
     );
   }
 });

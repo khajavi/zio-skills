@@ -10,6 +10,9 @@ import { note } from '../../runtime/log.ts';
 // templates: the reviewer is the one role whose result TypeScript holds (`recordedVerdict()`), so its
 // prompt is assembled here, beside the code that reads the answer.
 import { CHECKLISTS, STYLE_RULES } from '../../runtime/kind-docs.ts';
+// The other gate's recorded outcome, folded into the verdict below. One direction only: fact-check.ts
+// imports nothing from here, so the two phases stay independent modules.
+import { recordedFactCheck } from './fact-check.ts';
 
 /**
  * The review phase: a simple LLM review.
@@ -156,7 +159,11 @@ function recordReview(outcome: ReviewOutcome | null): void {
 }
 
 /**
- * The run's verdict, derived from what the reviewer actually returned.
+ * The run's verdict, derived from what the reviewer and the fact-checker actually returned.
+ *
+ * It lives here rather than in a module of its own because the review outcome is the only one that can
+ * produce a verdict at all: a run with no review has no verdict to give, whatever the fact-check
+ * found. The fact-check can turn a `passed` into a `failed`, never the reverse.
  *
  * A skipped review counts as `not-reviewed`, not as `passed`: skipping is a human decision to resume
  * a run, and it produces no evidence about the page. Same for a run where the model never called
@@ -173,11 +180,25 @@ export function recordedVerdict(): {
   verdict: 'passed' | 'failed' | 'not-reviewed';
   failingItems: string[];
 } {
+  // The second gate. Two things stand between a run and `passed` now: the reviewer's checklist, and
+  // whether the page's claims survive contact with the source. They fail for unrelated reasons, so
+  // both feed one verdict rather than one overruling the other — `report_run_result` and
+  // scripts/run-report.mjs read `{ passed, failingItems }` and must keep reading exactly that.
+  const factCheck = recordedFactCheck();
+
   if (lastOutcome === null || lastOutcome.state === 'skipped') {
-    return { verdict: 'not-reviewed', failingItems: [] };
+    // No review evidence, so no verdict — the fact-check cannot rescue a run into `passed`, and
+    // cannot fail one either, because `not-reviewed` already claims nothing. Its drifts are still
+    // named: a run with no review but a failed fact-check should not look empty in the archive.
+    return { verdict: 'not-reviewed', failingItems: factCheck.failingItems };
   }
-  const failingItems = failingItemsOf(lastOutcome);
-  return { verdict: failingItems.length === 0 ? 'passed' : 'failed', failingItems };
+  const reviewFailures = failingItemsOf(lastOutcome);
+  const failingItems = [...reviewFailures, ...factCheck.failingItems];
+
+  // `blocking` rather than "any drift": a `low` drift is named above but does not fail the run, since
+  // severity is model-authored and uncalibrated. See recordedFactCheck().
+  const passed = reviewFailures.length === 0 && !factCheck.blocking;
+  return { verdict: passed ? 'passed' : 'failed', failingItems };
 }
 
 /**

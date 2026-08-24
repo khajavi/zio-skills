@@ -12,7 +12,16 @@ import { recordedVerdict } from '../tools/phases/review-page.ts';
  */
 const insightsSchema = v.array(
   v.object({
-    phase: v.picklist(['research', 'design', 'write', 'examples', 'mdoc', 'integrate', 'review']),
+    phase: v.picklist([
+      'research',
+      'design',
+      'write',
+      'examples',
+      'mdoc',
+      'fact-check',
+      'integrate',
+      'review',
+    ]),
     obstacle: v.pipe(v.string(), v.description('What actually went wrong or slowed you down this run')),
     resolution: v.pipe(v.string(), v.description('How you got past it')),
     suggestedFix: v.nullable(

@@ -1,4 +1,11 @@
-export type SkipPhase = 'research' | 'design' | 'write' | 'write-examples' | 'integrate' | 'review';
+export type SkipPhase =
+  | 'research'
+  | 'design'
+  | 'write'
+  | 'write-examples'
+  | 'fact-check'
+  | 'integrate'
+  | 'review';
 
 /**
  * The kinds of document flowrite writes.
@@ -78,6 +85,22 @@ export function isPhaseSkipped(phase: SkipPhase): boolean {
 }
 
 /**
+ * Every phase this run was asked to skip, for the instruction that tells the model about them.
+ *
+ * `isPhaseSkipped` above is not enough on its own, and the gap was real: only `review_page` and
+ * `fact_check_page` are code-gated, so those were the only two phases a skip could actually stop.
+ * Research, design, write and integrate are `task` delegations driven by instruction prose, and
+ * nothing put the skip list in front of the model — so `skipPhases: ["research","design","write"]`
+ * silently researched, designed and wrote anyway, which is the opposite of what the creation-data
+ * field promises ("Skipping a head-phase prefix resumes a run whose artifacts already exist").
+ *
+ * A phase gated in code refuses the call; a phase driven by prose needs the prose. This supplies it.
+ */
+export function skippedPhases(): readonly SkipPhase[] {
+  return requireContext().skipPhases;
+}
+
+/**
  * Which kind of document this run writes.
  *
  * Throws rather than defaulting: a phase tool that ran before classification would silently review a
@@ -133,6 +156,36 @@ export function maxReviewRounds(): number {
  */
 export function reviewRoundCap(): number {
   return maxReviewRounds() + 1;
+}
+
+/**
+ * How many times the fact-check phase may run for one page. Default 1, `MAX_FACT_CHECK_ROUNDS` to
+ * raise it.
+ *
+ * Its own budget rather than a share of the review's, because the two gates fail for unrelated
+ * reasons and a run that spends its rounds fixing prose style would otherwise have none left to
+ * prove the page is factually correct. The costs differ in shape too: a review is one delegation
+ * over the whole page, a fact-check is one per section, so a shared counter would price them the
+ * same when they are not.
+ *
+ * Same default of 1 and the same reasoning as `maxReviewRounds`: this is the budget, not the
+ * ceiling — `consumeFactCheckRound` grants one confirming round when a check found drifts, so
+ * repairs can be observed rather than shipped unverified.
+ */
+export function maxFactCheckRounds(): number {
+  const raw = Number(process.env.MAX_FACT_CHECK_ROUNDS);
+  return Number.isInteger(raw) && raw > 0 ? raw : 1;
+}
+
+/**
+ * The most fact-check rounds a run can possibly spend: the budget plus the one confirming round.
+ *
+ * For the watchers, not the enforcement — see `reviewRoundCap()`, which exists for the same reason.
+ * `run-telemetry`'s repeat flag has to bound the earned confirming round or it reports every correct
+ * run as the cap being bypassed.
+ */
+export function factCheckRoundCap(): number {
+  return maxFactCheckRounds() + 1;
 }
 
 /**

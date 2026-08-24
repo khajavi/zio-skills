@@ -48,12 +48,20 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/reference/<file>.md --out
    website/docs/reference/<file>.md"` (one quoted arg — see mdoc-conventions). Fix every
    `[error]` before continuing. Mandatory before you call the page done.
-7. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the
+7. **Fact check.** Call `fact_check_page` with the page path. It reads the page section by section
+   against the library's real source and reports every claim the source contradicts, an API the
+   library does not have, or a citation that no longer resolves. Fact check reports; you fix — by
+   correcting the page to match the source, never by changing the source to match the page.
+   Drifts fail the run's verdict, so this is not advisory. Rounds are budgeted like review's: when a
+   check reports drifts, fix them ALL and call it once more, since the recorded result is whatever the
+   last check found. Run it BEFORE integrate — a page whose claims are wrong should not be wired into
+   the site and cross-linked first.
+8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the
    page path, the **Reference** category (not Guides), and the cross-reference direction:
    reference pages are linked TO from tutorials and how-to guides, so ask for inbound
    "See also" links from those pages where relevant. It wires `sidebars.js` and
    `docs/index.md`, adds the cross-references, and verifies every link.
-8. **Review.** Call `review_page` with the page path. It evaluates the page against
+9. **Review.** Call `review_page` with the page path. It evaluates the page against
    the data-type-ref-checklist and every writing style rule, and reports per-item pass/fail.
    Review reports; you fix. Use `check_method_coverage` yourself to confirm every public member
    is documented. Review rounds are budgeted — the tool's description says how many. When a review
@@ -61,7 +69,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
    review found, so that confirming round is what records the page as passing. A review that reported
    nothing needs no confirmation. Name what you fixed and anything still failing in your summary. The
    verdict is taken from what the review returned, so you do not report it.
-9. **Retrospective.** In your final result, alongside the path and summary, report
+10. **Retrospective.** In your final result, alongside the path and summary, report
    the real obstacles you hit this run (per phase), how you resolved each, and —
    where you can name one — a concrete instruction/tool/schema change that would
    prevent it next time. Report only friction you actually encountered; never invent it.
@@ -80,6 +88,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
 - Never invent a type — ask.
 - Never invent an API surface — every signature and example traces to real source.
+- A drift is fixed by correcting the PAGE. Never edit the library's source, or a signature block's
+  fence, to make a reported drift go away: the source is the authority, and the page is what changes.
 - Never claim done before scoped mdoc reports zero errors.
 - Document every public member, or justify each omission from the coverage report.
 - The page lives in `docs/reference/<type-kebab>.md`, and its `id` is that filename without `.md`.

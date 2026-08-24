@@ -14,7 +14,7 @@ import * as v from 'valibot';
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
 import { guardPhase, guardRootOnly } from './phase-guard.ts';
-import { type DocKind, getRepoPath, setRunContext } from './run-context.ts';
+import { type DocKind, getRepoPath, setRunContext, skippedPhases } from './run-context.ts';
 import { createReportRunResultTool } from './self-report.ts';
 import { useUsageReport } from './usage-report.ts';
 
@@ -29,6 +29,7 @@ import { drafter } from '../subagents/drafter.ts';
 import { reviewer } from '../subagents/reviewer.ts';
 import { examplesBuilder } from '../subagents/examples-builder.ts';
 import { docsIntegrator } from '../subagents/docs-integrator.ts';
+import { factChecker } from '../subagents/fact-checker.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
@@ -44,9 +45,17 @@ import { createGhQueryTool } from '../tools/repo-tools.ts';
  * label, one of them the agent and one of them this.
  */
 
-const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator];
+const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator, factChecker];
 
-const skipPhase = v.picklist(['research', 'design', 'write', 'write-examples', 'integrate', 'review']);
+const skipPhase = v.picklist([
+  'research',
+  'design',
+  'write',
+  'write-examples',
+  'fact-check',
+  'integrate',
+  'review',
+]);
 
 /**
  * The creation-data fields every docs writer takes. Each writer spreads these into
@@ -247,5 +256,21 @@ export function useDocsWriter(
 
   useUsageReport(opts.label);
   useInstruction(`${opts.runDirective} ${SHARED_DIRECTIVE}`);
+
+  // The skip list, in prose, because most phases are prose. See `skippedPhases()`: only the two
+  // code-gated tools could ever refuse a call, so without this a skipped head phase ran regardless
+  // and the run directive above — which names the full flow — was the only thing the model heard.
+  //
+  // Last, so it qualifies the directive it follows rather than being qualified by it.
+  const skipped = skippedPhases();
+  if (skipped.length > 0) {
+    useInstruction(
+      `This run SKIPS these phases: ${skipped.join(', ')}. Whatever each would have produced is ` +
+        `already on disk — read it and carry on from there. A skipped phase stays skipped: do not ` +
+        `delegate it, do not call its tool, and never do its work yourself. Every phase not listed ` +
+        `here still runs.`,
+    );
+  }
+
   return opts.instructions;
 }

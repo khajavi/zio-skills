@@ -1,9 +1,36 @@
 # RFC + Spec: `docs-gardener` — periodic documentation drift/gap detector
 
-- **Status:** Proposed
+- **Status:** Partly implemented — see "What exists now" below
 - **Date:** 2026-07-16
 - **Component:** flowrite (Flue-based ZIO documentation agents)
 - **Author:** @khajavi
+
+## What exists now (2026-08-20)
+
+Signal 2's detection engine was built, as a phase of the writer rather than as a periodic auditor:
+the `fact_checker` role (`src/subagents/fact-checker.{ts,md}`) and the `fact_check_page` phase tool
+(`src/tools/phases/fact-check.ts`). It checks ONE page against source on the run that wrote it, and
+its drifts fail that run's verdict through `recordedVerdict()`.
+
+Taken from this RFC: the findings shape, the both-sides citation requirement ("No citation pair ⇒ not
+reported"), the omit-rather-than-guess rule, and fail-safe-not-silent (the `incomplete` field).
+Dropped from it: `fingerprint` and `suggestedAction`, which serve cross-run dedup this does not do.
+
+Still unbuilt, and still described accurately by the rest of this document:
+
+- **Signal 1, missing coverage.** Partly covered already by `check_method_coverage`, which is a
+  deterministic tool the writer calls, not an audit.
+- **The whole-repo sweep.** `fact_check_page` takes one page path; nothing walks a docs tree.
+- **The rolling GitHub issue**, `src/shared/github-issue.ts`, fingerprint reconciliation across runs,
+  and the `docs-garden.yml` cron.
+- **The `docs-gardener` agent itself.** Nothing needs to be read-only-by-absence-of-capability yet,
+  because the checker runs inside a writer that is allowed to fix what it finds.
+
+Two corrections to the plan below, for whoever picks up the rest. The file layout it names
+(`src/agents/`, `src/workflows/garden.ts`) predates the Flue 2 migration: agents live in `src/`,
+roles in `src/subagents/`, and workflows no longer exist. And a `harness: true` tool cannot fan out
+in parallel — a session runs one operation at a time — so a whole-repo sweep either walks pages
+serially or is driven by the model batching `task` calls.
 
 ## Summary
 

@@ -58,13 +58,22 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/reference/<module>.md --out
    website/docs/reference/<module>.md"`. Hierarchical: run mdoc over the module directory (index +
    every subpage). Fix every `[error]` before continuing. Mandatory before you call the page done.
-8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the module page
+8. **Fact check.** Call `fact_check_page` with the module page path (flat page or hierarchical
+   index), and once per subpage a hierarchical run wrote — each is a page whose claims stand on their
+   own. It reads a page section by section against the library's real source and reports every claim
+   the source contradicts, an API the library does not have, or a citation that no longer resolves.
+   Fact check reports; you fix — by correcting the page to match the source, never the other way
+   round. Drifts fail the run's verdict, so this is not advisory. Rounds are budgeted like review's
+   and shared across every page this run checks, so fix everything a check reports before spending
+   the confirming round. Watch the cross-type claims especially: an invented RELATIONSHIP between two
+   real types is the drift a module reference is most likely to carry.
+9. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the module page
    path, the layout, and the **Reference** category (not Guides). For a hierarchical layout also give it
    each group's label with its subpage ids (`reference/<module-kebab>/<type-kebab>`, in reading order)
    so the sidebar becomes a category holding the index plus one sub-category per group; a flat layout is
    a single doc entry. Reference pages are linked TO from tutorials and how-to guides, so ask for
    inbound "See also" links from those pages where relevant.
-9. **Review.** Call `review_page` with the module page path (flat page or hierarchical
+10. **Review.** Call `review_page` with the module page path (flat page or hierarchical
    index). It evaluates the page against the module-ref-checklist and every writing style rule, and
    reports per-item pass/fail. Review reports; you fix. Use `check_method_coverage` yourself for each
    documented type to confirm every public member is documented. Review rounds are budgeted across the
@@ -73,7 +82,7 @@ reality differs. Do not mechanically follow steps that no longer fit.
    the last review found, so that confirming round is what records the page as passing. A review that
    reported nothing needs no confirmation. Name anything still failing in your summary. The verdict is
    taken from what the review returned, so you do not report it.
-10. **Retrospective.** In your final result, alongside the path and summary, report the real obstacles
+11. **Retrospective.** In your final result, alongside the path and summary, report the real obstacles
     you hit this run (per phase), how you resolved each, and — where you can name one — a concrete
     instruction/tool/schema change that would prevent it next time. Report only friction you actually
     encountered; never invent it.
@@ -93,6 +102,8 @@ reality differs. Do not mechanically follow steps that no longer fit.
   truly needs a subdir (e.g. into a `<library>-examples/<leaf>` dir to build that leaf), never back to the root.
 - Never invent a module or a type — ask / discover from real source.
 - Never invent an API surface or a relationship — every signature, example, and cross-type link traces to real source.
+- A drift is fixed by correcting the PAGE. Never edit the library's source, or a signature block's
+  fence, to make a reported drift go away: the source is the authority, and the page is what changes.
 - Never claim done before scoped mdoc reports zero errors for the whole module (index + subpages).
 - Document every core type discovered in research, or justify each omission.
 - The "How They Work Together" section is mandatory — a module reference without it is incomplete.
