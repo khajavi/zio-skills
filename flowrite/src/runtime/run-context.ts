@@ -78,6 +78,22 @@ export function isPhaseSkipped(phase: SkipPhase): boolean {
 }
 
 /**
+ * Every phase this run was asked to skip, for the instruction that tells the model about them.
+ *
+ * `isPhaseSkipped` above is not enough on its own, and the gap was real: only `review_page` and
+ * `fact_check_page` are code-gated, so those were the only two phases a skip could actually stop.
+ * Research, design, write and integrate are `task` delegations driven by instruction prose, and
+ * nothing put the skip list in front of the model — so `skipPhases: ["research","design","write"]`
+ * silently researched, designed and wrote anyway, which is the opposite of what the creation-data
+ * field promises ("Skipping a head-phase prefix resumes a run whose artifacts already exist").
+ *
+ * A phase gated in code refuses the call; a phase driven by prose needs the prose. This supplies it.
+ */
+export function skippedPhases(): readonly SkipPhase[] {
+  return requireContext().skipPhases;
+}
+
+/**
  * Which kind of document this run writes.
  *
  * Throws rather than defaulting: a phase tool that ran before classification would silently review a
