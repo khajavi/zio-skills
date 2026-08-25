@@ -70,16 +70,44 @@ different things in the two repos. This is a silent loss, not a rename.
 
 ### 3. Crossref / page-linker — a whole subsystem
 
-`workflows/crossref.ts`, `agents/page-linker.ts`, `lib/{state-store,schemas,migrate-state,config-loader}.ts`,
-`workflows/utils/{link-inserter,link-validator,sidebar-parser,confidence}.ts`, `skills/cross-linker`.
+**PARTLY PORTED** — `src/crossref.ts`, a standalone agent that makes one orphan page reachable:
+`flue run src/crossref.ts -m "Make docs/reference/stm/tref.md reachable"`. The judgement survives —
+which pages should link to a target, what anchor to wrap, and where a link may sit — in
+`src/skills/cross-linker/references/guide.md`. The subsystem does not.
 
-Site-wide linking: four modes (`reindex` / `step` / `autopilot` / `report`), persistent
-`.crossref-state/{index,suggestions}.json`, confidence-tiered suggestions, deduplication, and
-link insertion that is safe around code fences, inline code, and YAML frontmatter.
+**Correct the file list above before using it.** `workflows/crossref.ts` is a 228-line dispatcher with
+**six** modes, not four (`verify` and `verify-and-fix` are missing here, and the latter's custom-verify
+branch is dead code). The engine is `workflows/phases/process.ts` — 499 lines, **zero tests** — and the
+fence-safety code is `lib/markdown-parser.ts`. The audit named neither.
 
-flowrite has writing-style rule 7 — link a sibling type's first mention — applied by the drafter
-to the one page it is writing. There is no site-wide pass, no accumulated state, and no link
-validator beyond the Docusaurus build's `onBrokenLinks: 'throw'`.
+**The direction is inverted, and that is the one place the port improves on its source.** crossref read
+a source page and linked out to what it mentioned. Measured: across the 24 source pages that produced
+suggestions it proposed `reference/fiber/index` as a target 12 times — a page that already had 8 inbound
+links — while 84 of 220 reference pages had none. An outbound pass enriches hubs. So the unit here is one
+orphan *target*, which also buys a completion test that reads the files ("does anything link here yet"),
+the property `scripts/backfill-metadata.sh`'s skip grep has and an outbound pass cannot.
+
+Dropped, with reasons in the spec: the state store (no staleness detection anywhere — `indexBuiltAt` is
+written and never compared, `processed` membership is permanent, `absPath` is absolute so the state is
+not portable); all six modes (`autopilot` is `while (true)` with no cap, and with `targetFile` it
+reprocesses one page forever — `stm/stm` appears 7× in the real `processed`); confidence tiers
+(`utils/confidence.ts` is 7 lines with no scoring, the tier is emitted verbatim by Haiku and never
+audited, and the medium→high promotion is unreachable at the default threshold); `sidebar-parser.ts`,
+which **always returns `{}`** and so left adjacency — the skill's strongest confidence trigger — dead in
+every run; `link-inserter.ts`'s fuzzy fallback, which splits a multi-word anchor and links one keyword;
+`computeSafeZones`, which has 14 tests and diverges from a line-based scan on 7 of 299 files; the five
+model-facing tools (already §12); and `report.ts`'s orphan detection, which never measured real links.
+
+**Unlike §6's source, this one demonstrably ran** — commit `d058fcd26` (zio/zio PR #10986), 94 files, 28
+`## See Also` sections, ~40 inline links, from a 49-of-293-page hand-supervised run. That is also where
+its worst output is: `docs/reference/services/random.md:14` still has a markdown link spliced inside an
+inline-code span, rendering as literal text, invisible to `mdoc` (not a fenced block) and to
+`onBrokenLinks` (not a link), eleven weeks and one 94-file human review later. That line is now a ❌
+example in the guide, and the reason this agent runs on Sonnet rather than the original's Haiku.
+
+Unmeasured against a live model — see `docs/superpowers/specs/2026-08-25-crossref-port-design.md` and
+`BACKLOG.md` finding 12. Still not ported: any site-wide accumulated state, and link validation beyond
+the Docusaurus build's `onBrokenLinks: 'throw'` plus the guide's verification greps.
 
 ### 4. `reduce-redundancy`
 
