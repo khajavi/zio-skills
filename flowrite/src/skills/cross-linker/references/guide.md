@@ -96,7 +96,7 @@ suitable prose mention" is a correct run.
   matching inside `careful`.
 - Prefer the first prose mention on the page. Later mentions may stay unlinked.
 - Never let the anchor drift wider than the concept:
-  - ✅ `[`URIO`](../core/zio/urio.md)` — the type name
+  - ✅ ``[`URIO`](../core/zio/urio.md)`` — the type name
   - ❌ a link on the bare word `value`, taken from a phrase like "models an `IO` value"
 
 The second is what happens when an anchor is chosen as a long phrase and then trimmed to whatever

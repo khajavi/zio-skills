@@ -22,7 +22,8 @@ export const TIERS: Record<
   | 'reviewer'
   | 'factChecker'
   | 'redundancyEditor'
-  | 'metadataWriter',
+  | 'metadataWriter'
+  | 'crossLinker',
   Tier
 > = {
   writer: {
@@ -74,5 +75,19 @@ export const TIERS: Record<
   metadataWriter: {
     model: process.env.METADATA_WRITER_MODEL ?? 'anthropic/claude-haiku-4-5',
     thinkingLevel: effort(process.env.METADATA_WRITER_EFFORT, 'low'),
+  },
+  // Sonnet, and this is the one tier here chosen against a MEASURED failure rather than an argument.
+  // writer-assistant ran its page-linker on Haiku, and the output is still readable in zio/zio: a link
+  // spliced inside an inline-code span (`docs/reference/services/random.md:14`, merged in `d058fcd26`
+  // and live eleven weeks later), plus anchor phrases up to eight words long against its own skill's
+  // "1-5 words". Both are silent — an inline-code span is not a fenced block, so mdoc never sees it,
+  // and it is not a link, so `onBrokenLinks: 'throw'` never sees it either.
+  //
+  // Same shape of risk as redundancyEditor directly above: this EDITS pages that already passed
+  // review, in several files per run, with nothing downstream re-checking. The difference is that
+  // there the case for Sonnet was a prediction, and here it is a published defect.
+  crossLinker: {
+    model: process.env.CROSS_LINKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.CROSS_LINKER_EFFORT, 'low'),
   },
 };

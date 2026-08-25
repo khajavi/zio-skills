@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { DOC_KINDS, type DocKind, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
+import { RUN_LABEL as CROSSREF_LABEL } from './crossref.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
 
@@ -44,6 +45,7 @@ test('labels match what archive-docs.sh greps for', () => {
   // silent way.
   assert.equal(REDUNDANCY_LABEL, 'reduce-redundancy');
   assert.equal(METADATA_LABEL, 'backfill-metadata');
+  assert.equal(CROSSREF_LABEL, 'cross-link-page');
 });
 
 test('each fixture launcher passes its own kind label to archive-docs.sh', () => {
