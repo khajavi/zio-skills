@@ -262,6 +262,66 @@ Two smaller unknowns waiting on the same run:
   exactly the kind that gets quietly skipped (compare the measured `ask_for_clarification` case in
   `agent.ts`, where naming the alternative as a capability is what made it real).
 
+## 10. The metadata backfiller ships with no live measurement — OPEN
+
+`src/metadata.ts` and `scripts/backfill-metadata.sh` landed complete and have never run against a
+model. Same cause as findings 7 and 9: the key returns `"You have reached your specified API usage
+limits. You will regain access on 2026-09-01"`. Local evidence only — `tsc` clean, 102 unit tests, the
+agent verified to render and submit (it reached the API and returned `backfill-metadata run report:`
+with the right label before failing on the limit), the driver exercised against a scratch tree
+(`build/` pruned, a complete page skipped, a page carrying decoy `description:`/`keywords:` lines in
+its *body* correctly not skipped), and `test-fixtures/metadata/verify.sh` replayed against a simulated
+good run (20/20) and a simulated bad one (12 passed, 8 failed, non-zero exit — every planted
+misbehaviour caught).
+
+It shares finding 9's risk — **it edits, and nothing downstream re-checks it** — with one difference in
+each direction. Smaller: it only fills fields that are empty, so its worst ordinary output is a dull
+description where there was none. Larger: it is meant to run over a whole tree unattended, so a silent
+mangle is N damages before anyone looks. The answer chosen is `git`, not code: the driver refuses to be
+quiet about a dirty working tree, prints the `git diff` command to run, and prints the
+`git checkout --` that undoes one page. `scripts/backfill-metadata.sh`'s header records why it does
+*not* validate each page itself, and exactly what would earn that check.
+
+Run `bash test-fixtures/metadata/verify.sh` when the key works. Five pages, four of which test
+restraint; the script's header documents each one.
+
+Kill criteria, not tuning knobs:
+
+- a page **body** changes (the agent's mandate is two frontmatter fields — `code-heavy.md` carries a
+  `---` line inside a yaml fence precisely to probe this),
+- `complete.md` is edited at all, or the driver fails to report `skip` for it,
+- a pre-existing frontmatter key is reordered, rewritten or dropped — including
+  `keywords-missing.md`'s own `description`, which a better-phrasing model must still leave alone.
+
+Two smaller unknowns waiting on the same run:
+
+- **Whether Haiku clears the 50-character floor without padding.** The tier was chosen because a dull
+  description beats none; if it pads to reach the floor, the floor is producing filler and the answer
+  is Sonnet, not a lower floor.
+- **Whether keywords come out as Title-Case concepts or lowercase single words.** The rules say
+  `"Trace Sampling"`, not `"tracing"`, and nothing enforces case.
+
+## Observations, recorded while porting the backfiller
+
+Neither is worth a change on its own; both would be cheap to fix inside a change that is already
+touching the file.
+
+- **The drafter's frontmatter contract contradicts itself.** `src/subagents/drafter.md:13` says
+  "exactly these four fields, in this order, and nothing else", and the structure block joined *after*
+  it shows two-field examples — `src/skills/data-type-ref-structure/references/structure.md:7-15` and
+  `src/skills/module-ref-structure/references/structure.md:48-63,78` print `id` + `title` frontmatter
+  with no `description` and no `keywords`. The model reads the narrower example last. Left alone
+  deliberately: it changes the drafting prompt for every kind and needs its own run to judge.
+- **Two files now state the same two limits.** `src/subagents/drafter.md` and
+  `src/skills/page-metadata/references/rules.md` both say 50-150 characters and 3-6 keywords. This is
+  deliberate — the drafter authors four fields from nothing, the backfiller preserves `id`/`title` and
+  writes only what is absent, and one text serving both would hedge every sentence — but it is a real
+  drift risk. **`drafter.md` is the owner**; `rules.md` says so in its opening lines.
+- **`buildRunReport` flags phases that a standalone agent never has.** Both `reduce-redundancy` and
+  `backfill-metadata` runs report `review-not-run` and `fact-check-not-run`, which are meaningless
+  outside a write flow. Harmless noise today; misleading if anyone ever greps run reports across
+  agents.
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
