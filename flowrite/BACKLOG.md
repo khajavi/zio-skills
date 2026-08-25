@@ -229,6 +229,39 @@ Fixed by `skippedPhases()` plus a `useInstruction` in `useDocsWriter` naming the
 saying their artifacts are already on disk. A phase gated in code refuses the call; a phase driven by
 prose needs the prose. Unverified for the same reason as finding 7 — no run has exercised it.
 
+## 9. The redundancy editor ships with no live measurement — OPEN
+
+`src/redundancy.ts` landed complete and has never run against a model. Same cause as finding 7: the
+key returns `"You have reached your specified API usage limits. You will regain access on 2026-09-01"`,
+so the acceptance test was written and not executed. Local evidence only — `tsc` clean, 102 unit tests,
+and the mechanical half of `test-fixtures/redundancy/verify.sh` exercised against a simulated good run
+and a simulated bad one (it correctly passed the first and reported KILL on the second).
+
+This one carries a risk the fact-check gate does not: **it edits, and nothing downstream re-checks it.**
+A fact-checker that invents a drift wastes a round. An editor that cuts the wrong sentence ships a page
+with a hole in it, from a page that had already passed review. The bounds in
+`src/skills/reduce-redundancy/references/guide.md` are the whole defence, and they are unmeasured prose.
+
+Run `bash test-fixtures/redundancy/verify.sh` when the key works. It plants a page with 7 seeded
+redundancies and 5 decoys; the script's header documents every one. The decoys are the half that
+matters.
+
+Kill criteria, not tuning knobs — if the run shows any of these, delete the agent rather than adjust it:
+
+- a code block is touched (the guide forbids it outright, and mdoc scope means one cut breaks blocks
+  below it),
+- a heading moves (structure belongs to the template and the reviewer),
+- a decoy is cut — particularly DEC-4, the only place on the page that says `seeded` takes a `Long`.
+
+Two smaller unknowns waiting on the same run:
+
+- The three-occurrence threshold for a repeated *phrase* is a guess. Two occurrences might be worth
+  cutting; four might be the real floor.
+- Whether the receipt's `left` lines actually get written. They are the only evidence that a bound
+  held rather than that nothing was noticed, and an instruction asking for a report of inaction is
+  exactly the kind that gets quietly skipped (compare the measured `ask_for_clarification` case in
+  `agent.ts`, where naming the alternative as a capability is what made it real).
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:

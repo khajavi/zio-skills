@@ -88,9 +88,13 @@ validator beyond the Docusaurus build's `onBrokenLinks: 'throw'`.
 semantic redundancy, scanned and fixed in a bounded loop, repeated definitions replaced by
 cross-references.
 
-flowrite: `grep -ri redundan src/` → 0 hits. The closest thing is rule 3 (no filler phrases),
-which covers part of *structural* redundancy only. **A port is planned** —
-`docs/superpowers/specs/2026-08-24-reduce-redundancy-design.md`.
+**PORTED** — `src/redundancy.ts`, a standalone agent rather than a phase of the write flow:
+`flue run src/redundancy.ts -m "reduce redundancy in docs/reference/ledger.md"`. The three-kind
+classification and the fixing strategies survive in `src/skills/reduce-redundancy/references/guide.md`;
+the scan/fix session loop and its regex protocol did not. One bound was tightened against the
+original: removing a repeated code block is forbidden here, because mdoc blocks share one scope and
+nothing downstream would catch the break. Unmeasured against a live model — see
+`docs/superpowers/specs/2026-08-24-reduce-redundancy-design.md` and `BACKLOG.md` finding 9.
 
 ### 5. `extract-metadata`
 
@@ -120,6 +124,10 @@ with a **PR number**. flowrite's only entry point is a subject name.
 fixer loops (max 3 rounds) and typed results. You could point writer-assistant at an
 already-broken page and say "fix its mdoc". flowrite cannot — that logic exists only inside a
 full write run, as integrator instructions.
+
+**Partly addressed.** `src/redundancy.ts` (§4) is flowrite's first standalone entry point, so the
+shape now exists and `app.ts` records what mounting a second agent would take. The four mdoc/website
+entry points above are still write-run-only.
 
 ### 9. `organize-types`
 
