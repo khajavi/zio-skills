@@ -11,28 +11,34 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CHECKLISTS, STRUCTURES, STYLE_RULES, structureBlock, styleBlock } from './kind-docs.ts';
-import { setRunContext } from './run-context.ts';
+import { DOC_KINDS, type DocKind, setRunContext } from './run-context.ts';
 import { Designer } from '../subagents/designer.ts';
 
 /** Put the run in `kind`, with the other context fields at values nothing here reads. */
-const withKind = (kind: 'data-type' | 'module' | 'tutorial') =>
+const withKind = (kind: DocKind) =>
   setRunContext({ projectPath: '/tmp', request: 'document something', kind, skipPhases: [] });
 
 test('every kind has a structure template and a checklist', () => {
   // A missing entry would hand a role an empty template and read as a model failure.
-  for (const kind of ['data-type', 'module', 'tutorial'] as const) {
+  for (const kind of DOC_KINDS) {
     assert.ok(STRUCTURES[kind].length > 100, `${kind} structure is suspiciously short`);
     assert.ok(CHECKLISTS[kind].length > 100, `${kind} checklist is suspiciously short`);
   }
 });
 
-test('the three structures are distinct documents', () => {
+test('the structures are distinct documents, pairwise', () => {
   // The bug this catches: one kind's map entry pointing at another kind's import. Both would be
   // long, non-empty and plausible, and only a page reviewed against the wrong template would show it.
-  const { 'data-type': dataType, module, tutorial } = STRUCTURES;
-  assert.notEqual(dataType, module);
-  assert.notEqual(module, tutorial);
-  assert.notEqual(dataType, tutorial);
+  //
+  // A loop over pairs rather than a hand-written triangle: as three named assertions this covered
+  // nothing a fourth kind added, which is how it stood when `how-to` arrived.
+  for (const a of DOC_KINDS) {
+    for (const b of DOC_KINDS) {
+      if (a >= b) continue;
+      assert.notEqual(STRUCTURES[a], STRUCTURES[b], `${a} and ${b} share a structure template`);
+      assert.notEqual(CHECKLISTS[a], CHECKLISTS[b], `${a} and ${b} share a checklist`);
+    }
+  }
 });
 
 test('structureBlock frames the template as binding, and carries it verbatim', () => {

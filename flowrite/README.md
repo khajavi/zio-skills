@@ -3,8 +3,8 @@
 **Autonomous documentation agents for ZIO libraries, built on [Flue](https://flueframework.com).**
 
 flowrite reads a real ZIO library checkout and writes documentation that actually
-compiles: tutorials and exhaustive data-type reference pages, grounded in the
-library's own source, verified with `mdoc`, and integrated into the docs site.
+compiles: reference pages, module references, tutorials and how-to guides, grounded
+in the library's own source, verified with `mdoc`, and integrated into the docs site.
 
 It exists as much as a *demonstration* as a tool. Every non-trivial documentation
 task here is handled by an agent whose behavior lives in prose and skills — not in
@@ -37,7 +37,7 @@ export function DocsWriter() {
   return useDocsWriter({
     instructions: config.instructions,        // who it is — a Markdown file
     skills: config.skills,                   // e.g. mdocConventions + structure + checklist
-    tools: config.tools,                      // only THIS kind's phase tools, never all three
+    tools: config.tools,                      // only THIS kind's phase tools, never every kind's
     runDirective: config.directive(subject),
   });
 }
@@ -64,13 +64,18 @@ The interesting engineering therefore moves out of `.ts` files and into:
 
 ## What's in the box
 
-One agent, `docs-writer`, which writes three kinds of document:
+One agent, `docs-writer`, which writes four kinds of document — the four Diátaxis genres:
 
-| Kind | Writes |
-|------|--------|
-| `data-type` | Exhaustive, API-complete reference pages |
-| `module` | Module narrative plus per-type coverage, flat or hierarchical |
-| `tutorial` | Narrative, pedagogical guides with companion examples |
+| Kind | Writes | Lands in |
+|------|--------|----------|
+| `data-type` | Exhaustive, API-complete reference pages | `docs/reference/` |
+| `module` | Module narrative plus per-type coverage, flat or hierarchical | `docs/reference/` |
+| `tutorial` | Narrative, pedagogical guides with companion examples | `docs/guides/` |
+| `how-to` | Goal-oriented guides: one task, one path, a working result | `docs/guides/` |
+
+The last two share a directory and are told apart only by the reader's intent — an understanding, or
+a finished task. That makes classification the run's riskiest step, which is why the gate names the
+discriminator explicitly and asks rather than guesses.
 
 Ask for what you want in plain words — the writer works out which kind it is and what the subject
 is, and mounts only that kind's phase tools:
@@ -84,6 +89,8 @@ flue run src/agent.ts --id dtr-Chunk \
 `--data` carries only what a sentence cannot express: the checkout path, phases to skip, and the
 module layout override. When a request is ambiguous ("write docs for Chunk" — a reference page or a
 tutorial?) the writer asks instead of guessing, because guessing spends hours on the wrong document.
+Nothing downstream would catch it: a how-to misfiled as a tutorial is reviewed against the tutorial
+checklist and reported as a pass.
 
 The agent captures a structured result plus a **run retrospective** in its final
 reply.
@@ -127,19 +134,24 @@ prescribed sequence of moves.
 
 Implementation is mostly Markdown and schemas:
 
-- Write the kind's identity in `src/instructions/data-type-ref.md`, and add its row to `KINDS`.
-- Add skills: `data-type-ref-structure` (page layout), `data-type-ref-checklist`
-  (what "done" means), reusing `mdoc-conventions` and `writing-style`.
-- Add the kind's phase tools to the existing phase modules — `research.ts`,
-  `design-doc-plan.ts`, `write-doc.ts` — each defining a `valibot` result
-  schema and delegating to a generic role with a kind-specific prompt. One
-  module per phase, one tool per kind inside it: the shared body is already
-  there, so a fourth kind is a schema, a prompt and a config object rather than
-  three new files. The research schema alone — constructors, `coreOperations`,
-  `subtypesOrVariants`, per-fact `source` — *is* the spec that keeps the writer
-  honest.
-- Wire it all into the agent function shown above, and declare what a run needs
-  with its `initialData` static.
+This is what adding `how-to` as a fourth kind actually cost, in order:
+
+- Write the kind's identity in `src/instructions/<kind>.md` — the flow it drives, the paths it
+  writes, the sidebar category it names to the integrator.
+- Add two skills: `<kind>-structure` (the section template) and `<kind>-checklist` (what "done"
+  means), each a short `SKILL.md` stub over a `references/` file. `mdoc-conventions`,
+  `companion-examples` and `writing-style` are reused as-is.
+- Add the kind to `DOC_KINDS` in `src/runtime/run-context.ts`, its row to `KINDS`, and its two
+  documents to `STRUCTURES` and `CHECKLISTS` in `src/runtime/kind-docs.ts`.
+
+No phase tools, no new module, no schema: thirteen phase tools were deleted in favour of the built-in
+`task` tool, so a kind delegates to the same generic roles the others do. `designer` and `drafter`
+pick the new template up automatically — both read `structureBlock(docKind())` at their own render.
+
+`tsc` enforces most of that: the two `Record<DocKind, string>` maps and the `KINDS[kind]` index all
+fail until the kind is wired. What it does NOT reach is the prose — `GATE_INSTRUCTIONS`, two subagent
+descriptions, and the fixture's `AGENTS.md` each enumerated three kinds in text and had to be found
+by hand. That asymmetry is the real cost of a new kind, and it is worth knowing before the fifth.
 
 Model choice is centralized in `src/runtime/models.ts` as **tiers**, each
 env-overridable per run — so the same agent runs on cheap models under test and

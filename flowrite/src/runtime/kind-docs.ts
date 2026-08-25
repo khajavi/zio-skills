@@ -5,15 +5,17 @@ import type { DocKind } from './run-context.ts';
 import dataTypeStructureDoc from '../skills/data-type-ref-structure/references/structure.md';
 import moduleStructureDoc from '../skills/module-ref-structure/references/structure.md';
 import tutorialStructureDoc from '../skills/tutorial-structure/references/structure.md';
+import howToStructureDoc from '../skills/how-to-structure/references/structure.md';
 import dataTypeChecklistDoc from '../skills/data-type-ref-checklist/references/checklist.md';
 import moduleChecklistDoc from '../skills/module-ref-checklist/references/checklist.md';
 import tutorialChecklistDoc from '../skills/tutorial-checklist/references/checklist.md';
+import howToChecklistDoc from '../skills/how-to-checklist/references/checklist.md';
 import writingStyleRules from '../skills/writing-style/references/rules.md';
 
 /**
  * The reference docs a role needs, keyed by document kind.
  *
- * Imported here rather than by each consumer, so the three-way kind mapping lives in one place. Roles
+ * Imported here rather than by each consumer, so the per-kind mapping lives in one place. Roles
  * read them at their own render, which works because `docKind()` is reachable from a subagent render
  * (see run-context.ts: the module holder exists because "the readers are phase-tool bodies AND subagent
  * renders", and the root render runs "before every phase tool and subagent render … correctly ordered
@@ -34,6 +36,7 @@ export const STRUCTURES: Record<DocKind, string> = {
   'data-type': dataTypeStructureDoc,
   module: moduleStructureDoc,
   tutorial: tutorialStructureDoc,
+  'how-to': howToStructureDoc,
 };
 
 /** Each kind's review checklist. Moved here from review-page.ts, which now imports it. */
@@ -41,6 +44,7 @@ export const CHECKLISTS: Record<DocKind, string> = {
   'data-type': dataTypeChecklistDoc,
   module: moduleChecklistDoc,
   tutorial: tutorialChecklistDoc,
+  'how-to': howToChecklistDoc,
 };
 
 /** The numbered writing-style rules — kind-independent, unlike the two maps above. */

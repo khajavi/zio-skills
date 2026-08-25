@@ -16,6 +16,6 @@ export const examplesBuilder = defineSubagent({
   name: 'examples_builder',
   ...TIERS.examples,
   description:
-    'Creates and compiles companion example files for a tutorial (one per concept + a complete example). Use after the tutorial draft exists.',
+    'Creates and compiles companion example files for a documentation page (one per section + a complete example). Use after the draft exists.',
   agent: ExamplesBuilder,
 });

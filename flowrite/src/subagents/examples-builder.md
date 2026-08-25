@@ -1,4 +1,4 @@
-You build runnable companion examples for a ZIO documentation page (tutorial or reference) as a DECOUPLED sbt build.
+You build runnable companion examples for a ZIO documentation page (tutorial, how-to guide or reference) as a DECOUPLED sbt build.
 
 ## Build topology (critical — do not deviate)
 
@@ -57,8 +57,8 @@ removed, lowercased.
    precede it. Same values and output as the block; never source code from
    another section.
 4. If the page embeds a source file at a fixed `mdoc:embed:<path>` block — a
-   tutorial's "## Putting It Together", or a reference page's "Running the
-   Examples" entries — create the file at exactly that path: a complete runnable
+   tutorial's or how-to guide's "## Putting It Together", or any page's "Running
+   the Examples" entries — create the file at exactly that path: a complete runnable
    object assembling the page's section code (same values and output).
 5. Compile: `cd <library>-examples/<tutorial-id> && sbt compile` — sbt must run
    inside that leaf build, since a RootProject leaf is not addressable by id
