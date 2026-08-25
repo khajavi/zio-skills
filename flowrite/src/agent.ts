@@ -3,10 +3,11 @@ import { useDelivery, usePersistentState, useTool } from '@flue/runtime';
 import * as v from 'valibot';
 
 // instructions — one per kind. These files are the real per-kind content and are unchanged by the
-// merge: what differs between the three documents is writing guidance, which is data, not code.
+// merge: what differs between the documents is writing guidance, which is data, not code.
 import dataTypeRefMd from './instructions/data-type-ref.md';
 import moduleRefMd from './instructions/module-ref.md';
 import tutorialMd from './instructions/tutorial.md';
+import howToGuideMd from './instructions/how-to-guide.md';
 
 import {
   type RunFacts,
@@ -17,7 +18,7 @@ import {
 } from './runtime/composition.ts';
 import { installVerboseObserver } from './runtime/verbose-observer.ts';
 
-// skills — mdoc-conventions is shared by all three; writing-style comes from the shared baseline.
+// skills — mdoc-conventions is shared by every kind; writing-style comes from the shared baseline.
 import mdocConventions from './skills/mdoc-conventions/SKILL.md';
 import dataTypeStructure from './skills/data-type-ref-structure/SKILL.md';
 import dataTypeChecklist from './skills/data-type-ref-checklist/SKILL.md';
@@ -25,6 +26,8 @@ import moduleRefStructure from './skills/module-ref-structure/SKILL.md';
 import moduleRefChecklist from './skills/module-ref-checklist/SKILL.md';
 import tutorialStructure from './skills/tutorial-structure/SKILL.md';
 import tutorialChecklist from './skills/tutorial-checklist/SKILL.md';
+import howToStructure from './skills/how-to-structure/SKILL.md';
+import howToChecklist from './skills/how-to-checklist/SKILL.md';
 // Conditional bulk, activated only by the runs that need it: the sbt examples build when a page embeds
 // files, the per-type subpage loop when a module comes out hierarchical. Both would be dead weight in
 // an instruction file that rides on every turn.
@@ -67,16 +70,19 @@ export { DOC_KINDS, type DocKind };
  *
  * Narrower than `RunFacts` on purpose — a directive has no business seeing `projectPath` (the
  * sandbox owns that) or `skipPhases` (the phase tools gate on it), and narrowing keeps the table's
- * three directives honest about what they depend on.
+ * every directive honest about what it depends on.
  */
 export type DirectiveFacts = Pick<RunFacts, 'layout' | 'shapeOverride'>;
 
 /**
- * Everything that differs between the three kinds of document, in one table.
+ * Everything that differs between the kinds of document, in one table.
  *
- * One table rather than one file per kind: the three were structurally identical and only these five
- * fields differed. Adding a fourth kind is one row plus its .md and skills — no change to the agent
- * function and no new entry point.
+ * One table rather than one file per kind: they were structurally identical and only these five
+ * fields differed. Adding a kind is one row plus its .md and skills — no change to the agent
+ * function and no new entry point. `how-to` was added that way and held: tsc forces the row (the
+ * `KINDS[kind]` index below), the two `Record<DocKind, string>` maps in kind-docs.ts, and nothing
+ * else. What it did NOT cover is the prose around it — GATE_INSTRUCTIONS, two role descriptions, and
+ * the fixture's AGENTS.md all named three kinds and had to be amended by hand.
  */
 export const KINDS = {
   'data-type': {
@@ -133,6 +139,22 @@ export const KINDS = {
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
       `integrate → review; fact check compares every claim against the source).`,
   },
+  'how-to': {
+    label: 'write-how-to-guide',
+    instructions: howToGuideMd,
+    skills: [mdocConventions, howToStructure, howToChecklist, companionExamples],
+    tools: [reviewPage, factCheckPage],
+    // Empty for the same reason tutorial's is, and the reason is worth restating because a how-to
+    // guide *does* document real API: it documents only the API its one task needs, deliberately.
+    // Offering method coverage would invite a check that should fail on a correct page.
+    plainTools: [],
+    directive: (subject: string, _facts: DirectiveFacts) =>
+      `Write a complete, compile-verified how-to guide for the task: ${subject}. ` +
+      `It opens on a concrete problem with a "before" example of what the reader writes today — ` +
+      `not on concepts — and walks one canonical path to a working result. ` +
+      `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
+      `integrate → review; fact check compares every claim against the source).`,
+  },
 } as const;
 
 /**
@@ -151,8 +173,12 @@ const initialData = v.optional(v.object({ ...docsWriterFields }), {});
  * Ambiguity must stop the run rather than resolve it. "Write docs for Chunk" genuinely fits both a
  * reference page and a tutorial, and guessing spends hours of pipeline on the wrong document —
  * the same reason an uncertain module-shape classification halts instead of guessing.
+ *
+ * Exported only so a test can assert it names every DOC_KINDS member. This list is the one place the
+ * kinds are enumerated in prose rather than in a type, so it is the one place a new kind can be added
+ * everywhere else and stay invisible to the model. Nothing else reads it.
  */
-const GATE_INSTRUCTIONS = [
+export const GATE_INSTRUCTIONS = [
   'You write ZIO library documentation. Before any work starts, establish what the request asks for.',
   '',
   'Read the request and decide two things:',
@@ -160,18 +186,27 @@ const GATE_INSTRUCTIONS = [
   '1. **Which kind of document.**',
   '   - `data-type` — a reference page for ONE type: its full public API, every method.',
   '   - `module` — a reference for a MODULE: how its types work together, plus per-type coverage.',
-  '   - `tutorial` — a learning-oriented walkthrough of a task or topic.',
-  '2. **The subject** — the type name, the module name, or the tutorial topic, as the request names it.',
+  '   - `tutorial` — learning-oriented: the reader wants to UNDERSTAND a topic they are new to.',
+  '   - `how-to` — goal-oriented: the reader already knows the basics and wants to FINISH a task.',
+  '',
+  '   `tutorial` and `how-to` both walk through steps and both land in `docs/guides/`, so the shape ' +
+    'of the request does not separate them — the reader\'s intent does. Ask what they have when they ' +
+    'finish: an understanding, or a working result.',
+  '   ✅ "Understanding ZIO\'s error model" → `tutorial`  ✅ "How do I retry a failed request with ' +
+    'backoff?" → `how-to`',
+  '   ❌ "Error handling in ZIO" → neither; that is a subject, not an intent. Ask.',
+  '2. **The subject** — the type name, the module name, the tutorial topic, or the task the how-to ' +
+    'guide accomplishes, as the request names it.',
   '',
   'Record both with `set_document_kind`. The phase tools for that kind appear immediately after.',
   '',
-  'When the request is genuinely ambiguous, call `ask_for_clarification` and stop. "Write docs for ' +
-    'Chunk" fits both `data-type` and `tutorial` — that is a question, not a guess.',
+  'When the request is genuinely ambiguous, call `ask_for_clarification` and stop. "Streaming in ' +
+    'ZIO" fits `tutorial` and `how-to` equally — that is a question, not a guess.',
 ].join('\n');
 
 /**
  * Writes ZIO documentation of whichever kind the request asks for: a data type reference page, a
- * module reference, or a tutorial.
+ * module reference, a tutorial, or a how-to guide.
  *
  * Run it with a plain request — the kind and subject are read from the message:
  *   flue run src/agent.ts --id dtr-Chunk \
@@ -244,7 +279,10 @@ export function DocsWriter() {
         subject: v.pipe(
           v.string(),
           v.minLength(1),
-          v.description('The type name, module name, or tutorial topic, as the request names it.'),
+          v.description(
+            'The type name, module name, tutorial topic, or the task a how-to guide accomplishes, ' +
+              'as the request names it.',
+          ),
         ),
         rationale: v.pipe(
           v.string(),

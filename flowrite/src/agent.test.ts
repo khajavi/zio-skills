@@ -5,10 +5,14 @@
 // is now a mistake in every kind of document, and most of it fails at runtime rather than at `tsc`
 // (a mistyped label breaks log archiving silently; a duplicate tool throws only when the agent
 // renders).
+//
+// What tsc DOES cover, measured while adding the fourth kind: a missing KINDS row fails here and in
+// agent.ts, because `KINDS[kind]` indexes with a DocKind. So the row cannot be forgotten — only
+// filled in wrong.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { DOC_KINDS, KINDS } from './agent.ts';
+import { DOC_KINDS, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
 
@@ -33,11 +37,39 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(KINDS['data-type'].label, 'write-data-type-ref');
   assert.equal(KINDS.module.label, 'write-module-ref');
   assert.equal(KINDS.tutorial.label, 'write-tutorial');
+  assert.equal(KINDS['how-to'].label, 'write-how-to-guide');
   // Not KINDS rows: the standalone agents are their own entry points, not kinds of document.
   // Asserted in the same place because they are archived by the same script, and fail the same
   // silent way.
   assert.equal(REDUNDANCY_LABEL, 'reduce-redundancy');
   assert.equal(METADATA_LABEL, 'backfill-metadata');
+});
+
+test('the gate names every kind of document', () => {
+  // The classification prose is hand-written and enumerates the kinds itself — nothing derives it
+  // from DOC_KINDS, and nothing type-checks it. So a fifth kind could be wired up, pass tsc, pass
+  // every other test here, and never be offered to the model that has to choose it.
+  //
+  // Presence only. That the discriminator between two kinds is any GOOD is not something a test can
+  // reach; it is what the live classification check is for.
+  for (const kind of DOC_KINDS) {
+    assert.ok(
+      GATE_INSTRUCTIONS.includes(`\`${kind}\``),
+      `the gate instructions never mention \`${kind}\`, so the model cannot choose it`,
+    );
+  }
+});
+
+test('every mounted skill has a real name', () => {
+  // A SKILL.md whose frontmatter is missing `name:` loads as `name: undefined` rather than throwing,
+  // and then "no kind mounts the same skill twice" below compares undefined to undefined and passes.
+  // Two nameless skills on one row would satisfy every other assertion in this file.
+  for (const kind of DOC_KINDS) {
+    for (const skill of KINDS[kind].skills) {
+      assert.equal(typeof skill.name, 'string', `${kind} mounts a skill with no name`);
+      assert.ok((skill.name as string).length > 0, `${kind} mounts a skill with an empty name`);
+    }
+  }
 });
 
 test('no kind mounts the same tool twice', () => {
@@ -93,9 +125,10 @@ test('check_method_coverage is a plain tool, never a guarded one', () => {
     );
   }
 
-  // Reference pages promise complete API coverage, so both reference kinds get it. A tutorial is
-  // selective by design — coverage is not a defect there, and offering the tool would invite a
-  // check that should fail.
+  // Reference pages promise complete API coverage, so both reference kinds get it. A tutorial and a
+  // how-to guide are selective by design — coverage is not a defect there, and offering the tool
+  // would invite a check that should fail. A how-to is the sharper case of the two: it documents
+  // real API, just only the API its one task needs.
   for (const kind of ['data-type', 'module'] as const) {
     assert.deepEqual(
       KINDS[kind].plainTools.map((t) => t.name),
@@ -106,7 +139,9 @@ test('check_method_coverage is a plain tool, never a guarded one', () => {
   // Empty, not absent. Every row carries every field now, so this asserts what the agent offers
   // rather than which keys the literal happens to spell — the previous `!('plainTools' in …)` passed
   // for a reason the model never sees.
-  assert.deepEqual(KINDS.tutorial.plainTools, [], 'tutorial should not offer method coverage');
+  for (const kind of ['tutorial', 'how-to'] as const) {
+    assert.deepEqual(KINDS[kind].plainTools, [], `${kind} should not offer method coverage`);
+  }
 });
 
 test('the module escape hatches reach the directive', () => {

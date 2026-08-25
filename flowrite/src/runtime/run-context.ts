@@ -14,7 +14,7 @@ export type SkipPhase =
  * agent from a tool would close a cycle (agent → composition → run-context → agent). The agent
  * re-exports both for its own tests.
  */
-export const DOC_KINDS = ['data-type', 'module', 'tutorial'] as const;
+export const DOC_KINDS = ['data-type', 'module', 'tutorial', 'how-to'] as const;
 export type DocKind = (typeof DOC_KINDS)[number];
 
 /** Per-run facts every phase needs, taken from the writer agent's `initialData`. */
@@ -27,7 +27,7 @@ export interface RunContext {
    * Published here because a phase tool cannot read it any other way: it lives in
    * `usePersistentState('docKind')`, and hooks are unreachable from a tool body — the same reason
    * `projectPath` and `skipPhases` travel through this object. It is what lets one review tool serve
-   * all three kinds instead of three tools differing only in which checklist they paste.
+   * every kind instead of one tool per kind differing only in which checklist they paste.
    */
   kind: DocKind | null;
   /**
