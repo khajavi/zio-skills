@@ -21,7 +21,8 @@ export const TIERS: Record<
   | 'designer'
   | 'reviewer'
   | 'factChecker'
-  | 'redundancyEditor',
+  | 'redundancyEditor'
+  | 'metadataWriter',
   Tier
 > = {
   writer: {
@@ -64,5 +65,14 @@ export const TIERS: Record<
   redundancyEditor: {
     model: process.env.REDUNDANCY_EDITOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.REDUNDANCY_EDITOR_EFFORT, 'low'),
+  },
+  // Haiku, and the contrast with the tier directly above is the whole reasoning. That one DELETES
+  // sentences from a finished page: a wrong cut destroys information permanently and nothing
+  // downstream can tell. This one fills fields that are empty, so its worst realistic output is a
+  // dull description where there was none — visible in `git diff`, and still better than absent.
+  // writer-assistant also ran it on Haiku; here that is a decision rather than an inheritance.
+  metadataWriter: {
+    model: process.env.METADATA_WRITER_MODEL ?? 'anthropic/claude-haiku-4-5',
+    thinkingLevel: effort(process.env.METADATA_WRITER_EFFORT, 'low'),
   },
 };
