@@ -13,7 +13,7 @@ import { DocsWriter } from './agent.ts';
  * channels, schedules and the SDK have something to talk to when they are wanted.
  *
  * One route, mounted at the root, and now a deliberate choice rather than the only option: there are
- * four agents. `src/redundancy.ts`, `src/metadata.ts` and `src/crossref.ts` are registered by their own
+ * five agents. `src/redundancy.ts`, `src/metadata.ts`, `src/crossref.ts` and `src/organize.ts` are registered by their own
  * `'use agent'` directives and are left UNMOUNTED — dispatch-only, in the guide's terms ("An agent that
  * is registered but never mounted is simply unreachable over HTTP — `dispatch(...)` and schedules can
  * still drive it").
@@ -30,6 +30,6 @@ import { DocsWriter } from './agent.ts';
  * metadata backfiller is invoked in a loop by `scripts/backfill-metadata.sh`, and the cross-linker is
  * invoked one target at a time, neither of which would gain anything from an HTTP hop. When something
  * genuinely needs one of them over HTTP — a channel, a schedule, a webhook — add `hono` then and mount
- * all four, as the routing guide's multi-agent example shows.
+ * all five, as the routing guide's multi-agent example shows.
  */
 export default createAgentRouter(DocsWriter);
