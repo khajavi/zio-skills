@@ -14,7 +14,14 @@ const effort = (value: string | undefined, fallback: ThinkingLevel): ThinkingLev
   (value as ThinkingLevel) ?? fallback;
 
 export const TIERS: Record<
-  'writer' | 'researcher' | 'examples' | 'integrator' | 'designer' | 'reviewer' | 'factChecker',
+  | 'writer'
+  | 'researcher'
+  | 'examples'
+  | 'integrator'
+  | 'designer'
+  | 'reviewer'
+  | 'factChecker'
+  | 'redundancyEditor',
   Tier
 > = {
   writer: {
@@ -49,5 +56,13 @@ export const TIERS: Record<
   factChecker: {
     model: process.env.FACT_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.FACT_CHECKER_EFFORT, 'low'),
+  },
+  // writer-assistant ran this on Haiku, and the work looks cheap: find repetition, delete it. What
+  // makes it not cheap is that every cut is a judgement about whether the words carry anything —
+  // and unlike every other role here, this one EDITS a page that already passed review, with no
+  // gate downstream to catch it. A wrong cut ships.
+  redundancyEditor: {
+    model: process.env.REDUNDANCY_EDITOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.REDUNDANCY_EDITOR_EFFORT, 'low'),
   },
 };
