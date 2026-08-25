@@ -15,6 +15,6 @@ export const docsIntegrator = defineSubagent({
   name: 'docs_integrator',
   ...TIERS.integrator,
   description:
-    'Integrates a finished tutorial into the Docusaurus site: sidebars.js, index.md, cross-references, and build verification. Use after mdoc passes.',
+    'Integrates a finished documentation page into the Docusaurus site: sidebars.js, index.md, cross-references, and build verification. Use after mdoc passes.',
   agent: DocsIntegrator,
 });

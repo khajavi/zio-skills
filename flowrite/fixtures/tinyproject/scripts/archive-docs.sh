@@ -81,6 +81,15 @@ if [ -n "$log_file" ] && [ -f "$log_file" ]; then
       --argjson components "$components" \
       '{totalTokens: $totalTokens, input: $input, output: $output, cacheRead: $cacheRead, cacheWrite: $cacheWrite, turns: $turns, cost: $cost, components: $components}' \
       > "$dest/token-usage.json"
+  else
+    # Every grep below is guarded the same way, so a label that matches nothing produces an archive
+    # with no token-usage.json, no verdict, no insights and no run report — and a closing summary
+    # that reads exactly like a clean run. The likeliest cause is not a crash: the log is prefixed
+    # with the label of the kind the GATE classified, not the one this script asked for, so a
+    # misclassified run lands here. Say so, because nothing else will.
+    echo "warning: no '$workflow_label token consumption:' line in the log." >&2
+    echo "         the run may have been classified as a different kind — check the log's own" >&2
+    echo "         '<label> token consumption:' prefix before assuming it crashed." >&2
   fi
 
   # The run report: cost per phase (own vs delegate), cost per role, activity counts, the review

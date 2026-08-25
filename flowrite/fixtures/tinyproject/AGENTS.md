@@ -15,7 +15,8 @@ that mentions the wrong module's types is a mistake, not a shortcut.
   `optics`, **TinyTally** for `tally`.
 - Module source lives under `<module>/src/main/scala/<module>/`, e.g. `tally/src/main/scala/tally/`.
 - Runnable examples live under `tinyproject-examples/<module>/`.
-- Tutorials are Docusaurus markdown under `docs/guides/`; reference pages under `docs/reference/`.
+- Tutorials and how-to guides are Docusaurus markdown under `docs/guides/`; reference pages under
+  `docs/reference/`. Both guide kinds share that directory, so list it before choosing an `id`.
   One `docs/` tree covers both modules, so put a module's pages under `docs/reference/<module>/`.
 - Scala 2.13, so wildcard imports are `import tally._` — never `import tally.*`.
 

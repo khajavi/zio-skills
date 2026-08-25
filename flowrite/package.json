@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "test": "node --import ./test-setup/md-imports.mjs --test"
+    "test": "node --import ./test-setup/md-imports.mjs --test",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

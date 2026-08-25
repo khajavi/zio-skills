@@ -10,9 +10,10 @@
 // agent.ts, because `KINDS[kind]` indexes with a DocKind. So the row cannot be forgotten — only
 // filled in wrong.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { DOC_KINDS, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
+import { DOC_KINDS, type DocKind, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
 
@@ -43,6 +44,30 @@ test('labels match what archive-docs.sh greps for', () => {
   // silent way.
   assert.equal(REDUNDANCY_LABEL, 'reduce-redundancy');
   assert.equal(METADATA_LABEL, 'backfill-metadata');
+});
+
+test('each fixture launcher passes its own kind label to archive-docs.sh', () => {
+  // The test above pins the label strings; this one pins the other end of the same contract. The
+  // launcher hands the label to archive-docs.sh, which greps the log for `<label> token
+  // consumption:` — so a launcher carrying the wrong label produces an archive with every artifact
+  // missing and a summary that reads like a clean run.
+  //
+  // Reading the scripts because the existing pin asserted string equality against nothing: its own
+  // name says "what archive-docs.sh greps for" while no script was ever opened.
+  const launchers: Record<DocKind, string> = {
+    'data-type': 'run-data-type-ref.sh',
+    module: 'run-module-ref.sh',
+    tutorial: 'run-tutorial.sh',
+    'how-to': 'run-how-to-guide.sh',
+  };
+  for (const kind of DOC_KINDS) {
+    const path = new URL(`../fixtures/tinyproject/scripts/${launchers[kind]}`, import.meta.url);
+    const script = readFileSync(path, 'utf8');
+    assert.ok(
+      script.includes(`archive-docs.sh "$log" ${KINDS[kind].label}`),
+      `${launchers[kind]} does not archive under ${KINDS[kind].label}`,
+    );
+  }
 });
 
 test('the gate names every kind of document', () => {
