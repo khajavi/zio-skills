@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { DOC_KINDS, KINDS } from './agent.ts';
+import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
 
 test('every kind is fully configured', () => {
   for (const kind of DOC_KINDS) {
@@ -31,6 +32,9 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(KINDS['data-type'].label, 'write-data-type-ref');
   assert.equal(KINDS.module.label, 'write-module-ref');
   assert.equal(KINDS.tutorial.label, 'write-tutorial');
+  // Not a KINDS row: the redundancy editor is its own agent, not a kind of document. Asserted in the
+  // same place because it is archived by the same script, and fails the same silent way.
+  assert.equal(REDUNDANCY_LABEL, 'reduce-redundancy');
 });
 
 test('no kind mounts the same tool twice', () => {
