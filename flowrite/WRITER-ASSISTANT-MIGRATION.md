@@ -98,11 +98,26 @@ nothing downstream would catch the break. Unmeasured against a live model — se
 
 ### 5. `extract-metadata`
 
-`workflows/extract-metadata.ts`, `agents/metadata-extractor.ts`, `skills/metadata-extractor`,
-`lib/metadata-extractor-utils.ts`, and two test files. Bulk frontmatter — title, description,
-keywords, `sectionType` — over an *existing* docs tree, with a documented token-impact analysis.
+**PORTED** — `src/metadata.ts`, a standalone agent filling one page's missing `description` and
+`keywords`, with `scripts/backfill-metadata.sh` as the loop:
+`bash scripts/backfill-metadata.sh <checkout>/docs`. The judgement survives — which fields are
+missing, what a 50-150 character description says, which 3-6 terms a reader would search for, in
+`src/skills/page-metadata/references/rules.md`.
 
-flowrite authors frontmatter for the page it writes. Nothing retro-fits a site it did not write.
+Most of the original did not, and the reason is in its own spec: `docs/specs/2026-06-06-metadata-extraction-modular-design.md`
+§1 says it existed because the crossref `page-linker` paid "~5-6.5k tokens per page" extracting
+metadata inline, and pre-enriching dropped that to "~3.5-4.5k". Crossref never came to flowrite, so
+what was ported is the *residual* capability rather than the optimization. Dropped with it:
+`sectionType` (fed link suggestion; nothing reads it here — and the original was already inconsistent,
+its skill emitting three fields while the code path crossref used parsed two), `generateContextualTitle`
+(crossref's "See Also" lists), the fs walk and its realpath containment checks (`find` under a named
+directory generates the paths, so there is nothing to escape from), the four-mode payload, and the
+valibot result schema plus deterministic YAML writer — `BACKLOG.md` files the deleted frontmatter
+validator under "Verified working, and worth not breaking", and this port does not re-add it.
+
+One bound is stricter than the original's: a populated field is never overwritten by default, and the
+page body is out of bounds entirely. Unmeasured against a live model — see
+`docs/superpowers/specs/2026-08-25-extract-metadata-design.md` and `BACKLOG.md` finding 10.
 
 ### 6. `how-to-guide` as a document kind
 
@@ -125,9 +140,12 @@ fixer loops (max 3 rounds) and typed results. You could point writer-assistant a
 already-broken page and say "fix its mdoc". flowrite cannot — that logic exists only inside a
 full write run, as integrator instructions.
 
-**Partly addressed.** `src/redundancy.ts` (§4) is flowrite's first standalone entry point, so the
-shape now exists and `app.ts` records what mounting a second agent would take. The four mdoc/website
-entry points above are still write-run-only.
+**Partly addressed.** `src/redundancy.ts` (§4) is flowrite's first standalone entry point and
+`src/metadata.ts` (§5) is the second, so the shape now exists twice and `app.ts` records what mounting
+them over HTTP would take. §5 also establishes how a standalone pass runs over a *set* of pages: the
+loop lives in `scripts/backfill-metadata.sh`, one process per page, with the "already done?" test
+reading the files rather than a cursor a model maintains. The four mdoc/website entry points above are
+still write-run-only.
 
 ### 9. `organize-types`
 
