@@ -121,12 +121,47 @@ page body is out of bounds entirely. Unmeasured against a live model — see
 
 ### 6. `how-to-guide` as a document kind
 
-`skills/docs-how-to-guide/SKILL.md` + `workflows/write-how-to-guide.ts`. Goal-oriented and
-task-focused, explicitly *not* pedagogical.
+**PORTED** — `DOC_KINDS` now reads `['data-type', 'module', 'tutorial', 'how-to']`, with
+`src/instructions/how-to-guide.md`, the `how-to-structure` and `how-to-checklist` skills, and
+`fixtures/tinyproject/scripts/run-how-to-guide.sh`. Ask for it in words like any other kind:
+`-m "Please write a how-to guide for this task: …"`.
 
-flowrite's `DOC_KINDS = ['data-type', 'module', 'tutorial']`. "how-to" survives only as prose
-telling the tutorial writer not to become one. Cheapest gap to close: one `KINDS` row plus a
-structure and a checklist skill — the table was built for exactly this.
+The audit's estimate — "one `KINDS` row plus a structure and a checklist skill" — held for the
+*architecture* and undercounted the prose. No phase, no delegation, no schema, and no subagent
+changed: `designer` and `drafter` read `structureBlock(docKind())` at their own render, so both picked
+the new template up untouched. `tsc` forced the row, both `Record<DocKind, string>` maps and the
+`KINDS[kind]` index. What it could not reach was every place three kinds had been written out in
+text — `GATE_INSTRUCTIONS`, two subagent *descriptions*, the fixture's `AGENTS.md` — and that is
+where the work was.
+
+**The substance did not come from this repo.** `writer-assistant/skills/docs-how-to-guide/SKILL.md` is
+a 30-line conceptual summary; the doctrine worth porting — the Problem-section template, the research
+questions, a 43-item checklist — lives in `plugins/documentation/skills/docs-how-to-guide/`, which is
+*not* being deleted. Worse, `workflows/phases/verify.ts` instructed the model to "use the checklist in
+the docs-how-to-guide skill" and that skill never had one in this tree, while `ARCHITECTURE.md`
+asserted it did. Treat the predecessor's how-to path as a source of claims, not of proven behaviour.
+
+Two contradictions between the sources were resolved rather than carried: the plugin skill's "In this
+guide, we will build…" opening against the newer prompt's "no warm-up" (took the newer, as a
+preference — writing-style rule 2 explicitly permits both), and the plugin checklist's flat
+`git clone` + `runMain` "Running the Examples" format against flowrite's `<details>` +
+`mdoc:embed:…:show-line-numbers` (took flowrite's; copying the old one would have shipped a checklist
+that fails correct pages).
+
+One design decision is stricter than both sources. They fence the Problem section's "before" example
+as plain ` ```scala `, on the reasoning that painful code need not compile. `mdoc-conventions` forbids
+exactly that and sweeps for it, so the drafter would have added a modifier, hit a compile error, and
+obeyed "fix the example" by rewriting the pain away — silently. Here the before block is
+`mdoc:compile-only` real code that does not touch the documented library, which compiles (verbose
+working code does), keeps the contrast, and sidesteps the fact-checker's character-by-character
+scrutiny of uncompiled fences. Plain fences survive for pseudocode only.
+
+Dropped: the eight-section numbering (the template emits literal headings and forbids its own
+vocabulary in them — see `BACKLOG.md` finding 3), the `focus: 'guide'` research switch (flowrite's
+researcher is kind-neutral, so the asks live in the instruction file), and the separate
+`verify`/`style` phases (flowrite's review covers the checklist and every style rule in one pass).
+Unmeasured against a live model — see `docs/superpowers/specs/2026-08-25-how-to-guide-design.md` and
+`BACKLOG.md` finding 11.
 
 ### 7. `document-pr`
 

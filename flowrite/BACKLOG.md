@@ -322,6 +322,71 @@ touching the file.
   outside a write flow. Harmless noise today; misleading if anyone ever greps run reports across
   agents.
 
+## 11. The how-to guide kind ships with no live measurement — OPEN
+
+`how-to` is the fourth `DOC_KINDS` member and no run has produced a page. Offline coverage is real —
+`tsc` forces the row and both maps, 105 tests pass, and three new assertions cover what had no type
+behind it — but everything genre-shaped is unproven:
+
+- **Does the gate classify a task-shaped request as `how-to`?** This is the one that matters. A
+  misclassification is silent end to end: `run-telemetry.ts` is kind-agnostic by construction and keys
+  on the `docs/` path segment, which is `guides` for both guide kinds, and the reviewer is handed
+  whichever checklist the gate chose. A how-to misfiled as a tutorial is reviewed against the tutorial
+  checklist, passes, and files `verdict: passed`. The cheap check is one turn: start
+  `run-how-to-guide.sh` and Ctrl-C after the classification line (the INT trap archives).
+- **Does the "before" block come out as `mdoc:compile-only`, free of the documented library's API?**
+  The whole Problem section rests on it. Under a plain fence it becomes the most scrutinized text on
+  the page (`fact-checker.md:16`) and a `not-in-source` drift is blocking, so a correct page could fail
+  its own run.
+- **Does any heading carry template vocabulary?** `## Step 1:` / `## Capability 2:` by the same
+  mechanism as finding 3. The checklist has the item; nothing else does.
+- **Does `Putting It Together` come out as an empty `mdoc:embed`, or inlined?** If inlined, the
+  examples phase has nothing to build — finding 2 again, in a new kind.
+
+**The fixture bounds the answer.** `fixtures/tinyproject` is a dependency-free library with seven
+types and no boilerplate to suffer, so the before-block has nothing real to be painful about and the
+drafter will invent it — the one thing fact-check can neither confirm nor deny. A passing run proves
+the plumbing, not the genre. Also do not run it on `Lens`: `docs/guides/lens.md` is committed and
+already how-to-flavoured, so that topic overwrites a page instead of exercising the empty-start path.
+
+## Observations, recorded while porting the how-to kind
+
+None is worth a change on its own; each is cheap inside a change already touching the file.
+
+- **`:showLineNumbers` and `:show-line-numbers` are both in the tree, and neither is proven.**
+  `src/skills/mdoc-conventions/SKILL.md:22` says camelCase; the two structure templates and two
+  checklists say kebab (4-to-1). One of them does not resolve. **No fixture archive contains a built
+  page with either form** — finding 2 records the examples phase never having run since the conversion
+  — so a majority vote is not evidence. The how-to files use kebab, matching the other kinds. The first
+  run that actually builds an `mdoc:embed` settles it; do not "fix" it before then.
+- **Finding 3's diagnosis is wrong, and the mitigation follows the diagnosis.** It blames the
+  templates' numbered lists for `## 6. Concept 4: Bounded Windows`, but `## 1.` was *compliant* —
+  `src/skills/tutorial-structure/references/structure.md:46` mandates "Use '## 1. Topic'". What leaked
+  is the template's **placeholder label**: item 3 reads `Concept sections (3-6, one new idea each)` and
+  the page emitted `Concept 4:`. That is writing-style rule 27's category, but rule 27 enumerates
+  specific terms, so no reviewer item covered it. The how-to template emits literal headings and its
+  checklist carries an explicit item; the other three still inherit the label mechanism. Finding 3's
+  claim that "the same ambiguity exists in the data-type and module templates" is also unsupported —
+  the numbered-heading mandate exists only in `tutorial-structure`.
+- **`GATE_INSTRUCTIONS` is the one place the kinds are enumerated in prose.** Nothing derived it from
+  `DOC_KINDS`, so a kind could be fully wired, pass `tsc` and pass every test, and never be offered to
+  the model that has to choose it. There is now a test asserting presence — not that the discriminator
+  between two kinds is any good, which only a live run reaches.
+- **The predecessor's how-to path was partly fictional.**
+  `writer-assistant/workflows/phases/verify.ts` told the model to read a checklist that never existed
+  in that tree, and `ARCHITECTURE.md` asserted it did. The real material was in
+  `plugins/documentation/skills/docs-how-to-guide/`, which is not being deleted. Relevant to the
+  remaining audit gaps: a `writer-assistant` file is not evidence that the behaviour it describes ever
+  ran.
+- **`README.md` and `flowrite/CLAUDE.md` both name fixtures that do not exist.** `tinyoptics` and
+  `tinytally` are referenced throughout (README `:98,:167,:173,:177,:253`; CLAUDE.md's whole "which
+  fixture to run" section); only `fixtures/tinyproject/` is on disk. So the guidance on which fixture
+  to use for a given check points at nothing. Left alone here — it is not this kind's business, and the
+  fix is a decision about the fixtures rather than an edit.
+- **`npm` cannot run this package's scripts at all.** `devEngines` requires pnpm, so `npm test` and the
+  new `npm run typecheck` both die with `EBADDEVENGINES`. The binaries work directly
+  (`./node_modules/.bin/tsc --noEmit`), which is what every verification step actually uses.
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
@@ -330,7 +395,8 @@ Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
 - the frontmatter contract reproduced from prose, with its validator deleted
 - `@VERSION@` resolved by the build rather than hardcoded
 - a refused review round no longer reports as a failed phase (`e18c78d`)
-- the confirming round earns a post-fix verdict on all three kinds (`f15f64a`) — held until a round
+- the confirming round earns a post-fix verdict on all three kinds measured (`f15f64a`; `how-to` is
+  unmeasured — finding 11) — held until a round
   raised NEW items and spent the single grant; renewal added in finding 6 below
 - the `flowrite:` phase timeline, rebuilt from delegation events (`4a32380`)
 - `pagesWritten` caught finding 1 as `research-draft-mismatch`, counting pages rather than delegations
