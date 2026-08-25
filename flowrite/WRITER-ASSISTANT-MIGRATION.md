@@ -235,7 +235,34 @@ still write-run-only.
 
 ### 9. `organize-types`
 
-Auto or manual re-sorting of type pages into sidebar categories, with build verification after.
+**PORTED** — `src/organize.ts`, renamed **organize-reference-docs** because it organizes reference
+pages rather than types as such: `flue run src/organize.ts -m "Organize docs/reference into
+categories"`. The judgement survives — what a group of pages is *for*, what a category should be
+called, which pages do not belong in one — in
+`src/skills/organize-reference-docs/references/guide.md`.
+
+The original had **no skill**: 495 lines of TypeScript with its prompts inline, including a table that
+grouped by name substring ("contains chunk, list, vector" → Collections). That table is not ported; a
+substring cannot see that two differently-named types serve one purpose, and it is what a cheap model
+reaches for when it cannot hold a dozen pages' purposes at once. The guide requires reading what each
+page says the type is for, and that judgement is the only reason this is an agent rather than a script.
+
+**Nothing moves.** A page's links are relative to where it sits, so relocating one breaks every
+reference to it and every `../` inside it, and `onBrokenLinks: 'throw'` then fails the build with a list
+that does not name the cause. So a category is a sidebar grouping plus an index page. This also drops
+the original's sharpest defect: it emitted sidebar ids of the form `reference/<category>/<type>` while
+moving no files, pointing entries at paths it never created — and its build-repair phase was licensed to
+*"either create the missing file or remove the entry"*, which is `BACKLOG.md` finding 1's failure
+verbatim. Its prompt also cited a `docs-organize-types` skill that never existed in the repo, the same
+dangling reference §6 found.
+
+Dropped with it: the `auto` / manual mode split and `minConfidence` (the request either names the
+category and its members or asks for a proposal — one sentence, not a payload), and the build-error
+parser plus repair loop (`review_page` and the site build already cover it, and the repair licence was
+the defect above).
+
+Unmeasured against a live model — see `docs/superpowers/specs/2026-08-25-organize-reference-docs-design.md`
+and `BACKLOG.md` finding 13.
 
 ### 10. `preview-website`
 

@@ -447,6 +447,51 @@ None is worth a change on its own; each is cheap inside a change already touchin
   wrong for a pass that is *meant* to touch several. That flag is one of finding 1's four fix sites and
   is still awaiting its confirming run, so scope it deliberately rather than discovering this later.
 
+## 13. The docs organizer ships with no live measurement — OPEN
+
+`src/organize.ts` groups a reference section into sidebar categories. `tsc` clean, 105 tests, and every
+recipe in its guide verified against the fixture — but no run has proposed a grouping. What a first run
+must answer:
+
+- **Is the grouping any good?** This is the whole feature and the only part no test can reach. A
+  category is a claim about what a set of pages is *for*; a wrong one is durable in a way a wrong link
+  is not, because readers navigate by it and later pages get filed into it. Judge the category names
+  against the pages, not against plausibility.
+- **Did it hold the bounds?** Three pages minimum per category, one home per page, leftovers left at
+  the top level, and no "Miscellaneous" invented to reach full coverage.
+- **Did anything move?** `git status` should show only new category index pages and one `sidebars.js`
+  edit. Any renamed or relocated page is a kill, not a tuning knob — every relative link into it breaks.
+- **Does every sidebar id still resolve?** Use the guide's text-extraction recipe, not `require()`, for
+  the reason in the observations below.
+- **Did it leave other entries alone?** A page it did not group must keep its existing entry byte for
+  byte. Removing a sibling's entry to tidy the file is the edit here that loses work invisibly.
+
+The fixture cannot exercise the grouping itself: `fixtures/tinyproject/docs/reference/` holds a single
+`index.md`, so there is nothing to group. It is still the right place to check the *bounds* — a correct
+run reports that the section is too small and proposes no change.
+
+## Observations, recorded while porting the docs organizer
+
+- **`node -e "require('<sidebars.js>')"` is not the verification it looks like, in this repo.**
+  `docs-integrator.md` step 1 presents it as "verify it still parses". It does catch a syntax error — a
+  deliberately broken file throws `SyntaxError`. But `flowrite/package.json` sets `"type": "module"` and
+  `fixtures/tinyproject/` has no `package.json` of its own, so `docs/sidebars.js` loads as **ESM** and
+  `require()` returns `{}` with no error for a file whose `module.exports` never took effect. Every
+  sidebar id enumeration must therefore read the text, not the loaded object. Left alone in
+  `docs-integrator.md` deliberately: it is a working prompt, the check still catches the common failure,
+  and changing it affects every write run and needs its own run to judge.
+- **The predecessor's organize-types wrote sidebar ids for paths it never created.** Ids of the form
+  `reference/<category>/<type>` with no file move anywhere in its 495 lines, and a build-repair phase
+  told to "either create the missing file or remove the entry". That is finding 1's failure shipped as
+  a design. Worth remembering as a shape: a repair step licensed to *create* is how a broken reference
+  becomes unreviewed content.
+- **Its prompt cited a `docs-organize-types` skill that never existed.** Second instance of this exact
+  pattern after §6's how-to checklist, which makes it a property of the predecessor rather than an
+  accident: **a `writer-assistant` prompt naming a skill is not evidence the skill was there.**
+- **Grouping by name substring is the cheap-model failure mode.** The original's table matched
+  "contains chunk, list, vector" → Collections. It is the thing to look for when judging a live run's
+  output, because it produces categories that read plausibly and file `ChunkBuilder` under Collections.
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
