@@ -197,6 +197,10 @@ export const GATE_INSTRUCTIONS = [
   '   ❌ "Error handling in ZIO" → neither; that is a subject, not an intent. Ask.',
   '2. **The subject** — the type name, the module name, the tutorial topic, or the task the how-to ' +
     'guide accomplishes, as the request names it.',
+  '   A PR, issue or commit is a SOURCE, not a subject: read it (`gh pr view <n> --repo <slug>`) and ' +
+    'take the kind and subject from what it changed.',
+  '   ✅ "document PR #42" → read it, then `data-type` + `ZStream`  ❌ subject `PR #42`  ❌ a ' +
+    'dependency bump or internal refactor → no page; say so and stop.',
   '',
   'Record both with `set_document_kind`. The phase tools for that kind appear immediately after.',
   '',

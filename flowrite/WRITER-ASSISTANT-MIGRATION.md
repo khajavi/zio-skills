@@ -193,8 +193,31 @@ Unmeasured against a live model — see `docs/superpowers/specs/2026-08-25-how-t
 
 ### 7. `document-pr`
 
-Five phases — collect the PR from GitHub, decide the doc type, write, integrate, lint — entered
-with a **PR number**. flowrite's only entry point is a subject name.
+**NOT NEEDED** — and this entry was wrong. It read "flowrite's only entry point is a subject name" as
+though a capability were missing. Four of the five phases already exist, and the fifth is a sentence.
+
+| phase | flowrite |
+|---|---|
+| collect the PR from GitHub | the root agent's `local()` sandbox is an unrestricted shell, so `gh pr view <n> --repo <slug> --json title,body,files` just runs. writer-assistant needed `tools/github-research.ts` because it had no general shell. Note `gh_query` is **not** the path — it is `gh search`, returning only number/title/url/state, so it cannot read a diff |
+| decide the doc type | the only real gap, now closed by two lines in `GATE_INSTRUCTIONS`: a PR, issue or commit is a SOURCE, not a subject |
+| write | the four `KINDS` rows |
+| integrate | `docs_integrator` |
+| lint | `review_page` + the 28 style rules + scoped mdoc + the site build |
+
+flowrite already reads PRs on **every** run, as grounding rather than as an entry point: all four
+instruction files ask the researcher for "what the commit history states", and
+`src/subagents/researcher.md:40` handles the merge-commit case where a squashed PR leaves no `(#N)` in
+file history.
+
+Before the gate clause the workaround was to classify in the sentence — `-m "Write a data-type
+reference page for ZStream#groupByKey, using zio/zio PR #42 as the source"` — which worked with no
+changes at all. Without it the gate hit its genuinely-ambiguous branch and asked, which was correct
+behaviour rather than a failure.
+
+Two cases that look like gaps and are not. A PR touching several types across a module is several runs,
+one page each — that is what `pages-outside-one-root` already enforces, since one run documents one
+thing. A PR that is a dependency bump or an internal refactor has no right answer among four document
+kinds, and "no page" is the correct output; the gate clause says so explicitly.
 
 ### 8. Standalone check/fix entry points
 
