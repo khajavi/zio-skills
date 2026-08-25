@@ -387,6 +387,66 @@ None is worth a change on its own; each is cheap inside a change already touchin
   new `npm run typecheck` both die with `EBADDEVENGINES`. The binaries work directly
   (`./node_modules/.bin/tsc --noEmit`), which is what every verification step actually uses.
 
+## 12. The cross-linker ships with no live measurement — OPEN
+
+`src/crossref.ts` makes one orphan page reachable. `tsc` is clean, 105 tests pass, and every shell
+recipe in its guide was verified against a real 299-page corpus (see the spec's Verification table) —
+but no run has produced an edit. What a first run must answer, in priority order:
+
+- **Did it confirm orphan status before editing anything?** The instruction file makes "already has
+  prose links" a hard stop. A run that edits a page which was already reachable has ignored its first
+  step, and the receipt is where that shows.
+- **Is every inserted link in prose?** Not inside an inline-code span, a fence of any length,
+  frontmatter, a heading, or another link. This is the one that matters:
+  `docs/reference/services/random.md:14` in zio/zio is a published instance of the inline-code-span
+  failure, invisible to `mdoc` and to `onBrokenLinks`, which survived a 94-file human review. The
+  guide's grep catches it — `` grep -nE '`\[[^]]*\]\([^)]+\)' `` — and a run should be checked with
+  it rather than by eye.
+- **At most one link per source page, and did it wrap rather than rewrite?** The bound is prose only;
+  nothing enforces it. Any reworded sentence in the diff is a defect, not a style choice.
+- **Did it refuse to create a target?** `fixtures/tinyproject/docs/reference/index.md` names modules
+  that have no pages, so it is a ready-made adversarial read-only case for finding 1's failure — a run
+  pointed near it must drop the link, never manufacture the page.
+
+**The fixture cannot exercise this.** Four pages, three of them `index.md`, and writing to it would
+modify tracked files, which `flowrite/CLAUDE.md` forbids. So the first real run has to be on a corpus
+with prose to link — on a branch, on a clean tree, with the diff read before anything is staged. Every
+added line should contain the target's path; anything else is a bug in the agent.
+
+## Observations, recorded while porting the cross-linker
+
+None is worth a change on its own; each is cheap inside a change already touching the file.
+
+- **A link inside an inline-code span is invisible to every gate flowrite has.** `mdoc` does not
+  compile it (not a fenced block) and `onBrokenLinks: 'throw'` does not resolve it (not a link). The
+  known instance is `docs/reference/services/random.md:14` in zio/zio, merged in `d058fcd26` and still
+  present. This is the failure class that justifies the cross-linker's Sonnet tier, and it is worth
+  knowing generally: **"the build would catch it" is not true of every markdown defect.**
+- **`computeSafeZones` was the best-tested unit in crossref and is still wrong.** 14 tests, and its
+  fence regex `/(```|~~~)[\s\S]*?\1/g` diverges from a line-based scan on 7 of 299 real pages —
+  leaving the *interior* of a ` ````scala mdoc:passthrough ` block unprotected in
+  `docs/reference/test/installation.md`. It protects none of: setext headings, MDX `import`/`export`,
+  JSX blocks, link reference definitions (112 in that corpus), 4-backtick fences. Relevant beyond this
+  port: it is a clean case of a regex parser that reads as safe, has tests, and is not.
+- **`sidebar-parser.ts` returned `{}` on every run for its whole life.** It builds a one-element array
+  and indexes `[1]`, throwing into a catch that warns and returns empty. Adjacency was its skill's
+  single strongest HIGH-confidence trigger, and `adjacentPages` is empty in 0 of 293 and 0 of 3748 real
+  index entries. It had zero tests. The lesson for this repo is the one it already applies to labels:
+  a signal whose absence looks like a quiet answer needs an assertion, not a warning.
+- **crossref's confidence promotion was unreachable.** `process.ts:379-390` promotes medium→high, but it
+  sits after the threshold `continue` at `:343-349`, so at the default threshold it never runs — and all
+  84 `medium` suggestions in the real state are still `pending`, confirming it.
+- **Two standalone agents now have overlapping link mandates.**
+  `src/skills/reduce-redundancy/references/guide.md:37` has the redundancy editor replace a repeated
+  definition with a link, while `:73` tells it "links are not yours". Both unmeasured. Reconcile before
+  a third pass touches links.
+- **Telemetry cannot see an `edit`-only run.** `pages-outside-one-root`
+  (`src/runtime/run-telemetry.ts:220-233`) reads `activity.pagePaths`, populated only from the `write`
+  tool (`component-usage.ts:240-242`). So a pass that edits in place reports zero pages written, and a
+  `write`-based one would fire "one run documents one thing, so the extra pages were not asked for" —
+  wrong for a pass that is *meant* to touch several. That flag is one of finding 1's four fix sites and
+  is still awaiting its confirming run, so scope it deliberately rather than discovering this later.
+
 ## Verified working, and worth not breaking
 
 Measured on `write-module-ref-turn1` and `write-tutorial-turn1`:
