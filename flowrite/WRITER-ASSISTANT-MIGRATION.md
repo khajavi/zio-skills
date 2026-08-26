@@ -315,13 +315,22 @@ build.
 
 ## Recovering any of it after the delete
 
-`writer-assistant` was a subdirectory of the `zio-skills-modern` repository, so a `git rm -r`
-leaves every file reachable from the parent commit:
+**The directory was removed on 2026-08-26.** It was a subdirectory of the `zio-skills-modern`
+repository, so every file remains reachable from history. The last commit that still contained it is
+**`744baf9`** (`refactor(writer-assistant): convert build-verify phase into a Flue Action`):
 
 ```bash
-git log --oneline -1 -- writer-assistant          # last commit that still had it
-git show <sha>:writer-assistant/lib/rule-26-implicit-trace.ts
-git checkout <sha> -- writer-assistant/skills/docs-writing-style/check-docs-style.sh
+git show 744baf9:writer-assistant/lib/rule-26-implicit-trace.ts
+git checkout 744baf9 -- writer-assistant/skills/docs-writing-style/check-docs-style.sh
+git ls-tree -r --name-only 744baf9 -- writer-assistant   # everything that was there
 ```
 
-No copy was made and none is needed.
+The SHA is pinned deliberately. An earlier version of this section said to find it with
+`git log --oneline -1 -- writer-assistant`, which is wrong *after* a deletion: that command returns the
+commit that deleted the directory, and `git show <that sha>:writer-assistant/…` fails because the path
+no longer exists there. Use `744baf9`, or `<deletion-sha>^`.
+
+No copy was made and none is needed. Two other trees hold related material and were **not** deleted:
+`plugins/documentation/skills/` (which turned out to hold the substantive how-to and organize doctrine —
+see §6 and §9) and the branches `docs/writer-assistant-audit` and `upgrade-writer-assistant-deps`, the
+latter one commit ahead of `main`.
