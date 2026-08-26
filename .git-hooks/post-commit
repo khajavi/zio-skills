@@ -4,6 +4,36 @@ set -e
 COMMIT_HASH=$(git rev-parse --short HEAD)
 SKILLS_USED=()
 
+# Refresh the flowrite -> plugin-skill export whenever a commit touches the flowrite sources the
+# generator reads from. This does NOT touch plugins/documentation automatically — most of what's
+# there is verified-better or differently-shaped than a mechanical fold of flowrite's content (see
+# the commit history under plugins/documentation/skills/ for why promotion stayed a manual, reviewed
+# step all session). It only keeps dist/plugin-export/ from going stale, so nobody has to remember to
+# re-run the script by hand before comparing the two.
+if [ -d "flowrite" ] && [ -f "flowrite/scripts/generate-plugin-skill.mjs" ]; then
+  CHANGED_FLOWRITE_SOURCES=$(git diff-tree --no-commit-id --name-only -r HEAD -- \
+    'flowrite/src/instructions/' 'flowrite/src/skills/' 'flowrite/scripts/generate-plugin-skill.mjs' \
+    2>/dev/null || true)
+  # Also catch a new/changed standalone agent (flowrite/src/*.ts) without matching every .ts in the
+  # tree — diff-tree with a glob needs GNU find semantics git diff-tree doesn't have, so filter here.
+  CHANGED_STANDALONE_AGENTS=$(git diff-tree --no-commit-id --name-only -r HEAD -- 'flowrite/src/' \
+    2>/dev/null | grep -E '^flowrite/src/[a-z-]+\.ts$' || true)
+
+  if [ -n "$CHANGED_FLOWRITE_SOURCES" ] || [ -n "$CHANGED_STANDALONE_AGENTS" ]; then
+    if command -v node >/dev/null 2>&1; then
+      echo "flowrite sources changed — refreshing flowrite/dist/plugin-export/ ..."
+      if (cd flowrite && node scripts/generate-plugin-skill.mjs) >/tmp/flowrite-generate.log 2>&1; then
+        echo "  done. Diff it against plugins/documentation/skills/ before promoting anything by hand:"
+        echo "    diff -rq flowrite/dist/plugin-export plugins/documentation/skills"
+      else
+        echo "  generator failed — see /tmp/flowrite-generate.log (not blocking this commit)"
+      fi
+    else
+      echo "flowrite sources changed but node is not on PATH — skipped refreshing flowrite/dist/plugin-export/"
+    fi
+  fi
+fi
+
 # Auto-discover plugins and update versions
 if [ -d "plugins" ]; then
   for plugin_dir in plugins/*/; do
