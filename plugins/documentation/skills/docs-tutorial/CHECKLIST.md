@@ -25,25 +25,26 @@ After writing, verify every item on this checklist:
 - [ ] Imports are complete and correct in every code block
 - [ ] The sbt dependency (if mentioned) is correct
 - [ ] No deprecated methods or outdated patterns are used
-- [ ] Run `sbt "docs/mdoc --in docs/tutorials/<tutorial-id>.md"` and confirm zero `[error]` lines (this is mandatory before claiming the tutorial is done)
+- [ ] Run `sbt "docs/mdoc --in docs/guides/<tutorial-id>.md --out website/docs/guides/<tutorial-id>.md"` and confirm zero `[error]` lines (this is mandatory before claiming the tutorial is done). Note the path: tutorials live in `docs/guides/`, not `docs/tutorials/` — this checklist previously disagreed with SKILL.md's own file-location instructions on this.
+- [ ] "Putting It Together" is delivered as an EMPTY block fenced `scala mdoc:embed:<path-to-CompleteExample.scala>` (or the project's `SourceFile.print` equivalent — see `docs-examples`), never code inlined directly in the page. The embedded file is what the examples build actually compiles; inlining ships code no build has verified as standalone.
 
 ## Companion Examples
 
-- [ ] A package directory exists in `schema-examples/src/main/scala/<packagename>/`
+- [ ] A package directory exists in `<examples-module>/src/main/scala/<packagename>/` (the module name comes from the tutorial's own examples setup, not a fixed name — see `docs-examples`)
 - [ ] There is one example file per major tutorial concept (typically 3-5 files)
 - [ ] There is a `CompleteExample.scala` (or descriptively named equivalent) with the full "Putting It Together" code
 - [ ] Each example file is fully self-contained (compiles and runs independently)
 - [ ] Each example file has complete imports
 - [ ] Each example file has a scaladoc with tutorial title, concept name, description, and `sbt runMain` command
 - [ ] Each example file includes `println` output showing meaningful results
-- [ ] All examples compile successfully (`sbt "schema-examples/compile"`)
+- [ ] All examples compile successfully (`sbt "<examples-module>/compile"`)
 
 ## Running the Examples Section
 
 - [ ] The tutorial includes a "Running the Examples" section after "Putting It Together"
-- [ ] The section includes `git clone https://github.com/zio/<repo-name>.git` and `cd <repo-name>`
-- [ ] Every companion example file is listed with its `sbt "schema-examples/runMain ..."` command
-- [ ] The section includes `sbt "schema-examples/compile"` as an alternative
+- [ ] The section clones and `cd`s in one path straight into the examples module dir (`cd <repo>/<examples-module>`, not a separate `cd <repo>` then `cd <examples-module>`)
+- [ ] Every companion example file is embedded, per concept in order, inside a collapsible `<details><summary>` via `mdoc:embed:<path>:show-line-numbers` (same pattern as "Putting It Together"), with a short sentence on how to run it and its `sbt "<examples-module>/runMain ..."` command
+- [ ] The section includes `sbt "<examples-module>/compile"` as an alternative
 
 ## Style and Integration
 
@@ -52,5 +53,6 @@ After writing, verify every item on this checklist:
 - [ ] The tutorial is added to `sidebars.js` under the "Guides" category
 - [ ] The tutorial is linked from `docs/index.md`
 - [ ] Related reference pages link back to this tutorial
+- [ ] Every link in "Where to Go Next" points at a page that actually exists — check before linking, and leave a mention unlinked (never a placeholder) when it doesn't. Never accept a stub page written just to make a link resolve.
 - [ ] Writing style follows the rules (warm tone, present tense, "we"/"you", concise, no emojis)
 - [ ] Admonitions are used sparingly and for genuinely important callouts
