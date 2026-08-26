@@ -27,7 +27,8 @@ export const TIERS: Record<
   | 'docsOrganizer'
   | 'sectionWriter'
   | 'complianceChecker'
-  | 'prSubsectionWriter',
+  | 'prSubsectionWriter'
+  | 'sectionEnricher',
   Tier
 > = {
   writer: {
@@ -134,5 +135,14 @@ export const TIERS: Record<
   prSubsectionWriter: {
     model: process.env.PR_SUBSECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.PR_SUBSECTION_WRITER_EFFORT, 'medium'),
+  },
+  // Writer-shaped like sectionWriter and prSubsectionWriter above, but the risk sits closer to
+  // redundancyEditor's: this REPLACES content on a page that already passed review, rather than
+  // inserting into empty space. A bad enrichment does not just miss an opportunity, it overwrites
+  // something that worked. Sonnet stays for that reason; `medium` because composing five real parts
+  // from source research is still writer-shaped work, not a small judgement call.
+  sectionEnricher: {
+    model: process.env.SECTION_ENRICHER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.SECTION_ENRICHER_EFFORT, 'medium'),
   },
 };

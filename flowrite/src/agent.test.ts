@@ -17,6 +17,7 @@ import { RUN_LABEL as ADD_SECTION_LABEL } from './add-section.ts';
 import { DOC_KINDS, type DocKind, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
 import { RUN_LABEL as CHECK_COMPLIANCE_LABEL } from './check-compliance.ts';
 import { RUN_LABEL as CROSSREF_LABEL } from './crossref.ts';
+import { RUN_LABEL as ENRICH_SECTION_LABEL } from './enrich-section.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as ORGANIZE_LABEL } from './organize.ts';
 import { RUN_LABEL as PR_SUBSECTION_LABEL } from './pr-subsection.ts';
@@ -54,6 +55,7 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(ADD_SECTION_LABEL, 'add-missing-section');
   assert.equal(CHECK_COMPLIANCE_LABEL, 'check-compliance');
   assert.equal(PR_SUBSECTION_LABEL, 'pr-subsection');
+  assert.equal(ENRICH_SECTION_LABEL, 'enrich-section');
 });
 
 test('each fixture launcher passes its own kind label to archive-docs.sh', () => {
