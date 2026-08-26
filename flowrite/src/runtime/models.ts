@@ -23,7 +23,8 @@ export const TIERS: Record<
   | 'factChecker'
   | 'redundancyEditor'
   | 'metadataWriter'
-  | 'crossLinker',
+  | 'crossLinker'
+  | 'docsOrganizer',
   Tier
 > = {
   writer: {
@@ -89,5 +90,18 @@ export const TIERS: Record<
   crossLinker: {
     model: process.env.CROSS_LINKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.CROSS_LINKER_EFFORT, 'low'),
+  },
+  // Sonnet, but for a different reason than the two editors above: the risk here is not a damaged
+  // sentence, it is a bad TAXONOMY. Grouping is the whole judgement — a category is a claim about what
+  // a set of pages is for, and a wrong one is durable in a way a wrong link is not, because readers
+  // navigate by it and later pages get filed into it. The predecessor grouped by name substring
+  // ("contains chunk, list, vector" → Collections), which is what a cheap model reaches for when it
+  // cannot hold a dozen pages' purposes at once.
+  //
+  // `medium` rather than `low`, alone among the standalone agents: the others act on one page at a
+  // time, while this one has to hold every page in a section simultaneously to see the grouping.
+  docsOrganizer: {
+    model: process.env.DOCS_ORGANIZER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.DOCS_ORGANIZER_EFFORT, 'medium'),
   },
 };
