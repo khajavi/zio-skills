@@ -159,6 +159,79 @@ forbids. Reading it is fine, and it is a useful adversarial read-only case — i
 `docs/reference/index.md` names modules that have no pages, which is exactly the setup for
 `BACKLOG.md` finding 1, so a correct run refuses to create a target there.
 
+## Site-wide coverage: a named batch (added 2026-08-26)
+
+A request may name several targets. Each is handled exactly as one target is, in order of how much
+material it has, with its receipt block filed as it finishes.
+
+### The agent must not pick its own targets
+
+The obvious design — run the survey, take the first N orphans — was designed and rejected. Recording it
+so it is not re-proposed.
+
+Measured on `~/sources/scala/zio-2.x-new/docs` (299 pages, 181 non-index pages with no prose inbound
+link):
+
+- **The survey's head is unlinkable.** In emission order: `adopters.md`, `canfail.md`,
+  `code-of-conduct.md`, `contributing-to-documentation.md`, then 27 `ecosystem/community/*` listing
+  pages. Thirty-two site-meta entries before the first real candidate.
+- **Narrowing does not rescue it.** Restricted to `docs/reference`, the first three are
+  `architecture/functional-design-patterns.md`, `architecture/non-functional-requirements.md` and
+  `architecture/programming-paradigm.md`, whose subject phrases appear in **1, 0 and 3** other files.
+  Two of three are guaranteed no-ops.
+- **A correct no-op is sticky.** 80 of the 181 orphans (44%) have their subject phrase in no other page,
+  so "added nothing" is right — but the page stays orphaned, so the next invocation's survey returns it
+  **first again**. That is `autopilot`, whose recorded `processed` array holds `stm/stm` 7 times.
+
+The root cause is structural, which is why no prose fixes it: the file-derived completion test records
+the *edit* outcome and cannot record "processed, correctly empty". The state store that could was
+deliberately dropped. `src/crossref.ts` already named the missing piece — the survey "prints the list a
+human picks from". **The human is the filter.** A sweep deletes the filter and keeps the list.
+
+### The window binds before the cost does
+
+Re-sending earlier targets in one conversation is cheap here: `README.md` records 33,357 fresh input
+tokens against 6,180,078 cache reads across 248 turns for $1.94, and `run-telemetry.ts:38` puts the
+usual ratio at ~0.78. At ~20k durable context per target the extra cache read is quadratic — roughly
+$0.72 at three targets (+58% over three separate runs), $10.80 at ten (+270%). So cost rules out ten and
+does not rule out one.
+
+The context window is the real limit. Candidate sets measured on the same tree: `TRef` 6 files (178 KB),
+`Promise` 24 (489 KB), `Task` 45 (643 KB), `ZLayer` 63 (743 KB ≈ 186k tokens). One `ZLayer`-class target
+read exhaustively is most of a window. Hence the guide's candidate budget: rank by mention density, read
+a handful, and read the matched region rather than the file for anything over ~40 KB.
+
+### Four rules exist only because of batches
+
+- **One link per source page across the run**, not per target. Three real orphans' candidate sets
+  overlapped on three pages, one shared by all three. The corpus norm is ≤7 internal links per page, and
+  nothing in the files records the total — so per-target accounting is how a batch reintroduces the
+  monotonic growth that disqualified an outbound pass in the first place.
+- **A nested-link check.** Two targets' anchors on one page can nest, and the inline-code grep is blind
+  to it. Verified both ways; the single legitimate match is an image inside a link.
+- **A candidate-read budget**, above.
+- **A whole-diff audit at the end**, against the declared targets. A single-target run gets this free —
+  every added line contains the one target's path — and that invariant was this design's only
+  compensating control. With several targets it must be run deliberately.
+
+### Both halts are required output
+
+"Stop after the batch" and "abandon the remaining targets on a failed grep" are compliance-by-absence,
+which is the one class this repo has measured failing: `src/agent.ts` records prose-only "ask and stop"
+writing a whole page over 53 turns and $0.38, against 1 turn when the alternative was named as a tool.
+`BACKLOG.md` finding 1 is the other half — when a check failed mid-run, the model created artifacts to
+satisfy it. So both are required receipt lines. A missing line is visible; silent compliance is not.
+
+### What a batch cannot fix
+
+`component-usage.ts:240-243` populates `pagesWritten` only from the `write` tool, and this agent's whole
+mandate is to wrap an existing phrase — it calls `edit`. So `activity.pagePaths` is always empty,
+`pages-outside-one-root` is dead for this agent, and **the run report has no record of which pages a
+cross-link run touched.** The model-authored receipt is the only account, which is the "cursor written by
+the same model that decided it was finished" that `scripts/backfill-metadata.sh` rejects by name. At one
+target `git diff` is small and compensates; at three it is larger and unattributed, which is why the
+whole-diff audit is not optional.
+
 ## Risks
 
 - **The failure this agent must not repeat is invisible to every gate**, and once got through human
