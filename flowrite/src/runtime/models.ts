@@ -24,7 +24,8 @@ export const TIERS: Record<
   | 'redundancyEditor'
   | 'metadataWriter'
   | 'crossLinker'
-  | 'docsOrganizer',
+  | 'docsOrganizer'
+  | 'sectionWriter',
   Tier
 > = {
   writer: {
@@ -103,5 +104,14 @@ export const TIERS: Record<
   docsOrganizer: {
     model: process.env.DOCS_ORGANIZER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.DOCS_ORGANIZER_EFFORT, 'medium'),
+  },
+  // Writer's tier, not an editor's: the other standalone agents cut, link, or file existing prose —
+  // this one composes a new section from source it read itself, with runnable examples that have to
+  // pass mdoc. That is the writer's job in miniature, not a judgement call over a finished page, so it
+  // gets the writer's model. `medium` rather than `high`: one section is bounded in a way a whole page
+  // is not, and the insertion-point algorithm here is deterministic, not a design decision.
+  sectionWriter: {
+    model: process.env.SECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.SECTION_WRITER_EFFORT, 'medium'),
   },
 };
