@@ -15,7 +15,8 @@ Run through every item before reporting back to the user that the PR has been do
 - [ ] If new reference page → `docs-data-type-ref` skill was invoked with PR context (motivation from issues, key types from commits)
 - [ ] If new how-to guide → `docs-how-to-guide` skill was invoked
 - [ ] If new tutorial → `docs-tutorial` skill was invoked
-- [ ] If subsection addition → `docs-add-missing-section` or `docs-enrich-section` was invoked against the existing page
+- [ ] If subsection addition → the right one of three was used: `docs-add-missing-section` (a canonical section was entirely missing), `docs-enrich-section` (an existing section was thin), a direct edit (the page already claimed the old, wrong behavior), or — the common case — the manual freeform "Changes in this PR" append (see SKILL.md Path 3c)
+- [ ] If the manual freeform append was used, its mdoc block was verified to compile (`sbt "docs/mdoc --in <path> --out website/<path>"`) — nothing else checks this page
 - [ ] If no user-facing change → reported "no docs needed" with one-line rationale
 
 ## Per-Doc Quality (delegate to the chosen skill's CHECKLIST)
