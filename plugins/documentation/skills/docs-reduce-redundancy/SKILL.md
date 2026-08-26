@@ -32,7 +32,7 @@ Redundancy slows readers down by forcing them to process repeated information. D
 
 After all tasks complete, compile the documentation:
 ```
-sbt "docs/mdoc --in <file.md>"
+sbt "docs/mdoc --in <file.md> --out website/<file.md>"
 ```
 
 Verify:
@@ -40,6 +40,10 @@ Verify:
 - Cross-references are valid (no broken links)
 - Sections flow naturally after cuts
 - Concept clarity is preserved
+
+Report what you cut AND what you left, one line each with the section name. Leaving something is a
+finding, not an omission — it says a borderline case was considered and the bound held. A report
+listing only cuts can't be told apart from a pass that never noticed the borderline cases at all.
 
 ## Redundancy Detection Guide
 
@@ -64,7 +68,7 @@ Apply the appropriate strategy based on redundancy type:
 | **Structural: unnecessary transition** | Delete transition word; verify sentence still flows | Delete "Furthermore,"; sentence should still read naturally |
 | **Structural: restated signposting** | Remove phrase; rely on document flow | Delete "As mentioned above," — reader can infer from prior section |
 | **Semantic: repeated definition** | Keep definition in primary location (earliest, or most prominent); replace repeats with `[See X](#link)` | First definition in Overview; later sections link to it |
-| **Semantic: repeated example** | Choose the best/clearest example; remove others; add comparative note if examples show different patterns | Keep one realistic example; remove toy examples |
+| **Semantic: repeated example** | **Leave it — do not remove a code block, ever.** See "Never edit a code block" below. | Two similar examples stay two examples |
 | **Semantic: repeated motivation** | Keep motivation in one place (usually intro); remove from later sections | Explain "why" once; don't repeat in each section |
 
 ## Common Mistakes
@@ -72,18 +76,35 @@ Apply the appropriate strategy based on redundancy type:
 | Mistake | Why It Fails | Fix |
 |---------|-------------|-----|
 | Over-aggressive cutting | Removing context leaves section unclear | Remove only redundancy; preserve concept explanations |
-| Cutting example entirely | Readers need at least one concrete example | Keep best example; remove duplicates, not all examples |
+| **Removing ANY example code block**, even "keeping the best and cutting duplicates" | mdoc blocks share one scope down the whole page — deleting one can break every block after it, and the compile error will point at a line you never touched, far from the block you actually cut | **Never remove a code block, full stop.** Two examples that look alike stay two examples; see "Never edit a code block" below |
 | Removing type definition completely | Later sections may reference it without context | Always keep definition in first/primary location; link from others |
 | Breaking cross-references | Links become invalid after moving content | Verify links after removing redundant sections |
-| Removing transitions that clarify logic | Some transitions guide meaning ("first", "then", "because") | Only remove decorative transitions ("furthermore", "also") |
+| Removing transitions that clarify logic | Some transitions guide meaning ("first", "then", "because", "instead", "unless") | Only remove decorative transitions ("furthermore", "also") |
 | Cutting without re-reading | Section becomes grammatically broken | Always read edited section aloud after cutting |
+| Cutting a fact because it *looks* like repetition | If the text carries information that appears nowhere else on the page — a parameter, a default, a caveat, a version — it is not redundancy | A cut removes words, never facts |
+| Deleting the last of anything | The last example, the last definition, the last mention of a member — a section reduced to a heading and a link is worse than a repetitive one | Keep at least one occurrence of every fact and every example, always |
+| Treating two distant mentions as redundancy | A term recurring in two far-apart sections is a reader finding their place, not repetition — cutting it costs more than it saves | Require three or more occurrences before a lexical repeat counts (see Detection Hints) |
+
+## Never Edit a Code Block
+
+Prose is the only target of this skill. mdoc blocks share one scope down the whole page, so removing a
+"duplicate" example can break every block that follows it — and the compiler will blame a line you
+never looked at, far from the block you actually deleted. The cost of being wrong is a broken page; the
+saving from cutting a look-alike example is a few lines a reader can skip. Never worth the trade:
+
+- ✅ cut the sentence introducing the second of two similar examples ❌ cut the example itself
+- ✅ leave two code blocks that look alike ❌ merge them into one
+
+Headings, frontmatter, and links are not this skill's to restructure either — do not merge sections,
+renumber headings, or retitle anything in the name of reducing repetition.
 
 ## Detection Hints
 
-- **Grep for repeated phrases**: `grep -n "<phrase>" <file.md>` to find all occurrences
+- **Grep for repeated phrases**: `grep -c "<phrase>" <file.md>` — require three or more occurrences
+  before it counts; two distant mentions is a reader finding their place, not repetition
 - **Read for transitions**: Scan for words: "also", "furthermore", "moreover", "in addition", "as mentioned", "as we discussed", "in this regard"
 - **Count type mentions**: Each type should have at most one full definition; others should cross-reference
-- **Scan for patterns**: Look for identical code structures or narrative patterns in consecutive examples
+- **Scan for patterns**: Look for identical code structures or narrative patterns in consecutive examples — note them for the receipt, never for deletion
 
 ## Integration
 
