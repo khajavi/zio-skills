@@ -408,10 +408,39 @@ but no run has produced an edit. What a first run must answer, in priority order
   that have no pages, so it is a ready-made adversarial read-only case for finding 1's failure — a run
   pointed near it must drop the link, never manufacture the page.
 
+- **Did a batch stop where it was told?** A request may now name several targets. Three things to check:
+  the run worked only the targets named, it emitted the closing `targets: N of N` line, and on a failed
+  verification grep it emitted `HALTED:` and abandoned the rest. Both lines are required output
+  precisely because their absence is otherwise indistinguishable from a run with nothing to report.
+
 **The fixture cannot exercise this.** Four pages, three of them `index.md`, and writing to it would
 modify tracked files, which `flowrite/CLAUDE.md` forbids. So the first real run has to be on a corpus
-with prose to link — on a branch, on a clean tree, with the diff read before anything is staged. Every
-added line should contain the target's path; anything else is a bug in the agent.
+with prose to link — on a branch, on a clean tree, with the diff read before anything is staged.
+
+**Run a single target before running a batch**, whatever the instructions permit. Every added line of a
+one-target run contains that target's path, so a one-token grep audits the entire diff; that is the
+cheapest possible read of whether this agent behaves. A batch replaces that with a deliberate
+whole-diff audit, which is weaker in exactly the way `random.md:14` demonstrated — it survived a
+94-file human review.
+
+## Observations, recorded while adding the cross-linker's batch mode
+
+- **A correct no-op is sticky, and that is why an agent must not pick its own targets.** 44% of a real
+  tree's orphans (80 of 181) have their subject phrase in no other page, so "added nothing" is the right
+  answer — but the page stays orphaned, so a survey-driven loop returns it first on every invocation.
+  The completion test records the *edit* outcome and cannot record "processed, correctly empty". Worth
+  generalising: **a file-derived done-test only works when doing the work always changes a file.** The
+  metadata backfiller satisfies that; a linker does not.
+- **The context window binds long before cost does.** Candidate sets on the real tree: `TRef` 6 files,
+  `Promise` 24, `Task` 45, `ZLayer` 63 (~186k tokens). Re-sending earlier targets is cheap at this
+  repo's ~0.78 cache ratio — about +58% at three targets — but one large subject read exhaustively is
+  most of a window. Also relevant to any future multi-item pass: `run-telemetry.ts:295-299` records that
+  no flag watches context growth and why one cannot be built from current data.
+- **`pagesWritten` cannot see this agent at all.** `component-usage.ts:240-243` fills it from the `write`
+  tool; the cross-linker only ever calls `edit`. So `activity.pagePaths` is always empty and
+  `pages-outside-one-root` is dead here — the run report records nothing about which pages were touched,
+  leaving the model's own receipt as the only account. Counting `edit` would be a two-line change and is
+  the one piece of code worth arguing for, once a run has justified it.
 
 ## Observations, recorded while porting the cross-linker
 

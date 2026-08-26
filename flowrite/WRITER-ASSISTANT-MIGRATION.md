@@ -105,9 +105,28 @@ inline-code span, rendering as literal text, invisible to `mdoc` (not a fenced b
 `onBrokenLinks` (not a link), eleven weeks and one 94-file human review later. That line is now a ❌
 example in the guide, and the reason this agent runs on Sonnet rather than the original's Haiku.
 
+**Site-wide coverage is a named batch, not a sweep.** A request may name several targets and the run
+works them one at a time. The agent does **not** pick targets from the survey, and that is a measured
+decision rather than caution: on a real 299-page tree the survey's head is `adopters.md`,
+`code-of-conduct.md` and 27 ecosystem listing pages, and 44% of the orphans it finds have their subject
+in no other page — so a *correct* no-op leaves the page orphaned and the next invocation's survey
+returns it first again, which is `autopilot` reprocessing `stm/stm` 7 times. The completion test records
+the edit outcome only; it cannot record "processed, correctly empty", and the state store that could was
+dropped. So the survey stays a report and the requester stays the filter.
+
+Still not ported, named rather than implied:
+
+- **the state store** — no `.crossref-state`, no persistence of any kind
+- **confidence tiers** — the model links or it does not
+- **`link-inserter.ts`** — insertion is an `edit` the model makes, bounded by the guide's ✅/❌ pairs
+- **`report` mode** — the guide's survey recipe is the report
+- **any durable record of a correctly-empty target** — the gap above, and the reason target selection
+  is the requester's
+- **link validation beyond** the Docusaurus build's `onBrokenLinks: 'throw'` plus the guide's four
+  verification greps
+
 Unmeasured against a live model — see `docs/superpowers/specs/2026-08-25-crossref-port-design.md` and
-`BACKLOG.md` finding 12. Still not ported: any site-wide accumulated state, and link validation beyond
-the Docusaurus build's `onBrokenLinks: 'throw'` plus the guide's verification greps.
+`BACKLOG.md` finding 12.
 
 ### 4. `reduce-redundancy`
 

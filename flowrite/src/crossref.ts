@@ -64,10 +64,17 @@ const initialData = v.optional(
  * the metadata backfiller's frontmatter grep does, so a re-run is safe and an outbound pass could
  * never be.
  *
- * No driver script, unlike `scripts/backfill-metadata.sh`. That loop exists because metadata is a
- * per-page sweep needing env guards and a fresh process each time; here one run already covers a whole
- * target and its sources, and the guide's orphan recipe prints the list a human picks from — one
- * deliberate act per page rather than an unattended sweep over a tree that it edits in several places.
+ * A run covers the targets the REQUEST names — one, or a handful. No driver script, unlike
+ * `scripts/backfill-metadata.sh`, and more importantly nothing that lets this agent pick its own
+ * targets from the guide's orphan recipe. That recipe is a report for a person to read, and the person
+ * is the filter: measured on a real 299-page tree its head is `adopters.md`, `code-of-conduct.md` and
+ * 27 ecosystem listing pages, and 44% of the orphans it finds have their subject in no other page, so
+ * a correct no-op leaves the page orphaned and the next invocation's survey returns it first again.
+ * That is the predecessor's `autopilot`, which reprocessed `stm/stm` 7 times.
+ *
+ * The completion test that makes re-runs safe — "does anything link here yet" — records the EDIT
+ * outcome only. It cannot record "processed, correctly empty", and the state store that could was
+ * deliberately dropped, which is exactly why target selection stays with the requester.
  *
  * Deliberately small: no roles, no phase tools, no run context, and no tools at all. The five the
  * original mounted (`search_pages`, `search_page_content`, `get_adjacent_pages`,
@@ -99,5 +106,13 @@ export function CrossLinker() {
 CrossLinker.agentName = 'cross-linker';
 CrossLinker.initialData = initialData;
 
-// No `durability` static. This reads a handful of pages and edits a phrase in each, well inside the
-// runtime's default hour.
+// No `durability` static, and for a batch that is a judgement rather than an obvious call. The default
+// is one hour per submission, enforced PREEMPTIVELY — at the deadline the coordinator fires the
+// attempt's abort signal (guide/durability.md). A batch reading several targets' candidate pages could
+// approach that, and an abort partway leaves the earlier targets' edits on disk with no account of
+// them, because the receipt is this run's only record: `component-usage.ts` populates `pagesWritten`
+// from the `write` tool, and this agent only ever calls `edit`.
+//
+// The answer is in the instructions rather than here: each target's receipt block is filed as that
+// target finishes, so an interrupted run still accounts for what it changed. Raising the timeout would
+// hide the problem instead of bounding it — the bound that matters is how many targets a request names.
