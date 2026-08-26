@@ -32,6 +32,8 @@ Skill: docs-writing-style
 
 Read all rules it defines. For enumerated rule skills, note the rule numbers and create a checklist. These are the only rules you will enforce.
 
+**Not every rule skill is numbered.** `docs-mdoc-conventions`, for one, is a decision tree and a set of named checks (modifier selection, public-symbols-only, admonition frequency, …), not a numbered list. When the rule skill has no numbers, build your checklist from its distinct named points instead — each named check or named subsection is one checklist item, cited by name rather than number (e.g. "mdoc-conventions: modifier-matches-decision-tree" instead of "rule 4").
+
 ### Step 2: Read Doc File
 
 Read the full documentation file to understand its current state.
@@ -61,7 +63,8 @@ For each rule in your checklist:
    git add <docs-file>
    git commit -m "docs(<docs-file-stem>): fix <rule-name>"
    ```
-   Example: `git commit -m "docs(chunk): fix rule-2-sentence-clarity"`
+   Example (numbered rule skill): `git commit -m "docs(chunk): fix rule-2-sentence-clarity"`
+   Example (unnumbered rule skill): `git commit -m "docs(chunk): fix mdoc-conventions modifier-selection"`
 
 **Repeat steps 1–3 for each rule until zero violations remain, then proceed to the next rule.**
 
@@ -70,10 +73,12 @@ For each rule in your checklist:
 Run mdoc to verify the doc compiles without errors:
 
 ```bash
-sbt "docs/mdoc --in docs/reference/chunk.md"
+sbt "docs/mdoc --in docs/reference/chunk.md --out website/docs/reference/chunk.md"
 ```
 
-(Substitute the actual docs-file path.)
+(Substitute the actual docs-file path for both `--in` and `--out` — `--out` is the same path prefixed
+with `website/`.) Never bare `sbt docs/mdoc` without `--in`/`--out` — it recompiles every doc in the
+tree, minutes of sbt for a one-file check.
 
 If mdoc fails, identify the error, fix it, and commit:
 ```bash
@@ -106,7 +111,7 @@ To check `docs/reference/chunk.md` against the `docs-writing-style` rule skill:
 1. Load the rule skill: `Skill: docs-writing-style`
 2. Read the doc file: `Read: <PROJECT_ROOT>/docs/reference/chunk.md`
 3. For each rule, find violations, fix, and commit
-4. Run: `sbt "docs/mdoc --in docs/reference/chunk.md"`
+4. Run: `sbt "docs/mdoc --in docs/reference/chunk.md --out website/docs/reference/chunk.md"`
 5. Report results
 
 Example commit message:

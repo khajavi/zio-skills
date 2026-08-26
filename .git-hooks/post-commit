@@ -1,8 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
+
+# Re-entrancy guard. This hook calls `git commit --amend` below, and `--amend` creates a new commit
+# just like any other — so with `core.hooksPath` active, git invokes this SAME post-commit hook again
+# for the amend, which amends again, which invokes it again... measured directly: activating the hook
+# for the first time and making one real commit produced over 1300 stacked "Skills-Used" trailers and
+# a multi-megabyte commit message before it was killed by hand. Standard `--no-verify` does not help;
+# it skips pre-commit/commit-msg, never post-commit. The guard: the outer (real) invocation exports a
+# sentinel before amending, so the inner (recursive) invocation sees it and exits immediately.
+if [ -n "${_ZIO_POST_COMMIT_RUNNING:-}" ]; then
+  exit 0
+fi
+export _ZIO_POST_COMMIT_RUNNING=1
 
 COMMIT_HASH=$(git rev-parse --short HEAD)
 SKILLS_USED=()
+
+# Refresh the flowrite -> plugin-skill export whenever a commit touches the flowrite sources the
+# generator reads from. This does NOT touch plugins/documentation automatically — most of what's
+# there is verified-better or differently-shaped than a mechanical fold of flowrite's content (see
+# the commit history under plugins/documentation/skills/ for why promotion stayed a manual, reviewed
+# step all session). It only keeps dist/plugin-export/ from going stale, so nobody has to remember to
+# re-run the script by hand before comparing the two.
+if [ -d "flowrite" ] && [ -f "flowrite/scripts/generate-plugin-skill.mjs" ]; then
+  CHANGED_FLOWRITE_SOURCES=$(git diff-tree --no-commit-id --name-only -r HEAD -- \
+    'flowrite/src/instructions/' 'flowrite/src/skills/' 'flowrite/scripts/generate-plugin-skill.mjs' \
+    2>/dev/null || true)
+  # Also catch a new/changed standalone agent (flowrite/src/*.ts) without matching every .ts in the
+  # tree — diff-tree with a glob needs GNU find semantics git diff-tree doesn't have, so filter here.
+  CHANGED_STANDALONE_AGENTS=$(git diff-tree --no-commit-id --name-only -r HEAD -- 'flowrite/src/' \
+    2>/dev/null | grep -E '^flowrite/src/[a-z-]+\.ts$' || true)
+
+  if [ -n "$CHANGED_FLOWRITE_SOURCES" ] || [ -n "$CHANGED_STANDALONE_AGENTS" ]; then
+    if command -v node >/dev/null 2>&1; then
+      echo "flowrite sources changed — refreshing flowrite/dist/plugin-export/ ..."
+      if (cd flowrite && node scripts/generate-plugin-skill.mjs) >/tmp/flowrite-generate.log 2>&1; then
+        echo "  done. Diff it against plugins/documentation/skills/ before promoting anything by hand:"
+        echo "    diff -rq flowrite/dist/plugin-export plugins/documentation/skills"
+      else
+        echo "  generator failed — see /tmp/flowrite-generate.log (not blocking this commit)"
+      fi
+    else
+      echo "flowrite sources changed but node is not on PATH — skipped refreshing flowrite/dist/plugin-export/"
+    fi
+  fi
+fi
 
 # Auto-discover plugins and update versions
 if [ -d "plugins" ]; then
@@ -35,14 +77,16 @@ if [ -d "plugins" ]; then
 
     # Get current commit message and append skills trailer
     COMMIT_MSG=$(git log -1 --pretty=%B)
-    git commit --amend -m "$(cat <<EOF
+    # Idempotency, independent of the re-entrancy guard above: skip if this exact commit already
+    # carries a Skills-Used trailer (e.g. a manual `git commit --amend` run after the hook already
+    # added one) rather than appending a second one.
+    if ! grep -q '^Skills-Used:' <<<"$COMMIT_MSG"; then
+      git commit --amend -m "$(cat <<EOF
 $COMMIT_MSG
 
 $SKILLS_TRAILER
 EOF
 )" --no-edit
-  else
-    # Fallback if no skills found
-    git commit --amend --no-edit
+    fi
   fi
 fi

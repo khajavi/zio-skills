@@ -13,6 +13,15 @@ Cross-checks the public members of a Scala data type (extracted from source
 or supplied as a list) against a reference documentation page, and reports
 any members that are not documented.
 
+Heuristic, not a Scala parser: a member counts as documented if it appears
+bare in backticks, as a `def name` signature, or after a `.`/`#` anywhere in
+the page — including inside a package path like `import zio.stream.ZStream`
+matching a member literally named "stream". False positives of that shape
+are the accepted tradeoff against the much larger false-negative risk of
+missing a method shown only via a plain ```scala signature block, which the
+bare-backtick check alone cannot see at all. Treat "missing" as candidates
+to double-check, not gospel.
+
 Arguments:
   <TypeName>       Scala type name (e.g., Chunk, Reader, Schema).
   <doc-file.md>    Reference documentation page to audit.
@@ -141,6 +150,22 @@ extract_methods_from_doc() {
     sort -u
 }
 
+# A member also counts as documented if it appears as a `def name` signature (typical of a plain
+# ```scala illustration block with no backticks at all) or after a `.`/`#` anywhere in the text —
+# not only inside a backtick span that is EXACTLY the bare name. Without this, a reference page that
+# shows every method purely via signature blocks (`def map[B](f: A => B): Chunk[B]`) has every one of
+# them reported missing, and a call written as `Chunk(1,2,3).mapZIO(f)` is missed too: the original
+# paren-stripping regex assumes parens only follow the method name, so a constructor call's `(...)`
+# before the `.` strips everything after it, discarding the method name along with the arguments.
+extract_methods_from_defs_and_qualified() {
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    return
+  fi
+  grep -oE '\bdef[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*' "$file" | awk '{print $2}'
+  grep -oE '[A-Za-z_][A-Za-z0-9_]*(\([^)]*\))?[.#][a-z][a-zA-Z0-9_]+' "$file" | sed -E 's/.*[.#]//'
+}
+
 if [[ $JSON_OUTPUT -eq 0 ]]; then
   echo "=== Documentation Coverage Check for '$TYPE_NAME' ==="
   echo ""
@@ -180,7 +205,8 @@ while IFS= read -r line; do
 done < "$MEMBERS_INPUT"
 
 # Collect documented methods
-extract_methods_from_doc "$DOC_FILE" > "$DOC_METHODS"
+{ extract_methods_from_doc "$DOC_FILE"; extract_methods_from_defs_and_qualified "$DOC_FILE"; } \
+  | sort -u > "$DOC_METHODS"
 
 # Compute missing-set per category (drives both text and JSON output)
 [[ -s "$COMPANION_MEMBERS" ]] && comm -23 <(sort "$COMPANION_MEMBERS") "$DOC_METHODS" > "$COMPANION_MISSING" 2>/dev/null || true

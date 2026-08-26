@@ -32,12 +32,12 @@ Generates documentation from a GitHub pull request. Automatically gathers relate
 
 ### Step 1a — Get PR metadata and commits
 
-Use the `gh` CLI to fetch the PR number (the user provides this):
+Use the `gh` CLI to fetch the PR number (the user provides this). `gh` infers the repo from the
+checkout — never pass `--repo`:
 
 ```bash
 gh pr view <PR_NUMBER> \
-  --json title,body,labels,commits,closingIssuesReferences \
-  --repo <auto-detect from current git remote>
+  --json title,body,labels,commits,closingIssuesReferences
 ```
 
 **What to extract:**
@@ -53,8 +53,7 @@ For each issue referenced in the PR (via `closingIssuesReferences` or found via 
 
 ```bash
 gh issue view <ISSUE_NUMBER> \
-  --json title,body,labels \
-  --repo <same as above>
+  --json title,body,labels
 ```
 
 **What to extract:**
@@ -152,7 +151,22 @@ User: "Create a how-to guide for the new temporal processing feature from PR #12
 - Labels: `enhancement`, `fix`
 - Existing doc page covers the parent topic
 
-**Manual process:**
+**First, check whether this is genuinely a freeform "what changed" note, or one of two more specific
+cases** — the three are not interchangeable, and picking the wrong one has produced real drift here
+before:
+- The PR completed a section that was **entirely absent** from the page and matches one of the five
+  canonical reference-page section types (Construction, Predefined Instances, Comparison, Advanced
+  Usage, Motivation) → delegate to **`docs-add-missing-section`** instead of the manual process below.
+- The PR extends an **existing but thin** section (signature + toy example, no real motivation) →
+  delegate to **`docs-enrich-section`** instead.
+- The PR corrects something the page **already claims incorrectly** (a bugfix whose old, wrong
+  behavior the page documented) → this is a targeted **edit** of the existing wrong text, not a new
+  subsection at all. Read the passage, correct it to match the fixed behavior, and stop — don't
+  invent a "Behaviour notes" subsection to hold a correction that belongs inline.
+- Otherwise — the common case, a small enhancement with nothing thin or wrong to fix, just something
+  new to note — use the manual process below.
+
+**Manual process** (the common case):
 1. Read the existing page at `docs/reference/<id>.md` or `docs/guides/<id>.md`
 2. Extract PR context (issues, motivation, commits)
 3. Append a new section using this structure:
@@ -168,7 +182,9 @@ User: "Create a how-to guide for the new temporal processing feature from PR #12
 
    ### Example
 
-   \`\`\`scala
+   A prose sentence ending in `:`, then:
+
+   \`\`\`scala mdoc:compile-only
    <brief code example showing the new feature>
    \`\`\`
 
@@ -177,7 +193,12 @@ User: "Create a how-to guide for the new temporal processing feature from PR #12
    <If applicable, list new types/methods. Link to reference docs if they exist.>
    ```
 4. Follow `docs-writing-style` for prose (refer to the skill for rules)
-5. Follow `docs-mdoc-conventions` for code block syntax (refer to the skill for modifiers and admonitions)
+5. Follow `docs-mdoc-conventions` for code block syntax (refer to the skill for modifiers and admonitions) — the example above is illustrative; a real block always carries a real mdoc modifier, never plain ` ```scala ` for a runnable example
+6. **Verify it compiles** — this page was not touched by any other verification step, so this is the only place it happens:
+   ```bash
+   sbt "docs/mdoc --in docs/reference/<id>.md --out website/docs/reference/<id>.md"
+   ```
+   (or `docs/guides/<id>.md`, matching wherever the page actually lives). Zero `[error]` lines before continuing.
 
 ### Guidelines Across All Paths
 
@@ -274,10 +295,13 @@ Once documentation is written, tell the user:
 
 ## Phase 6: Verify Lint (If Examples Created)
 
-If documentation involved creating or modifying `.scala` example files in `schema-examples/`, stage them in git first, then verify that all Scala code passes the CI formatting gate before reporting completion:
+If documentation involved creating or modifying `.scala` example files in an examples module (see
+`docs-examples` — the module name is whatever this project's own examples setup uses, not a fixed
+name), stage them in git first, then verify that all Scala code passes the CI formatting gate before
+reporting completion:
 
 ```bash
-git add schema-examples/src/main/scala/**/*.scala
+git add <examples-module>/src/main/scala/**/*.scala
 sbt fmtChanged
 ```
 
@@ -310,7 +334,8 @@ When you invoke this skill:
 - [ ] **Phase 2:** Use PR labels and title as tiebreakers
 - [ ] **Phase 3a:** If new reference/API page → invoke `docs-data-type-ref` skill with PR context
 - [ ] **Phase 3b:** If new how-to guide → invoke `docs-how-to-guide` skill with PR context
-- [ ] **Phase 3c:** If subsection → manually edit existing page, consult `docs-writing-style` and `docs-mdoc-conventions` skills
+- [ ] **Phase 3c:** If subsection → check first whether it's a missing canonical section (delegate to `docs-add-missing-section`), a thin existing section (delegate to `docs-enrich-section`), or a correction to already-wrong text (a direct edit) — only the remaining common case is the manual freeform append, consulting `docs-writing-style` and `docs-mdoc-conventions`
+- [ ] **Phase 3c:** If the manual append was used, verify it compiles (`sbt "docs/mdoc --in <path> --out website/<path>"`) — nothing else checks this page
 - [ ] **Phase 4:** If new page → invoke `docs-integrate` skill to update sidebar
 - [ ] **Phase 5:** Report findings and file paths to user
 - [ ] **Phase 6:** If `.scala` examples were created, run `sbt fmt` and `sbt check` to verify lint compliance
@@ -325,7 +350,7 @@ For worked examples covering the common PR shapes (new reference page, new how-t
 
 ## Notes
 
-- **Auto-detect repo:** Use `git remote -v` to find the GitHub repo URL if needed
+- **Repo:** `gh` infers it from the checkout on its own — never pass `--repo` or shell out to `git remote -v` to find it
 - **PR numbers:** Assume user provides `#123` format; extract the number
 - **No commits/issues:** If a PR has no linked issues, use only PR title and body
 - **Ambiguous cases:** If unsure whether to create a new page or subsection, default to a new page (easier to reorganize later) or ask the user

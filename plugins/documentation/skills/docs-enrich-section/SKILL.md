@@ -72,6 +72,24 @@ Checklist for the example:
 - [ ] No hardcoded output comments (`// None`, `// "hello"`, etc.)
 - [ ] Preceded by a prose sentence ending in `:`
 
+### Cross-references
+
+Where the enriched API composes with a sibling type or a related section, link to it. A reader who
+now understands *why* this API exists often needs to know what it hands off to next.
+
+### When a part is intentionally omitted
+
+Some sections have no natural "naive approach" — the API has no precursor a reader would reach for
+first. Say so in the section itself, briefly, so a future reader does not read the omission as an
+oversight.
+
+## Avoid Bloat
+
+Longer is not automatically better. A section that doubled in length earns that only if every added
+paragraph carries information the reader needs — not filler, not a restatement, not content that
+belongs in a different section type (a Construction example does not belong inside an enriched
+Advanced Usage subsection), and nothing already said elsewhere on the same page.
+
 ## Common Mistakes
 
 | Mistake | Fix |

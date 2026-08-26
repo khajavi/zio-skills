@@ -24,7 +24,14 @@ export const TIERS: Record<
   | 'redundancyEditor'
   | 'metadataWriter'
   | 'crossLinker'
-  | 'docsOrganizer',
+  | 'docsOrganizer'
+  | 'sectionWriter'
+  | 'complianceChecker'
+  | 'prSubsectionWriter'
+  | 'sectionEnricher'
+  | 'gapFinder'
+  | 'prAuditor'
+  | 'retrospector',
   Tier
 > = {
   writer: {
@@ -103,5 +110,72 @@ export const TIERS: Record<
   docsOrganizer: {
     model: process.env.DOCS_ORGANIZER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.DOCS_ORGANIZER_EFFORT, 'medium'),
+  },
+  // Writer's tier, not an editor's: the other standalone agents cut, link, or file existing prose —
+  // this one composes a new section from source it read itself, with runnable examples that have to
+  // pass mdoc. That is the writer's job in miniature, not a judgement call over a finished page, so it
+  // gets the writer's model. `medium` rather than `high`: one section is bounded in a way a whole page
+  // is not, and the insertion-point algorithm here is deterministic, not a design decision.
+  sectionWriter: {
+    model: process.env.SECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.SECTION_WRITER_EFFORT, 'medium'),
+  },
+  // Same risk shape as redundancyEditor and crossLinker directly above: this EDITS a page that already
+  // passed review, with nothing downstream re-checking a given fix. `low` rather than `medium` because
+  // the rigor here is procedural, not judgement — 28 numbered rules checked one at a time, adversarial
+  // verification against explicit text, not a taste call about what a sentence carries. Sonnet, not
+  // Haiku, for the same reason as its neighbors: a false "clean" on a rule is silent, and nothing
+  // downstream would catch it either.
+  complianceChecker: {
+    model: process.env.COMPLIANCE_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.COMPLIANCE_CHECKER_EFFORT, 'low'),
+  },
+  // sectionWriter's tier and reasoning apply unchanged: this composes new prose and a runnable example
+  // from source it reads itself (here, a PR and its linked issues rather than the library source
+  // directly), same writer-in-miniature shape. `medium`, not `high`: one subsection is more bounded
+  // than one of the five canonical section types above it, since there is no insertion-point
+  // algorithm to reason about — the PR names the feature, the page's end is the seam.
+  prSubsectionWriter: {
+    model: process.env.PR_SUBSECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.PR_SUBSECTION_WRITER_EFFORT, 'medium'),
+  },
+  // Writer-shaped like sectionWriter and prSubsectionWriter above, but the risk sits closer to
+  // redundancyEditor's: this REPLACES content on a page that already passed review, rather than
+  // inserting into empty space. A bad enrichment does not just miss an opportunity, it overwrites
+  // something that worked. Sonnet stays for that reason; `medium` because composing five real parts
+  // from source research is still writer-shaped work, not a small judgement call.
+  sectionEnricher: {
+    model: process.env.SECTION_ENRICHER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.SECTION_ENRICHER_EFFORT, 'medium'),
+  },
+  // Same reasoning as docsOrganizer above, and for the same structural reason: this agent has to hold
+  // every undocumented type in the scan simultaneously to classify priority sensibly, not act on one
+  // page at a time like the editors above it. `medium` rather than `low` follows from that alone. It
+  // writes no page, so the redundancyEditor-class risk (a silent bad edit shipping) does not apply —
+  // the worst realistic output is a report with a type in the wrong priority tier, visible in the
+  // report itself and cheap to correct on the next run.
+  gapFinder: {
+    model: process.env.GAP_FINDER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.GAP_FINDER_EFFORT, 'medium'),
+  },
+  // Same shape as complianceChecker: the part that most needed rigor — applying the gate table — is
+  // no longer this model's job at all, `classify_pr_docs` computes it. What is left is procedural,
+  // not judgement: fetch two `gh` calls per PR, up to 20 times a run, and grade coverage against a
+  // fixed four-level rubric. `low` follows from that, Sonnet because a batch this repetitive is where
+  // a cheap model starts skipping later items.
+  prAuditor: {
+    model: process.env.PR_AUDITOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.PR_AUDITOR_EFFORT, 'low'),
+  },
+  // The highest blast radius of any standalone agent here: redundancyEditor and crossLinker corrupt
+  // one page if they get it wrong; this one edits the instructions that govern EVERY future run of a
+  // kind, so a bad "fix" degrades every page written after it, silently, until the next retrospection
+  // happens to catch it. `medium`, not `low` — this is judgement (is the log evidence strong enough to
+  // justify a permanent change to shared instructions?), not a mechanical checklist like
+  // complianceChecker's. Sonnet for the same reason as every editor above it: nothing downstream
+  // re-checks what this run decides to change.
+  retrospector: {
+    model: process.env.RETROSPECTOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.RETROSPECTOR_EFFORT, 'medium'),
   },
 };

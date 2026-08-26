@@ -13,11 +13,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { RUN_LABEL as ADD_SECTION_LABEL } from './add-section.ts';
 import { DOC_KINDS, type DocKind, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
+import { RUN_LABEL as CHECK_COMPLIANCE_LABEL } from './check-compliance.ts';
 import { RUN_LABEL as CROSSREF_LABEL } from './crossref.ts';
+import { RUN_LABEL as ENRICH_SECTION_LABEL } from './enrich-section.ts';
+import { RUN_LABEL as GAP_FINDER_LABEL } from './find-gaps.ts';
+import { RUN_LABEL as PR_AUDITOR_LABEL } from './list-undocumented-prs.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as ORGANIZE_LABEL } from './organize.ts';
+import { RUN_LABEL as PR_SUBSECTION_LABEL } from './pr-subsection.ts';
 import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
+import { RUN_LABEL as RETROSPECT_LABEL } from './retrospect.ts';
 
 test('every kind is fully configured', () => {
   for (const kind of DOC_KINDS) {
@@ -48,6 +55,13 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(METADATA_LABEL, 'backfill-metadata');
   assert.equal(CROSSREF_LABEL, 'cross-link-page');
   assert.equal(ORGANIZE_LABEL, 'organize-reference-docs');
+  assert.equal(ADD_SECTION_LABEL, 'add-missing-section');
+  assert.equal(CHECK_COMPLIANCE_LABEL, 'check-compliance');
+  assert.equal(PR_SUBSECTION_LABEL, 'pr-subsection');
+  assert.equal(ENRICH_SECTION_LABEL, 'enrich-section');
+  assert.equal(GAP_FINDER_LABEL, 'find-gaps');
+  assert.equal(PR_AUDITOR_LABEL, 'list-undocumented-prs');
+  assert.equal(RETROSPECT_LABEL, 'retrospect');
 });
 
 test('each fixture launcher passes its own kind label to archive-docs.sh', () => {

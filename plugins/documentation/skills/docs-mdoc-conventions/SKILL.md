@@ -14,7 +14,7 @@ Scan the document and identify every Scala code block missing an mdoc modifier
 1. Create a parent task: "Fix mdoc modifier – <section>:<line>"
 2. Under it, create two child tasks:
   - "1. Choose and apply modifier"
-  - "2. Run `sbt mdoc --in <file>.md` and confirm zero errors"
+  - "2. Run `sbt \"docs/mdoc --in <file>.md --out website/<file>.md\"` and confirm zero errors"
 
 Do not touch any source file until the full task tree is created and you have
 listed it for confirmation.
@@ -65,8 +65,22 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
   (for self-contained examples). Use `invisible` only when you need imports shared across blocks
   but must **not** appear anywhere in the rendered output.
 
+- **`mdoc:embed:<path>`** — Custom modifier: replaces the block (leave its body empty) with the file
+  at `<path>` (repo-root relative) rendered as a titled code fence. Append `:showLineNumbers` for line
+  numbers. Use for a tutorial's "Putting It Together" final block, pointing at the companion example
+  file that is the single source of truth for that complete example — never paste the same code inline
+  when a companion file already carries it. Requires the docs subproject to depend on
+  `"dev.zio" %% "zio-sbt-source"` — add it if missing.
+
 - **No mdoc** (plain `` ```scala ``) — Renders source code only, not compiled.
   Use for pseudocode, ASCII diagrams, type signatures for illustration, or non-Scala syntax (e.g., sbt configuration).
+
+- **Public API only.** An mdoc block compiles in the default package, exactly like user code —
+  reference only PUBLIC symbols. A `private`/`private[pkg]`/`protected` type or member won't compile in
+  a snippet, so never demonstrate a closed extension point: ✅ implement the public
+  `LogRecordProcessor` ❌ implement `LogFormatter` whose required parameter type is
+  `private[telemetry]`. Verify visibility against the real source before drafting; if the only path
+  needs a package-private symbol, pick a public alternative or drop the example.
 
 - -**Never hardcode expression output in comments**: Let mdoc render output automatically, don't add comments like `// None` or `// "hello"`. Use bare `mdoc` to show all vals; only use `mdoc:silent` when output is verbose boilerplate.
 
@@ -266,9 +280,37 @@ Run with `--help` for full usage. **Exit codes:**
 | `1`  | One or more code blocks are missing mdoc modifiers.              |
 | `2`  | Invocation error (missing/extra arguments, file not found).      |
 
+## Docs Classpath
+
+mdoc compiles against the docs project's `.dependsOn(...)`. If the documented module is missing there,
+add it to `build.sbt` (match sibling style, e.g. `<module>.jvm`) and reload — never downgrade real code
+to plain ```` ```scala ```` over a missing dependency, and never leave a runnable example uncompiled to
+work around a build gap.
+
+**A build's gap is fixed in the build, never in the page.** `key not found: VERSION` means the docs
+project defines no `mdocVariables`, so add `mdocVariables += "VERSION" -> version.value` there and
+re-run: ✅ `mdocVariables += "VERSION" -> version.value"` in `build.sbt` ❌ writing `% "0.1.0"` into the
+page (it reads as fixed, and it breaks writing-style rule 25's `@VERSION@` placeholder).
+
+## Verifying the Full Compile
+
+The mechanical checker above only catches a missing modifier — it cannot catch a real compile error.
+Always follow it with an actual mdoc compile, scoped to the file you touched, never the whole docs set
+(unscoped `sbt docs/mdoc` recompiles every doc — minutes of sbt for a one-file change):
+
+```bash
+sbt "docs/mdoc --in <file> --out website/<file>"
+```
+
+`mdoc` is an sbt task, not a shell binary: quote the whole `docs/mdoc …` as one argument (never bare
+`mdoc`, never unquoted). One `--in`/`--out` pair per file; `--out` is the same path prefixed with
+`website/`, e.g. `docs/reference/x.md` → `website/docs/reference/x.md`. If the failure output only
+shows a stack trace with "stack trace is suppressed; run 'last <scope>'", run that `sbt "last <scope>"`
+command to get the real error.
+
 ## Troubleshooting
 
-If mdoc produces more than 3 compilation errors, the blocks are likely not properly isolated. Check for missing `:reset` or `:nest` modifiers, or name collisions between blocks. If the issue persists, strip all mdoc modifiers from the reported lines, confirm the errors are gone, then re-apply the correct modifiers one by one using the decision tree — running `sbt mdoc --in <path>.md` after each change to verify before continuing.
+If mdoc produces more than 3 compilation errors, the blocks are likely not properly isolated. Check for missing `:reset` or `:nest` modifiers, or name collisions between blocks. If the issue persists, strip all mdoc modifiers from the reported lines, confirm the errors are gone, then re-apply the correct modifiers one by one using the decision tree — running `sbt "docs/mdoc --in <path> --out website/<path>"` after each change to verify before continuing.
 
 Common mistakes when writing mdoc blocks? See **`references/troubleshooting.md`** for solutions to.
 

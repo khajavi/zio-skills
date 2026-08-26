@@ -1,6 +1,6 @@
 {
   "name": "docs-write",
-  "version": "0.1.0",
+  "version": "0.1.0-d57697ef",
   "description": "Guided documentation workflow: generates reference pages, how-to guides, and tutorials for existing ZIO library code by routing to the documentation plugin skills",
   "author": {
     "name": "Milad Khajavi"
@@ -8,5 +8,12 @@
   "homepage": "https://github.com/zio/zio-skills",
   "repository": "https://github.com/zio/zio-skills",
   "license": "Apache-2.0",
-  "keywords": ["zio", "documentation", "docs", "mdoc", "skills", "scala"]
+  "keywords": [
+    "zio",
+    "documentation",
+    "docs",
+    "mdoc",
+    "skills",
+    "scala"
+  ]
 }

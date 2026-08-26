@@ -8,6 +8,18 @@ allowed-tools: Glob, Grep, Read, Edit, Bash
 
 Improve documentation structure by organizing related data types into meaningful categories.
 
+**A category is a sidebar grouping plus one index page — never a directory, and never a file move.**
+A page's links are relative to where it sits, so relocating a type's `.md` file breaks every reference
+to it and every `../` inside it. Every type file stays exactly where it already is; only its sidebar
+`items` entry moves into the new category, using the id it already has (`reference/chunk`, not
+`reference/collections/chunk`). The category's own index page is the one genuinely new file, and it
+lives at `docs/reference/[category-kebab-case].md` — a flat file, not `[category]/index.md`, because
+nothing lives in that directory. (Measured: a predecessor version of this skill emitted ids of the
+form `reference/<category>/<type>` while moving no files, so its own entries pointed at pages that
+never existed there — and its own repair advice was "create the missing page or remove the entry,"
+which shipped unreviewed stub pages to make a broken sidebar resolve. Never do that; see Common
+Failures below.)
+
 ## Two Modes of Operation
 
 ### Mode 1: Manual Categorization
@@ -24,7 +36,8 @@ docs-organize-types [type1] [type2] [type3] --category "[Category Name]"
 docs-organize-types chunk list vector --category "Collections"
 ```
 
-This moves (or creates links for) `chunk`, `list`, and `vector` into a "Collections" category.
+This groups `chunk`, `list`, and `vector` into a "Collections" category in the sidebar. Their `.md`
+files are never moved — only their sidebar entry changes.
 
 ### Mode 2: Automatic Categorization
 
@@ -39,7 +52,8 @@ The skill will:
 1. **Scan** `docs/reference/` for all data type documentation files
 2. **Extract** type signatures, descriptions, and relationships
 3. **Analyze** integration patterns (which types depend on others)
-4. **Group** types by functional area:
+4. **Group** types by functional area — from what each type's own definition says it's for (see Step 3
+   below), never from its name alone. Typical resulting shapes, illustrative rather than a rulebook:
    - **Collections**: Chunk, List, Vector, etc.
    - **Type System**: TypeId, Schema, DynamicValue, etc.
    - **Resource Management**: Resource, Scope, Wire, etc.
@@ -56,6 +70,9 @@ The skill will:
 - Verify each type has a corresponding `.md` file in `docs/reference/`
 - Confirm the category name is reasonable (avoid duplicates with existing categories)
 - If any type is missing, report and stop
+- **Three types minimum.** A category of one or two is noise in the sidebar, not structure — report
+  that the request doesn't meet the bound and suggest leaving them at the top level, unless the
+  request explicitly overrides this after being told
 
 ### Step 2: Check Existing Structure
 
@@ -63,9 +80,11 @@ The skill will:
 - Identify the Reference section
 - Check if the category already exists; if so, note its current contents
 
-### Step 3: Create/Update Category index.md
+### Step 3: Create/Update the Category Index Page
 
-Create a new file `docs/reference/[category-kebab-case]/index.md` with:
+Create a new file at `docs/reference/[category-kebab-case].md` — a flat file, a sibling of the type
+pages it groups, **not** a subdirectory (see the note above: the member types never move, so nothing
+lives at `[category-kebab-case]/`):
 
 ```markdown
 ---
@@ -87,7 +106,9 @@ title: "[Category Name]"
 [Additional context about how these types work together and when to use them as a group]
 ```
 
-Extract descriptions from each type's `.md` file (first sentence after the opening definition).
+Every link uses the type's real, unchanged path (`./<type1>.md`, since the index sits alongside it in
+`docs/reference/`). Extract descriptions from each type's `.md` file (first sentence after the opening
+definition).
 
 ### Step 4: Update sidebars.js
 
@@ -96,20 +117,22 @@ If the category doesn't exist, create it:
 {
   type: "category",
   label: "[Category Name]",
-  link: { type: "doc", id: "reference/[category-kebab-case]/index" },
+  link: { type: "doc", id: "reference/[category-kebab-case]" },
   items: [
-    "reference/[category-kebab-case]/[type1]",
-    "reference/[category-kebab-case]/[type2]",
-    "reference/[category-kebab-case]/[type3]"
+    "reference/[type1]",
+    "reference/[type2]",
+    "reference/[type3]"
   ]
 }
 ```
 
-If it does exist, append new types in alphabetical order.
+Each item is the type's **existing** doc id — the one its file already had before this run, unchanged.
+Confirm each one resolves to a real file before writing it; an id for a file that doesn't exist is
+never valid, even temporarily.
 
-Maintain alphabetical order of categories within the Reference section.
+If the category does exist, append new types in alphabetical order.
 
-**Note:** Update item paths to include the category subdirectory: `"reference/[category-kebab-case]/[type-id]"`
+Maintain alphabetical order of categories within the Reference section, and of items within a category.
 
 ### Step 5: Verify Syntax
 
@@ -124,7 +147,7 @@ If there are errors, report and revert.
 
 Show:
 - **Added Category**: Yes/No (new category created)
-- **Index File Created**: path to new `index.md`
+- **Index File Created**: path to the new `docs/reference/[category-kebab-case].md`
 - **Types Added**: list of types moved into the category
 - **Verification**: ✅ Syntax valid | ❌ Syntax error (reverted)
 - **Preview**: before/after snippet of the Reference section
@@ -156,32 +179,33 @@ Build a **relationship graph**: if Type A mentions Type B, record that edge.
 
 ### Step 3: Propose Categories
 
-Based on type names, descriptions, and relationships, assign each type to a category:
+**Never group by name substring.** Matching "chunk" | "list" | "vector" in a type's name and calling
+that "Collections" is what a cheap pass reaches for when it can't hold every page's actual purpose at
+once — and it is wrong exactly as often as a name is a poor proxy for what a type is for (a
+`ValidationError` is not a validator; `HttpClientConfig` is configuration, not a client). A category is
+a claim about what a group of types is *for*, and only the page itself can tell you that.
 
-**Collection Types** → Chunk, List, Vector, NonEmptyList, etc.
-- Signal: type name contains "chunk" | "list" | "vector" | "sequence" | "collection"
-- Context: used for organizing/storing data
+For each type, read its opening definition (the prose right after the frontmatter, before the first
+`##`) — that sentence states what the type is for, in its author's own words. Group types whose stated
+purposes actually align, using the relationship graph from Step 2 as corroboration (types that
+reference each other are more likely to belong together), not as the primary signal.
 
-**Type System & Schemas** → Schema, TypeId, DynamicValue, SchemaError, etc.
-- Signal: type name contains "schema" | "type" | "dynamic" | "error" | "validation"
-- Context: used for type representation, validation, transformation
-
-**Resource Management & DI** → Resource, Scope, Wire, Finalizer, etc.
-- Signal: type name contains "resource" | "scope" | "wire" | "finalizer" | "context"
-- Context: used for lifecycle management, dependency injection
-
-**Error & Validation** → SchemaError, Validation, etc.
-- Signal: type name or content mentions error handling, constraints
-- Context: used for error representation and validation
-
-**Utilities & Formats** → MediaType, Syntax, Docs, JSON, XML, etc.
-- Signal: type name is format/utility name (not a core abstraction)
-- Context: add-on functionality, specific formats
+Typical shapes this produces in a ZIO-style library — illustrative, not a lookup table to match names
+against:
+- Collection/sequence types grouped by "stores or iterates a sequence of values" in their definitions
+- Schema/type-representation types grouped by "describes or validates a value's shape"
+- Resource/lifecycle types grouped by "acquires, releases, or scopes a resource"
+- Error/validation types grouped by "represents a failure or a validation result"
+- Format/codec utilities grouped by "encodes or decodes a specific wire format"
 
 For each proposed grouping, compute a **confidence level**:
-- **High** (90%+): Clear semantic signal (name + description alignment)
-- **Medium** (70-89%): Some signal (description or relationships align)
-- **Low** (<70%): Weak signal (consider alternatives)
+- **High** (90%+): the definitions of every member state the same purpose in different words
+- **Medium** (70-89%): most members' definitions align; one or two are a judgment call
+- **Low** (<70%): grouped mainly on the relationship graph, definitions don't clearly agree — flag
+  these for the user rather than proposing them with unwarranted confidence
+
+A category proposed with fewer than three types is not a category — fold it into "Unassigned" instead
+of forcing a group to reach the bound.
 
 ### Step 4: Preview Proposed Structure
 
@@ -197,11 +221,13 @@ Wait for user input:
 - **Selective**: Accept specific categories only
 - **Reject**: Keep current flat structure
 
-### Step 6: Create Category index.md Files
+### Step 6: Create Category Index Pages
 
-For each approved category, create `docs/reference/[category-kebab-case]/index.md` with:
+For each approved category, create `docs/reference/[category-kebab-case].md` — a flat file alongside
+the type pages it groups, per the note at the top of this skill; no type file moves and no
+`[category]/` directory gets created. Each index page carries:
 - Category title and introduction
-- List of related types with brief descriptions
+- List of related types with brief descriptions, linked at their real, unchanged paths
 - Overview section explaining how types work together
 
 Use the analysis from Step 2 (descriptions and relationships) to write the introduction.
@@ -210,13 +236,14 @@ Use the analysis from Step 2 (descriptions and relationships) to write the intro
 
 Once approved, update sidebars.js with the new structure, maintaining:
 - Alphabetical order of categories
-- Alphabetical order of types within each category
-- Link to category `index.md` file in category definition
+- Alphabetical order of types within each category, referenced by their **existing** doc ids
+  (`reference/<type>`, unchanged — see Step 3/4 of Manual Mode for the exact shape)
+- A `link` to the category's own index page id (`reference/[category-kebab-case]`)
 - Existing non-categorized types (if kept)
 
 ### Step 8: Verify & Report
 
-Same as manual mode: verify syntax, report changes including index.md file creation.
+Same as manual mode: verify syntax, report changes including the category index page's creation.
 
 ---
 
@@ -253,20 +280,26 @@ Preview:
 
 ## Implementation Notes
 
-- **Directory Structure**: Each category creates a subdirectory: `docs/reference/[category-kebab-case]/`
-  - Category index: `docs/reference/[category-kebab-case]/index.md`
-  - Type files are organized within the category directory (may involve moving existing files or creating symlinks)
-- **Index.md Content**:
+- **No file ever moves.** A category is sidebar structure plus one index page, never a directory. Every
+  type `.md` file stays at the exact path it already had — moving it breaks every relative link to it
+  and every `../` inside it.
+- **Category index page**: `docs/reference/[category-kebab-case].md`, a flat file — not
+  `[category-kebab-case]/index.md`, since nothing else lives in that directory.
   - Frontmatter with `id` matching the category kebab-case name
   - Introduction section explaining the category
-  - List of related types with descriptions
+  - List of related types with descriptions, linked at their real paths
   - Overview of how types work together
-- **Sidebar Paths**: Updated to reflect category structure: `"reference/[category-kebab-case]/[type-id]"`
-- **Category Link**: Sidebar category definition includes `link: { type: "doc", id: "reference/[category-kebab-case]/index" }`
+- **Sidebar item paths are unchanged**: `"reference/[type-id]"`, exactly the id the type already had —
+  never `"reference/[category-kebab-case]/[type-id]"`, which would only be valid if the file actually
+  lived there.
+- **Category Link**: Sidebar category definition includes `link: { type: "doc", id: "reference/[category-kebab-case]" }`
 - **Alphabetical order** is maintained within each category and at the category level
 - **Existing categories** are preserved if they already exist in sidebars.js
 - **Syntax validation** is mandatory — invalid changes are reverted
 - **No breaking changes** — existing structure is preserved; only new categories are added
+- **Three types minimum per category** — fewer is noise, not structure; leave them uncategorized
+- **A page belongs to at most one category** — if two categories both fit, pick the better one; a
+  duplicate sidebar entry for the same id is a Docusaurus bug, not a feature
 
 ---
 
@@ -275,9 +308,9 @@ Preview:
 | Symptom                                                              | Likely cause                                                              | Fix                                                                                                            |
 |----------------------------------------------------------------------|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
 | `node -e "require('./docs/sidebars.js')"` reports a syntax error     | Edit introduced an unmatched brace, trailing comma in unsupported syntax, or stray quote. | **Revert the edit** and reapply more carefully. Validate after each insertion before moving on.                |
-| Docusaurus build complains "Doc id ... not found"                    | A type was added to a category but the file at `docs/reference/<id>.md` doesn't exist. | Confirm every sidebar entry corresponds to a real file. Either create the missing page first, or remove the entry. |
+| Docusaurus build complains "Doc id ... not found"                    | An item's id doesn't resolve to a real file — usually a leftover `reference/<cat>/<type>`-shaped id from moving a type's sidebar entry instead of reusing its real, unchanged id. | **Remove the entry**, never create a page to make it resolve — a stub page shipped to satisfy a broken sidebar id is unreviewed content taking the name a real page will later want. Fix the id to the type's actual, existing path (`reference/<type>`) and re-add it. |
 | The same type appears in two categories                              | Auto-categorization fired twice, or a manual entry was added without removing the old one. | Sidebar entries must be unique. Pick the better-fitting category, remove the other entry.                       |
-| Category link 404s in Docusaurus                                     | `link: { type: "doc", id: "reference/<cat>/index" }` set but `index.md` is missing.   | Either create `docs/reference/<cat>/index.md` (recommended for hierarchical layout) or omit the `link` field.   |
+| Category link 404s in Docusaurus                                     | `link: { type: "doc", id: "reference/<cat>" }` set but `docs/reference/<cat>.md` is missing.   | Create `docs/reference/<cat>.md` (the category's own index page — this is the one file this skill IS allowed to create) or omit the `link` field.   |
 | Type that doesn't fit any obvious category                           | Genuinely cross-cutting type (e.g., a utility used by many categories).   | **Stop and ask the user.** Don't force a fit; cross-cutting types often belong in their own "Utilities" category. |
 | Edit duplicated existing structure (no diff)                         | Skill ran in idempotency-check mode but produced no change.               | Confirm with `git diff sidebars.js` — if empty, the structure was already correct. Report and exit.            |
 

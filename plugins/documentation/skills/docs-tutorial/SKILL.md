@@ -2,7 +2,7 @@
 name: docs-tutorial
 description: Write a tutorial for newcomers learning a topic in a ZIO library. Use when the user asks to write a tutorial or learning guide that teaches concepts step-by-step in a linear path. Tutorials are learning-oriented (for newcomers with no prior knowledge) unlike how-to guides which are task-oriented.
 argument-hint: "[tutorial title or topic description]"
-allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(sbt:*), Bash(sbt gh-query*), Bash(git:*), Task, Skill
 ---
 
 # Write a Tutorial
@@ -146,10 +146,20 @@ Place the file in `docs/guides/` directory (same location as how-to guides):
 ---
 id: <kebab-case-id>
 title: "<Tutorial Title>"
+description: "A 50-150 character summary of what this tutorial teaches."
+keywords:
+  - "General Domain Concept"
+  - "Page-Specific Concept"
+  - "<Core Type Name>"
 ---
 ```
 
-The `id` must match the filename (without `.md`).
+`description` and each `keywords` entry are double-quoted; `keywords` is a block list (one `- "item"`
+per line), 3-6 entries. Write these now — don't rely on a later docs-backfill-metadata pass.
+
+The `id` must match the filename (without `.md`), and must be specific to this tutorial's actual
+angle: `compositional-fiberref-updates`, not `fiberref`. A vague id invites the next tutorial about the
+same type to collide with it, or to be titled just as vaguely.
 
 ### Writing the Sections
 
@@ -271,13 +281,23 @@ The code above:
 
 #### Putting It Together
 
-Near the end, show the complete working example that combines everything from the tutorial into a single cohesive block. Use `mdoc:compile-only` or `mdoc:silent:reset` + `mdoc:compile-only` so it demonstrates all concepts together without necessarily showing output.
+Near the end, show the complete working example that combines everything from the tutorial. **This is
+not an inline code block.** It is an EMPTY block fenced `` scala mdoc:embed:<path-to-CompleteExample.scala> ``
+(or the project's `SourceFile.print` equivalent — see `docs-examples`) pointing at the companion
+`CompleteExample.scala` that Step 4 builds. Never soften this to "may include an embedded example" or
+write the code inline instead: the embedded file is what the examples build actually compiles, so
+inlining ships code no build has verified as standalone — and it also means Step 4 has nothing to
+build, since nothing in the page names a file for it to create.
 
 Add a brief explanation: "This example combines all the concepts we've learned — [quick summary]."
 
 #### Running the Examples
 
 Follow the **"Running the Examples" section template** from the `docs-examples` skill. It provides the exact Markdown pattern to use in your tutorial, substituting the correct `<packagename>` and example object names.
+
+Two tutorial-specific details:
+- Clone and `cd` in one path straight into the examples module directory — `cd <repo>/<examples-module>`, not a separate `cd <repo>` followed by a separate `cd <examples-module>`.
+- Embed each concept's file, in order, the same way "Putting It Together" does: a collapsible `<details><summary>` wrapping `` scala mdoc:embed:<path>:show-line-numbers ``, a short sentence on how to run it, and its `sbt "<examples-module>/runMain ..."` command.
 
 #### What You've Learned
 
@@ -298,7 +318,10 @@ You now have a solid foundation in [topic]. The next step is to see how to [appl
 
 #### Where to Go Next
 
-Provide links to help the learner deepen their knowledge:
+Provide links to help the learner deepen their knowledge. **Check each target page exists before
+linking to it.** Mention a guide or reference page in prose, unlinked, when it doesn't exist yet —
+never a placeholder link to be resolved later, and never accept a stub page written just to make one
+resolve. A tutorial run writes a tutorial, not a reference page it happens to link to.
 
 ```
 ## Where to Go Next
@@ -331,25 +354,48 @@ See the **`docs-mdoc-conventions`** skill for admonition syntax and usage guidel
 
 ## Step 4: Create Companion Examples
 
+**Every tutorial has them — this step is never optional.** "Putting It Together" and each concept in
+"Running the Examples" are `mdoc:embed` blocks (Step 3), not inline code, so those embeds have nothing
+to resolve to until this step runs. If you find yourself skipping this step because the page "doesn't
+need it," that means Step 3 was written wrong — go back and fix the page to embed, then build the
+files here. Skipping this because nothing appears to embed is how the whole examples phase silently
+stops running.
+
 Use the **`docs-examples`** skill to create companion examples. It covers all aspects: directory structure, file templates, compilation verification, and the lint check procedure. Follow steps 4a–4f exactly as documented in that skill.
 
 ---
 
 ## Step 5: Verify Mdoc Compilation
 
-Before integrating, verify that all code examples in the tutorial compile:
+Before integrating, verify that all code examples in the tutorial compile — scoped to this file, never
+unscoped (`sbt docs/mdoc` alone recompiles all documentation, ~90 seconds):
 
 ```bash
-sbt "docs/mdoc --in docs/guides/<tutorial-name>.md"
+sbt "docs/mdoc --in docs/guides/<tutorial-name>.md --out website/docs/guides/<tutorial-name>.md"
 ```
 
-**Important:** Always use `--in <file.md>` to compile only this file. Never use bare `sbt docs/mdoc` without `--in` — it recompiles all documentation (~90 seconds).
-
-Fix any compilation errors before proceeding to integration.
+`--out` is the same path prefixed with `website/`. Fix any compilation errors before proceeding.
 
 ---
 
-## Step 6: Integrate
+## Step 6: Fact-Check
+
+**Same reason as `docs-data-type-ref`'s fact-check step**: a tutorial's prose is looser than a
+reference page's, but its claims about the library are not. A step that names a method the library
+doesn't have, or describes behavior the source contradicts, sends a learner nowhere — and nothing
+before this step verifies tutorial prose against real source; mdoc only verified that the code
+compiles, not that the surrounding claims about it are true.
+
+Delegate to a fresh subagent with the `Task` tool, following `docs-data-type-ref`'s fact-checker
+prompt, pointed at this tutorial's path and the library's source root. Fix every reported drift by
+correcting the **tutorial**, never the source. Bounded rounds, same discipline: fix everything a check
+reports, then confirm once — that confirming round is what records the tutorial as clean. Genuinely
+new drifts in a confirming round earn another, up to 3 total; a round repeating the same drifts ends
+it.
+
+---
+
+## Step 7: Integrate
 
 See the **`docs-integrate`** skill for the complete integration checklist (sidebars.js, index.md, cross-references, link verification).
 
@@ -357,11 +403,19 @@ Additional notes for tutorials:
 
 - Place the file in `docs/guides/` directory (same location as how-to guides).
 - In `sidebars.js`, add under the "Guides" category alongside how-to guides.
-- Cross-reference: add links from any related reference pages (e.g., if the tutorial teaches `Scope`, add a "See also" link from `docs/reference/scope.md`).
+- Cross-reference: add links from any related reference pages (e.g., if the tutorial teaches `Scope`, add a "See also" link from `docs/reference/scope.md`) **that already exist** — check first, and name which do. A tutorial run writes a tutorial: never ask for a reference page to be created to satisfy a link, and never accept a stub written to make one resolve.
 - Tutorials should link to related how-to guides in the "Where to Go Next" section to guide learners toward practical application.
 
 ---
 
-## Step 7: Review Checklist
+## Step 8: Final Review
 
-Before submitting, work through the checklist in [CHECKLIST.md](./CHECKLIST.md).
+Delegate to a fresh subagent with the `Task` tool: have it read [CHECKLIST.md](./CHECKLIST.md) and
+evaluate the tutorial against every item there, reporting pass/fail per item with a specific issue for
+each failure. An item naming a command (a compile check) is verified by running it, not by inspection.
+
+**Bounded rounds:** if review reports failing items, fix them ALL and call it once more — that
+confirming round is what records the tutorial as passing, since the verdict is whatever the last
+review found. Genuinely NEW failing items in a confirming round earn another round, up to 3 total; a
+round repeating the same failures ends it — name what's still failing in your summary. A review that
+reported nothing needs no confirming round.
