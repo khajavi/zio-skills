@@ -26,7 +26,8 @@ export const TIERS: Record<
   | 'crossLinker'
   | 'docsOrganizer'
   | 'sectionWriter'
-  | 'complianceChecker',
+  | 'complianceChecker'
+  | 'prSubsectionWriter',
   Tier
 > = {
   writer: {
@@ -124,5 +125,14 @@ export const TIERS: Record<
   complianceChecker: {
     model: process.env.COMPLIANCE_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.COMPLIANCE_CHECKER_EFFORT, 'low'),
+  },
+  // sectionWriter's tier and reasoning apply unchanged: this composes new prose and a runnable example
+  // from source it reads itself (here, a PR and its linked issues rather than the library source
+  // directly), same writer-in-miniature shape. `medium`, not `high`: one subsection is more bounded
+  // than one of the five canonical section types above it, since there is no insertion-point
+  // algorithm to reason about — the PR names the feature, the page's end is the seam.
+  prSubsectionWriter: {
+    model: process.env.PR_SUBSECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.PR_SUBSECTION_WRITER_EFFORT, 'medium'),
   },
 };

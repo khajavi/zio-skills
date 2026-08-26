@@ -201,6 +201,8 @@ export const GATE_INSTRUCTIONS = [
     'take the kind and subject from what it changed.',
   '   ✅ "document PR #42" → read it, then `data-type` + `ZStream`  ❌ subject `PR #42`  ❌ a ' +
     'dependency bump or internal refactor → no page; say so and stop.',
+  '   ❌ a PR that only enhances or fixes something an existing page already covers → not a new ' +
+    'page either; that is `src/pr-subsection.ts`, a different flowrite agent — say so and stop.',
   '',
   'Record both with `set_document_kind`. The phase tools for that kind appear immediately after.',
   '',
