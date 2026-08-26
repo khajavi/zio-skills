@@ -63,7 +63,13 @@ object MethodExtractor {
 
         // Check if we're entering target type
         if (typeName.isDefined && !inTargetType && !inCompanionObject && depth == 0) {
-          if (trimmed.matches(s"(abstract\\s+)?(class|trait)\\s+${typeName.get}\\s*[\\[({].*")) {
+          // `(abstract|final|sealed|case)` in any combination/order — a plain `class Foo` never has
+          // these, but the far more common case for a "data type" is `final case class Foo(...)` or
+          // `sealed trait Foo`, and the original pattern (`(abstract\s+)?(class|trait)` only) matched
+          // NEITHER: it required the trimmed line to match `.matches` (a full-string anchor) starting
+          // at "class"/"trait" itself, so any modifier before it failed the whole match, silently
+          // returning an empty Public API for the most common data-type declaration shape.
+          if (trimmed.matches(s"((?:abstract|final|sealed|case)\\s+)*(class|trait)\\s+${typeName.get}\\s*[\\[({].*")) {
             inTargetType = true
             currentTypeDepth = depth
             targetTypeStart = depth + openBraces
@@ -110,6 +116,16 @@ object MethodExtractor {
 
           methodPattern.findFirstMatchIn(line).foreach { m =>
             val methodName = m.group(4)
+            // KNOWN SHARP EDGE, not a principled rule: this name-based exclusion looks like it was
+            // patched against a false-positive extraction (probably a local helper `def` nested inside
+            // a method body, at a deeper brace depth than the depth-tracking above meant to allow)
+            // seen in one specific source file during development. As written it will also silently
+            // drop any REAL public member that happens to start with "loop"/"mk"/"_", or is literally
+            // named "source" or "toInterpreter", from every type in every project this runs against —
+            // e.g. a legitimate `mkString` or `loopWhile`. If output looks short for a type with such a
+            // member, suspect this list first. The principled fix is tightening the depth check above
+            // so a nested local def is never reached in the first place; this list is a stand-in for
+            // that, not a substitute for it.
             if (!methodName.startsWith("loop") && !methodName.startsWith("mk") && !methodName.startsWith("_") &&
                 methodName != "source" && methodName != "toInterpreter") {
               if (inCompanionObject) {
