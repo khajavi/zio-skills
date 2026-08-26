@@ -28,7 +28,8 @@ export const TIERS: Record<
   | 'sectionWriter'
   | 'complianceChecker'
   | 'prSubsectionWriter'
-  | 'sectionEnricher',
+  | 'sectionEnricher'
+  | 'gapFinder',
   Tier
 > = {
   writer: {
@@ -144,5 +145,15 @@ export const TIERS: Record<
   sectionEnricher: {
     model: process.env.SECTION_ENRICHER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.SECTION_ENRICHER_EFFORT, 'medium'),
+  },
+  // Same reasoning as docsOrganizer above, and for the same structural reason: this agent has to hold
+  // every undocumented type in the scan simultaneously to classify priority sensibly, not act on one
+  // page at a time like the editors above it. `medium` rather than `low` follows from that alone. It
+  // writes no page, so the redundancyEditor-class risk (a silent bad edit shipping) does not apply —
+  // the worst realistic output is a report with a type in the wrong priority tier, visible in the
+  // report itself and cheap to correct on the next run.
+  gapFinder: {
+    model: process.env.GAP_FINDER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.GAP_FINDER_EFFORT, 'medium'),
   },
 };
