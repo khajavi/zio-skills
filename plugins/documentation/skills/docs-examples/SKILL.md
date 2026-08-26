@@ -6,7 +6,52 @@ allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scalafmt), Bash(git)
 
 ## Setup Example Sub-module
 
-Add to root `build.sbt`, for example if the you are creating examples for a webauthn guide:
+**Never invent example code.** Every line in an example file traces back to a code block already in
+the documentation page being written — package declaration, imports, a runnable wrapper, and `println`
+calls for output the page renders are the only things you may add beyond what the page's blocks
+already contain. If the page doesn't show it, the example doesn't invent it.
+
+### Preferred: a decoupled examples build, one per documented page
+
+Adding each page's examples as a plain `RootProject` straight into the root build (below) works for a
+single one-off example module, but it doesn't scale: every later page's examples become another
+permanent entry in the ROOT build.sbt, forever, and each one can pin its own Scala version only by
+becoming its own top-level aggregate — which is what makes it pile up. Prefer nesting instead, so the
+root build gains exactly ONE addition, ever, no matter how many pages get examples later:
+
+```
+root build.sbt          — ONE addition: aggregates <library>-examples, nothing else, ever
+<library>-examples/build.sbt
+  └─ aggregates one RootProject per documented page (webauthn, lens, prism, ...)
+     <library>-examples/<page-id>/build.sbt   — its OWN scalaVersion, its OWN deps
+```
+
+```scala
+// root build.sbt — the only edit this makes to the main build, ever
+lazy val examples = RootProject(file("<library>-examples"))
+// include `examples` in the root project's own .aggregate(...)
+```
+
+```scala
+// <library>-examples/build.sbt — grows by one line per new page, additively
+lazy val root = (project in file(".")).aggregate(webauthn, lens)
+lazy val webauthn = RootProject(file("webauthn"))
+lazy val lens      = RootProject(file("lens"))
+```
+
+Each leaf (`<library>-examples/<page-id>/`) is a fully independent sbt build — its own `build.sbt`
+(own `scalaVersion`, own `libraryDependencies`, depending on the library the way a real user would:
+published coordinates when the library publishes them, or `.dependsOn(ProjectRef(file("../.."),
+"<rootProjectId>"))` by source for an unpublished fixture) and its own
+`project/build.properties` pinning the sbt version (copy the value from the main build's), since a
+`RootProject` leaf with no `build.properties` isn't recognized as a build at all. This is why the
+approach is decoupled: every page's examples pin their own Scala version and dependencies, isolated
+from the main library's cross-build (JVM/JS/Native, multiple Scala versions) and from each other.
+
+### Simpler alternative: a single flat sub-module
+
+For a genuinely one-off example set with no expectation of more pages gaining examples later, adding
+it straight into the root build is fine:
 
 ```scala
 lazy val `zio-http-example-webauthn` =
@@ -141,6 +186,20 @@ sbt check
 ### Step 7: Documenting Examples
 
 #### When Examples Use SourceFile Embedding
+
+There are two ways to pull a companion file's source into a page, and they are not interchangeable —
+use whichever this project already has wired up, and check before introducing the other:
+
+- **`SourceFile.print` inside `mdoc:passthrough`** (below) — a project-local helper. Use this when the
+  project's docs subproject already defines `docs.SourceFile`, which is the common case for an
+  established ZIO docs site.
+- **`mdoc:embed:<path>`** (see `docs-mdoc-conventions`) — a built-in mdoc modifier requiring the docs
+  subproject to depend on `"dev.zio" %% "zio-sbt-source"`. Prefer this for a project that has neither
+  convention yet — it needs no custom Scala utility to maintain.
+
+Either way, the embedded file must exist on disk **before** mdoc runs — both mechanisms fail outright
+if the path they name is absent. Commission every example file (this whole skill) before running the
+page's own mdoc verification pass, never after.
 
 For data type references and module references where examples need detailed documentation:
 
