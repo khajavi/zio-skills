@@ -15,6 +15,7 @@ import test from 'node:test';
 
 import { RUN_LABEL as ADD_SECTION_LABEL } from './add-section.ts';
 import { DOC_KINDS, type DocKind, GATE_INSTRUCTIONS, KINDS } from './agent.ts';
+import { RUN_LABEL as CHECK_COMPLIANCE_LABEL } from './check-compliance.ts';
 import { RUN_LABEL as CROSSREF_LABEL } from './crossref.ts';
 import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as ORGANIZE_LABEL } from './organize.ts';
@@ -50,6 +51,7 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(CROSSREF_LABEL, 'cross-link-page');
   assert.equal(ORGANIZE_LABEL, 'organize-reference-docs');
   assert.equal(ADD_SECTION_LABEL, 'add-missing-section');
+  assert.equal(CHECK_COMPLIANCE_LABEL, 'check-compliance');
 });
 
 test('each fixture launcher passes its own kind label to archive-docs.sh', () => {

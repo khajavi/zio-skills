@@ -25,7 +25,8 @@ export const TIERS: Record<
   | 'metadataWriter'
   | 'crossLinker'
   | 'docsOrganizer'
-  | 'sectionWriter',
+  | 'sectionWriter'
+  | 'complianceChecker',
   Tier
 > = {
   writer: {
@@ -113,5 +114,15 @@ export const TIERS: Record<
   sectionWriter: {
     model: process.env.SECTION_WRITER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.SECTION_WRITER_EFFORT, 'medium'),
+  },
+  // Same risk shape as redundancyEditor and crossLinker directly above: this EDITS a page that already
+  // passed review, with nothing downstream re-checking a given fix. `low` rather than `medium` because
+  // the rigor here is procedural, not judgement — 28 numbered rules checked one at a time, adversarial
+  // verification against explicit text, not a taste call about what a sentence carries. Sonnet, not
+  // Haiku, for the same reason as its neighbors: a false "clean" on a rule is silent, and nothing
+  // downstream would catch it either.
+  complianceChecker: {
+    model: process.env.COMPLIANCE_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.COMPLIANCE_CHECKER_EFFORT, 'low'),
   },
 };
