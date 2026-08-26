@@ -24,6 +24,7 @@ import { RUN_LABEL as METADATA_LABEL } from './metadata.ts';
 import { RUN_LABEL as ORGANIZE_LABEL } from './organize.ts';
 import { RUN_LABEL as PR_SUBSECTION_LABEL } from './pr-subsection.ts';
 import { RUN_LABEL as REDUNDANCY_LABEL } from './redundancy.ts';
+import { RUN_LABEL as RETROSPECT_LABEL } from './retrospect.ts';
 
 test('every kind is fully configured', () => {
   for (const kind of DOC_KINDS) {
@@ -60,6 +61,7 @@ test('labels match what archive-docs.sh greps for', () => {
   assert.equal(ENRICH_SECTION_LABEL, 'enrich-section');
   assert.equal(GAP_FINDER_LABEL, 'find-gaps');
   assert.equal(PR_AUDITOR_LABEL, 'list-undocumented-prs');
+  assert.equal(RETROSPECT_LABEL, 'retrospect');
 });
 
 test('each fixture launcher passes its own kind label to archive-docs.sh', () => {

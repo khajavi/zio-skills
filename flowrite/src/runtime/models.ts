@@ -30,7 +30,8 @@ export const TIERS: Record<
   | 'prSubsectionWriter'
   | 'sectionEnricher'
   | 'gapFinder'
-  | 'prAuditor',
+  | 'prAuditor'
+  | 'retrospector',
   Tier
 > = {
   writer: {
@@ -165,5 +166,16 @@ export const TIERS: Record<
   prAuditor: {
     model: process.env.PR_AUDITOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.PR_AUDITOR_EFFORT, 'low'),
+  },
+  // The highest blast radius of any standalone agent here: redundancyEditor and crossLinker corrupt
+  // one page if they get it wrong; this one edits the instructions that govern EVERY future run of a
+  // kind, so a bad "fix" degrades every page written after it, silently, until the next retrospection
+  // happens to catch it. `medium`, not `low` — this is judgement (is the log evidence strong enough to
+  // justify a permanent change to shared instructions?), not a mechanical checklist like
+  // complianceChecker's. Sonnet for the same reason as every editor above it: nothing downstream
+  // re-checks what this run decides to change.
+  retrospector: {
+    model: process.env.RETROSPECTOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.RETROSPECTOR_EFFORT, 'medium'),
   },
 };
