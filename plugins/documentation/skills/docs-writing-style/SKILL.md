@@ -49,14 +49,20 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 21, 22, 23, and 25 
 ## Prose Style Rules
 
 1. **Person pronouns**: Use "we" when guiding the reader or walking through examples ("we can create...", "we need to..."). Use "you" when addressing the reader's choices ("if you need...", "you might want to...").
-2. **Tense**: Present tense only ("returns", "creates", "modifies").
-3. **No padding/filler**: No filler phrases like "as we can see" or "it's worth noting that". Just state the fact.
+2. **Tense**: Present tense only ("returns", "creates", "modifies"). Exception: promises about the reader's future are fine ("By the end of this tutorial, you will...").
+3. **No padding/filler**: No filler phrases like "as we can see" or "it's worth noting that". Just state the fact. Exception: tutorial warmth ("Welcome!", "Let's", "That's it!", "notice that") is required tone, not filler.
 4. **Bullet capitalization**: When a bullet point is a full sentence, start it with a capital letter.
 5. **No manual line breaks in prose**: Do not hard-wrap paragraph text at a fixed column. Write each paragraph as one continuous line.
 6. **ASCII art usage**: Use it for diagrams showing data flow, type relationships, or architecture. Readers find these very helpful for understanding how pieces fit together.
-7. **Link to related docs**: Use relative paths with the full filename including `.md`
-   extension. Never use a bare directory name: ✅ `[Endpoint](./reference/endpoint/index.md)`,
-   ❌ `[Endpoint](./reference/endpoint)`.
+7. **Link to related docs**: Link a sibling type's first mention in prose, not only in a trailing "See
+   also" list. Use relative paths with the full filename including the `.md` extension, never a bare
+   directory name: ✅ `[Endpoint](./reference/endpoint/index.md)`, ❌ `[Endpoint](./reference/endpoint)`.
+   Markdown links only, never templating syntax: ❌ `{{< reference_path "Endpoint" >}}`.
+
+   **Link only a page that exists** — verify it before writing the link, and write the sentence
+   without a link when it does not. A link to a missing page fails the site build
+   (`onBrokenLinks: 'throw'`); the fix is to drop the link, never to create the target page just to
+   make it resolve.
 
 ## Referencing Types, Operations, and Constructors
 
@@ -87,7 +93,7 @@ This checks Rules 2, 3, 4, 7, 8, 10, 11, 12, 13, 15, 16, 18, 21, 22, 23, and 25 
    **Bad vs. Good:**
    - ❌ `## Operations` → `### Map` (no intro between them)  
      ✅ `## Operations` → `To transform values, use these operations.` → `### Map`
-13. **No lone subheaders**: Never create a subsection with only one child. 
+13. **No lone subheaders**: Never create a subsection with only one child — except a Core Operations category may keep one method when no related category fits.
 
    **Bad vs. Good:**
    - ❌ `## Overview` → `### Definition` (only one subsection)  
@@ -111,7 +117,7 @@ Between consecutive code blocks, add bridging prose that explains what the next 
 
 ## Code Block Rules
 
-16. **Always include imports**: Every code block must start with the necessary import statements.
+16. **Always include imports**: Every code block must start with the necessary import statements. Exception for mdoc pages: mdoc blocks share one scope, so imports in the page's first block satisfy this rule for every later block that reuses that scope.
 17. **One concept per code block**: Each code block demonstrates one cohesive idea.
 18. **Prefer `val` over `var`**: Use immutable patterns everywhere if possible.
 19. **Show method signatures within their containing type**: Document methods within their containing trait/class, not as bare signatures. Provides context about ownership and API surface.
@@ -128,7 +134,7 @@ Between consecutive code blocks, add bridging prose that explains what the next 
    - ❌ "We can see this in action:"  
      ✅ "When filtering an empty chunk, the result contains no elements:"
 
-21. **Bullet list formatting**: Use bullets only for independent, enumerable items. When items form a connected narrative — building on each other, explaining cause-and-effect, or describing a single concept — write prose instead. Never place blank lines between bullet items.
+21. **Bullet list formatting**: Use bullets only for independent, enumerable items — never to explain a single definition, and never for a list of only one or two items; write prose instead. When items form a connected narrative — building on each other, explaining cause-and-effect, or describing a single concept — write prose. Never place blank lines between bullet items.
 
    **Bad vs. Good (connected narrative):**
    - ❌ "The code above:\n  - We open three streams\n  - Each has its own queues\n  - There is no crosstalk"
@@ -167,5 +173,19 @@ Between consecutive code blocks, add bridging prose that explains what the next 
    - ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "1.0.0"`
    - ❌ `libraryDependencies += "dev.zio" %% "zio-blocks" % "<version>"`
    - ✅ `libraryDependencies += "dev.zio" %% "zio-blocks" % "@VERSION@"`
+
+## Audience and Vocabulary
+
+26. **Frame by audience tier**: Lead with the end-user / high-level path. When a section documents a
+    low-level building block — one a higher-level API wraps — open it with a signal: "You rarely call
+    this directly; it is an advanced API for `<case>` — prefer `<high-level API>`." Document it fully;
+    change the framing, not the coverage.
+27. **Never surface internal planning vocabulary in the doc**: the names, categories, or shape labels
+    a writer uses to organize the *work* of documenting something are not reader-facing terms.
+
+    **Bad vs. Good:**
+    - ❌ "the Tracing sub-domain" (an internal planning category leaking into prose)
+    - ✅ "the Tracing area of the telemetry module" or just "Tracing"
+28. **Title Case every heading**: ✅ `## Open a Span and Record Work` ❌ `## Open a span and record work`.
 
 ---
