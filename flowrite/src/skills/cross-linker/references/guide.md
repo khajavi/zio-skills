@@ -55,8 +55,20 @@ about its subject:
 grep -rIln --include='*.md' --include='*.mdx' -F "TypeName" docs
 ```
 
-Read each candidate in full before editing it. A page that mentions the name once inside a code
-example is not a candidate; a page that explains a related concept in prose is.
+Read each candidate before editing it. A page that mentions the name once inside a code example is not
+a candidate; a page that explains a related concept in prose is.
+
+**Read to a budget, not exhaustively.** Candidate sets on a real tree are far larger than they look:
+`TRef` has 6 pages, `Promise` 24, `Task` 45, `ZLayer` 63 — and `ZLayer`'s 63 pages are ~186k tokens,
+which is most of a context window spent on one target. So:
+
+- Rank candidates by how many times they mention the subject (`grep -c`), and read the densest first.
+- Read in full only as many as you can act on — a handful. Three good links beat ten speculative ones,
+  so there is no value in reading the twentieth candidate.
+- For a page over about 40 KB, read the region around the match rather than the whole file. One page in
+  the real tree, `docs/guides/migrate/migration-guide.md`, is 112 KB and is a candidate for nearly
+  every subject.
+- Stop reading a target's candidates once you have the links you intend to add.
 
 ## Where a link may sit, and where it may not
 
@@ -104,7 +116,13 @@ matched. Choose the short form to begin with.
 
 ## Bounds
 
-- **One link per source page.** If a page discusses the target in three places, link the first.
+- **One link per source page, across the whole run.** If a page discusses the target in three places,
+  link the first. And when a page is a candidate for two targets in the same run, it still gets **one**
+  link — not one per target. This is the bound that keeps a batch from doing what a repeated sweep
+  does: measured on three real orphans, their candidate sets overlapped on three pages, and
+  `docs/guides/migrate/migration-guide.md` was a candidate for all three. The corpus norm for a
+  non-index page is seven internal links or fewer; a run that adds one per target per page walks past
+  that in a handful of invocations, and nothing in the files records the total.
 - **Whole pages only.** Never `file.md#heading` — an anchor is only ever checked by a full site build,
   so a wrong one is invisible until much later.
 - **Link form is writing-style rule 7**, which governs relative path and full `.md` filename. That
@@ -128,11 +146,45 @@ For every page you edited:
 # 2. no link ended up inside an inline-code span — expect no output
 grep -nE '`\[[^]]*\]\([^)]+\)' "$src"
 
-# 3. the target is now reachable from prose — rerun the PRO/IDX recipe above
+# 3. no link ended up inside another link — expect no output
+grep -nE '\[[^]]*\[[^]]*\]\([^)]+\)[^]]*\]\(' "$src"
+
+# 4. the target is now reachable from prose — rerun the PRO/IDX recipe above
 ```
+
+Check 3 exists because a batch is what makes it reachable: two targets' anchors on the same page can
+nest, and check 2 is blind to it. One shape is legitimate and will match — an image inside a link,
+`[![badge](svg.svg)](url)`. Anything else is a defect.
 
 Then re-run the inbound check on the target. If it still shows no `PRO` line, your edits did not
 achieve the task, and the receipt has to say that rather than claim success.
+
+**Once, at the end of the run**, confirm every line you added names a target you were asked about:
+
+```bash
+git diff -U0 -- docs | grep '^+' | grep -v '^+++' | grep -vF -e 'tref.md' -e 'tmap.md'   # your targets
+```
+
+Expect no output. This replaces the check a single-target run gets for free — there, every added line
+contains the one target's path, and a one-token grep audits the whole diff. With several targets that
+becomes several alternatives, so it has to be run deliberately. It is the only mechanical audit of this
+run's output that exists: nothing downstream re-checks the work, and the run report cannot see which
+pages were edited, because this agent edits rather than writes.
+
+## Working a batch
+
+The request may name several targets. Nothing else about the task changes — each target is handled
+exactly as one target is — but four rules only exist because of batches, and they are all above:
+
+- read candidates **to a budget**, since one large subject can fill the context alone
+- **one link per source page across the run**, not per target
+- **check for nested links** after each target, not only inline-code spans
+- **audit the whole diff once at the end** against the declared targets
+
+Handle targets one at a time, in the order the instructions give (densest subject first), and finish
+each one's receipt block before starting the next. Never widen a batch beyond what the request named,
+and never continue after a verification grep fails — the same instruction produced that edit, so the
+next target would produce it again.
 
 ## The receipt
 
