@@ -10,10 +10,11 @@ role separation (coordinator never edits directly), how to gather critic context
 than content, the critic's required findings/verdict format, the severity-based iteration rules, and
 multi-file handling.
 
-Ported from the `docs-critique` plugin skill, translated from Claude Code's `Agent(...)` tool calls to
-Flue's own delegation primitive — a coordinator that mounts this skill delegates to a critic or fixer
-with the built-in `task` tool, the same way every subagent delegation in this project works, rather
-than a named role under `src/subagents/`.
+Originally ported from a `docs-critique` plugin skill (since removed from `plugins/documentation` as
+unneeded — the pattern here stands on its own and doesn't depend on that file existing), translated
+from Claude Code's `Agent(...)` tool calls to Flue's own delegation primitive — a coordinator that
+mounts this skill delegates to a critic or fixer with the built-in `task` tool, the same way every
+subagent delegation in this project works, rather than a named role under `src/subagents/`.
 
 **Not currently mounted by any flowrite agent.** This is reference material only: the pattern is
 documented and ready, but no standalone entry point or `KINDS` row wires it into a run. A future

@@ -1,7 +1,7 @@
 {
   "name": "zio-skills",
   "description": "Coding agent skills for building applications with ZIO and ZIO HTTP. Start here for server scaffolding, OpenAPI code generation, endpoint API patterns, and more.",
-  "version": "0.1.0-bae4e37e",
+  "version": "0.1.0-d57697ef",
   "author": {
     "name": "Milad Khajavi"
   },
