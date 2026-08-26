@@ -29,7 +29,8 @@ export const TIERS: Record<
   | 'complianceChecker'
   | 'prSubsectionWriter'
   | 'sectionEnricher'
-  | 'gapFinder',
+  | 'gapFinder'
+  | 'prAuditor',
   Tier
 > = {
   writer: {
@@ -155,5 +156,14 @@ export const TIERS: Record<
   gapFinder: {
     model: process.env.GAP_FINDER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.GAP_FINDER_EFFORT, 'medium'),
+  },
+  // Same shape as complianceChecker: the part that most needed rigor — applying the gate table — is
+  // no longer this model's job at all, `classify_pr_docs` computes it. What is left is procedural,
+  // not judgement: fetch two `gh` calls per PR, up to 20 times a run, and grade coverage against a
+  // fixed four-level rubric. `low` follows from that, Sonnet because a batch this repetitive is where
+  // a cheap model starts skipping later items.
+  prAuditor: {
+    model: process.env.PR_AUDITOR_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.PR_AUDITOR_EFFORT, 'low'),
   },
 };
