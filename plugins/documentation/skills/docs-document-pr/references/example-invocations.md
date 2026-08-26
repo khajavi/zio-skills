@@ -74,8 +74,15 @@ Worked examples of the 6-phase workflow for representative PR shapes. Load this 
 1. Fetch PR metadata. Look for `bug` / `fix` labels and the linked issue's reproduction case.
 2. **Decision (Phase 2):** No new page — but the existing `docs/reference/chunk.md` should mention the corrected behaviour if it described the buggy behaviour.
 3. Read `docs/reference/chunk.md` to find any text that documented the old (incorrect) behaviour.
-4. If found:
-   - **Invoke `docs-add-missing-section`** or `docs-enrich-section` to add a "Behaviour notes" subsection covering the corrected semantic.
+4. If found — **this is a direct edit, not a new subsection.** A correction belongs inline where the
+   wrong claim already sits, not in a fabricated "Behaviour notes" section invented to hold it (that
+   would be the third, mismatched case — neither `docs-add-missing-section`, which inserts one of five
+   *entirely absent* canonical sections, nor `docs-enrich-section`, which expands a *thin* section, is
+   the right tool for correcting a claim the page already makes confidently and wrongly):
+   - Edit the sentence(s) describing the old behaviour to state the corrected one, verified against the
+     actual fixed source.
+   - Verify: `sbt "docs/mdoc --in docs/reference/chunk.md --out website/docs/reference/chunk.md"`.
+   - **Report:** "Corrected the description of `Chunk.flatten` on nested empty chunks in `docs/reference/chunk.md` to match the fix in PR #1240."
 5. If not (the page never claimed otherwise):
    - **Report:** "PR #1240 fixes a bug; the docs already match the intended behaviour. No update needed."
 
