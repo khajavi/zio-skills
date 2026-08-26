@@ -15,7 +15,7 @@ description: >
   or similar coverage questions. Invoke it even if the user just says "doc
   audit" or "show me undocumented changes."
 argument-hint: "[optional: base-ref or --reset, e.g. 'origin/main' or '--reset']"
-allowed-tools: Read, Write, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(jq:*)
+allowed-tools: Read, Write, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(jq:*), Bash(node:*)
 triggers:
   - "doc audit"
   - "documentation audit"
@@ -154,11 +154,26 @@ Run Phase 3 (classification) and Phase 4 (grading) for this PR before advancing 
 
 ## Phase 3 — Does This PR Require Documentation?
 
-Classify the PR using a **hierarchical, priority-ordered gate system**. Extract preliminary variables, check overrides, evaluate NO gates (first match wins), then YES gates (first match wins), then default to UNCERTAIN.
+Run the bundled classifier instead of applying the gate table by hand — it is deterministic, and a
+model evaluating ~16 ordered boolean conditions across a 20-PR batch is exactly where one gets
+silently reordered or skipped, producing a wrong classification that still looks plausible:
 
-### Preliminary Variable Extraction
+```bash
+echo '{"title": "<PR title>", "labels": [<label names>], "files": [{"path": "...", "status": "added|modified|removed|renamed"}, ...]}' \
+  | node ${CLAUDE_PLUGIN_ROOT}/skills/docs-list-undocumented-prs/classify-pr-docs.mjs
+```
 
-Before evaluating any gate, compute these derived facts from the PR data:
+Build the `files` array from the second `gh api` call in Phase 2 (it already has `path` and `status`
+per entry — pass those two fields straight through). The script prints
+`{"requiresDocs": "yes"|"no"|"uncertain", "gate": "<gate id>", "reason": "<why>"}`. Trust it; there is
+nothing to re-derive by hand. Run with `--help` for the input/output shapes.
+
+The tables below are **reference**, not a procedure to execute yourself — they document what the
+script computes and why, so you can explain a classification or spot an actually-wrong gate (report
+it, don't silently override it). First match wins, checked in this order: overrides, then NO-1
+through NO-9, then YES-1 through YES-5, then UNCERTAIN.
+
+### Preliminary Variable Extraction (computed by the script)
 
 **File categories:**
 - `files_test`: Paths matching `*Test.scala`, `*Spec.scala`, `*Suite.scala`, or under `src/test/`
@@ -174,23 +189,6 @@ Before evaluating any gate, compute these derived facts from the PR data:
 - `cc_breaking`: True if title contains `!:` (breaking change marker)
 - `is_bump`: True if title matches (case-insensitive): `^(bump|upgrade|update).*\b(to v?\d|version|dep)` OR starts with `build(deps)`
 - `is_revert`: True if title starts with `Revert "`
-
-### Evaluation Algorithm
-
-```
-1. Overrides (bypass all gates):
-   - If cc_breaking = true → REQUIRES_DOCS = yes, GATE = "OVERRIDE-BREAKING"
-   - If labels include "documentation-needed" → REQUIRES_DOCS = yes, GATE = "OVERRIDE-DOCS-NEEDED"
-
-2. NO gates (first match wins → REQUIRES_DOCS = no):
-   - Evaluate gates NO-1 through NO-9 in order
-
-3. YES gates (first match wins → REQUIRES_DOCS = yes):
-   - Evaluate gates YES-1 through YES-5 in order
-
-4. Fallback (all gates failed):
-   - REQUIRES_DOCS = uncertain, provide explanation
-```
 
 ### Override Conditions (checked first)
 
@@ -225,10 +223,9 @@ Before evaluating any gate, compute these derived facts from the PR data:
 
 ### UNCERTAIN — No Gate Matched
 
-If no gate fires (neither NO nor YES), classify as UNCERTAIN and include a brief explanation of what signals were observed. Examples:
-- "Refactor label with public files modified — unclear if this is a breaking change or implementation detail"
-- "No labels, both test and src/main files changed — requires manual review"
-- "`fix:` prefix but new public file added — may be a silent feature addition"
+When no gate fires, the script returns `gate: "UNCERTAIN"` with a `reason` summarizing the observed
+signals (commit prefix, labels, and file counts) — pass that reason straight into the report rather
+than inventing your own explanation.
 
 ---
 
@@ -378,12 +375,8 @@ When you invoke this skill:
 - [ ] **Phase 2:** Print `[N/20] Processing PR #<number>: <title>` before each PR
 - [ ] **Phase 2:** Fetch metadata via `gh pr view <N> --json number,title,body,labels,mergedAt,commits,author`
 - [ ] **Phase 2:** Fetch file statuses via `gh api repos/{owner}/{repo}/pulls/{N}/files` to get `{path, status, additions, deletions}`
-- [ ] **Phase 3:** Extract preliminary variables (`files_test`, `files_main_scala`, `files_internal`, `files_public_main`, `files_new_public_main`, `cc_prefix`, `cc_breaking`, `is_bump`, `is_revert`)
-- [ ] **Phase 3:** Check overrides first (cc_breaking or documentation-needed label → always YES)
-- [ ] **Phase 3:** Evaluate NO gates in order (NO-1 through NO-9), first match wins
-- [ ] **Phase 3:** Evaluate YES gates in order (YES-1 through YES-5), first match wins
-- [ ] **Phase 3:** Classify as UNCERTAIN if no gate fires; include explanation of observed signals
-- [ ] **Phase 3:** Store gate ID and reason alongside `docs_required` classification
+- [ ] **Phase 3:** Run `classify-pr-docs.mjs` with the PR's title, labels, and files — do not evaluate the gate table by hand
+- [ ] **Phase 3:** Store the script's `gate` and `reason` alongside `docs_required` classification
 - [ ] **Phase 4:** Skip entirely if `docs_required = "no"`
 - [ ] **Phase 4:** Check `docs/` files changed in the PR via `jq`
 - [ ] **Phase 4:** Extract key symbols; use the Grep tool to search for key symbols in `docs/`
