@@ -1,8 +1,0 @@
-dist
-build
-node_modules
-.next
-coverage
-*.lock
-flake.lock
-CLAUDE.md

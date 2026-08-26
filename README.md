@@ -123,7 +123,7 @@ npm run crossref -- --mode=full
 - **Testing**: Vitest with 43+ test cases
 - **State Storage**: JSON-based index and suggestion tracking
 
-For detailed architecture and implementation details, see [writer-assistant/ARCHITECTURE.md](writer-assistant/ARCHITECTURE.md) and [writer-assistant/README.md](writer-assistant/README.md).
+That module was `writer-assistant/`, removed in this repository once its capabilities had been ported into `flowrite/`. What was ported, what was dropped and why is recorded in [flowrite/WRITER-ASSISTANT-MIGRATION.md](flowrite/WRITER-ASSISTANT-MIGRATION.md), which also carries the commands to recover any file from git history.
 
 ## Skills
 
