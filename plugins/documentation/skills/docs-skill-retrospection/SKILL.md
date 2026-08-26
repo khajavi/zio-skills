@@ -20,15 +20,21 @@ allowed-tools: Read, Glob, Grep, Edit, Bash
 
 ### Step 1: Locate and Read the Skill File
 
-Find the skill file. Check project-level first, then global:
+**Do not assume one fixed location.** A `docs-*` skill can live as a project-local skill
+(`.claude/skills/<skill-name>/SKILL.md`) or, in this repo, as a plugin skill nested under
+`plugins/<plugin-name>/skills/<skill-name>/SKILL.md` — every skill this retrospection skill's own
+description names as an example (`docs-data-type-ref`, `docs-how-to-guide`, `docs-tutorial`) is the
+latter, so checking only the project-local path finds nothing for the common case. Search instead:
 
 ```bash
-# Project-level (most doc skills live here)
-ls <PROJECT_ROOT>/.claude/skills/<skill-name>/SKILL.md
-
-# Global fallback
-ls /home/milad/.claude/skills/<skill-name>/SKILL.md
+find . -path "*/skills/<skill-name>/SKILL.md" -not -path "*/node_modules/*"
 ```
+
+If that finds more than one match (a project skill shadowing a plugin skill of the same name, or two
+plugins defining the same name), stop and ask which one actually ran — never guess. If it finds none,
+check the global user-level skill directory as a last resort: `~/.claude/skills/<skill-name>/SKILL.md`
+(never a specific user's literal home directory path — this file is shared, checked-in content, and a
+hardcoded `/home/<user>/...` path only ever works on one machine).
 
 Read the full content of the SKILL.md found. Treat each numbered step in the
 **Workflow** section as the ground truth for what *should* happen.
@@ -91,7 +97,7 @@ Rules:
 ### Step 5: Commit
 
 ```bash
-git add .claude/skills/<skill-name>/SKILL.md
+git add <path-found-in-step-1>
 git commit -m "skill(<skill-name>): retrospection improvements from <task-slug>"
 ```
 
