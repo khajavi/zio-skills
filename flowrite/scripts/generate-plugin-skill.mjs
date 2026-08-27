@@ -139,7 +139,7 @@ const MANIFEST = [
     ],
     references: [
       {
-        from: 'src/skills/page-metadata/references/rules.md',
+        from: 'src/skills/backfill-metadata/references/rules.md',
         to: 'references/rules.md',
         substitutions: [
           [

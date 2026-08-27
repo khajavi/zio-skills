@@ -1,5 +1,5 @@
 ---
-name: page-metadata
+name: backfill-metadata
 description: Write a Docusaurus page's `description` and `keywords` frontmatter from the page's own content — length and form rules, and what makes a keyword worth indexing. Load when filling metadata on an existing page rather than authoring a new one.
 ---
 

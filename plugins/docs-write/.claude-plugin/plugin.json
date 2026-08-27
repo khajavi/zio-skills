@@ -1,6 +1,6 @@
 {
   "name": "docs-write",
-  "version": "0.1.0-e2df29cd",
+  "version": "0.1.0-c9e5e4b3",
   "description": "Guided documentation workflow: generates reference pages, how-to guides, and tutorials for existing ZIO library code by routing to the documentation plugin skills",
   "author": {
     "name": "Milad Khajavi"
