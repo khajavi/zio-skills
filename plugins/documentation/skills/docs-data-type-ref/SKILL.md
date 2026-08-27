@@ -358,48 +358,18 @@ declaration, not runnable code. That makes it the one place in an otherwise full
 where a wrong signature, a hallucinated method, or a stale citation can sit undetected. Runnable `mdoc`
 blocks already passed Step 7; this step exists for what they don't cover.
 
-Delegate to a fresh subagent with the `Task` tool — it must NOT share your conversation, so its only
-knowledge of the page is what you tell it:
+Delegate to the **`docs-fact-checker`** agent with the `Task` tool — it must NOT share your
+conversation, so its only knowledge of the page is what you tell it. The agent already knows what
+counts as a claim, how to verify it, the drift kinds, severity, and how to report an incomplete check;
+give it only the page-specific parameters:
 
 ```
 Task(
   description: "Fact-check <TypeName> reference page",
-  subagent_type: "general-purpose",
-  prompt: "You check whether a finished ZIO documentation page tells the truth about the code it
-           documents.
-
-           Page: docs/reference/<type-name>.md
+  subagent_type: "documentation:docs-fact-checker",
+  prompt: "Page: docs/reference/<type-name>.md
            Subject: <TypeName>
-           Library source root: <path>
-
-           Read the page section by section. For every claim it makes about the code — a member
-           exists, its parameters, its return type, what it does, what it requires — open the real
-           source and check it. The plain ```scala signature blocks matter most: mdoc never compiles
-           them, so a wrong one is the one thing a fully-passing mdoc run cannot catch. Runnable mdoc
-           blocks already compiled; skip re-verifying those, and skip anything not checkable
-           (motivation, tone, prose quality — that's a different gate's job).
-
-           Verify by opening the file and reading the declaration — never from memory, never from
-           what the name suggests, never trusting the page's own citation without checking it.
-
-           Report each drift with BOTH sides: where the page makes the claim (path:line), and what the
-           source actually says (path:L<start>-L<end>) in a file you opened. No pair, no report — an
-           unverifiable suspicion is not a finding. Classify each as:
-           - contradicted: the member exists but the page describes it wrongly
-           - not-in-source: the page names something that doesn't exist (search the companion, the
-             parent trait, and a bare grep before concluding this)
-           - stale-citation: the claim is correct but the cited location doesn't contain it
-
-           And severity: high (wrong code would result — nonexistent member, wrong return type, wrong
-           params, inverted semantics), medium (a careful reader would notice, code wouldn't break —
-           renamed parameter, wrong edge-case description), low (accurate but misplaced — stale
-           citation, terminology drift).
-
-           If you cannot finish (source root missing, a file wouldn't read, the page names a type you
-           can't locate), say so plainly rather than reporting a false all-clear — 'no drift' and
-           'could not look' must never be the same answer.
-
-           End with: a list of drifts (empty if none), and whether the check completed."
+           Library source root: <path>"
 )
 ```
 
@@ -425,18 +395,15 @@ also check whether an existing guide should gain a "See also" link pointing at t
 The last gate, run against the page's final, integrated state — not before Step 9, since this grades
 what a reader actually sees, sidebar entry and cross-references included.
 
-Delegate to a fresh subagent with the `Task` tool:
+Delegate to the **`docs-reviewer`** agent with the `Task` tool. The agent already knows to run any
+command an item names rather than trust it, and that "cannot verify" fails the item; give it only the
+page path and the checklist itself:
 
 ```
 Task(
   description: "Review <TypeName> reference page",
-  subagent_type: "general-purpose",
-  prompt: "Evaluate docs/reference/<type-name>.md against this checklist. Report each item pass/fail;
-           when failing, give a specific, actionable issue. Set passed=true only if every item passes.
-
-           An item naming a command (a compile or a build check) is verified by RUNNING it exactly as
-           written, in this checkout's shell — 'cannot verify' fails an item on your own tooling, not
-           on the page.
+  subagent_type: "documentation:docs-reviewer",
+  prompt: "Evaluate docs/reference/<type-name>.md against this checklist.
 
            ## Structure
            - Opening definition appears immediately after the frontmatter with NO heading.
@@ -469,9 +436,7 @@ Task(
              the actual file).
            - No deprecated methods or outdated patterns shown as current.
            - sbt \"docs/mdoc --in docs/reference/<type-name>.md --out website/docs/reference/<type-name>.md\"
-             reports zero [error] lines — run it now.
-
-           End with: each item's pass/fail and, for failures, the specific issue."
+             reports zero [error] lines — run it now."
 )
 ```
 
