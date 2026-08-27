@@ -2,7 +2,7 @@
 
 ## Skill Attribution Hook
 
-This project includes automatic skill attribution tracking. When you use ZIO skills (like `zio-http-scaffold` or `docs-write`), the git hook automatically:
+This project includes automatic skill attribution tracking. When you use ZIO skills (like `zio-http-scaffold` or `docs-data-type-ref`), the git hook automatically:
 
 - Updates plugin versions with commit hashes
 - Tracks which skills were used in each commit
@@ -25,7 +25,7 @@ Your commits will show:
 ```
 feat: add OpenAPI validation
 
-Skills-Used: zio-http-scaffold@0.1.0-abc1234,docs-write@0.1.0-abc1234
+Skills-Used: zio-http-scaffold@0.1.0-abc1234,docs-data-type-ref@0.1.0-abc1234
 ```
 
 ### Manual Installation
