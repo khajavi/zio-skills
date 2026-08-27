@@ -44,16 +44,25 @@ This skill produces comprehensive reference documentation for modules with multi
 
 ## Step 1: Research & Map the Module
 
-Run the `docs-research` skill to:
-- Discover which types belong to the module — the scope is free-form, only the name was given — and
-  classify each as **core** or **supporting** (a supporting type exists to serve the core types; app
-  code rarely touches it directly).
-- Find a real multi-type test that exercises the types together, and base the module's workflow on it
-  — this is the heart of the research, more than any single type's exhaustive API (that happens per
-  type, later).
-- Identify named patterns, integration points, imports, the sbt dependency.
-- Search GitHub history for why the module is factored this way, which types it gained or extracted,
-  and where a platform differs.
+Delegate to the **`docs-researcher`** agent with the `Task` tool — it must NOT share your
+conversation, so its only knowledge of what to research is what you tell it:
+
+```
+Task(
+  description: "Research <module-name> module",
+  subagent_type: "documentation:docs-researcher",
+  prompt: "Research the <module-name> module for a module reference page. The scope is free-form —
+           only the module name was given — so DISCOVER which types belong to it, and classify each as
+           core or supporting (a supporting type exists to serve the core types; app code rarely
+           touches it directly).
+           Find a real multi-type test that exercises the types together, and base the module's
+           workflow on it — this is the heart of the research, more than any single type's exhaustive
+           API (that happens per type, later).
+           Identify named patterns, integration points, imports, the sbt dependency.
+           Search commit history for why the module is factored this way, which types it gained or
+           extracted, and where a platform differs."
+)
+```
 
 Build a mental model of core types (primary exports), supporting types (helpers), their relationships, and data flow.
 
@@ -404,13 +413,14 @@ Decide where to place runnable examples, one approach per module for consistency
 
 **Option 1: Module-level examples** (recommended for most modules) — a single section in the module
 index or a dedicated examples page, showing cross-type workflows ("create a Request, send it, parse
-the Response"). Use the `docs-examples` skill.
+the Response"). Use the `docs-companion-examples` skill.
 
 **Option 2: Per-type examples** (only if each type has standalone value) — examples in individual type
-pages (flat) or individual type files (hierarchical), using `docs-examples` separately per type.
+pages (flat) or individual type files (hierarchical), using `docs-companion-examples` separately per
+type.
 
 Do this **before** Step 8 (mdoc verify) — an embedded example file that doesn't exist yet fails mdoc
-outright, whichever embedding mechanism this project uses (see `docs-examples`).
+outright, whichever embedding mechanism this project uses (see `docs-companion-examples`).
 
 ---
 
@@ -462,10 +472,10 @@ way the source doesn't actually show. Watch for that specifically; it's the drif
 most likely to carry that a single-type reference never could.
 
 Run once per page checked — the flat page, or the hierarchical index plus each subpage (each stands on
-its own claims). Delegate each to a fresh `Task`-tool subagent, following `docs-data-type-ref`'s
-fact-checker prompt, with one addition to the brief: explicitly ask it to verify every claimed
-cross-type relationship against real source (an import, a call site, a field of that type) — not just
-per-type signatures and behavior.
+its own claims). Delegate each to the **`docs-fact-checker`** agent with the `Task` tool
+(`subagent_type: "documentation:docs-fact-checker"`), same shape as `docs-data-type-ref`'s Step 8, with
+one addition to the brief: explicitly ask it to verify every claimed cross-type relationship against
+real source (an import, a call site, a field of that type) — not just per-type signatures and behavior.
 
 Fix every reported drift by correcting the **page**, never the source. **Bounded rounds, shared across
 every page this run checks**: fix everything a check reports before spending a confirming round; if a
@@ -477,11 +487,24 @@ name the unrepairable drift in your summary.
 
 ## Step 11: Integrate
 
-Use the **`docs-integrate`** skill for the full checklist. For a hierarchical layout, give it each
-sub-domain (or, for `core-family`, each type) with its subpage ids in reading order, so the sidebar
-becomes a category holding the index plus one entry (or sub-category, for `multi-domain`) per group. A
-flat layout is a single doc entry. Reference pages are linked TO from tutorials and how-to guides —
-also check whether an existing guide using this module should gain a "See also" link here.
+Delegate to the **`docs-integrator`** agent with the `Task` tool. For a hierarchical layout, give it
+each sub-domain (or, for `core-family`, each type) with its subpage ids in reading order, so the
+sidebar becomes a category holding the index plus one entry (or sub-category, for `multi-domain`) per
+group. A flat layout is a single doc entry. Reference pages are linked TO from tutorials and how-to
+guides — also ask for inbound "See also" links from an existing guide using this module where relevant:
+
+```
+Task(
+  description: "Integrate <module-name> module reference",
+  subagent_type: "documentation:docs-integrator",
+  prompt: "Page: docs/reference/<module-name>.md (or docs/reference/<module-name>/index.md for a
+           hierarchical layout, plus one entry/sub-category per <sub-domain-or-type> subpage: <list>)
+           Category: Reference
+           Layout: <flat | hierarchical>
+           Cross-reference direction: this page is linked TO from tutorials and how-to guides that use
+           this module — add inbound 'See also' links from those pages where relevant."
+)
+```
 
 ### sidebars.js Shape
 
@@ -522,10 +545,17 @@ sub-domain's index and its own `items` list of that sub-domain's type ids.
 The last gate, run against the page's final, integrated state — after Step 11, since this grades what
 a reader actually sees, sidebar and cross-references included.
 
-Delegate to a fresh `Task`-tool subagent, evaluating the module page (flat page, or hierarchical
-index) against this checklist — an item naming a command is verified by running it, not by inspection:
+Delegate to the **`docs-reviewer`** agent with the `Task` tool
+(`subagent_type: "documentation:docs-reviewer"`), evaluating the module page (flat page, or
+hierarchical index) against this checklist:
 
 ```
+Task(
+  description: "Review <module-name> module reference",
+  subagent_type: "documentation:docs-reviewer",
+  prompt: "Evaluate docs/reference/<module-name>.md (or the hierarchical index plus each subpage)
+           against this checklist.
+
 ## Module Narrative
 - Opening definition immediately after frontmatter, NO heading, states purpose, lists core types as inline code.
 - Includes a plain scala structural block (no bodies) showing the shape of the main types.
@@ -546,7 +576,8 @@ index) against this checklist — an item naming a command is verified by runnin
 - Every core type discovered in research is documented — none dropped.
 - Relationships and composition shown reflect the real source, not invented links.
 - Writing-style rules pass (evaluate in this same pass; report violations as failing items too).
-- mdoc reports zero [error] lines for every page checked — run it now, scoped, never --watch.
+- mdoc reports zero [error] lines for every page checked — run it now, scoped, never --watch."
+)
 ```
 
 **Bounded rounds, same discipline as fact-check:** if review reports failing items, fix them ALL and

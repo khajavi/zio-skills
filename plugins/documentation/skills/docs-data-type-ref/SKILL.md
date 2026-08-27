@@ -38,9 +38,29 @@ grades the page's final, integrated state. Complete all tasks before claiming do
 
 ## Step 1: Deep Source Code Research
 
-Use the **`docs-research`** skill to find the source file, read tests, identify examples, find usages, read related docs, and search GitHub history. It covers steps for identifying the type, finding supporting information, and building a complete mental model — including citation discipline, verbatim signature rules, and audience-tier classification (see below).
+Delegate to the **`docs-researcher`** agent with the `Task` tool — it must NOT share your
+conversation, so its only knowledge of what to research is what you tell it. It already knows how to
+trace source, tests, examples, and commit history, and how to cite what it finds; give it only what
+this page needs:
 
-**Additional guidance for reference pages**: Ensure you also locate the type's full public API (all public methods and companion object methods), as this will form the core of your documentation. Reference pages are exhaustive: an operation you didn't find is a defect, not an omission you can shrug off.
+```
+Task(
+  description: "Research <TypeName> for a reference page",
+  subagent_type: "documentation:docs-researcher",
+  prompt: "Research <TypeName> for a data type reference page. Find the full public API surface —
+           structural signature, type parameters, every companion constructor and factory, predefined
+           instances, EVERY public operation with its verbatim signature and a short real usage
+           snippet, subtypes or variants, worthwhile comparisons, the imports and sbt dependency, and a
+           closing grounding-detail section of verbatim excerpts. This page is exhaustive: an omitted
+           operation is a defect.
+           Also ask what the commit history states: it is the only source for why the type is shaped
+           this way, what a member used to be called, and where a platform differs."
+)
+```
+
+Reference pages are exhaustive: an operation the agent didn't find is a defect, not an omission you
+can shrug off. If its findings are missing or thin, say so and delegate again rather than filling the
+gap yourself.
 
 ## Step 2: Plan the Page
 
@@ -288,13 +308,13 @@ the same diagram here.
 #### 12. Running the Examples (required when standalone example files exist)
 
 **How to create the section:**
-1. Use the **`docs-examples`** skill to create example project or example files — see that skill for
+1. Use the **`docs-companion-examples`** skill to commission the example files — see that skill for
    the choice between `SourceFile.print` and `mdoc:embed`, and its warning that either mechanism must
    have its file on disk before mdoc runs (Step 6, below, handles the ordering).
 2. Embed each example with a short description paragraph, source link, and run command.
 3. Place the section at the very end of the page (after Integration).
 
-**When invoking `docs-examples`:** Pass the examples module name (e.g., `schema-examples`), repo name, package name, and specify this is a **data type reference** (for the embedding template).
+**When invoking `docs-companion-examples`:** Pass the examples module name (e.g., `schema-examples`), repo name, package name, and specify this is a **data type reference** (for the embedding template).
 
 ### Writing Rules
 
@@ -310,9 +330,9 @@ catches prose and code-block issues early, before the more expensive steps below
 
 ## Step 5: Write Examples
 
-Use the **`docs-examples`** skill to create and document runnable examples. Do this now, **before**
-mdoc verification (Step 7) — an embedded example file that doesn't exist yet fails mdoc outright,
-whichever embedding mechanism this project uses.
+Use the **`docs-companion-examples`** skill to commission and verify runnable examples. Do this now,
+**before** mdoc verification (Step 7) — an embedded example file that doesn't exist yet fails mdoc
+outright, whichever embedding mechanism this project uses.
 
 Pass as context: the examples module name, the package name derived from the type name (lowercase, hyphens removed), and that this is a **data type reference** page.
 
@@ -386,9 +406,21 @@ rather than looping. A check that reported nothing needs no confirming round.
 
 ## Step 9: Integrate
 
-Use the **`docs-integrate`** skill for integration checklist (sidebars.js, index.md, cross-references).
-Reference pages are linked TO from tutorials and how-to guides that use this type — when integrating,
-also check whether an existing guide should gain a "See also" link pointing at this new page.
+Delegate to the **`docs-integrator`** agent with the `Task` tool. It already knows the sidebars.js,
+index.md, and build-verification procedure; give it only the page-specific parameters. Reference pages
+are linked TO from tutorials and how-to guides that use this type, so ask it for inbound "See also"
+links from those pages where relevant:
+
+```
+Task(
+  description: "Integrate <TypeName> reference page",
+  subagent_type: "documentation:docs-integrator",
+  prompt: "Page: docs/reference/<type-name>.md
+           Category: Reference
+           Cross-reference direction: this page is linked TO from tutorials and how-to guides that use
+           <TypeName> — add inbound 'See also' links from those pages where relevant."
+)
+```
 
 ## Step 10: Final Review
 

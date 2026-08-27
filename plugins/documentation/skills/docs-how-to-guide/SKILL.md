@@ -38,7 +38,26 @@ Key properties of a good how-to guide:
 
 Before writing a single word, you must build a complete mental model of every type, method, pattern, and integration point relevant to the guide topic. This is the most critical step.
 
-**For the source research procedure (finding source files, tests, examples, and GitHub history), use the `docs-research` skill.** It covers steps 1a–1d: identifying core data types, supporting types, real-world patterns, and GitHub history search.
+Delegate to the **`docs-researcher`** agent with the `Task` tool — it must NOT share your
+conversation, so its only knowledge of what to research is what you tell it:
+
+```
+Task(
+  description: "Research <topic> for a how-to guide",
+  subagent_type: "documentation:docs-researcher",
+  prompt: "Research <topic> for a goal-oriented how-to guide. Find: the specific problem this guide
+           solves and what a reader would write to solve it without this library (a real 'before' code
+           example); the minimal set of types and operations needed to reach the goal; the key decision
+           points and common mistakes; for each core type, what it is and its role in reaching the
+           goal; the dependency/composition order; factory methods and constructors the reader will
+           actually use; the simplest starting point and the layers of complexity that can be added
+           incrementally; imports and sbt dependency; commit history for why this is shaped the way it
+           is."
+)
+```
+
+Read its findings before proceeding — if they're missing or thin, say so and delegate again rather
+than filling the gap yourself.
 
 ### 1e. Answer These Research Questions
 
@@ -311,7 +330,8 @@ to resolve to until this step runs. If you find yourself skipping this step beca
 need it," that means Step 3 was written wrong — go back and fix the page to embed, then build the
 files here.
 
-Use the **`docs-examples`** skill to create companion examples. It covers all aspects: directory structure, file templates, compilation verification, and the lint check procedure. Follow steps 4a–4f exactly as documented in that skill.
+Use the **`docs-companion-examples`** skill to commission and verify companion examples — it delegates
+the build (directory structure, file templates, compilation, lint) and checks what came back.
 
 ---
 
@@ -335,34 +355,56 @@ guide's prose claims about the library against real source — only that the cod
 names a method the library doesn't have, or describes behavior the source contradicts, sends the
 reader down a dead end at exactly the point they're trying to get something done.
 
-Delegate to a fresh subagent with the `Task` tool, following `docs-data-type-ref`'s fact-checker
-prompt, pointed at this guide's path and the library's source root. Fix every reported drift by
-correcting the **guide**, never the source. Bounded rounds, same discipline: fix everything a check
-reports, then confirm once — that confirming round is what records the guide as clean. Genuinely new
-drifts in a confirming round earn another, up to 3 total; a round repeating the same drifts ends it.
+Delegate to the **`docs-fact-checker`** agent with the `Task` tool:
+
+```
+Task(
+  description: "Fact-check <guide-id> how-to guide",
+  subagent_type: "documentation:docs-fact-checker",
+  prompt: "Page: docs/guides/<guide-id>.md
+           Subject: <topic>
+           Library source root: <path>"
+)
+```
+
+Fix every reported drift by correcting the **guide**, never the source. Bounded rounds, same
+discipline: fix everything a check reports, then confirm once — that confirming round is what records
+the guide as clean. Genuinely new drifts in a confirming round earn another, up to 3 total; a round
+repeating the same drifts ends it.
 
 ---
 
 ## Step 7: Integrate
 
-See the **`docs-integrate`** skill for the complete integration checklist (sidebars.js, index.md,
-cross-references, link verification).
+Delegate to the **`docs-integrator`** agent with the `Task` tool:
 
-Additional notes for how-to guides:
-- Place the file in `docs/guides/` directory.
-- In `sidebars.js`, add under a "Guides" category (create it if absent).
-- Cross-reference: add links from any related reference pages (e.g., if the guide uses `Schema`,
-  add a "See also" link from `docs/reference/schema.md`) **that already exist** — check first, and
-  name which do. Never ask for a reference page to be created to satisfy a link, and never accept a
-  stub written to make one resolve.
+```
+Task(
+  description: "Integrate <guide-id> how-to guide",
+  subagent_type: "documentation:docs-integrator",
+  prompt: "Page: docs/guides/<guide-id>.md
+           Category: Guides (create it if absent)
+           Cross-reference direction: add 'See also' links from related reference pages that already
+           exist (e.g. if this guide uses Schema, from docs/reference/schema.md) — check first, and
+           name which do. Never ask for a reference page to be created to satisfy a link, and never
+           accept a stub written to make one resolve."
+)
+```
 
 ---
 
 ## Step 8: Final Review
 
-Delegate to a fresh subagent with the `Task` tool: have it read [CHECKLIST.md](./CHECKLIST.md) and
-evaluate the guide against every item there, reporting pass/fail per item with a specific issue for
-each failure. An item naming a command (a compile check) is verified by running it, not by inspection.
+Delegate to the **`docs-reviewer`** agent with the `Task` tool: give it [CHECKLIST.md](./CHECKLIST.md)'s
+content and have it evaluate the guide against every item.
+
+```
+Task(
+  description: "Review <guide-id> how-to guide",
+  subagent_type: "documentation:docs-reviewer",
+  prompt: "Evaluate docs/guides/<guide-id>.md against this checklist: <CHECKLIST.md's content>"
+)
+```
 
 **Bounded rounds:** if review reports failing items, fix them ALL and call it once more — that
 confirming round is what records the guide as passing, since the verdict is whatever the last review
