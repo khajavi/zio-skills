@@ -10,7 +10,7 @@ import instructions from './instructions/metadata.md';
 // earns that for a writer carrying seven skills it uses some of; it is pure loss for an agent whose
 // only job is these two fields, which needs the rules on turn 1 of every run. Mounting would also add
 // a way to fail — the model declining to activate, then writing frontmatter without reading the form.
-import rules from './skills/page-metadata/references/rules.md';
+import rules from './skills/backfill-metadata/references/rules.md';
 // Mounted, unlike the rules, and for the mirror-image reason: a description is prose, so rule 3 (no
 // padding or filler) can bite, but the other 27 rules are about a page body this agent never touches.
 // Paying for all 28 on every turn would be the waste kind-docs measured in the other direction.
