@@ -381,11 +381,13 @@ const MANIFEST = [
  * `git`/`gh` call the body already tells the model to run directly). `skills` mirrors a `useSkill()`
  * mount 1:1 — only `drafter` has any.
  *
- * `drafter` is a known, documented gap, not a workaround: flowrite's `drafter.ts` composes
- * `structureBlock(docKind()) + styleBlock()` into the prompt AT RENDER TIME, chosen per-invocation from
- * which page kind is being written. A static Claude Code agent file has no per-call templating
- * equivalent, so `docs-drafter.md`'s body is `drafter.md` verbatim and nothing more — whoever delegates
- * to it must supply the kind-specific structure/style material in the `Task()` prompt itself.
+ * `drafter` AND `designer` are a known, documented gap, not a workaround: flowrite's `drafter.ts`
+ * composes `structureBlock(docKind()) + styleBlock()`, and `designer.ts` composes
+ * `structureBlock(docKind())`, into the prompt AT RENDER TIME, chosen per-invocation from which page
+ * kind is being written. A static Claude Code agent file has no per-call templating equivalent, so
+ * `docs-drafter.md`/`docs-designer.md`'s bodies are `drafter.md`/`designer.md` verbatim and nothing
+ * more — whoever delegates to either must supply the kind-specific structure/style material in the
+ * `Task()` prompt itself.
  */
 const AGENT_MANIFEST = [
   {
