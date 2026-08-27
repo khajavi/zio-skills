@@ -120,7 +120,7 @@ keywords:
 
 `description` and each `keywords` entry are double-quoted; `keywords` is a block list (one `-
 "item"` per line), 3-6 entries. Write these now — don't ship the page relying on a later
-docs-backfill-metadata pass to fill them in.
+docs-page-metadata pass to fill them in.
 
 ### Module-Level Sections (BOTH STRUCTURES)
 

@@ -1,5 +1,5 @@
 ---
-name: docs-backfill-metadata
+name: docs-page-metadata
 description: >
   Fill in the missing `description` and `keywords` frontmatter fields on one
   documentation page, without touching anything else on it. Use when a page has
