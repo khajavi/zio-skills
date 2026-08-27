@@ -24,7 +24,8 @@ SKILLS_USED=()
 # re-run the script by hand before comparing the two.
 if [ -d "flowrite" ] && [ -f "flowrite/scripts/generate-plugin-skill.mjs" ]; then
   CHANGED_FLOWRITE_SOURCES=$(git diff-tree --no-commit-id --name-only -r HEAD -- \
-    'flowrite/src/instructions/' 'flowrite/src/skills/' 'flowrite/scripts/generate-plugin-skill.mjs' \
+    'flowrite/src/instructions/' 'flowrite/src/skills/' 'flowrite/src/subagents/' \
+    'flowrite/scripts/generate-plugin-skill.mjs' \
     2>/dev/null || true)
   # Also catch a new/changed standalone agent (flowrite/src/*.ts) without matching every .ts in the
   # tree — diff-tree with a glob needs GNU find semantics git diff-tree doesn't have, so filter here.

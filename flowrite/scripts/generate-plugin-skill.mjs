@@ -371,6 +371,127 @@ const MANIFEST = [
   },
 ];
 
+/**
+ * One entry per generated Claude Code subagent, mechanically derived from a flowrite subagent under
+ * `src/subagents/`. Unlike MANIFEST, output is a single flat file (`OUT_DIR/agents/<name>.md`), not a
+ * folder — Claude Code subagents have no `references/` sibling. `frontmatter` fields land verbatim in
+ * the output's YAML block via the same `frontmatter()` helper skills use; omitting `tools` inherits
+ * every tool, which is the closest equivalent to a flowrite subagent inheriting its parent's sandbox
+ * (none of these declare a `useTool` beyond researcher's `gh_query`, itself just a bash-wrapped
+ * `git`/`gh` call the body already tells the model to run directly). `skills` mirrors a `useSkill()`
+ * mount 1:1 — only `drafter` has any.
+ *
+ * `drafter` is a known, documented gap, not a workaround: flowrite's `drafter.ts` composes
+ * `structureBlock(docKind()) + styleBlock()` into the prompt AT RENDER TIME, chosen per-invocation from
+ * which page kind is being written. A static Claude Code agent file has no per-call templating
+ * equivalent, so `docs-drafter.md`'s body is `drafter.md` verbatim and nothing more — whoever delegates
+ * to it must supply the kind-specific structure/style material in the `Task()` prompt itself.
+ */
+const AGENT_MANIFEST = [
+  {
+    name: 'docs-researcher',
+    frontmatter: {
+      name: 'docs-researcher',
+      description:
+        'Researches a ZIO topic across source, tests, examples, and GitHub history; returns ' +
+        'structured research answers in the shape the caller requests.',
+      model: 'haiku',
+      effort: 'low',
+    },
+    instructions: 'src/subagents/researcher.md',
+    substitutions: [
+      [
+        'Write your findings to the file path your task names, under `.flowrite/research/`, with the `write`\ntool',
+        'Write your findings to the file path your task names, with the `Write`\ntool',
+      ],
+    ],
+  },
+  {
+    name: 'docs-designer',
+    frontmatter: {
+      name: 'docs-designer',
+      description: 'Turns research findings into a validated plan for a ZIO documentation page.',
+      model: 'sonnet',
+      effort: 'medium',
+    },
+    instructions: 'src/subagents/designer.md',
+  },
+  {
+    name: 'docs-drafter',
+    frontmatter: {
+      name: 'docs-drafter',
+      description:
+        'Writes a complete ZIO documentation page as Docusaurus markdown from a given plan and ' +
+        'research findings.',
+      model: 'sonnet',
+      effort: 'high',
+      skills: 'docs-mdoc-conventions, docs-ascii-diagram, docs-markdown-table',
+    },
+    instructions: 'src/subagents/drafter.md',
+    substitutions: [
+      ['Write the page with the `write` tool', 'Write the page with the `Write` tool'],
+    ],
+  },
+  {
+    name: 'docs-examples-builder',
+    frontmatter: {
+      name: 'docs-examples-builder',
+      description:
+        'Creates and compiles companion example files for a documentation page (one per section + a ' +
+        'complete example). Use after the draft exists.',
+      model: 'sonnet',
+      effort: 'medium',
+    },
+    instructions: 'src/subagents/examples-builder.md',
+  },
+  {
+    name: 'docs-integrator',
+    frontmatter: {
+      name: 'docs-integrator',
+      description:
+        'Wires a new documentation page into the ZIO documentation site: sidebars.js, index.md, ' +
+        'cross-references, and build verification. Use after mdoc passes.',
+      model: 'sonnet',
+      effort: 'medium',
+    },
+    instructions: 'src/subagents/docs-integrator.md',
+  },
+  {
+    name: 'docs-fact-checker',
+    frontmatter: {
+      name: 'docs-fact-checker',
+      description:
+        'Verifies the factual claims in one section of a documentation page against the library ' +
+        'source, and reports each mismatch with citations to both the page and the source.',
+      model: 'sonnet',
+      effort: 'low',
+    },
+    instructions: 'src/subagents/fact-checker.md',
+    substitutions: [
+      [
+        'A research file under `.flowrite/research/` may exist.',
+        'A research file may exist at a path your task names.',
+      ],
+      [
+        'End with a single `finish` call whose arguments match the schema. Prose does not count as a result.',
+        'End with: a list of drifts (empty if none), and whether the check completed.',
+      ],
+    ],
+  },
+  {
+    name: 'docs-reviewer',
+    frontmatter: {
+      name: 'docs-reviewer',
+      description:
+        'Evaluates a written ZIO documentation page against a checklist supplied in the task, and ' +
+        'reports each item pass/fail.',
+      model: 'sonnet',
+      effort: 'low',
+    },
+    instructions: 'src/subagents/reviewer.md',
+  },
+];
+
 function generate(entry) {
   const skillDir = path.join(OUT_DIR, entry.name);
   mkdirSync(skillDir, { recursive: true });
@@ -398,5 +519,18 @@ function generate(entry) {
   console.log(`generated ${entry.name} -> ${path.relative(FLOWRITE_ROOT, skillDir)}`);
 }
 
+function generateAgent(entry) {
+  const agentsDir = path.join(OUT_DIR, 'agents');
+  mkdirSync(agentsDir, { recursive: true });
+
+  const body = applySubstitutions(rd(entry.instructions), entry.substitutions ?? []);
+  const output = frontmatter(entry.frontmatter) + '\n' + body;
+  const agentOutPath = path.join(agentsDir, `${entry.name}.md`);
+  writeFileSync(agentOutPath, output);
+
+  console.log(`generated agent ${entry.name} -> ${path.relative(FLOWRITE_ROOT, agentOutPath)}`);
+}
+
 if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
 for (const entry of MANIFEST) generate(entry);
+for (const entry of AGENT_MANIFEST) generateAgent(entry);
