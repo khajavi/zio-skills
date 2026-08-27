@@ -62,7 +62,7 @@ and say so if it does not — then follow the request.
 
 One per category, at `docs/reference/<category-kebab>/index.md` **only if pages already live in that
 directory**; otherwise at `docs/reference/<category-kebab>.md`. Use the plugin's page-metadata
-frontmatter contract (id, title, description, keywords — see `docs-page-metadata`), and keep the body
+frontmatter contract (id, title, description, keywords — see `docs-backfill-metadata`), and keep the body
 short:
 
 - Two or three sentences on what this category covers and why these types are grouped — a reader

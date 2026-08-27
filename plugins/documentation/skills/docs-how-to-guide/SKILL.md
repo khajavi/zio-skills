@@ -137,7 +137,7 @@ keywords:
 ```
 
 `description` and each `keywords` entry are double-quoted; `keywords` is a block list (one `- "item"`
-per line), 3-6 entries. Write these now — don't rely on a later docs-page-metadata pass.
+per line), 3-6 entries. Write these now — don't rely on a later docs-backfill-metadata pass.
 
 The `id` must match the filename (without `.md`), and should name the task rather than a type
 (`validate-json-schemas`, not `schema`).
