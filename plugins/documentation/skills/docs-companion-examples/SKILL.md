@@ -11,28 +11,19 @@ need nothing here. **Embedded** files — pulled in with `mdoc:embed:<path>` or 
 tutorial's "Putting It Together" or a reference page's "Running the Examples" — are real `.scala` files
 that must exist on disk before mdoc runs, in their own sbt build.
 
-Delegate the build to a fresh subagent with the `Task` tool — it must NOT share your conversation, so
-its only knowledge of the page is what you tell it. Point it at the **`docs-examples`** skill for the
-mechanical procedure (the decoupled sbt build topology, file templates, compile, lint), and name:
+Delegate the build to the **`docs-examples-builder`** agent with the `Task` tool — it must NOT share
+your conversation, so its only knowledge of the page is what you tell it. The agent already knows the
+decoupled sbt build topology, file templates, and the compile/lint/self-check procedure; give it only
+the page-specific parameters:
 
 ```
 Task(
   description: "Build companion examples for <page-id>",
-  subagent_type: "general-purpose",
-  prompt: "Build the companion example files for a ZIO documentation page. Use the docs-examples skill
-           for the build topology, file templates, and compile/lint procedure.
-
-           Page: <path to the page being documented>
+  subagent_type: "documentation:docs-examples-builder",
+  prompt: "Page: <path to the page being documented>
            Embeds this page declares: <every mdoc:embed:<path> or SourceFile.print path it names,
              each of which must end up at exactly that path>
-           Requirement: every example must print meaningful output when run, not just compile.
-
-           The page's own code blocks are the only permitted source of example code — never invent
-           example code beyond a package declaration, imports, a runnable wrapper, and printlns for
-           output the page renders.
-
-           Report: the examples build dir, the subproject id, the package name, and every example
-           object with its run command."
+           Requirement: every example must print meaningful output when run, not just compile."
 )
 ```
 

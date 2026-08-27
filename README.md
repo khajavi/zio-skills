@@ -2,11 +2,10 @@
 
 Teaching coding agents (Claude Code, Cursor, Codex, Gemini, OpenCode) how to build and document ZIO applications.
 
-This marketplace currently ships three plugins:
+This marketplace currently ships two plugins:
 
 - **`zio-skills`** — Build ZIO and ZIO HTTP applications (server scaffolding, OpenAPI code generation, endpoint API, …).
 - **`documentation`** — Write high-quality documentation for ZIO libraries (reference pages, how-to guides, tutorials, mdoc conventions, writing-style enforcement).
-- **`docs-write`** — Guided documentation authoring workflow (research, generation, and quality review for existing code).
 
 ## Installation
 
@@ -22,9 +21,6 @@ claude plugin install zio-skills@ziogenetics
 
 # write documentation for ZIO libraries
 claude plugin install documentation@ziogenetics
-
-# guided documentation authoring workflow
-claude plugin install docs-write@ziogenetics
 ```
 
 Then invoke a skill in Claude Code:
@@ -33,7 +29,6 @@ Then invoke a skill in Claude Code:
 /zio-http-openapi-to-endpoint
 /zio-http-endpoint-to-openapi
 /zio-http-imperative-to-declarative
-/docs-write
 /docs-data-type-ref
 /docs-how-to-guide
 /docs-tutorial
@@ -135,9 +130,6 @@ That module was `writer-assistant/`, removed in this repository once its capabil
 - **`zio-http-imperative-to-declarative`** — Convert imperative routes to typed Endpoint API
 
 ### Documentation (`documentation` plugin)
-
-Orchestration:
-- **`docs-write`** — Guided 5-phase workflow for writing documentation (research, generation, quality review)
 
 Authoring skills:
 - **`docs-data-type-ref`** — Write a reference page for a single data type

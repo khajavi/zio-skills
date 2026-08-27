@@ -37,7 +37,7 @@ Every commit will automatically include:
 ```
 feat: add OpenAPI validation
 
-Skills-Used: zio-http-scaffold@0.1.0-abc1234,docs-write@0.1.0-abc1234
+Skills-Used: zio-http-scaffold@0.1.0-abc1234,docs-data-type-ref@0.1.0-abc1234
 ```
 
 This makes it easy to:
