@@ -4,6 +4,7 @@ import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { authorHint, maxFactCheckRounds } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 import { note } from '../../runtime/log.ts';
+import { createOutcomeTracker, createRoundBudget } from '../../runtime/round-budget.ts';
 
 /**
  * The fact-check phase: does the page tell the truth about the code?
@@ -88,43 +89,28 @@ export type DriftReport = v.InferOutput<typeof driftSchema>;
 const FACT_CHECK_TOOL_NAME = 'fact_check_page';
 
 /**
- * Rounds spent against the budget.
+ * Confirming rounds a run may earn, and the ceiling on them.
  *
- * Module state, like the review phase's counters and for the same reason: one OS process per run
- * (each `run-*.sh` execs a fresh node), and a run documents one page.
+ * Mirrors the review phase after the same defect was measured there: a round that reports drifts the
+ * round before it never mentioned confirmed nothing — it found more work — so the run earns another.
+ * A single grant froze the verdict on findings the run then repaired. The cap is what stops the
+ * renewal from looping on a page that cannot be fixed.
  */
-let roundsUsed = 0;
-
-/**
- * Confirming rounds granted so far, and the ceiling on them.
- *
- * Counted rather than a boolean, mirroring the review phase after the same defect was measured there:
- * a round that reports drifts the round before it never mentioned confirmed nothing — it found more
- * work — so the run earns another. A single grant froze the verdict on findings the run then repaired.
- * The cap is what stops the renewal from looping on a page that cannot be fixed.
- */
-let confirmingRounds = 0;
 const MAX_CONFIRMING_ROUNDS = 3;
 
-/**
- * The finding keys of the check BEFORE `lastOutcome`, so `consumeFactCheckRound` can tell a
- * confirmation from a fresh finding. `null` until a second check lands.
- */
-let previousFindingKeys: string[] | null = null;
-
-let budgetRefusals = 0;
+// The round-budget mechanism (counters, renewal-on-new-findings decision) is identical to
+// review-page.ts's and lives in round-budget.ts; only the refusal wording below is specific to
+// fact-check.
+const roundBudget = createRoundBudget(MAX_CONFIRMING_ROUNDS);
 
 /** Refused rounds, by tool name, for the run report. */
 export function factCheckRefusals(): Record<string, number> {
-  return budgetRefusals > 0 ? { [FACT_CHECK_TOOL_NAME]: budgetRefusals } : {};
+  return roundBudget.budgetRefusals > 0 ? { [FACT_CHECK_TOOL_NAME]: roundBudget.budgetRefusals } : {};
 }
 
 /** Reset the round counters. Tests only — module state with no other seam. */
 export function __resetFactCheckRoundsForTests(): void {
-  roundsUsed = 0;
-  confirmingRounds = 0;
-  previousFindingKeys = null;
-  budgetRefusals = 0;
+  roundBudget.reset();
 }
 
 /**
@@ -138,19 +124,6 @@ export function __resetFactCheckRoundsForTests(): void {
 type FactCheckOutcome =
   | { state: 'skipped' }
   | { state: 'checked'; drifts: Drift[]; incomplete: string | null };
-
-let lastOutcome: FactCheckOutcome | null = null;
-
-/** Reset the recorded fact-check. Tests only — module state with no other seam. */
-export function __resetLastFactCheckForTests(): void {
-  lastOutcome = null;
-  previousFindingKeys = null;
-}
-
-/** Record what a fact-check concluded. Tests only; the phase records on its own path. */
-export function __setLastFactCheckForTests(outcome: FactCheckOutcome | null): void {
-  recordFactCheck(outcome);
-}
 
 /**
  * A drift's identity across rounds: which member, and what kind of problem.
@@ -175,16 +148,27 @@ function findingKeysOf(outcome: FactCheckOutcome | null): string[] {
   return keys;
 }
 
+const factCheckOutcome = createOutcomeTracker<FactCheckOutcome>(findingKeysOf);
+
+/** Reset the recorded fact-check. Tests only — module state with no other seam. */
+export function __resetLastFactCheckForTests(): void {
+  factCheckOutcome.reset();
+}
+
+/** Record what a fact-check concluded. Tests only; the phase records on its own path. */
+export function __setLastFactCheckForTests(outcome: FactCheckOutcome | null): void {
+  recordFactCheck(outcome);
+}
+
 /**
  * Record a fact-check, keeping the one before it.
  *
  * The previous round's findings are what make "this round confirmed the fixes" distinguishable from
- * "this round found more" — see `consumeFactCheckRound`. Every write to `lastOutcome` goes through
- * here so the two can never drift apart.
+ * "this round found more" — see `consumeFactCheckRound`. Every write goes through here so the recorded
+ * outcome and its predecessor can never drift apart.
  */
 function recordFactCheck(outcome: FactCheckOutcome | null): void {
-  previousFindingKeys = findingKeysOf(lastOutcome);
-  lastOutcome = outcome;
+  factCheckOutcome.record(outcome);
 }
 
 /** One drift, as a failing-item line. Prefixed so a flat `failingItems` list stays legible. */
@@ -212,6 +196,7 @@ export function recordedFactCheck(): {
   failingItems: string[];
   blocking: boolean;
 } {
+  const lastOutcome = factCheckOutcome.last;
   if (lastOutcome === null) return { state: 'none', failingItems: [], blocking: false };
   if (lastOutcome.state === 'skipped') return { state: 'skipped', failingItems: [], blocking: false };
 
@@ -243,31 +228,14 @@ export function recordedFactCheck(): {
  */
 export function consumeFactCheckRound(): void {
   const budget = maxFactCheckRounds();
-  if (roundsUsed < budget) {
-    roundsUsed++;
-    return;
-  }
+  const result = roundBudget.consume(
+    budget,
+    factCheckOutcome.hasFindings(),
+    factCheckOutcome.foundNewSinceLast(),
+  );
+  if (result === 'granted') return;
 
-  // A grant is renewed only when the round that spent the last one reported drifts the round before it
-  // never mentioned. That round confirmed nothing — it found more work, and the page it judged is not
-  // the page the model went on to fix. A round that merely repeats the previous drifts has confirmed
-  // what it can, so the run ends on it rather than paying for a third opinion.
-  //
-  // Mirrors `consumeReviewRound` after the same defect was measured on two runs there. Not measured
-  // here — this phase has never run — but the mechanism is identical, and shipping the two gates with
-  // divergent budgets would mean knowingly keeping the bug in one of them.
-  const lastFindings = findingKeysOf(lastOutcome);
-  // Bound to a local so the null check narrows inside the closure — module state does not.
-  const previous = previousFindingKeys;
-  const foundNewDrifts = previous !== null && lastFindings.some((key) => !previous.includes(key));
-  const renewable = confirmingRounds === 0 || foundNewDrifts;
-  if (lastFindings.length > 0 && renewable && confirmingRounds < MAX_CONFIRMING_ROUNDS) {
-    confirmingRounds++;
-    roundsUsed++;
-    return;
-  }
-
-  budgetRefusals += 1;
+  const confirmingRounds = roundBudget.confirmingRounds;
   const spent =
     confirmingRounds === 0
       ? ''
