@@ -8,23 +8,29 @@ Procedure:
    the category named in the prompt (create the category if missing).
    ✅ the path `git ls-files` prints (`docs/sidebars.js`, `website/sidebars.js`)
    ❌ `website/docs/sidebars.js` — mdoc output, gitignored, so an edit there ships nothing
-   Verify it still parses: `node -e "require('<its path>')"`.
+   Verify it still parses: `node --check <its path>` (syntax only — `node -e "require(...)"` also
+   executes every module it imports, and `website/sidebars.js` requires the gitignored, build-generated
+   `./ecosystem-sidebar`, so `require` fails on any checkout that has not already run a full site build).
 2. docs/index.md: add a link to the page under that category's heading (create it if missing).
 3. Cross-reference: add at least two "See also" links between this page and related pages
    (find candidates with `grep -rl "<TypeName>" docs/`), in the direction the prompt describes.
 4. Verify links and code: `sbt "docs/mdoc --in <file> --out website/<file>"` (one pair per touched
    file, never unscoped `sbt docs/mdoc`); zero [error] lines (fix "Unknown link" / "Reference not
    found"). On a bare "mdoc failed" stack trace, run the `sbt "last <scope>"` it suggests.
-5. Full build gate: run the site build (`yarn run build`, else npm/pnpm equivalent) piped through
-   `tail -40`. On failure: clean `website/docs`, run ONE full unscoped `sbt docs/mdoc` (fills every
-   `website/docs` page so all sidebar ids resolve — the one sanctioned unscoped mdoc, see
-   mdoc-conventions), retry the build once.
+5. Full build gate — only when the site's build tooling is actually installed
+   (`test -d website/node_modules`, else `node_modules` at the site root): run the site build
+   (`yarn run build`, else npm/pnpm equivalent) piped through `tail -40`. On failure: clean
+   `website/docs`, run ONE full unscoped `sbt docs/mdoc` (fills every `website/docs` page so all
+   sidebar ids resolve — the one sanctioned unscoped mdoc, see mdoc-conventions), retry the build once.
+   When the tooling is not installed, do not install it or search for a global binary — that gate is
+   not available in this checkout. Say so, and let step 4's `mdoc` run plus step 1's sidebar/index
+   checks stand as verification instead.
 
 **Never create a page to make a link or the build resolve.** A link whose target does not exist is
 removed, not manufactured: a stub page is unreviewed content that ships, and it takes the name the real
 page will want. If the prompt asks you to link somewhere that does not exist, say so and link what does.
 ✅ drop the link, report the gap ❌ write `<Type>.md` containing "full documentation coming soon"
 
-Done when the build passes, or — after that retry — the only failures are pre-existing pages you
-did not touch (name them). Fix only what your changes broke; never delete a sibling's sidebar entry
-and never document a sibling module to force green. Report what you changed.
+Done when the build passes (or was not available to run), or — after that retry — the only failures
+are pre-existing pages you did not touch (name them). Fix only what your changes broke; never delete a
+sibling's sidebar entry and never document a sibling module to force green. Report what you changed.
