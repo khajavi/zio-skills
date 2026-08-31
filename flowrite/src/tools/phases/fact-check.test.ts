@@ -407,6 +407,19 @@ test('merging is clean only when nothing drifted and nothing was missed', () => 
   assert.equal(mergeReports([clean, { ...clean, incomplete: 'nope' }], []).clean, false);
 });
 
+test('a blank incomplete string is not a finding, unlike a real one', () => {
+  // The schema asks for `null` when nothing stopped the check, but a delegate can return `""` instead
+  // of the JSON null it was told to use. Several chunks doing that in the same round used to produce
+  // a literal "; ; ; " in the merged report — noise the model then had to read and ignore every round.
+  const clean = { clean: true, sectionsChecked: ['Usage'], drifts: [], incomplete: null };
+  const blank = { ...clean, incomplete: '' };
+  const whitespace = { ...clean, incomplete: '   ' };
+
+  const merged = mergeReports([blank, whitespace, blank], []);
+  assert.equal(merged.clean, true);
+  assert.equal(merged.incomplete, null);
+});
+
 test('sections dropped by the chunk cap are reported as incomplete, never as clean', () => {
   // The failure this prevents: a long module page whose tail is silently unchecked, reported clean.
   const clean = { clean: true, sectionsChecked: ['Usage'], drifts: [], incomplete: null };

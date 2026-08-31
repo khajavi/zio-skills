@@ -77,6 +77,8 @@ Judge by consequence to someone writing code from the page, not by how confident
 Set `incomplete` to one sentence saying what stopped you — the source root did not exist, a file would
 not read, the section names a type you could not locate anywhere. `clean` is then false.
 
+When nothing stopped you, set `incomplete` to `null` — never an empty string.
+
 "No drift" and "could not look" must never arrive as the same answer. A false all-clear is the worst
 thing you can produce, because the gate then reports a page as verified that nobody checked.
 

@@ -342,7 +342,14 @@ export function chunkSections(sections: Section[], maxChars = MAX_CHUNK_CHARS): 
 
 /** Merge the per-chunk reports into the one report the tool returns. */
 export function mergeReports(reports: DriftReport[], skipped: string[]): DriftReport {
-  const incompletes = reports.map((report) => report.incomplete).filter((reason): reason is string => reason !== null);
+  // A blank/whitespace-only `incomplete` is not a real finding — the schema asks for `null` when
+  // nothing stopped the check, but a delegate can still return `""` instead of the JSON null it was
+  // told to use. Filtering those out here, not just `!== null`, keeps a stray empty string from any
+  // one chunk from turning `incomplete.join('; ')` into pure noise like "; ; ; " once several chunks
+  // do it in the same round.
+  const incompletes = reports
+    .map((report) => report.incomplete)
+    .filter((reason): reason is string => typeof reason === 'string' && reason.trim().length > 0);
   if (skipped.length > 0) {
     incompletes.push(
       `${skipped.length} section(s) were not checked because the per-round chunk budget ran out: ${skipped.join(', ')}`,
