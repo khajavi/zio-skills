@@ -1,15 +1,22 @@
 import { observe, type FlueEvent } from '@flue/runtime';
 import { getRepoPath } from './run-context.ts';
 import { reviewPage } from '../tools/phases/review-page.ts';
+import { factCheckPage } from '../tools/phases/fact-check.ts';
 
 /**
  * The phase tools, reported under their own category to separate them from generic tools.
  *
- * One entry. The pipeline's stages are not readable here: they are `task` delegations, and `task` is one
- * tool name whatever role it reaches. The per-stage view is the 'subagent' category, which names the role
- * that actually ran; see perTypePairing in run-telemetry.ts.
+ * Two entries — one per gated phase tool (agent.ts:42-52). The pipeline's other stages are not
+ * readable here: they are `task` delegations, and `task` is one tool name whatever role it reaches.
+ * The per-stage view is the 'subagent' category, which names the role that actually ran; see
+ * perTypePairing in run-telemetry.ts.
+ *
+ * `fact_check_page` was missing from this set: every one of its calls fell into the generic 'tool'
+ * category instead of 'phase', so `phaseCalls` never got a `fact_check_page` key and
+ * run-telemetry.ts's `fact-check-not-run` flag fired on every run regardless of whether fact-check
+ * actually ran — confirmed against a real run where it ran 3 times and reported real drifts.
  */
-const PHASE_TOOLS = new Set([reviewPage].map((a) => a.name));
+const PHASE_TOOLS = new Set([reviewPage, factCheckPage].map((a) => a.name));
 
 export type ComponentCategory = 'phase' | 'subagent' | 'tool' | 'skill' | 'agent';
 
