@@ -4,6 +4,7 @@ import { isPhaseSkipped } from '../../runtime/skip-phases.ts';
 import { type DocKind, authorHint, docKind, maxReviewRounds } from '../../runtime/run-context.ts';
 import { delegate } from '../../runtime/delegate.ts';
 import { note } from '../../runtime/log.ts';
+import { createOutcomeTracker, createRoundBudget } from '../../runtime/round-budget.ts';
 // Each kind's checklist and the writing-style rules, injected into the generic reviewer's task.
 //
 // These stay injected rather than moving to the reviewer's render, unlike the drafter's and designer's
@@ -54,18 +55,6 @@ export const reviewSchema = v.object({
  */
 const REVIEW_TOOL_NAME = 'review_page';
 
-let roundsUsed = 0;
-
-/**
- * Confirming rounds granted so far.
- *
- * Separate from `roundsUsed` because they are granted on a condition rather than budgeted: see
- * `consumeReviewRound`. Counted rather than a boolean because a round that reports items the previous
- * round never mentioned did not confirm anything — it found more work — so the run earns another. The
- * cap is what stops that from looping.
- */
-let confirmingRounds = 0;
-
 /**
  * Confirming rounds a run may earn.
  *
@@ -77,33 +66,18 @@ let confirmingRounds = 0;
  */
 const MAX_CONFIRMING_ROUNDS = 3;
 
-/**
- * The failing items of the review BEFORE `lastOutcome`, so `consumeReviewRound` can tell a
- * confirmation from a fresh finding. `null` until a second review lands.
- */
-let previousFailingItems: string[] | null = null;
-
-/**
- * Rounds this tool refused because the budget was spent.
- *
- * Reported so the end-of-run report can tell a refusal apart from a failure. They arrive identically —
- * `consumeReviewRound` throws, the runtime marks the call `isError`, and `phaseFailures` counts it — but
- * a refusal is the cap working, and flagging it reads as review_page having broken. Same reason
- * `guardRefusals()` exists in phase-guard.ts.
- */
-let budgetRefusals = 0;
+// The round-budget mechanism (counters, renewal-on-new-findings decision) is identical to
+// fact-check.ts's and lives in round-budget.ts; only the refusal wording below is specific to review.
+const roundBudget = createRoundBudget(MAX_CONFIRMING_ROUNDS);
 
 /** Refused rounds, by tool name, for the run report. */
 export function reviewRefusals(): Record<string, number> {
-  return budgetRefusals > 0 ? { [REVIEW_TOOL_NAME]: budgetRefusals } : {};
+  return roundBudget.budgetRefusals > 0 ? { [REVIEW_TOOL_NAME]: roundBudget.budgetRefusals } : {};
 }
 
 /** Reset the round counters. Tests only — they are module state with no other seam. */
 export function __resetReviewRoundsForTests(): void {
-  roundsUsed = 0;
-  confirmingRounds = 0;
-  previousFailingItems = null;
-  budgetRefusals = 0;
+  roundBudget.reset();
 }
 
 /**
@@ -121,24 +95,11 @@ export function __resetReviewRoundsForTests(): void {
  * run's outcome. Three runs of the same defect are on record now, so the verdict stopped being
  * something to ask for.
  *
- * Module state, like `roundsUsed` above: one OS process per run, one page per run.
+ * Module state, like the round budget above: one OS process per run, one page per run.
  */
 type ReviewOutcome =
   | { state: 'skipped' }
   | { state: 'reviewed'; items: v.InferOutput<typeof reviewSchema>['items'] };
-
-let lastOutcome: ReviewOutcome | null = null;
-
-/** Reset the recorded review. Tests only — module state with no other seam. */
-export function __resetLastReviewForTests(): void {
-  lastOutcome = null;
-  previousFailingItems = null;
-}
-
-/** Record what a review concluded. Tests only; the phase records on its own path. */
-export function __setLastReviewForTests(outcome: ReviewOutcome | null): void {
-  recordReview(outcome);
-}
 
 /** The failing item names in an outcome; empty for a skip or for nothing recorded. */
 function failingItemsOf(outcome: ReviewOutcome | null): string[] {
@@ -146,16 +107,27 @@ function failingItemsOf(outcome: ReviewOutcome | null): string[] {
   return outcome.items.filter((item) => !item.pass).map((item) => item.item);
 }
 
+const reviewOutcome = createOutcomeTracker<ReviewOutcome>(failingItemsOf);
+
+/** Reset the recorded review. Tests only — module state with no other seam. */
+export function __resetLastReviewForTests(): void {
+  reviewOutcome.reset();
+}
+
+/** Record what a review concluded. Tests only; the phase records on its own path. */
+export function __setLastReviewForTests(outcome: ReviewOutcome | null): void {
+  recordReview(outcome);
+}
+
 /**
  * Record a review, keeping the one before it.
  *
  * The previous round's failing items are what make "this round confirmed the fixes" distinguishable
- * from "this round found more" — see `consumeReviewRound`. Every write to `lastOutcome` goes through
- * here so the two can never drift apart.
+ * from "this round found more" — see `consumeReviewRound`. Every write goes through here so the
+ * recorded outcome and its predecessor can never drift apart.
  */
 function recordReview(outcome: ReviewOutcome | null): void {
-  previousFailingItems = failingItemsOf(lastOutcome);
-  lastOutcome = outcome;
+  reviewOutcome.record(outcome);
 }
 
 /**
@@ -185,6 +157,7 @@ export function recordedVerdict(): {
   // both feed one verdict rather than one overruling the other — `report_run_result` and
   // scripts/run-report.mjs read `{ passed, failingItems }` and must keep reading exactly that.
   const factCheck = recordedFactCheck();
+  const lastOutcome = reviewOutcome.last;
 
   if (lastOutcome === null || lastOutcome.state === 'skipped') {
     // No review evidence, so no verdict — the fact-check cannot rescue a run into `passed`, and
@@ -236,40 +209,14 @@ function reviewBudgetNote(): string {
  */
 export function consumeReviewRound(): void {
   const budget = maxReviewRounds();
-  if (roundsUsed < budget) {
-    roundsUsed++;
-    return;
-  }
+  // The budget-and-renewal decision (grant a confirming round only when the last review found
+  // failures the round before it never mentioned, capped at MAX_CONFIRMING_ROUNDS) is identical to
+  // fact-check.ts's and lives in round-budget.ts — see its docstring for why write-module-ref-turn4
+  // made this a gate that reads evidence rather than asking the model for a verdict.
+  const result = roundBudget.consume(budget, reviewOutcome.hasFindings(), reviewOutcome.foundNewSinceLast());
+  if (result === 'granted') return;
 
-  // The budget is spent. Grant a confirming round when the last review found failures, because
-  // without one a run that repairs everything can never record that it did: `recordedVerdict()` returns
-  // the last outcome, the refused call records none, so the verdict permanently predates the fixes.
-  // write-module-ref-turn4 fixed 5 of 6 items and still filed all 6 — then wrote "production-ready and
-  // passes all technical verification" in prose, contradicting the verdict it could not change. So the
-  // mechanism meant to stop optimistic self-reporting was manufacturing the motive for it.
-  //
-  // Conditional, not budgeted, and that is the point: a clean first review needs no confirmation and
-  // pays nothing, while a failing one buys evidence about the fixed page rather than an assumption.
-  //
-  // A grant is renewed only when the round that spent the last one reported items the round before it
-  // never mentioned. That round confirmed nothing — it found more work — and the page it judged is not
-  // the page the model went on to fix. Both runs on 2026-08-19 ended exactly there: round 2 raised
-  // items round 1 had missed, the single grant was gone, and the verdict froze on findings the run then
-  // repaired (tinyproject turn3 filed mdoc errors and a `var` that a re-run and a grep both show fixed).
-  // A round that merely repeats the previous round's items has confirmed what it can, so the run ends
-  // on it rather than paying for a third opinion.
-  const lastFailing = failingItemsOf(lastOutcome);
-  // Bound to a local so the null check narrows inside the closure — module state does not.
-  const previous = previousFailingItems;
-  const foundNewItems = previous !== null && lastFailing.some((item) => !previous.includes(item));
-  const renewable = confirmingRounds === 0 || foundNewItems;
-  if (lastFailing.length > 0 && renewable && confirmingRounds < MAX_CONFIRMING_ROUNDS) {
-    confirmingRounds++;
-    roundsUsed++;
-    return;
-  }
-
-  budgetRefusals += 1;
+  const confirmingRounds = roundBudget.confirmingRounds;
   const spent =
     confirmingRounds === 0
       ? ''
