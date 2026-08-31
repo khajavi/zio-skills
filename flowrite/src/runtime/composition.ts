@@ -13,6 +13,7 @@ import * as v from 'valibot';
 
 // reusable baseline (supplies model tier + the writing-style skill)
 import { useDocsAuthorBase } from './docs-author-base.ts';
+import { withGuardedBash } from './guarded-sandbox.ts';
 import { guardPhase, guardRootOnly } from './phase-guard.ts';
 import { type DocKind, getRepoPath, setRunContext, skippedPhases } from './run-context.ts';
 import { createReportRunResultTool } from './self-report.ts';
@@ -137,7 +138,12 @@ export function useRunBasics(schema: v.GenericSchema, request: string, kind: Doc
   // environment. Passing it to useSandbox left the sandbox rooted in flowrite itself, so workspace
   // discovery — AGENTS.md and .agents/skills/ from the session cwd — fed the writer flowrite's own
   // AGENTS.md instead of the checkout it is documenting.
-  useSandbox(local({ cwd: projectPath }));
+  //
+  // withGuardedBash: the shell already starts at `projectPath`, and every phase's instructions say
+  // so — SHARED_DIRECTIVE below and how-to-guide.md's guardrails both do. Measured anyway: 18
+  // redundant `cd <checkout> &&` prefixes on one real run despite both. A third sentence was not
+  // going to fix a third occurrence, so this drops the no-op instead of asking nicely again.
+  useSandbox(withGuardedBash(local({ cwd: projectPath })));
 
   // MUST come after useSandbox. Declared before it, the roles never reach a phase tool's harness
   // conversation: every phase gave up with "No subagents are currently available. The system context
