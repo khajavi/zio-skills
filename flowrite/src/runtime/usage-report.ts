@@ -2,8 +2,6 @@ import { useAgentFinish } from '@flue/runtime';
 import { trackTokenUsage, type TokenUsageTracker } from './token-usage.ts';
 import { trackComponentUsage, type ComponentUsageTracker } from './component-usage.ts';
 import { guardRefusals } from './phase-guard.ts';
-import { reviewRefusals } from '../tools/phases/review-page.ts';
-import { factCheckRefusals } from '../tools/phases/fact-check.ts';
 import { buildRunReport } from './run-telemetry.ts';
 
 /**
@@ -56,9 +54,10 @@ function report(label: string): void {
         phases: state.components.phases(),
         activity: state.components.activity(),
         refusals: guardRefusals(),
-        // Both gates keep their own refusal counter, and both belong here: a refused round is the cap
-        // working, and without it the report bills the refusal as a phase failure.
-        refusedCalls: { ...reviewRefusals(), ...factCheckRefusals() },
+        // No phase tool owns a round-budget refusal counter any more — `review_page` and
+        // `fact_check_page` were the last two, and both are gone. `refusedCalls` stays optional in
+        // `buildRunReport`'s input for exactly this: a future phase tool with its own budget has
+        // somewhere to plug one back in without changing the shape here.
       }),
     )}`,
   );

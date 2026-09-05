@@ -474,10 +474,9 @@ const AGENT_MANIFEST = [
         'A research file under `.flowrite/research/` may exist.',
         'A research file may exist at a path your task names.',
       ],
-      [
-        'End with a single `finish` call whose arguments match the schema. Prose does not count as a result.',
-        'End with: a list of drifts (empty if none), and whether the check completed.',
-      ],
+      // The `finish`-call substitution that used to sit here is gone along with the harness-tool
+      // delegation it translated: `fact-checker.md` now ends with a plain "Reply in prose" section
+      // that names no Flue internal at all, so there is nothing left to substitute.
     ],
   },
   {

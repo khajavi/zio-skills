@@ -58,30 +58,32 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/reference/<module>.md --out
    website/docs/reference/<module>.md"`. Hierarchical: run mdoc over the module directory (index +
    every subpage). Fix every `[error]` before continuing. Mandatory before you call the page done.
-8. **Fact check.** Call `fact_check_page` with the module page path (flat page or hierarchical
-   index), and once per subpage a hierarchical run wrote — each is a page whose claims stand on their
-   own. It reads a page section by section against the library's real source and reports every claim
-   the source contradicts, an API the library does not have, or a citation that no longer resolves.
+8. **Fact check.** Read each page yourself — the module page (flat page or hierarchical index), and
+   every subpage a hierarchical run wrote, each a page whose claims stand on their own — and delegate
+   to the `fact_checker` subagent with the `task` tool, one delegation per `##` section or a small
+   batch of adjacent sections, since a delegate sees none of your conversation and a whole page plus
+   the source it cites crowds one context window. Tell it which page, which section heading(s), and
+   where the library's sources live. It reports every claim the source contradicts, an API the
+   library does not have, or a citation that no longer resolves, citing both the page and the source.
    Fact check reports; you fix — by correcting the page to match the source, never the other way
-   round. Drifts fail the run's verdict, so this is not advisory. Rounds are budgeted like review's
-   and shared across every page this run checks, so fix everything a check reports before spending
-   the confirming round. Watch the cross-type claims especially: an invented RELATIONSHIP between two
-   real types is the drift a module reference is most likely to carry.
+   round. Once every section of every page is checked, re-delegate any section a fix touched to
+   confirm nothing new surfaced (see the run directive for the confirm-and-stop protocol). Watch the
+   cross-type claims especially: an invented RELATIONSHIP between two real types is the drift a
+   module reference is most likely to carry.
 9. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the module page
    path, the layout, and the **Reference** category (not Guides). For a hierarchical layout also give it
    each group's label with its subpage ids (`reference/<module-kebab>/<type-kebab>`, in reading order)
    so the sidebar becomes a category holding the index plus one sub-category per group; a flat layout is
    a single doc entry. Reference pages are linked TO from tutorials and how-to guides, so ask for
    inbound "See also" links from those pages where relevant.
-10. **Review.** Call `review_page` with the module page path (flat page or hierarchical
-   index). It evaluates the page against the module-ref-checklist and every writing style rule, and
-   reports per-item pass/fail. Review reports; you fix. Use `check_method_coverage` yourself for each
-   documented type to confirm every public member is documented. Review rounds are budgeted across the
-   whole run — the tool's description says how many, and an index plus its subpages share that budget.
-   When a review reports failing items, fix them ALL and call review once more: the verdict is whatever
-   the last review found, so that confirming round is what records the page as passing. A review that
-   reported nothing needs no confirmation. Name anything still failing in your summary. The verdict is
-   taken from what the review returned, so you do not report it.
+10. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the module page
+   path (flat page or hierarchical index) — it reads the module-ref-checklist and every writing
+   style rule itself and reports per-item pass/fail in prose. Do the same for each subpage a
+   hierarchical run wrote. Review reports; you fix. Use `check_method_coverage` yourself for each
+   documented type to confirm every public member is documented. Follow the run directive's
+   confirm-and-stop protocol for each page, then report the verdict honestly in `report_run_result`:
+   name anything still failing across the whole run, and never report "passed" over a failure you
+   have not verified is fixed.
 11. **Retrospective.** In your final result, alongside the path and summary, report the real obstacles
     you hit this run (per phase), how you resolved each, and — where you can name one — a concrete
     instruction/tool/schema change that would prevent it next time. Report only friction you actually

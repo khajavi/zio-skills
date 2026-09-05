@@ -1,22 +1,18 @@
 import { observe, type FlueEvent } from '@flue/runtime';
 import { getRepoPath } from './run-context.ts';
-import { reviewPage } from '../tools/phases/review-page.ts';
-import { factCheckPage } from '../tools/phases/fact-check.ts';
 
 /**
  * The phase tools, reported under their own category to separate them from generic tools.
  *
- * Two entries — one per gated phase tool (agent.ts:42-52). The pipeline's other stages are not
- * readable here: they are `task` delegations, and `task` is one tool name whatever role it reaches.
- * The per-stage view is the 'subagent' category, which names the role that actually ran; see
- * perTypePairing in run-telemetry.ts.
- *
- * `fact_check_page` was missing from this set: every one of its calls fell into the generic 'tool'
- * category instead of 'phase', so `phaseCalls` never got a `fact_check_page` key and
- * run-telemetry.ts's `fact-check-not-run` flag fired on every run regardless of whether fact-check
- * actually ran — confirmed against a real run where it ran 3 times and reported real drifts.
+ * Empty now: `review_page` and `fact_check_page` were the last two `harness: true` phase tools, and
+ * both are gone — every stage of the pipeline is a `task` delegation, and `task` is one tool name
+ * whatever role it reaches. The per-stage view is entirely the 'subagent' category now, which names
+ * the role that actually ran; see perTypePairing in run-telemetry.ts. Kept as a named set, rather than
+ * deleted along with its two entries, so a future phase tool with a reason to hold its delegate's
+ * result in TypeScript (see reviewer.ts's comment on why the last two gave that up) has somewhere to
+ * register.
  */
-const PHASE_TOOLS = new Set([reviewPage, factCheckPage].map((a) => a.name));
+const PHASE_TOOLS = new Set<string>();
 
 export type ComponentCategory = 'phase' | 'subagent' | 'tool' | 'skill' | 'agent';
 
@@ -32,17 +28,19 @@ export interface ComponentUsage {
  * What one stage of the pipeline cost, end to end.
  *
  * A stage is a phase tool when one is open, otherwise the ROLE that ran the turn, otherwise the
- * writer's own orchestration. That three-way rule is what keeps this table informative now that the
- * pipeline runs on `task` delegations: with only `review_page` left as a phase tool, keying rows on
- * phase tools alone filed research, design, write and integrate into one synthetic bucket worth 72%
- * of the run — every cost still recorded, none of it attributable.
+ * writer's own orchestration. `PHASE_TOOLS` is empty now — `review_page`, the last phase tool, is
+ * gone — so every stage keys on its role today: research, design, write, review, fact-check,
+ * integrate all read as `delegateOnly` rows for the role that ran them, and only `(orchestration)`
+ * carries the root writer's own turns. Kept as a three-way rule rather than simplified to two, because
+ * a future phase tool would otherwise have nowhere to attribute its own relay cost.
  *
  * `own` and `delegate` no longer split every row, and the asymmetry is the point:
  *
- *  - `review_page` has BOTH, because it still has a scratch conversation relaying to a role. This is
- *    the comparison worth keeping — in a measured run the review phase's own conversation cost $1.67
- *    against $0.99 for all three of its roles, so the coordination outweighed the reviewing.
- *  - a role's row is delegate-only: there is no relay in front of it any more.
+ *  - a phase tool's row (none exist today) would have BOTH, because it runs a scratch conversation
+ *    relaying to a role — `review_page` did, back when reviewing cost $1.67 of its own coordination
+ *    against $0.99 for the roles it delegated to, which is exactly the coordination-vs-work comparison
+ *    that made removing the relay worth measuring.
+ *  - a role's row is delegate-only: there is no relay in front of it.
  *  - `(orchestration)` is own-only: the root agent's turns between delegations.
  */
 export interface PhaseUsage {
@@ -83,7 +81,7 @@ export interface ActivityReport {
   phaseFailures: Record<string, number>;
   /** Skills the model activated, in the order first seen. */
   skills: string[];
-  /** Phase tool call counts, so a repeated phase is visible. Only `review_page` remains. */
+  /** Phase tool call counts, so a repeated phase is visible. Always empty today — see `PHASE_TOOLS`. */
   phaseCalls: Record<string, number>;
   /**
    * Delegations per role, from `task_start`.
@@ -281,10 +279,11 @@ export function trackComponentUsage(): ComponentUsageTracker {
 
       // Same turn, filed a second way: by the stage it belongs to.
       //
-      // A phase tool wins when one is open, so `review_page`'s own relay turns and its reviewer's
-      // turns land on the same row and stay comparable. A delegated turn with no phase open is filed
-      // under its ROLE — that is every stage now that research/design/write/integrate reach their
-      // roles with `task`. Everything else is the root agent's own work.
+      // A phase tool would win when one is open, so its own relay turns and its delegate's turns
+      // would land on the same row and stay comparable — no phase tool is open today, since
+      // `review_page` (the last one) is gone, so every delegated turn is filed under its ROLE instead:
+      // that is every stage now, including review and fact-check, all reached with `task`. Everything
+      // else is the root agent's own work.
       //
       // With parallel calls this credits the most recently started phase, so a module run's
       // concurrent per-type work is approximate; sequential runs are exact.

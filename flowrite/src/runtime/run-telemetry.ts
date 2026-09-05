@@ -1,6 +1,5 @@
 import type { ActivityReport, ComponentUsage, PhaseUsage } from './component-usage.ts';
 import type { TokenUsageTotals } from './token-usage.ts';
-import { factCheckRoundCap, reviewRoundCap } from './run-context.ts';
 
 /**
  * The end-of-run report: what the run cost, what it did, and what looks wrong.
@@ -47,9 +46,10 @@ export interface RunReport {
 /**
  * Deliberately carries no review verdict.
  *
- * This report is built from observed telemetry; the verdict is derived separately by
- * `recordedVerdict()` in review-page.ts and filed by `report_run_result`, landing in the archive's
- * `verdict.json`. Keeping them apart is what lets a reader compare the two.
+ * This report is built from observed telemetry; the verdict is self-reported by the model and filed
+ * by `report_run_result` (self-report.ts), landing in the archive's `verdict.json`. Keeping them apart
+ * is what lets a reader compare the two — this report can say a page was never reviewed at all
+ * (`review-not-run`, below) even when the model's own filed verdict claims otherwise.
  */
 export interface FlagInput {
   phases: PhaseUsage[];
@@ -72,41 +72,21 @@ export interface FlagInput {
 const TOOL_ERROR_THRESHOLD = 3;
 
 /**
- * Review rounds allowed before the repeat is worth remarking on: the run's own budget.
- *
- * This used to be a flat 6, chosen when nothing bounded the review loop and this flag was its only
- * watcher. `maxReviewRounds()` now enforces a hard cap (default 1), which made a static 6 unreachable
- * — a flag that can never fire is worse than no flag, because it reads as coverage that is not there.
- *
- * Reading a function derived from the cap keeps the two in step: raise `MAX_REVIEW_ROUNDS` and the
- * threshold rises with it, so the flag still means "more rounds than this run was allowed" rather than
- * "more than some number I hardcoded". If it ever fires, the cap has been bypassed.
- *
- * `reviewRoundCap()`, not `maxReviewRounds()`: a run whose first review failed earns one confirming
- * round, so a correct run CAN review budget+1 times. Reading the budget here would report that earned
- * round as a bypass — the same false positive this flag already had once for refused calls.
+ * The ceiling for a phase tool, should one ever exist again. Always null today: `review_page` and
+ * `fact_check_page` were the last two, and both are gone — every stage is a `task` delegation, keyed
+ * by role in `activity.delegations`, not by a repeatable `phaseCalls` entry with its own budget. Kept
+ * as a named seam rather than deleted outright, so a future phase tool with a round budget has
+ * somewhere to plug in its cap instead of this function growing a special case inline.
  */
-const reviewRepeatLimit = () => reviewRoundCap();
-
-/**
- * The ceiling for a phase that owns a round budget, or null for a phase that should run once.
- *
- * Two phases have budgets now, and they are not interchangeable: `MAX_REVIEW_ROUNDS` and
- * `MAX_FACT_CHECK_ROUNDS` are separate knobs, so reading the wrong one would report a correct run as a
- * bypass. Matched on prefix because the key is the tool name — `review_page` today, plus the per-page
- * review tools a fourth document kind might add.
- */
-function budgetedRepeatLimit(phase: string): number | null {
-  if (phase.startsWith('review')) return reviewRepeatLimit();
-  if (phase.startsWith('fact_check')) return factCheckRoundCap();
+function budgetedRepeatLimit(_phase: string): number | null {
   return null;
 }
 
 /**
  * Phases exempt from the repeat check because they legitimately run per documented type.
  *
- * Empty: `review_page` is the only phase tool and it has its own budget check, so nothing needs
- * exempting. Kept as a named constant because a fourth document kind adding a per-type phase would.
+ * Empty: no phase tool remains, so nothing needs exempting. Kept as a named constant because a
+ * fourth document kind adding a per-type phase tool would.
  */
 const PER_TYPE_PHASES: readonly string[] = [];
 
@@ -268,17 +248,19 @@ export function computeFlags(input: FlagInput): RunFlag[] {
     });
   }
 
-  // A run in which no review tool was called at all is still worth flagging — that is an activity
-  // count, not a verdict, so it survives the verdict's removal.
-  if (!Object.keys(activity.phaseCalls).some((phase) => phase.startsWith('review'))) {
-    flags.push({ code: 'review-not-run', detail: 'no review phase ran for this page' });
+  // A run that never delegated to `reviewer` at all is still worth flagging — an activity count, not
+  // a verdict, so it stands on its own regardless of what report_run_result claims. Read from
+  // `delegations` rather than `phaseCalls`: `reviewer` is a `task`-reached role now, not a phase tool,
+  // so it never appears in `phaseCalls` at all.
+  if ((activity.delegations['reviewer'] ?? 0) === 0) {
+    flags.push({ code: 'review-not-run', detail: 'no review delegation ran for this page' });
   }
 
   // Same flag for the other gate, and it matters more than it looks: a run that never fact-checked
   // records `not-reviewed`-style silence rather than a failure, so nothing else in the report would
   // say the page's claims went unverified. An activity count, like the one above — not a verdict.
-  if (!Object.keys(activity.phaseCalls).some((phase) => phase.startsWith('fact_check'))) {
-    flags.push({ code: 'fact-check-not-run', detail: 'no fact-check phase ran for this page' });
+  if ((activity.delegations['fact_checker'] ?? 0) === 0) {
+    flags.push({ code: 'fact-check-not-run', detail: 'no fact-check delegation ran for this page' });
   }
 
   for (const phase of real) {
@@ -294,9 +276,9 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   }
 
   // No flag watches context growth. A median-based one needs three or more rows with own turns, and
-  // there are two — `review_page` and `(orchestration)` — so it could never fire, and a fixed
-  // tokens-per-turn threshold would be a number with nothing behind it. `tokensPerOwnTurn` is in the
-  // table for a reader to judge instead.
+  // `(orchestration)` is the only one left now that no phase tool holds a relay conversation of its
+  // own, so it could never fire, and a fixed tokens-per-turn threshold would be a number with nothing
+  // behind it. `tokensPerOwnTurn` is in the table for a reader to judge instead.
 
   if (reportCalls > 1) {
     flags.push({

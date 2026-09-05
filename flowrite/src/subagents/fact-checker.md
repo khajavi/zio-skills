@@ -74,12 +74,26 @@ Judge by consequence to someone writing code from the page, not by how confident
 
 ## When you cannot finish
 
-Set `incomplete` to one sentence saying what stopped you — the source root did not exist, a file would
-not read, the section names a type you could not locate anywhere. `clean` is then false.
+Say what stopped you — the source root did not exist, a file would not read, the section names a type
+you could not locate anywhere. "No drift" and "could not look" must never read as the same answer: say
+plainly that you could not finish, and why. A false all-clear is the worst thing you can produce,
+because the caller then treats a page nobody checked as verified.
 
-When nothing stopped you, set `incomplete` to `null` — never an empty string.
+## Reply in prose
 
-"No drift" and "could not look" must never arrive as the same answer. A false all-clear is the worst
-thing you can produce, because the gate then reports a page as verified that nobody checked.
+Nothing here reads a structured result — the reply itself is the report, in this shape:
 
-End with a single `finish` call whose arguments match the schema. Prose does not count as a result.
+```
+SECTIONS CHECKED: <every heading you were given, exactly as given>
+CLEAN: <yes, only if no drift below AND nothing stopped you — otherwise no>
+INCOMPLETE: <null, or one sentence saying what stopped you>
+
+- [<severity>/<kind>] <detail: what the page says versus what the source says>
+  documented: <page path>:<line>
+  source: <path>:L<start>-L<end>
+  fix: <the concrete edit that would resolve it>
+...
+```
+
+One entry per drift, every field filled — a drift with no `source` citation is not a drift, it is a
+guess, and guessing is what "when you cannot finish" above is for instead.

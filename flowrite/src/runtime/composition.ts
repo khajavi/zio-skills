@@ -192,12 +192,19 @@ export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempt
 const SHARED_DIRECTIVE =
   `Your shell already starts in the repo root of the library checkout — use relative paths ` +
   `for every command; do not cd into the repo. ` +
-  `When the work is done, call report_run_result once with the final page path, a one-line summary, ` +
+  `Review and fact-check are delegations to the "reviewer" and "fact_checker" subagents with the ` +
+  `task tool, like every other phase — there is no tool that holds their verdict for you. Delegate ` +
+  `once; if a reply reports failures or drifts, fix them ALL and delegate to the SAME role once more ` +
+  `to confirm the fixes — that confirming round is what lets you report the page as passing. If the ` +
+  `confirming round raises something NEW instead of confirming your fixes, fix that too and delegate ` +
+  `again: a round that finds something new earns another. Stop once a round only repeats what the ` +
+  `one before it already said. ` +
+  `When the work is done, call report_run_result once with the final page path, YOUR OWN read of ` +
+  `whether it passed review (reviewVerdict), the failing items if it did not, a one-line summary, ` +
   `and a run retrospective: the real obstacles you hit this run and how you resolved them (empty if ` +
-  `it went smoothly — never invent friction). ` +
-  `The verdict is taken from what the review returned, so you do not report it — say in the summary ` +
-  `and in your closing reply what you fixed and anything still wrong, and never describe a page with ` +
-  `failing items as complete.`;
+  `it went smoothly — never invent friction). Report the verdict honestly: say in reviewVerdict, in ` +
+  `the summary, and in your closing reply what you fixed and anything still wrong, and never report ` +
+  `"passed" over a page with a failing item you have not verified is fixed.`;
 
 /**
  * Declare every role delegate. Called by useRunBasics, so every render has the full roster —

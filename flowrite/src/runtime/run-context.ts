@@ -79,22 +79,14 @@ export function getRepoPath(): string {
   return requireContext().projectPath;
 }
 
-/** True when this code-gated phase was skipped for the current run. */
-export function isPhaseSkipped(phase: SkipPhase): boolean {
-  return requireContext().skipPhases.includes(phase);
-}
-
 /**
  * Every phase this run was asked to skip, for the instruction that tells the model about them.
  *
- * `isPhaseSkipped` above is not enough on its own, and the gap was real: only `review_page` and
- * `fact_check_page` are code-gated, so those were the only two phases a skip could actually stop.
- * Research, design, write and integrate are `task` delegations driven by instruction prose, and
- * nothing put the skip list in front of the model — so `skipPhases: ["research","design","write"]`
- * silently researched, designed and wrote anyway, which is the opposite of what the creation-data
- * field promises ("Skipping a head-phase prefix resumes a run whose artifacts already exist").
- *
- * A phase gated in code refuses the call; a phase driven by prose needs the prose. This supplies it.
+ * Every phase is a `task` delegation driven by instruction prose now — review and fact-check joined
+ * research/design/write/integrate when `review_page` and `fact_check_page` (the last two code-gated
+ * phase tools) were retired, so nothing in this module can refuse a call any more. A skip is entirely
+ * the model's to honor, which is what this supplies to the instruction: see SHARED_DIRECTIVE in
+ * composition.ts for where it reaches the model.
  */
 export function skippedPhases(): readonly SkipPhase[] {
   return requireContext().skipPhases;
@@ -103,10 +95,10 @@ export function skippedPhases(): readonly SkipPhase[] {
 /**
  * Which kind of document this run writes.
  *
- * Throws rather than defaulting: a phase tool that ran before classification would silently review a
+ * Throws rather than defaulting: a role that rendered before classification would silently review a
  * data type page against the tutorial checklist, and a wrong checklist is worse than a stopped run.
- * In practice it cannot happen — the phase tools are only mounted once the kind is set — so this
- * guards a programming error, not a run.
+ * In practice it cannot happen — no role is reachable before `set_document_kind` publishes the kind —
+ * so this guards a programming error, not a run.
  */
 export function docKind(): DocKind {
   const kind = requireContext().kind;
@@ -117,75 +109,6 @@ export function docKind(): DocKind {
     );
   }
   return kind;
-}
-
-/**
- * How many times the review phase may run for one page. Default 1, `MAX_REVIEW_ROUNDS` to raise it.
- *
- * A cap exists because a review round is the most expensive thing a run does, and it is expensive
- * *repeatedly*: the simple LLM review re-judges the whole page against the whole checklist and all 28
- * style rules every time, so round 4 costs what round 1 cost. Measured on the Prism run of
- * 2026-08-12: four rounds took 1,082s of a 45-minute run — 40% of the wall clock — with per-round
- * times of 242s, 344s, 239s and 256s that showed no sign of converging. Each round also drags a fix
- * pass and another sbt/mdoc verify behind it, so rounds multiply rather than add.
- *
- * This is the budget, not the ceiling: `consumeReviewRound` grants one confirming round on top of it
- * when a review found failures, so fixes are no longer forced to ship unverified. See
- * `reviewRoundCap()` for the ceiling, and review-page.ts for why the extra round is conditional.
- *
- * An earlier hard cap of 1 (`MAX_REVIEW_CALLS`) produced a measured bug — a page shipped whose verdict
- * still named a rule the writer had already fixed — though that failure came from returning a cached
- * verdict, and nothing caches one now.
- *
- * Read from the environment rather than creation data because it is a cost knob for whoever launches
- * the run, like the model tiers in models.ts, not a fact about the document being written.
- */
-export function maxReviewRounds(): number {
-  const raw = Number(process.env.MAX_REVIEW_ROUNDS);
-  return Number.isInteger(raw) && raw > 0 ? raw : 1;
-}
-
-/**
- * The most review rounds a run can possibly spend: the budget plus the one confirming round.
- *
- * Exists for the watchers, not the enforcement. `run-telemetry`'s repeat flag asks "did this run review
- * more times than it was allowed", and reading `maxReviewRounds()` there would report every correct
- * confirming round as the cap being bypassed — the same false positive its own comment records fixing
- * once already, for refused calls. Enforcement stays in `consumeReviewRound`, which knows whether the
- * extra round was earned; this only bounds it.
- */
-export function reviewRoundCap(): number {
-  return maxReviewRounds() + 1;
-}
-
-/**
- * How many times the fact-check phase may run for one page. Default 1, `MAX_FACT_CHECK_ROUNDS` to
- * raise it.
- *
- * Its own budget rather than a share of the review's, because the two gates fail for unrelated
- * reasons and a run that spends its rounds fixing prose style would otherwise have none left to
- * prove the page is factually correct. The costs differ in shape too: a review is one delegation
- * over the whole page, a fact-check is one per section, so a shared counter would price them the
- * same when they are not.
- *
- * Same default of 1 and the same reasoning as `maxReviewRounds`: this is the budget, not the
- * ceiling — `consumeFactCheckRound` grants one confirming round when a check found drifts, so
- * repairs can be observed rather than shipped unverified.
- */
-export function maxFactCheckRounds(): number {
-  const raw = Number(process.env.MAX_FACT_CHECK_ROUNDS);
-  return Number.isInteger(raw) && raw > 0 ? raw : 1;
-}
-
-/**
- * The most fact-check rounds a run can possibly spend: the budget plus the one confirming round.
- *
- * For the watchers, not the enforcement — see `reviewRoundCap()`, which exists for the same reason.
- * `run-telemetry`'s repeat flag has to bound the earned confirming round or it reports every correct
- * run as the cap being bypassed.
- */
-export function factCheckRoundCap(): number {
-  return maxFactCheckRounds() + 1;
 }
 
 /**
