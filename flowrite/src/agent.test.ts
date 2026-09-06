@@ -137,11 +137,11 @@ test('no kind mounts the same skill twice', () => {
 test('no kind mounts a harness phase tool', () => {
   // Replaces a test that pinned exactly two: `review_page` and `fact_check_page`, the last harness
   // tools, held their delegate's result in TypeScript so `recordedVerdict()` could derive the run's
-  // verdict without trusting the model's own claim. Both are retired now — `reviewer` and
-  // `fact_checker` are ordinary subagents reached with `task`, like every other role, and
-  // `report_run_result` (self-report.ts) is back to asking the model for the verdict directly. That
-  // is a deliberate tradeoff, not a regression: see self-report.ts's docstring for the bug it reopens
-  // and why it was accepted anyway.
+  // verdict without trusting the model's own claim. Both are retired now — `reviewer` (which later
+  // absorbed `fact_checker` into one merged identity) is an ordinary subagent reached with `task`,
+  // like every other role, and `report_run_result` (self-report.ts) is back to asking the model for
+  // the verdict directly. That is a deliberate tradeoff, not a regression: see self-report.ts's
+  // docstring for the bug it reopens and why it was accepted anyway.
   //
   // What is still worth pinning is that `tools` stays empty. A future harness tool arriving here
   // should not do so quietly — it is a decision that belongs in a plan, same as the two it would be

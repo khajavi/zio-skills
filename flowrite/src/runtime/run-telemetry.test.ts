@@ -31,10 +31,10 @@ const activity = (over: Partial<ActivityReport> = {}): ActivityReport => ({
   // No phase tool remains — `review_page` and `fact_check_page` were the last two, and both are
   // retired — so `phaseCalls` is empty by default; a real run never populates it any more.
   phaseCalls: {},
-  // A real clean run delegates to both gates on its page, so the default fixture does too —
-  // otherwise every case would trip review-not-run and fact-check-not-run. One research delegation
-  // per drafted page is the balanced shape perTypePairing looks for.
-  delegations: { researcher: 1, designer: 1, drafter: 1, reviewer: 1, fact_checker: 1 },
+  // A real clean run delegates to `reviewer` at least once, so the default fixture does too —
+  // otherwise every case would trip review-not-run. One research delegation per drafted page is the
+  // balanced shape perTypePairing looks for.
+  delegations: { researcher: 1, designer: 1, drafter: 1, reviewer: 1 },
   // Pages, which is what the pairing compares against — NOT delegations.drafter, since one drafter
   // delegation can write several pages.
   pagesWritten: 1,
@@ -89,7 +89,6 @@ test('a module run researching and drafting five pages is not a repeat', () => {
           drafter: 5,
           docs_integrator: 1,
           reviewer: 1,
-          fact_checker: 1,
         },
         pagesWritten: 5,
       }),
@@ -102,7 +101,7 @@ test('a page drafted without a research delegation is flagged', () => {
   const flags = computeFlags(
     input({
       activity: activity({
-        delegations: { researcher: 3, drafter: 4, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 3, drafter: 4, reviewer: 1 },
         pagesWritten: 4,
       }),
     }),
@@ -116,7 +115,7 @@ test('research paid for and never drafted is flagged the other way round', () =>
   const flags = computeFlags(
     input({
       activity: activity({
-        delegations: { researcher: 4, drafter: 2, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 4, drafter: 2, reviewer: 1 },
         pagesWritten: 2,
       }),
     }),
@@ -134,7 +133,7 @@ test('batching several pages into one drafter delegation is not a mismatch', () 
   assert.deepEqual(
     codes({
       activity: activity({
-        delegations: { researcher: 3, designer: 1, drafter: 1, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 3, designer: 1, drafter: 1, reviewer: 1 },
         pagesWritten: 3,
       }),
     }),
@@ -149,7 +148,7 @@ test('a balanced count with a failed delegation is flagged as possibly hollow', 
   const flags = computeFlags(
     input({
       activity: activity({
-        delegations: { researcher: 4, drafter: 4, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 4, drafter: 4, reviewer: 1 },
         pagesWritten: 4,
         toolErrors: { task: 1 },
       }),
@@ -183,24 +182,19 @@ test('cd-ing into the repo is flagged', () => {
   assert.deepEqual(codes({ activity: activity({ cdViolations: 76 }) }), ['cd-into-repo']);
 });
 
-test('a run that delegated to neither gate is flagged for both', () => {
+test('a run that never delegated to reviewer is flagged', () => {
   // An activity count, not a verdict: the report no longer carries pass/fail, but "nothing reviewed
   // this page at all" is still visible from the delegation counts and still worth saying.
   //
-  // Both gates get their own flag because they answer different questions — is the page good, and is
-  // it true — and a run can legitimately skip one and not the other.
+  // One flag covers both jobs now that `fact_checker` merged into `reviewer` — there used to be a
+  // second flag, `fact-check-not-run`, keyed on a separate delegate name. It's gone, not renamed:
+  // `delegations` is keyed purely by the subagent's NAME, which cannot tell "reviewer was asked to
+  // fact-check" from "reviewer was asked to check style/checklist" once both share one name. A
+  // normal review→fix→confirm cycle alone produces 2 reviewer delegations with zero fact-check
+  // calls, so a count-based heuristic for the missing half would be unsound — see run-telemetry.ts.
   assert.deepEqual(
     codes({ activity: activity({ delegations: { researcher: 1, designer: 1, drafter: 1 } }) }),
-    ['review-not-run', 'fact-check-not-run'],
-  );
-});
-
-test('a run that reviewed but never fact-checked is flagged for the gate it skipped', () => {
-  assert.deepEqual(
-    codes({
-      activity: activity({ delegations: { researcher: 1, designer: 1, drafter: 1, reviewer: 1 } }),
-    }),
-    ['fact-check-not-run'],
+    ['review-not-run'],
   );
 });
 
@@ -250,7 +244,7 @@ test('a hierarchical module writing an index and subpages stays under one root',
           'docs/reference/tally/ledger.md',
           'docs/reference/tally/window.md',
         ],
-        delegations: { researcher: 3, designer: 1, drafter: 3, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 3, designer: 1, drafter: 3, reviewer: 1 },
       }),
     }),
     [],
@@ -264,7 +258,7 @@ test('a page directly in docs/ is not a second root', () => {
       activity: activity({
         pagesWritten: 2,
         pagePaths: ['docs/index.md', 'docs/reference/tally/ledger.md'],
-        delegations: { researcher: 2, designer: 1, drafter: 1, reviewer: 1, fact_checker: 1 },
+        delegations: { researcher: 2, designer: 1, drafter: 1, reviewer: 1 },
       }),
     }),
     [],

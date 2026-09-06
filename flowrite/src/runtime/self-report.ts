@@ -19,6 +19,7 @@ const insightsSchema = v.array(
       'fact-check',
       'integrate',
       'review',
+      'fix',
     ]),
     obstacle: v.pipe(v.string(), v.description('What actually went wrong or slowed you down this run')),
     resolution: v.pipe(v.string(), v.description('How you got past it')),

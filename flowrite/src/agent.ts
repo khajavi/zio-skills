@@ -41,9 +41,15 @@ import markdownTable from './skills/markdown-table/SKILL.md';
 
 // `review_page` and `fact_check_page` — the last two `harness: true` phase tools — are gone too now.
 // Both existed so TypeScript could hold a schema-validated verdict for `recordedVerdict()`, since a
-// plain `task` delegation returns prose that nothing can check; `reviewer` and `fact_checker` are
-// ordinary subagents reached with `task` like every other role now, and `report_run_result` (see
-// self-report.ts) is back to asking the model for the verdict directly, trusting what it reports.
+// plain `task` delegation returns prose that nothing can check; `reviewer` (which now covers both
+// jobs — `fact_checker` merged into it) is an ordinary subagent reached with `task` like every other
+// role, and `report_run_result` (see self-report.ts) is back to asking the model for the verdict
+// directly, trusting what it reports.
+//
+// A `fixer` subagent now applies every fix `reviewer` reports — the root agent no longer edits a page
+// itself. `reviewer` composes the exact corrected statement for each finding; `fixer` applies it
+// verbatim, with no judgment of its own. See composition.ts's SHARED_DIRECTIVE for the delegation
+// protocol and fixer.ts's doc-comment for why it carries no per-kind context.
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
 // instead of waiting for the review phase to discover a gap.
@@ -88,8 +94,9 @@ export const KINDS = {
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source, and review covers ` +
-      `method coverage + writing style + the checklist).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against method coverage + writing style + ` +
+      `the checklist — and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   module: {
     label: 'write-module-ref',
@@ -116,9 +123,10 @@ export const KINDS = {
         : '') +
       (facts.layout ? `Use the "${facts.layout}" layout — tell the designer to use it. ` : '') +
       `Run the full flow (research → design → write module page → per-type subpages if ` +
-      `hierarchical → examples → mdoc verify → fact check → integrate → review; fact check compares ` +
-      `every claim against the source, and review covers per-type method coverage + writing style + ` +
-      `the module checklist).`,
+      `hierarchical → examples → mdoc verify → fact check → integrate → review; fact check and ` +
+      `review are both the "reviewer" role — fact check per section against source, review of each ` +
+      `page against per-type method coverage + writing style + the module checklist — and the ` +
+      `"fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   tutorial: {
     label: 'write-tutorial',
@@ -131,7 +139,9 @@ export const KINDS = {
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified tutorial for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against writing style + the checklist — ` +
+      `and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   'how-to': {
     label: 'write-how-to-guide',
@@ -147,7 +157,9 @@ export const KINDS = {
       `It opens on a concrete problem with a "before" example of what the reader writes today — ` +
       `not on concepts — and walks one canonical path to a working result. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against writing style + the checklist — ` +
+      `and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
 } as const;
 

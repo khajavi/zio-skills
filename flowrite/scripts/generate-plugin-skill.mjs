@@ -381,13 +381,20 @@ const MANIFEST = [
  * `git`/`gh` call the body already tells the model to run directly). `skills` mirrors a `useSkill()`
  * mount 1:1 — only `drafter` has any.
  *
- * `drafter` AND `designer` are a known, documented gap, not a workaround: flowrite's `drafter.ts`
- * composes `structureBlock(docKind()) + styleBlock()`, and `designer.ts` composes
- * `structureBlock(docKind())`, into the prompt AT RENDER TIME, chosen per-invocation from which page
- * kind is being written. A static Claude Code agent file has no per-call templating equivalent, so
- * `docs-drafter.md`/`docs-designer.md`'s bodies are `drafter.md`/`designer.md` verbatim and nothing
- * more — whoever delegates to either must supply the kind-specific structure/style material in the
- * `Task()` prompt itself.
+ * `drafter`, `designer` AND `reviewer` are a known, documented gap, not a workaround: flowrite's
+ * `drafter.ts` composes `structureBlock(docKind()) + styleBlock()`, `designer.ts` composes
+ * `structureBlock(docKind())`, and `reviewer.ts` composes `checklistBlock(docKind()) + styleBlock()`,
+ * into the prompt AT RENDER TIME, chosen per-invocation from which page kind is being reviewed/
+ * written. A static Claude Code agent file has no per-call templating equivalent, so
+ * `docs-drafter.md`/`docs-designer.md`/`docs-reviewer.md`'s bodies are their flowrite `.md` sources
+ * verbatim and nothing more — whoever delegates to any of them must supply the kind-specific
+ * structure/checklist/style material in the `Task()` prompt itself.
+ *
+ * `fixer` is deliberately NOT in that group, even though it's also an editing role added alongside
+ * `reviewer`'s merge with `fact_checker`: it composes nothing at render time (no docKind(), no mounted
+ * skill) because it applies a fix `reviewer` already wrote out in full, rather than composing or
+ * judging anything itself — see `fixer.ts`'s own doc-comment. `docs-fixer.md` is a plain, complete
+ * body with no gap to document.
  */
 const AGENT_MANIFEST = [
   {
@@ -459,37 +466,39 @@ const AGENT_MANIFEST = [
     instructions: 'src/subagents/docs-integrator.md',
   },
   {
-    name: 'docs-fact-checker',
-    frontmatter: {
-      name: 'docs-fact-checker',
-      description:
-        'Verifies the factual claims in one section of a documentation page against the library ' +
-        'source, and reports each mismatch with citations to both the page and the source.',
-      model: 'sonnet',
-      effort: 'low',
-    },
-    instructions: 'src/subagents/fact-checker.md',
-    substitutions: [
-      [
-        'A research file under `.flowrite/research/` may exist.',
-        'A research file may exist at a path your task names.',
-      ],
-      // The `finish`-call substitution that used to sit here is gone along with the harness-tool
-      // delegation it translated: `fact-checker.md` now ends with a plain "Reply in prose" section
-      // that names no Flue internal at all, so there is nothing left to substitute.
-    ],
-  },
-  {
     name: 'docs-reviewer',
     frontmatter: {
       name: 'docs-reviewer',
       description:
-        'Evaluates a written ZIO documentation page against a checklist supplied in the task, and ' +
-        'reports each item pass/fail.',
+        'Evaluates a written ZIO documentation page two ways: a full-page check against a checklist ' +
+        'and writing-style rules supplied in the task, or a fact-check of one section against the ' +
+        'library source. Reports per-item pass/fail or per-drift findings, each with the exact ' +
+        'corrected statement to apply.',
       model: 'sonnet',
       effort: 'low',
     },
     instructions: 'src/subagents/reviewer.md',
+    substitutions: [
+      // Moved here from the retired docs-fact-checker entry: this text now lives inside merged
+      // reviewer.md's "## Fact-check" section, not a separate file.
+      [
+        'A research file under `.flowrite/research/` may exist.',
+        'A research file may exist at a path your task names.',
+      ],
+    ],
+  },
+  {
+    name: 'docs-fixer',
+    frontmatter: {
+      name: 'docs-fixer',
+      description:
+        'Applies fixes docs-reviewer already composed: given a location and the exact corrected ' +
+        'statement for it, edits the page to match — verbatim, no re-deriving, no rephrasing.',
+      model: 'sonnet',
+      effort: 'low',
+    },
+    instructions: 'src/subagents/fixer.md',
+    // No substitutions: fixer.md names no Flue internal (no .flowrite/, no finish call, no task()).
   },
 ];
 

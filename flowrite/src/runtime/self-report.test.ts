@@ -1,9 +1,10 @@
 // What report_run_result records, now that the verdict is self-reported again.
 //
 // `review_page` and `fact_check_page` — the harness tools that used to hold a schema-validated
-// verdict in TypeScript for `recordedVerdict()` to derive from — are retired: `reviewer` and
-// `fact_checker` are ordinary subagents reached with `task` now, and a `task` delegation returns
-// prose that nothing can validate. So the model reports its own verdict again, same as it did before
+// verdict in TypeScript for `recordedVerdict()` to derive from — are retired: `reviewer` (which later
+// absorbed `fact_checker` into one merged identity) is an ordinary subagent reached with `task` now,
+// and a `task` delegation returns prose that nothing can validate. So the model reports its own
+// verdict again, same as it did before
 // d700d2b6/e93719ac fixed the three measured cases where that claim diverged from the evidence
 // (tinytally turn1's exact inversion chief among them — see self-report.ts's docstring).
 //

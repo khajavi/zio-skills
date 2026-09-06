@@ -48,28 +48,35 @@ reality differs. Do not mechanically follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/reference/<file>.md --out
    website/docs/reference/<file>.md"` (one quoted arg — see mdoc-conventions). Fix every
    `[error]` before continuing. Mandatory before you call the page done.
-7. **Fact check.** Read the page yourself and delegate to the `fact_checker` subagent with the
-   `task` tool — one delegation per `##` section, or a small batch of adjacent sections for a short
-   page, since a delegate sees none of your conversation and a whole page plus the source it cites
-   crowds one context window. Tell it the page's path, exactly which section heading(s) it is
-   checking, and where the library's sources live. It reports every claim the source contradicts, an
-   API the library does not have, or a citation that no longer resolves, citing both the page and the
-   source. Fact check reports; you fix — by correcting the page to match the source, never by
-   changing the source to match the page. Once every section is checked, re-delegate any section a
-   fix touched to confirm nothing new surfaced (see the run directive for the confirm-and-stop
-   protocol). Run it BEFORE integrate — a page whose claims are wrong should not be wired into the
-   site and cross-linked first.
+7. **Fact check.** Read the page yourself and delegate to the `reviewer` subagent with the
+   `task` tool, asking it to fact-check — one delegation per `##` section, or a small batch of
+   adjacent sections for a short page, since a delegate sees none of your conversation and a whole
+   page plus the source it cites crowds one context window. Tell it the page's path, exactly which
+   section heading(s) it is checking, and where the library's sources live. It reports every claim
+   the source contradicts, an API the library does not have, or a citation that no longer resolves,
+   citing both the page and the source, with the exact corrected statement for each. Fact check
+   reports; delegate everything it reports, verbatim (every corrected statement included), to the
+   `fixer` subagent with the `task` tool — never fix the page yourself, and never change the source
+   to match the page. Re-run mdoc after fixer returns, then re-delegate any section a fix touched to
+   confirm nothing new surfaced (see the run directive for the confirm-and-stop protocol). Run it
+   BEFORE integrate — a page whose claims are wrong should not be wired into the site and
+   cross-linked first.
 8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the
    page path, the **Reference** category (not Guides), and the cross-reference direction:
    reference pages are linked TO from tutorials and how-to guides, so ask for inbound
    "See also" links from those pages where relevant. It wires `sidebars.js` and
    `docs/index.md`, adds the cross-references, and verifies every link.
-9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the page path — it
-   reads the data-type-ref-checklist and every writing style rule itself and reports per-item
-   pass/fail in prose. Review reports; you fix. Use `check_method_coverage` yourself to confirm every
-   public member is documented. Follow the run directive's confirm-and-stop protocol, then report the
-   verdict honestly in `report_run_result`: name what you fixed and anything still failing, and never
-   report "passed" over a failure you have not verified is fixed.
+9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the page path and
+   asking for a full-page review — it reads the data-type-ref-checklist and every writing style rule
+   itself and reports per-item pass/fail in prose, with the exact corrected statement for each
+   failure. Review reports; delegate everything it reports, verbatim, to the `fixer` subagent — never
+   fix the page yourself. Use `check_method_coverage` yourself to confirm every public member is
+   documented, and add any missing member's documentation yourself — a coverage gap names what's
+   undocumented, not composed text a fixer could apply verbatim, so this is drafting work, not a fix.
+   Follow the run directive's confirm-and-stop protocol — re-run mdoc after fixer returns, before re-delegating to
+   `reviewer` to confirm — then report the verdict honestly in `report_run_result`: name what got
+   fixed and anything still failing, and never report "passed" over a failure you have not verified is
+   fixed.
 10. **Retrospective.** In your final result, alongside the path and summary, report
    the real obstacles you hit this run (per phase), how you resolved each, and —
    where you can name one — a concrete instruction/tool/schema change that would

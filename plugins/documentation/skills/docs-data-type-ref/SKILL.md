@@ -378,31 +378,48 @@ declaration, not runnable code. That makes it the one place in an otherwise full
 where a wrong signature, a hallucinated method, or a stale citation can sit undetected. Runnable `mdoc`
 blocks already passed Step 7; this step exists for what they don't cover.
 
-Delegate to the **`docs-fact-checker`** agent with the `Task` tool — it must NOT share your
-conversation, so its only knowledge of the page is what you tell it. The agent already knows what
-counts as a claim, how to verify it, the drift kinds, severity, and how to report an incomplete check;
-give it only the page-specific parameters:
+Delegate to the **`docs-reviewer`** agent with the `Task` tool, asking it to fact-check — it must NOT
+share your conversation, so its only knowledge of the page is what you tell it. The agent already
+knows what counts as a claim, how to verify it, the drift kinds, severity, and how to report an
+incomplete check; give it only the page-specific parameters, and say plainly this is a fact-check
+call (not a full-page checklist/style review — the agent covers both jobs now):
 
 ```
 Task(
   description: "Fact-check <TypeName> reference page",
-  subagent_type: "documentation:docs-fact-checker",
-  prompt: "Page: docs/reference/<type-name>.md
+  subagent_type: "documentation:docs-reviewer",
+  prompt: "Fact-check this page against source (not a checklist/style review).
+           Page: docs/reference/<type-name>.md
            Subject: <TypeName>
            Library source root: <path>"
 )
 ```
 
-Fix every reported drift by correcting the **page** to match the source — never edit the library's
-source to match what the page claims. A drift with `high` or `medium` severity blocks calling this
-step done; fix it before moving on.
+It reports each drift with the exact corrected statement to apply, not just a description of what's
+wrong. Never fix a drift yourself: delegate every reported drift, verbatim (the exact statement
+included), to the **`docs-fixer`** agent with the `Task` tool — never edit the library's source to
+match what the page claims, only the page:
 
-**Bounded rounds, same shape as Step 10's review:** if the fact-check reports drifts, fix all of them
-and call it once more — that confirming round is what actually records the page as clean, since the
-result is whichever check ran last. If that confirming round reports genuinely NEW drifts (not the same
-ones repeated), fix those too and confirm again — up to 3 confirming rounds total. If a round repeats
-the exact same drifts as the round before it, stop: name the unrepairable drift in your final summary
-rather than looping. A check that reported nothing needs no confirming round.
+```
+Task(
+  description: "Apply fact-check fixes to <TypeName> reference page",
+  subagent_type: "documentation:docs-fixer",
+  prompt: "Page: docs/reference/<type-name>.md
+           Findings (apply each verbatim):
+           <every drift from the fact-check reply, its exact statement included>"
+)
+```
+
+A drift with `high` or `medium` severity blocks calling this step done; delegate its fix before
+moving on.
+
+**Bounded rounds, same shape as Step 10's review:** after `docs-fixer` returns, re-run mdoc, then
+delegate the same fact-check to `docs-reviewer` once more — that confirming round is what actually
+records the page as clean, since the result is whichever check ran last. If that confirming round
+reports genuinely NEW drifts (not the same ones repeated), delegate those to `docs-fixer` too and
+confirm again — up to 3 confirming rounds total. If a round repeats the exact same drifts as the
+round before it, stop: name the unrepairable drift in your final summary rather than looping. A check
+that reported nothing needs no confirming round.
 
 ## Step 9: Integrate
 
@@ -427,15 +444,18 @@ Task(
 The last gate, run against the page's final, integrated state — not before Step 9, since this grades
 what a reader actually sees, sidebar entry and cross-references included.
 
-Delegate to the **`docs-reviewer`** agent with the `Task` tool. The agent already knows to run any
-command an item names rather than trust it, and that "cannot verify" fails the item; give it only the
-page path and the checklist itself:
+Delegate to the **`docs-reviewer`** agent with the `Task` tool, asking for a full-page review. The
+agent already knows to run any command an item names rather than trust it, that "cannot verify" fails
+the item, and to report the exact corrected statement for every failing item; give it only the page
+path and the checklist itself:
 
 ```
 Task(
   description: "Review <TypeName> reference page",
   subagent_type: "documentation:docs-reviewer",
-  prompt: "Evaluate docs/reference/<type-name>.md against this checklist.
+  prompt: "Full-page review (not a fact-check): evaluate
+           docs/reference/<type-name>.md against this checklist. For every failing item, give the
+           exact corrected statement to apply, not just what's wrong.
 
            ## Structure
            - Opening definition appears immediately after the frontmatter with NO heading.
@@ -472,9 +492,23 @@ Task(
 )
 ```
 
-**Bounded rounds:** if review reports failing items, fix them ALL and call it once more — that
-confirming round is what records the page as passing, since the verdict is whichever review ran last.
-If that confirming round reports genuinely NEW failing items, fix those too and confirm again — up to 3
-confirming rounds total. A round that repeats the same failing items as before earns no further round:
-stop, name what's still failing in your summary, and report the page as not fully passing. A review
-that reported nothing needs no confirming round — you're done.
+Never fix a failing item yourself: delegate everything review reports, verbatim (the exact statement
+for each), to the **`docs-fixer`** agent with the `Task` tool:
+
+```
+Task(
+  description: "Apply review fixes to <TypeName> reference page",
+  subagent_type: "documentation:docs-fixer",
+  prompt: "Page: docs/reference/<type-name>.md
+           Findings (apply each verbatim):
+           <every failing item from the review reply, its exact statement included>"
+)
+```
+
+**Bounded rounds:** after `docs-fixer` returns, re-run mdoc, then delegate the same review to
+`docs-reviewer` once more — that confirming round is what records the page as passing, since the
+verdict is whichever review ran last. If that confirming round reports genuinely NEW failing items,
+delegate those to `docs-fixer` too and confirm again — up to 3 confirming rounds total. A round that
+repeats the same failing items as before earns no further round: stop, name what's still failing in
+your summary, and report the page as not fully passing. A review that reported nothing needs no
+confirming round — you're done.

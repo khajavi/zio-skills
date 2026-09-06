@@ -64,27 +64,31 @@ follow steps that no longer fit.
    `sbt "docs/mdoc --in docs/guides/<id>.md --out website/docs/guides/<id>.md"` (one quoted arg —
    see mdoc-conventions); add an `--in`/`--out` pair for any other docs file you touched, never all
    docs. Fix every `[error]` before continuing. Mandatory before you call the guide done.
-7. **Fact check.** Read the guide yourself and delegate to the `fact_checker` subagent with the
-   `task` tool — one delegation per `##` section, or a small batch of adjacent sections for a short
-   guide, since a delegate sees none of your conversation and a whole guide plus the source it cites
-   crowds one context window. Tell it the guide's path, exactly which section heading(s) it is
-   checking, and where the library's sources live. It reports every claim the source contradicts, an
-   API the library does not have, or a citation that no longer resolves, citing both the guide and the
-   source. Fact check reports; you fix — by correcting the guide to match the source, never the other
-   way round. Once every section is checked, re-delegate any section a fix touched to confirm nothing
-   new surfaced (see the run directive for the confirm-and-stop protocol). A guide's claims carry
-   further than a reference page's: a reader follows these steps into their own codebase, so a method
-   that does not exist costs them the whole afternoon.
+7. **Fact check.** Read the guide yourself and delegate to the `reviewer` subagent with the
+   `task` tool, asking it to fact-check — one delegation per `##` section, or a small batch of
+   adjacent sections for a short guide, since a delegate sees none of your conversation and a whole
+   guide plus the source it cites crowds one context window. Tell it the guide's path, exactly which
+   section heading(s) it is checking, and where the library's sources live. It reports every claim
+   the source contradicts, an API the library does not have, or a citation that no longer resolves,
+   citing both the guide and the source, with the exact corrected statement for each. Fact check
+   reports; delegate everything it reports, verbatim, to the `fixer` subagent with the `task` tool —
+   never fix the guide yourself. Re-run mdoc after fixer returns, then re-delegate any section a fix
+   touched to confirm nothing new surfaced (see the run directive for the confirm-and-stop protocol).
+   A guide's claims carry further than a reference page's: a reader follows these steps into their own
+   codebase, so a method that does not exist costs them the whole afternoon.
 8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the guide
    path and the **Guides** category (not Reference). Ask it to link out to the reference pages for
    the types the guide uses **that already exist** — check first, and say which they are. A how-to
    run writes a how-to: never ask for a reference page to be created, and never accept a stub
    written to make a link resolve.
-9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the guide path — it
-   reads the how-to-checklist and every writing style rule itself and reports per-item pass/fail in
-   prose. Review reports; you fix. Follow the run directive's confirm-and-stop protocol, then report
-   the verdict honestly in `report_run_result`: name anything still failing, and never report
-   "passed" over a failure you have not verified is fixed.
+9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the guide path and
+   asking for a full-page review — it reads the how-to-checklist and every writing style rule itself
+   and reports per-item pass/fail in prose, with the exact corrected statement for each failure.
+   Review reports; delegate everything it reports, verbatim, to the `fixer` subagent — never fix the
+   guide yourself. Follow the run directive's confirm-and-stop protocol — re-run mdoc after fixer
+   returns, before re-delegating to `reviewer` to confirm — then report the verdict honestly in
+   `report_run_result`: name anything still failing, and never report "passed" over a failure you
+   have not verified is fixed.
 10. **Retrospective.** In your final result, alongside the path and summary, report the real
    obstacles you hit this run (per phase), how you resolved each, and — where you can name one — a
    concrete instruction/tool/schema change that would prevent it next time. Report only friction you

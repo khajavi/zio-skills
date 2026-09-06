@@ -252,15 +252,20 @@ export function computeFlags(input: FlagInput): RunFlag[] {
   // a verdict, so it stands on its own regardless of what report_run_result claims. Read from
   // `delegations` rather than `phaseCalls`: `reviewer` is a `task`-reached role now, not a phase tool,
   // so it never appears in `phaseCalls` at all.
+  //
+  // Covers BOTH jobs now that `fact_checker` merged into `reviewer` (one delegate name, two jobs
+  // selected by the task prompt) — there used to be a second flag, `fact-check-not-run`, keyed on
+  // `delegations['fact_checker']`. It's gone, not renamed: `delegations` is keyed purely by the
+  // subagent's NAME (component-usage.ts, from `task_start`'s `agent` field), which cannot tell "asked
+  // to fact-check" from "asked to check style/checklist" once both share one name. A count-based
+  // heuristic (e.g. "≥2 reviewer calls means both jobs ran") is unsound — a normal
+  // review→fix→confirm cycle alone produces 2 reviewer delegations with zero fact-check calls. An
+  // honest gap here beats a fabricated one.
   if ((activity.delegations['reviewer'] ?? 0) === 0) {
-    flags.push({ code: 'review-not-run', detail: 'no review delegation ran for this page' });
-  }
-
-  // Same flag for the other gate, and it matters more than it looks: a run that never fact-checked
-  // records `not-reviewed`-style silence rather than a failure, so nothing else in the report would
-  // say the page's claims went unverified. An activity count, like the one above — not a verdict.
-  if ((activity.delegations['fact_checker'] ?? 0) === 0) {
-    flags.push({ code: 'fact-check-not-run', detail: 'no fact-check delegation ran for this page' });
+    flags.push({
+      code: 'review-not-run',
+      detail: 'no reviewer delegation ran for this page (neither review nor fact-check)',
+    });
   }
 
   for (const phase of real) {

@@ -51,27 +51,31 @@ differs. Do not mechanically follow steps that no longer fit.
    website/docs/guides/<id>.md"` (one quoted arg — see mdoc-conventions); add an `--in`/`--out`
    pair for any other docs file you touched, never all docs. Fix every `[error]` before
    continuing. Mandatory before you call the tutorial done.
-7. **Fact check.** Read the tutorial yourself and delegate to the `fact_checker` subagent with the
-   `task` tool — one delegation per `##` section, or a small batch of adjacent sections for a short
-   tutorial, since a delegate sees none of your conversation and a whole tutorial plus the source it
-   cites crowds one context window. Tell it the tutorial's path, exactly which section heading(s) it
-   is checking, and where the library's sources live. It reports every claim the source contradicts,
-   an API the library does not have, or a citation that no longer resolves, citing both the tutorial
-   and the source. Fact check reports; you fix — by correcting the tutorial to match the source,
-   never the other way round. Once every section is checked, re-delegate any section a fix touched to
-   confirm nothing new surfaced (see the run directive for the confirm-and-stop protocol). A
-   tutorial's prose is looser than a reference page's, but its claims are not: a step that names a
-   method the library lacks sends a learner nowhere.
+7. **Fact check.** Read the tutorial yourself and delegate to the `reviewer` subagent with the
+   `task` tool, asking it to fact-check — one delegation per `##` section, or a small batch of
+   adjacent sections for a short tutorial, since a delegate sees none of your conversation and a whole
+   tutorial plus the source it cites crowds one context window. Tell it the tutorial's path, exactly
+   which section heading(s) it is checking, and where the library's sources live. It reports every
+   claim the source contradicts, an API the library does not have, or a citation that no longer
+   resolves, citing both the tutorial and the source, with the exact corrected statement for each.
+   Fact check reports; delegate everything it reports, verbatim, to the `fixer` subagent with the
+   `task` tool — never fix the tutorial yourself. Re-run mdoc after fixer returns, then re-delegate
+   any section a fix touched to confirm nothing new surfaced (see the run directive for the
+   confirm-and-stop protocol). A tutorial's prose is looser than a reference page's, but its claims
+   are not: a step that names a method the library lacks sends a learner nowhere.
 8. **Integrate.** Delegate to the `docs_integrator` subagent with the `task` tool. Name the tutorial
    path and the **Guides** category (not Reference). Ask it to link out to the reference pages for the
    types the tutorial teaches **that already exist** — check first, and say which they are. A tutorial
    run writes a tutorial: never ask for a reference page to be created, and never accept a stub written
    to make a link resolve.
-9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the tutorial path —
-   it reads the tutorial-checklist and every writing style rule itself and reports per-item pass/fail
-   in prose. Review reports; you fix. Follow the run directive's confirm-and-stop protocol, then
-   report the verdict honestly in `report_run_result`: name anything still failing, and never report
-   "passed" over a failure you have not verified is fixed.
+9. **Review.** Delegate to the `reviewer` subagent with the `task` tool, naming the tutorial path and
+   asking for a full-page review — it reads the tutorial-checklist and every writing style rule
+   itself and reports per-item pass/fail in prose, with the exact corrected statement for each
+   failure. Review reports; delegate everything it reports, verbatim, to the `fixer` subagent — never
+   fix the tutorial yourself. Follow the run directive's confirm-and-stop protocol — re-run mdoc after
+   fixer returns, before re-delegating to `reviewer` to confirm — then report the verdict honestly in
+   `report_run_result`: name anything still failing, and never report "passed" over a failure you
+   have not verified is fixed.
 10. **Retrospective.** In your final result, alongside the path and summary,
    report the real obstacles you hit this run (per phase), how you resolved
    each, and — where you can name one — a concrete instruction/tool/schema
