@@ -355,22 +355,38 @@ guide's prose claims about the library against real source — only that the cod
 names a method the library doesn't have, or describes behavior the source contradicts, sends the
 reader down a dead end at exactly the point they're trying to get something done.
 
-Delegate to the **`docs-fact-checker`** agent with the `Task` tool:
+Delegate to the **`docs-reviewer`** agent with the `Task` tool, asking it to fact-check (the agent
+covers both a full-page checklist/style review and a fact-check — say plainly which this call is):
 
 ```
 Task(
   description: "Fact-check <guide-id> how-to guide",
-  subagent_type: "documentation:docs-fact-checker",
-  prompt: "Page: docs/guides/<guide-id>.md
+  subagent_type: "documentation:docs-reviewer",
+  prompt: "Fact-check this page against source (not a checklist/style review).
+           Page: docs/guides/<guide-id>.md
            Subject: <topic>
            Library source root: <path>"
 )
 ```
 
-Fix every reported drift by correcting the **guide**, never the source. Bounded rounds, same
-discipline: fix everything a check reports, then confirm once — that confirming round is what records
-the guide as clean. Genuinely new drifts in a confirming round earn another, up to 3 total; a round
-repeating the same drifts ends it.
+It reports each drift with the exact corrected statement, not just a description of what's wrong.
+Never fix a drift yourself: delegate every reported drift, verbatim (its exact statement included), to
+the **`docs-fixer`** agent with the `Task` tool — correcting only the **guide**, never the source:
+
+```
+Task(
+  description: "Apply fact-check fixes to <guide-id> how-to guide",
+  subagent_type: "documentation:docs-fixer",
+  prompt: "Page: docs/guides/<guide-id>.md
+           Findings (apply each verbatim):
+           <every drift from the fact-check reply, its exact statement included>"
+)
+```
+
+Bounded rounds, same discipline: after `docs-fixer` returns, re-run mdoc, then delegate the same
+fact-check to `docs-reviewer` once more — that confirming round is what records the guide as clean.
+Genuinely new drifts in a confirming round earn another (delegate those to `docs-fixer` too), up to 3
+total; a round repeating the same drifts ends it.
 
 ---
 
@@ -395,19 +411,36 @@ Task(
 
 ## Step 8: Final Review
 
-Delegate to the **`docs-reviewer`** agent with the `Task` tool: give it [CHECKLIST.md](./CHECKLIST.md)'s
-content and have it evaluate the guide against every item.
+Delegate to the **`docs-reviewer`** agent with the `Task` tool, asking for a full-page review: give it
+[CHECKLIST.md](./CHECKLIST.md)'s content, have it evaluate the guide against every item, and tell it
+to give the exact corrected statement for every failing item, not just what's wrong.
 
 ```
 Task(
   description: "Review <guide-id> how-to guide",
   subagent_type: "documentation:docs-reviewer",
-  prompt: "Evaluate docs/guides/<guide-id>.md against this checklist: <CHECKLIST.md's content>"
+  prompt: "Full-page review (not a fact-check): evaluate docs/guides/<guide-id>.md against this
+           checklist: <CHECKLIST.md's content>
+           For every failing item, give the exact corrected statement to apply."
 )
 ```
 
-**Bounded rounds:** if review reports failing items, fix them ALL and call it once more — that
-confirming round is what records the guide as passing, since the verdict is whatever the last review
-found. Genuinely NEW failing items in a confirming round earn another round, up to 3 total; a round
-repeating the same failures ends it — name what's still failing in your summary. A review that
-reported nothing needs no confirming round.
+Never fix a failing item yourself: delegate everything review reports, verbatim (the exact statement
+for each), to the **`docs-fixer`** agent with the `Task` tool:
+
+```
+Task(
+  description: "Apply review fixes to <guide-id> how-to guide",
+  subagent_type: "documentation:docs-fixer",
+  prompt: "Page: docs/guides/<guide-id>.md
+           Findings (apply each verbatim):
+           <every failing item from the review reply, its exact statement included>"
+)
+```
+
+**Bounded rounds:** after `docs-fixer` returns, re-run mdoc, then delegate the same review to
+`docs-reviewer` once more — that confirming round is what records the guide as passing, since the
+verdict is whatever the last review found. Genuinely NEW failing items in a confirming round earn
+another round (delegate those to `docs-fixer` too), up to 3 total; a round repeating the same failures
+ends it — name what's still failing in your summary. A review that reported nothing needs no
+confirming round.

@@ -1,5 +1,5 @@
 'use agent';
-import { useDelivery, usePersistentState, useTool } from '@flue/runtime';
+import { type ToolDefinition, useDelivery, usePersistentState, useTool } from '@flue/runtime';
 import * as v from 'valibot';
 
 // instructions — one per kind. These files are the real per-kind content and are unchanged by the
@@ -39,17 +39,17 @@ import moduleSubpages from './skills/module-subpages/SKILL.md';
 import asciiDiagram from './skills/ascii-diagram/SKILL.md';
 import markdownTable from './skills/markdown-table/SKILL.md';
 
-// The one remaining phase tool. The other thirteen were deleted: each wrapped a delegation in a
-// `harness: true` scratch conversation that never resets (agent-api.md:402), so the writer paid two
-// relay turns per phase to reach a role it can reach directly with the built-in `task` tool
-// (guide/subagents.md:40,46). review_page stays because TypeScript has to hold the reviewer's result
-// for recordedVerdict() — a `task` delegation returns prose that nothing can check.
-import { reviewPage } from './tools/phases/review-page.ts';
-// The second harness tool, and the reason is the same one that saved review_page: this phase gates the
-// verdict, so its result has to be data TypeScript holds rather than prose the model summarizes. A
-// `task` delegation cannot supply that — `defineSubagent` has no output schema. See the plan for the
-// decision, and agent.test.ts for the invariant that keeps a THIRD from arriving quietly.
-import { factCheckPage } from './tools/phases/fact-check.ts';
+// `review_page` and `fact_check_page` — the last two `harness: true` phase tools — are gone too now.
+// Both existed so TypeScript could hold a schema-validated verdict for `recordedVerdict()`, since a
+// plain `task` delegation returns prose that nothing can check; `reviewer` (which now covers both
+// jobs — `fact_checker` merged into it) is an ordinary subagent reached with `task` like every other
+// role, and `report_run_result` (see self-report.ts) is back to asking the model for the verdict
+// directly, trusting what it reports.
+//
+// A `fixer` subagent now applies every fix `reviewer` reports — the root agent no longer edits a page
+// itself. `reviewer` composes the exact corrected statement for each finding; `fixer` applies it
+// verbatim, with no judgment of its own. See composition.ts's SHARED_DIRECTIVE for the delegation
+// protocol and fixer.ts's doc-comment for why it carries no per-kind context.
 
 // Ordinary tools, mounted unguarded. Deterministic and free, so the writer can iterate against them
 // instead of waiting for the review phase to discover a gap.
@@ -59,9 +59,9 @@ import { checkMethodCoverage } from './tools/check-method-coverage.ts';
 // this module is now the single entry point for every kind of document.
 installVerboseObserver();
 
-// Defined in run-context.ts, where the phase tools can reach the type without importing this module
-// and closing a cycle. Re-exported because this is where a reader looks for it, and the tests import
-// it from here.
+// Defined in run-context.ts, where every role's render can reach the type (via docKind()) without
+// importing this module and closing a cycle. Re-exported because this is where a reader looks for it,
+// and the tests import it from here.
 import { DOC_KINDS, type DocKind } from './runtime/run-context.ts';
 export { DOC_KINDS, type DocKind };
 
@@ -69,8 +69,8 @@ export { DOC_KINDS, type DocKind };
  * The slice of creation data a run directive may read: the module escape hatches, and nothing else.
  *
  * Narrower than `RunFacts` on purpose — a directive has no business seeing `projectPath` (the
- * sandbox owns that) or `skipPhases` (the phase tools gate on it), and narrowing keeps the table's
- * every directive honest about what it depends on.
+ * sandbox owns that) or `skipPhases` (the run directive states them in prose; see `skippedPhases()`),
+ * and narrowing keeps the table's every directive honest about what it depends on.
  */
 export type DirectiveFacts = Pick<RunFacts, 'layout' | 'shapeOverride'>;
 
@@ -89,13 +89,14 @@ export const KINDS = {
     label: 'write-data-type-ref',
     instructions: dataTypeRefMd,
     skills: [mdocConventions, dataTypeStructure, dataTypeChecklist, companionExamples],
-    tools: [reviewPage, factCheckPage],
+    tools: [] as ToolDefinition[],
     plainTools: [checkMethodCoverage],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified data type reference page for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source, and review covers ` +
-      `method coverage + writing style + the checklist).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against method coverage + writing style + ` +
+      `the checklist — and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   module: {
     label: 'write-module-ref',
@@ -112,7 +113,7 @@ export const KINDS = {
       asciiDiagram,
       markdownTable,
     ],
-    tools: [reviewPage, factCheckPage],
+    tools: [] as ToolDefinition[],
     // Module references carry per-type subpages, so coverage applies to each of them.
     plainTools: [checkMethodCoverage],
     directive: (subject: string, facts: DirectiveFacts) =>
@@ -122,28 +123,31 @@ export const KINDS = {
         : '') +
       (facts.layout ? `Use the "${facts.layout}" layout — tell the designer to use it. ` : '') +
       `Run the full flow (research → design → write module page → per-type subpages if ` +
-      `hierarchical → examples → mdoc verify → fact check → integrate → review; fact check compares ` +
-      `every claim against the source, and review covers per-type method coverage + writing style + ` +
-      `the module checklist).`,
+      `hierarchical → examples → mdoc verify → fact check → integrate → review; fact check and ` +
+      `review are both the "reviewer" role — fact check per section against source, review of each ` +
+      `page against per-type method coverage + writing style + the module checklist — and the ` +
+      `"fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   tutorial: {
     label: 'write-tutorial',
     instructions: tutorialMd,
     skills: [mdocConventions, tutorialStructure, tutorialChecklist, companionExamples],
-    tools: [reviewPage, factCheckPage],
+    tools: [] as ToolDefinition[],
     // Empty rather than absent: every row carries every field, so the call site reads
     // `config.plainTools` like any other. A missing key made the union type reject the property.
     plainTools: [],
     directive: (subject: string, _facts: DirectiveFacts) =>
       `Write a complete, compile-verified tutorial for: ${subject}. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against writing style + the checklist — ` +
+      `and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
   'how-to': {
     label: 'write-how-to-guide',
     instructions: howToGuideMd,
     skills: [mdocConventions, howToStructure, howToChecklist, companionExamples],
-    tools: [reviewPage, factCheckPage],
+    tools: [] as ToolDefinition[],
     // Empty for the same reason tutorial's is, and the reason is worth restating because a how-to
     // guide *does* document real API: it documents only the API its one task needs, deliberately.
     // Offering method coverage would invite a check that should fail on a correct page.
@@ -153,7 +157,9 @@ export const KINDS = {
       `It opens on a concrete problem with a "before" example of what the reader writes today — ` +
       `not on concepts — and walks one canonical path to a working result. ` +
       `Run the full flow (research → design → write → examples → mdoc verify → fact check → ` +
-      `integrate → review; fact check compares every claim against the source).`,
+      `integrate → review; fact check and review are both the "reviewer" role — fact check per ` +
+      `section against source, review of the whole page against writing style + the checklist — ` +
+      `and the "fixer" role applies whatever either one reports, verbatim, never you).`,
   },
 } as const;
 

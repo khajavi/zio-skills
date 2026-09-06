@@ -472,14 +472,19 @@ way the source doesn't actually show. Watch for that specifically; it's the drif
 most likely to carry that a single-type reference never could.
 
 Run once per page checked — the flat page, or the hierarchical index plus each subpage (each stands on
-its own claims). Delegate each to the **`docs-fact-checker`** agent with the `Task` tool
-(`subagent_type: "documentation:docs-fact-checker"`), same shape as `docs-data-type-ref`'s Step 8, with
-one addition to the brief: explicitly ask it to verify every claimed cross-type relationship against
-real source (an import, a call site, a field of that type) — not just per-type signatures and behavior.
+its own claims). Delegate each to the **`docs-reviewer`** agent with the `Task` tool
+(`subagent_type: "documentation:docs-reviewer"`), asking it to fact-check, same shape as
+`docs-data-type-ref`'s Step 8, with one addition to the brief: explicitly ask it to verify every
+claimed cross-type relationship against real source (an import, a call site, a field of that type) —
+not just per-type signatures and behavior. It reports each drift with the exact corrected statement,
+not just a description of what's wrong.
 
-Fix every reported drift by correcting the **page**, never the source. **Bounded rounds, shared across
-every page this run checks**: fix everything a check reports before spending a confirming round; if a
-confirming round finds genuinely NEW drifts (not repeats), fix those and confirm again, up to 3
+Never fix a drift yourself: delegate every reported drift, verbatim (its exact statement included), to
+the **`docs-fixer`** agent with the `Task` tool (`subagent_type: "documentation:docs-fixer"`) —
+correcting only the **page**, never the source. **Bounded rounds, shared across every page this run
+checks**: delegate everything a check reports to `docs-fixer` before spending a confirming round;
+re-run mdoc after `docs-fixer` returns, then re-delegate the fact-check to confirm. If a confirming
+round finds genuinely NEW drifts (not repeats), delegate those too and confirm again, up to 3
 confirming rounds total across the whole run. A round repeating the same drifts as before ends it —
 name the unrepairable drift in your summary.
 
@@ -546,15 +551,17 @@ The last gate, run against the page's final, integrated state — after Step 11,
 a reader actually sees, sidebar and cross-references included.
 
 Delegate to the **`docs-reviewer`** agent with the `Task` tool
-(`subagent_type: "documentation:docs-reviewer"`), evaluating the module page (flat page, or
-hierarchical index) against this checklist:
+(`subagent_type: "documentation:docs-reviewer"`), asking for a full-page review of the module page
+(flat page, or hierarchical index) against this checklist, and telling it to give the exact corrected
+statement for every failing item, not just what's wrong:
 
 ```
 Task(
   description: "Review <module-name> module reference",
   subagent_type: "documentation:docs-reviewer",
-  prompt: "Evaluate docs/reference/<module-name>.md (or the hierarchical index plus each subpage)
-           against this checklist.
+  prompt: "Full-page review (not a fact-check): evaluate
+           docs/reference/<module-name>.md (or the hierarchical index plus each subpage) against this
+           checklist. For every failing item, give the exact corrected statement to apply.
 
 ## Module Narrative
 - Opening definition immediately after frontmatter, NO heading, states purpose, lists core types as inline code.
@@ -580,10 +587,15 @@ Task(
 )
 ```
 
-**Bounded rounds, same discipline as fact-check:** if review reports failing items, fix them ALL and
-call it once more — that confirming round is what records the page as passing. Genuinely NEW failing
-items in a confirming round earn another round, up to 3 total; a round repeating the same failures ends
-it. A review that reported nothing needs no confirming round.
+Never fix a failing item yourself: delegate everything review reports, verbatim (the exact statement
+for each), to the **`docs-fixer`** agent with the `Task` tool
+(`subagent_type: "documentation:docs-fixer"`).
+
+**Bounded rounds, same discipline as fact-check:** after `docs-fixer` returns, re-run mdoc, then
+delegate the same review to `docs-reviewer` once more — that confirming round is what records the
+page as passing. Genuinely NEW failing items in a confirming round earn another round (delegate those
+to `docs-fixer` too), up to 3 total; a round repeating the same failures ends it. A review that
+reported nothing needs no confirming round.
 
 ### Final Formatting
 

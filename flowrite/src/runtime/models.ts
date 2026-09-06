@@ -20,7 +20,7 @@ export const TIERS: Record<
   | 'integrator'
   | 'designer'
   | 'reviewer'
-  | 'factChecker'
+  | 'fixer'
   | 'redundancyEditor'
   | 'metadataWriter'
   | 'crossLinker'
@@ -54,18 +54,28 @@ export const TIERS: Record<
     model: process.env.DESIGNER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.DESIGNER_EFFORT, 'medium'),
   },
+  // Covers both the full-page checklist/style review and the per-section fact-check — merged from
+  // two identities (`reviewer` and `factChecker`) into one, since a checker's tier doesn't need to
+  // differ by job, only the payload a given call carries does. Not the researcher's tier, though the
+  // fact-check half looks similar. Both read source, but a researcher's miss is recoverable
+  // downstream — the drafter can still be corrected — while this role's answer IS the gate: a
+  // fabricated drift fails a correct page, and a missed one passes a wrong page. Haiku was the
+  // obvious cheap choice and is deliberately not the default, because the whole value of the phase is
+  // that its evidence can be trusted without a second opinion.
   reviewer: {
     model: process.env.REVIEWER_MODEL ?? 'anthropic/claude-sonnet-4-6',
     thinkingLevel: effort(process.env.REVIEWER_EFFORT, 'low'),
   },
-  // Not the researcher's tier, though the work looks similar. Both read source, but a researcher's
-  // miss is recoverable downstream — the drafter can still be corrected — while this role's answer
-  // IS the gate: a fabricated drift fails a correct page, and a missed one passes a wrong page.
-  // Haiku was the obvious cheap choice and is deliberately not the default, because the whole value
-  // of the phase is that its evidence can be trusted without a second opinion.
-  factChecker: {
-    model: process.env.FACT_CHECKER_MODEL ?? 'anthropic/claude-sonnet-4-6',
-    thinkingLevel: effort(process.env.FACT_CHECKER_EFFORT, 'low'),
+  // Mechanical, not judgment: fixer applies a statement reviewer already composed, verbatim — it
+  // does not diagnose, compose, or re-derive anything. `low` follows from that more directly than
+  // for any other editing role here: redundancyEditor/crossLinker/complianceChecker/sectionEnricher
+  // (below) all carry SOME judgement about what to change; this one is handed the literal answer and
+  // an exact location. It's also the one editing role whose edit gets re-verified downstream (the
+  // root re-runs mdoc, then re-delegates to reviewer to confirm) before a run may report the page as
+  // passing — the closest thing here to a real gate, which is exactly what those other roles lack.
+  fixer: {
+    model: process.env.FIXER_MODEL ?? 'anthropic/claude-sonnet-4-6',
+    thinkingLevel: effort(process.env.FIXER_EFFORT, 'low'),
   },
   // writer-assistant ran this on Haiku, and the work looks cheap: find repetition, delete it. What
   // makes it not cheap is that every cut is a judgement about whether the words carry anything —

@@ -29,7 +29,7 @@ import { drafter } from '../subagents/drafter.ts';
 import { reviewer } from '../subagents/reviewer.ts';
 import { examplesBuilder } from '../subagents/examples-builder.ts';
 import { docsIntegrator } from '../subagents/docs-integrator.ts';
-import { factChecker } from '../subagents/fact-checker.ts';
+import { fixer } from '../subagents/fixer.ts';
 
 import { createGhQueryTool } from '../tools/repo-tools.ts';
 
@@ -45,7 +45,7 @@ import { createGhQueryTool } from '../tools/repo-tools.ts';
  * label, one of them the agent and one of them this.
  */
 
-const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator, factChecker];
+const ROLES = [researcher, designer, drafter, reviewer, examplesBuilder, docsIntegrator, fixer];
 
 const skipPhase = v.picklist([
   'research',
@@ -192,12 +192,25 @@ export const docsWriterDurability = { timeoutMs: 6 * 60 * 60 * 1_000, maxAttempt
 const SHARED_DIRECTIVE =
   `Your shell already starts in the repo root of the library checkout — use relative paths ` +
   `for every command; do not cd into the repo. ` +
-  `When the work is done, call report_run_result once with the final page path, a one-line summary, ` +
+  `Review and fact-check are both delegations to the single "reviewer" subagent with the task tool, ` +
+  `like every other phase — say in your task which job you want (a whole-page check against ` +
+  `checklist + style, or a fact-check of one section or a small batch against source) and it replies ` +
+  `in that job's shape; there is no tool that holds its verdict for you. When a reply reports ` +
+  `failures or drifts, do NOT fix them yourself — delegate everything it reported, VERBATIM (every ` +
+  `finding's exact statement/fix text included, never paraphrased or summarized), in one call to the ` +
+  `"fixer" subagent with the task tool, naming the page path. Once fixer returns, re-run mdoc over ` +
+  `the page yourself before trusting the edit — a fix that satisfies a finding can still break the ` +
+  `page's compiled examples — then delegate to the SAME reviewer job once more to confirm. That ` +
+  `confirming round is what lets you report the page as passing. If the confirming round raises ` +
+  `something NEW instead of confirming the fixes, delegate to fixer again with the new findings and ` +
+  `repeat: a round that finds something new earns another. Stop once a round only repeats what the ` +
+  `one before it already said. ` +
+  `When the work is done, call report_run_result once with the final page path, YOUR OWN read of ` +
+  `whether it passed review (reviewVerdict), the failing items if it did not, a one-line summary, ` +
   `and a run retrospective: the real obstacles you hit this run and how you resolved them (empty if ` +
-  `it went smoothly — never invent friction). ` +
-  `The verdict is taken from what the review returned, so you do not report it — say in the summary ` +
-  `and in your closing reply what you fixed and anything still wrong, and never describe a page with ` +
-  `failing items as complete.`;
+  `it went smoothly — never invent friction). Report the verdict honestly: say in reviewVerdict, in ` +
+  `the summary, and in your closing reply what you fixed and anything still wrong, and never report ` +
+  `"passed" over a page with a failing item you have not verified is fixed.`;
 
 /**
  * Declare every role delegate. Called by useRunBasics, so every render has the full roster —

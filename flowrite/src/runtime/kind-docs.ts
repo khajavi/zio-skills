@@ -39,7 +39,7 @@ export const STRUCTURES: Record<DocKind, string> = {
   'how-to': howToStructureDoc,
 };
 
-/** Each kind's review checklist. Moved here from review-page.ts, which now imports it. */
+/** Each kind's review checklist. Read by the `reviewer` role at its own render — see `checklistBlock`. */
 export const CHECKLISTS: Record<DocKind, string> = {
   'data-type': dataTypeChecklistDoc,
   module: moduleChecklistDoc,
@@ -62,3 +62,14 @@ export const structureBlock = (kind: DocKind): string =>
 /** The writing-style block, in the same shape as `structureBlock`. */
 export const styleBlock = (): string =>
   [`Writing-style rules — apply every rule to the prose you write:`, ``, STYLE_RULES].join('\n');
+
+/**
+ * The checklist block a `reviewer` delegation prepends to its instructions, in the same shape as
+ * `structureBlock`.
+ *
+ * Read at the reviewer's own render rather than pasted into a delegation prompt by a phase tool —
+ * `review_page` no longer exists; the reviewer is an ordinary `task`-reached subagent now, like every
+ * other role, and `docKind()` is reachable from its render the same way it is from the drafter's.
+ */
+export const checklistBlock = (kind: DocKind): string =>
+  [`Evaluate the page against every item in this ${kind} checklist:`, ``, CHECKLISTS[kind]].join('\n');

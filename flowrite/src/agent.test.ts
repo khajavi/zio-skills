@@ -31,7 +31,9 @@ test('every kind is fully configured', () => {
     const config = KINDS[kind];
     assert.ok(config.instructions.length > 0, `${kind} has instructions`);
     assert.ok(config.skills.length > 0, `${kind} has skills`);
-    assert.ok(config.tools.length > 0, `${kind} has phase tools`);
+    // No kind mounts a phase tool any more — `review_page` and `fact_check_page` were the last two.
+    // See 'no kind mounts a harness phase tool' for the invariant this replaced.
+    assert.equal(config.tools.length, 0, `${kind} should have no phase tools`);
   }
 });
 
@@ -132,26 +134,20 @@ test('no kind mounts the same skill twice', () => {
   }
 });
 
-test('review_page and fact_check_page are the only harness tools any kind mounts', () => {
-  // Replaces a test that guarded "a required field no component can produce": a write phase was mounted
-  // without the design phase that fed its required `plan`, so the model satisfied the schema by inventing
-  // one, and once reached for another type's. That defect needs a tool ARGUMENT to fabricate, and the
-  // tools that took one are gone — the test had become vacuous, looping over an empty list.
+test('no kind mounts a harness phase tool', () => {
+  // Replaces a test that pinned exactly two: `review_page` and `fact_check_page`, the last harness
+  // tools, held their delegate's result in TypeScript so `recordedVerdict()` could derive the run's
+  // verdict without trusting the model's own claim. Both are retired now — `reviewer` (which later
+  // absorbed `fact_checker` into one merged identity) is an ordinary subagent reached with `task`,
+  // like every other role, and `report_run_result` (self-report.ts) is back to asking the model for
+  // the verdict directly. That is a deliberate tradeoff, not a regression: see self-report.ts's
+  // docstring for the bug it reopens and why it was accepted anyway.
   //
-  // What is worth pinning instead is the shape that replaced it. Every stage is a `task` delegation now,
-  // and the harness tools are the exceptions: both hold a delegate's result in TypeScript because
-  // `recordedVerdict()` derives the run's verdict from them, and a `task` delegation returns prose that
-  // nothing can check.
-  //
-  // fact_check_page joined review_page deliberately — it gates the verdict on whether the page's claims
-  // survive contact with the source. A THIRD arriving is either a mistake or a decision that belongs in
-  // a plan, and either way it should not arrive quietly, which is what this list is for.
+  // What is still worth pinning is that `tools` stays empty. A future harness tool arriving here
+  // should not do so quietly — it is a decision that belongs in a plan, same as the two it would be
+  // joining used to require.
   for (const kind of DOC_KINDS) {
-    assert.deepEqual(
-      KINDS[kind].tools.map((tool) => tool.name),
-      ['review_page', 'fact_check_page'],
-      `${kind} should mount review_page and fact_check_page, and nothing else`,
-    );
+    assert.deepEqual(KINDS[kind].tools, [], `${kind} should mount no harness phase tools`);
   }
 });
 
