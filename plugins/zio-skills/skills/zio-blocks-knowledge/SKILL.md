@@ -8,10 +8,10 @@ tags: [zio, zio-blocks, scala, knowledge, reference, documentation]
 
 ## Core Principles
 
-1. **Accuracy over memory** — Do not rely on training data for ZIO Blocks specifics. Fetch the relevant documentation page before answering.
+1. **Accuracy over memory** — Do not rely on training data for ZIO Blocks specifics. Fetch the relevant documentation page before answering. If a page contradicts your training data, trust the docs.
 2. **MCP tools first, sitemap fallback** — If the `zio-blocks` MCP server is connected, use mcp tools instead of `WebFetch`. Otherwise start at `https://zioblocks.com/llms.txt` to discover the current documentation structure and pick the right page for your specific question. Not connected? See https://zioblocks.com/start.md to add it.
 3. **Source everything** — Include the documentation URL (or doc `path`, when using the MCP tools) in your response so the user can verify and learn more.
-4. **Right resource first** — Navigate to the specific block's reference page rather than answering from the generic overview. Each block is a separate `zio-blocks-*` artifact, so confirm the artifact name, supported platforms (JVM/Scala.js) and Scala versions (2.13/3.x) on its page.
+4. **Right resource first** — Navigate to the specific block's reference page rather than answering from the generic overview. Each block is a separate `zio-blocks-*` artifact, so confirm the artifact name, supported platforms (JVM/Scala.js) and Scala versions (2.13/3.x) on its page or in the catalog at https://zioblocks.com/docs/. Some blocks are JVM-only or Scala 3-only (e.g. SQL, Datastar, HTMX).
 5. **Prefer Markdown pages** — When falling back to `WebFetch`, always fetch the `.md` version of a documentation URL first. Fall back to the regular HTML website page only if the `.md` fetch fails or returns an error.
 6. **No effect system assumed** — ZIO Blocks has no dependency on ZIO. Do not add ZIO imports or `ZIO`/`ZLayer` code to answers unless the user asks or a ZIO-integration module (e.g. `zio-blocks-sql-zio`) is the topic. For core ZIO questions, use the `zio-knowledge` skill.
 
@@ -62,8 +62,6 @@ tags: [zio, zio-blocks, scala, knowledge, reference, documentation]
 
 **`get_doc_page` fails for a returned path** — retry once verbatim, else fall back to sitemap.
 
-**MCP unavailable** — fall back to sitemap workflow above.
-
 **Sitemap fetch fails** — Network outage, or the docs site is being deployed. Retry once; if it persists, fall back to https://github.com/zio/zio-blocks (the source is the ground truth) and the README.
 
 **`WebFetch` returns 404 for a `zioblocks.com/...` page** — it was renamed or removed. Re-fetch the sitemap (https://zioblocks.com/llms.txt), search for the topic, and navigate to the new URL.
@@ -71,7 +69,3 @@ tags: [zio, zio-blocks, scala, knowledge, reference, documentation]
 **Topic isn't in the sitemap** — either it's too narrow for its own page or covered under a broader one. Search the source under https://github.com/zio/zio-blocks.
 
 **Multiple pages cover the same topic** — prefer the page under zioblocks.com over external links; cite both if they materially differ.
-
-**Wrong artifact, platform, or Scala version** — Some blocks are JVM-only or Scala 3-only (e.g. SQL, Datastar, HTMX). Check the block's row in the catalog at https://zioblocks.com/docs/ before suggesting a dependency.
-
-**Doc page contradicts your training data** — Training cutoff is older than the docs site. **Trust the docs site, not training data.** Cite the page in the answer so the user can verify.
