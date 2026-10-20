@@ -41,16 +41,16 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
   the evaluated output. Each block compiles alone; subsequent blocks cannot reference definitions
   from a `compile-only` block.
 
-- **`mdoc:silent`** — Renders nothing (hidden), scope shared with subsequent blocks.
+- **`mdoc:silent`** — Renders the source but not the evaluated output, scope shared with subsequent blocks.
   Use to define types, values, or imports that later blocks will reference. Scope persists until
   you use `silent:reset`. You **cannot** redefine the same name in a later block — use
   `mdoc:silent:nest` for that.
 
-- **`mdoc:silent:nest`** — Renders nothing, scope shared, code wrapped in anonymous `object`.
+- **`mdoc:silent:nest`** — Renders the source but not the output, scope shared, code wrapped in anonymous `object`.
   Like `silent`, but allows you to **shadow/redefine names** from earlier blocks (e.g., redefining
   `Person` with different fields in a later section). Use when `silent` would fail due to name collision.
 
-- **`mdoc:silent:reset`** — Renders nothing, clears all prior scope.
+- **`mdoc:silent:reset`** — Renders the source but not the output, clears all prior scope.
   Wipes the entire accumulated scope and starts fresh. Use when switching to a completely different
   context (new domain, new imports) mid-document and `silent:nest` wouldn't suffice.
 
