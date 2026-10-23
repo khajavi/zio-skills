@@ -1,23 +1,32 @@
 ---
 name: docs-examples
-description: Shared procedure for creating and documenting companion examples. Covers directory structure, file templates, example creation, compilation, linting, and embedding with SourceFile. Used by docs-data-type-ref, docs-module-ref, docs-how-to-guide, and docs-tutorial.
-allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scalafmt), Bash(git)
+description: Shared rules for companion example files — where they live, which sections get one, the file template, shared code, the complete example, verification, formatting, and how a page embeds them. Used by docs-data-type-ref, docs-module-ref, docs-how-to-guide, docs-tutorial, and the docs-examples-builder agent.
+allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scala-cli:*), Bash(scalafmt), Bash(git)
 ---
-
-## Setup Example Sub-module
 
 **Never invent example code.** Every line in an example file traces back to a code block already in
 the documentation page being written — package declaration, imports, a runnable wrapper, and `println`
 calls for output the page renders are the only things you may add beyond what the page's blocks
 already contain. If the page doesn't show it, the example doesn't invent it.
 
-### Preferred: a decoupled examples build, one per documented page
+**Coverage runs both ways.** Every code block of a section that gets a file lands in that file.
+✅ the page's `println(rawYaml)` is in the example ❌ an example that keeps only the fixed end state
 
-Adding each page's examples as a plain `RootProject` straight into the root build (below) works for a
-single one-off example module, but it doesn't scale: every later page's examples become another
-permanent entry in the ROOT build.sbt, forever, and each one can pin its own Scala version only by
-becoming its own top-level aggregate — which is what makes it pile up. Prefer nesting instead, so the
-root build gains exactly ONE addition, ever, no matter how many pages get examples later:
+## Where Examples Live
+
+**The project's conventions win.** Before creating anything, read the project's `AGENTS.md` /
+`CONTRIBUTING.md` and one existing examples build, and copy their layout, Scala version, dependency
+coordinates, run command and format command. Use the fallback layouts below only when the project has
+no examples convention yet.
+
+✅ zio-blocks: flat standalone `schema-examples/` build, one package per page, run with
+`cd schema-examples && sbt "runMain <pkg>.<Obj>"` ❌ creating `zio-blocks-examples/<page-id>/` because
+the fallback below shows it
+
+**A shared examples build is shared.** A dependency or import you add can break other pages' files
+(✅ compile the whole build after adding one ❌ compile only your package).
+
+### Fallback: a decoupled examples build, one leaf per page
 
 ```
 root build.sbt          — ONE addition: aggregates <library>-examples, nothing else, ever
@@ -30,139 +39,100 @@ root build.sbt          — ONE addition: aggregates <library>-examples, nothing
 // root build.sbt — the only edit this makes to the main build, ever
 lazy val examples = RootProject(file("<library>-examples"))
 // include `examples` in the root project's own .aggregate(...)
-```
 
-```scala
 // <library>-examples/build.sbt — grows by one line per new page, additively
 lazy val root = (project in file(".")).aggregate(webauthn, lens)
 lazy val webauthn = RootProject(file("webauthn"))
 lazy val lens      = RootProject(file("lens"))
 ```
 
-Each leaf (`<library>-examples/<page-id>/`) is a fully independent sbt build — its own `build.sbt`
-(own `scalaVersion`, own `libraryDependencies`, depending on the library the way a real user would:
-published coordinates when the library publishes them, or `.dependsOn(ProjectRef(file("../.."),
-"<rootProjectId>"))` by source for an unpublished fixture) and its own
-`project/build.properties` pinning the sbt version (copy the value from the main build's), since a
-`RootProject` leaf with no `build.properties` isn't recognized as a build at all. This is why the
-approach is decoupled: every page's examples pin their own Scala version and dependencies, isolated
-from the main library's cross-build (JVM/JS/Native, multiple Scala versions) and from each other.
+Each leaf is an independent sbt build: its own `build.sbt` (own `scalaVersion`, depending on the
+library's published coordinates, or `.dependsOn(ProjectRef(file("../.."), "<rootProjectId>"))` for an
+unpublished fixture) and its own `project/build.properties` (copy the main build's value — without it
+sbt does not treat the directory as a build). A leaf is not addressable from the repo root: run sbt
+inside it.
 
-### Simpler alternative: a single flat sub-module
+## Which Sections Get a File
 
-For a genuinely one-off example set with no expectation of more pages gaining examples later, adding
-it straight into the root build is fine:
+**Guides and tutorials:** one file per section that has code to run. Skip a section when it:
 
-```scala
-lazy val `zio-http-example-webauthn` =
-  RootProject(file("zio-http-example-webauthn"))
+- has no runnable code (prose, a diagram, a build/install snippet),
+- is an `mdoc:fail` compile-error demo,
+- only repeats code an earlier section's file already runs.
 
-lazy val root = (project in file("."))
-  .aggregate(
-    // other sub-modules
-    `zio-http-example-webauthn`
-  )
-```
+**Reference pages:** `BasicUsage.scala`, `AdvancedPatterns.scala`, … or descriptive names
+(`CompleteHttpRequest.scala`); for a module reference, prefer files that exercise several types together.
 
-Inside the example project directory, create a standard Scala project structure, including a `build.sbt` with necessary dependencies.
+**Names.** How-to: `Step<N><Topic>Example.scala`; tutorial: `Concept<N><Topic>Example.scala`; `N` counts
+only sections that have a file. ✅ `Step3UpsertRowsExample` ❌ `Step3Example` ❌ `UpsertRowsExample`
 
+**Package** = page id, lowercased, hyphens removed: `query-dsl-sql` → `querydslsql`,
+`upsert-and-paginate-with-keyset-cursors` → `upsertandpaginatewithkeysetcursors`.
 
-## Creating Example Files
+**Cumulative pages.** When a section builds on earlier sections' state, the file starts from that state,
+labelled. ✅ `// Setup from sections 1–2: table created, three books inserted` ❌ re-seeding different data,
+so the file prints something other than the page.
 
-### Step 1: Directory and Package Structure
+**Shared code.** A model or helper used by 2+ files of a page lives once in the package (`Model.scala`,
+no `main`) and each user names it with `//> using file Model.scala`. A helper used by several pages lives
+once per examples build (`shared/`). Each file contains only what it uses.
+✅ `//> using file ../shared/JdkHttp.scala` ❌ five diverging copies of `JdkHttp.scala`
+❌ copying a whole setup block, unused JVM-only calls included, into a file meant for Scala.js
 
-Create a package directory matching the following pattern:
-
-```
-<examples-module>/src/main/scala/<packagename>/
-```
-
-Where `<examples-module>` is one of:
-- `<module>-examples` (for module references, e.g., `http-model-examples`)
-- `<library-name>-examples` (for guides and tutorials, or integration examples spanning multiple modules)
-
-**Name conversion rule**: Drop hyphens. e.g.:
-- `query-dsl-sql` → `querydsl` (lowercase, hyphens removed)
-- `http-model` → `httpmodel`
-- `scope-resource-management` → `scoperesourcemanagement`
-
-### Step 2: Example File Structure
-
-Create **one Scala file per major step/concept/use case**, plus a final file for the complete example. Each file should be a standalone runnable program, either an `object` extending `App` or a Scala 3 `@main def` function.
-
-**Naming convention depends on document type:**
-
-| Document Type | File Naming |
-|---------------|------------|
-| How-to guides | `Step1BasicExample.scala`, `Step2AdvancedExample.scala`, ..., `CompleteExample.scala` |
-| Tutorials | `Concept1Example.scala`, `Concept2Example.scala`, ..., `CompleteExample.scala` |
-| Data type refs | `BasicUsage.scala`, `AdvancedPatterns.scala`, `CompleteExample.scala` (or descriptive names like `CompleteHttpRequest.scala`) |
-| Module refs | `MultiTypeComposition.scala`, `CommonPattern1.scala`, ..., `CompleteExample.scala` (titles emphasizing multi-type usage) |
-
-Create 3-5 files total (feel free to write more examples if number of concepts warrants it).
-
-### Step 3: Example File Template
-
-Each example file follows this pattern:
-
-For Scala 3:
+## File Template
 
 ```scala
+//> using scala <the examples build's scalaVersion>
+//> using dep <org>::<artifact>:<version>   // exactly what the examples build resolves for that Scala version
+//> using file Model.scala                  // only when the file uses shared code
+// Run from this folder:  scala-cli run Step3UpsertRowsExample.scala
+// Or from <module-dir>:  sbt "runMain <packagename>.Step3UpsertRowsExample"
+
 package <packagename>
 
 import <requiredImports>
 
 /**
- * <Documentation Title> — Step/Concept/Pattern: <Title>
+ * <Page title> — <Section heading>
  *
- * <1-2 sentence description of what this example demonstrates.>
- *
- * Run with: sbt "<examples-module>/runMain <packagename>.<FunctionName>"
+ * <1–2 sentences on what this file demonstrates.>
  */
-@main def <FunctionName>(): Unit = {
-   // Example code
+object Step3UpsertRowsExample {
+  def main(args: Array[String]): Unit = {
+    // section code
+  }
 }
 ```
 
-For Scala 2.13:
+- **Header.** The `//> using` lines make the file run alone with scala-cli, with no clone. Copy the
+  artifact name from the build's dependency helper, never guess it (✅ zio-blocks on Scala 3.9:
+  `zio-blocks-next-schema` ❌ `zio-blocks-schema`). A module that needs a newer JDK adds `//> using jvm 21`.
+- **Run commands go in `//` comments, never in Scaladoc.** Scalafmt rewraps Scaladoc and splits the
+  command across two lines.
+- **Always `object X { def main(args: Array[String]): Unit }`**, on Scala 2.13 and 3.
+  ❌ `extends App`: deprecated on Scala 3.8+, and its body runs inside the class initializer, so a thread
+  that touches the object's fields (a server handler, a joined task, a stream's async stage) deadlocks.
+- **Label output; print evidence, not claims.**
+  ✅ `println(s"after upsert: $books")` ❌ `println(true)`
+  ✅ `println(s"map runs on ${Thread.currentThread.getName}")` ❌ `println("Running in background")`
+- **Servers.** Forked `run` has no stdin. ✅ fixed port, block until Ctrl+C (or run a scripted demo and
+  stop) ❌ `StdIn.readLine()` to keep serving.
+- **Clean up** temp files and directories the example creates.
 
-```scala
-package <packagename>
+## The Complete Example
 
-import <requiredImports>
+Only when the page plan records `page shape: one-program`; a `recipes` page has none.
+`CompleteExample.scala` is assembled from the section files' code in page order. Every difference from
+the sections (a real `EnvSource` instead of the page's map stand-in, a resource file instead of a temp
+dir) is named in the page's "Putting It Together" prose.
+❌ new domain types, payloads, helpers or defaults the page never shows (e.g. a default `db.password`)
 
-/**
- * <Documentation Title> — Step/Concept/Pattern: <Title>
- *
- * <1-2 sentence description of what this example demonstrates.>
- *
- * Run with: sbt "<examples-module>/runMain <packagename>.<ObjectName>"
- */
-object <ObjectName> extends App {
-   // Example code
-}
-```
+## Verify
 
-On Scala 3, an `object ... extends App` runs its whole body inside the object's initializer. If the
-example starts another thread that reads the object's fields and then waits for that thread (an HTTP
-server handler answering a request the example sends itself, an executor task it joins), the other
-thread blocks on the class-initialization lock and the program hangs. Write such an example as
-`object <ObjectName> { def main(args: Array[String]): Unit = ... }` and keep the threaded code inside
-`main`, with a comment saying why.
-
-### Step 4: The Complete Example
-
-The final example file (`CompleteExample.scala` or descriptively-named equivalent like `CompleteHttpRequest.scala`) must contain the **entire "Putting It Together" or most complex code block** from the document, wrapped in a runnable program (either a Scala 3 `@main def` function or a Scala 2.13 `object` extending `App`). This is the most important example file.
-
-### Step 5: Verify Examples Compile
-
-After creating all example files, verify they compile:
-
-```bash
-sbt "<examples-module>/compile"
-```
-
-Fix any compilation failures before proceeding. The examples must compile successfully.
+1. Run every new main, batched (`sbt "runMain a.A" "runMain a.B"`), plus `src/test` if present. A shared
+   build: compile all of it.
+2. Compare each run's output with the page's quoted output and prose claims, line by line.
+3. `scala-cli compile <file>` for each new file — this proves the `//> using` header.
 
 **Never kill sbt by pattern** (`pkill -f sbt`, `pkill -f sbt-launch`, `pkill java`). The caller
 and other sessions usually run their own sbt servers on the same machine (e.g. the docs build's
@@ -170,149 +140,79 @@ mdoc), and a pattern kill takes them down mid-task ("sbt server disconnected"). 
 started: `sbt --client shutdown` from your own build directory, or use batch-mode `sbt`, which exits
 on its own.
 
-### Step 6: Lint Check (Mandatory Before Integration)
+## Format
 
-After all examples compile, stage them in git, then run Scalafmt:
+Use the project's documented format command, scoped to the files you created
+(✅ zio-blocks standalone builds: `scala-cli fmt --scalafmt-conf <repo>/.scalafmt.conf <files>`
+❌ formatting a whole `src/`, which reflows other pages' files). Examples inside the main build:
+`sbt fmtChanged`, then `sbt check`. If formatting changes code that is also on the page, mirror the
+change into the page block.
 
-```bash
-git add <examples-module>/src/main/scala/**/*.scala
-sbt fmtChanged
-```
-
-If any files were reformatted, commit them immediately:
-
-```bash
-git add -A
-git commit -m "docs(<doc-id>): apply scalafmt to examples"
-```
-
-Verify the CI lint gate locally:
-
-```bash
-sbt check
-```
-
-**Success criterion**: Zero formatting violations reported.
-
----
-
-### Step 7: Documenting Examples
-
-#### When Examples Use SourceFile Embedding
+## Embedding in the Page
 
 There are two ways to pull a companion file's source into a page, and they are not interchangeable —
 use whichever this project already has wired up, and check before introducing the other:
 
-- **`SourceFile.print` inside `mdoc:passthrough`** (below) — a project-local helper. Use this when the
-  project's docs subproject already defines `docs.SourceFile`, which is the common case for an
-  established ZIO docs site.
+- **`SourceFile.print` inside `mdoc:passthrough`** — a project-local helper. Use this when the
+  project's docs subproject already defines `docs.SourceFile`.
 - **`mdoc:embed:<path>`** (see `docs-mdoc-conventions`) — a built-in mdoc modifier requiring the docs
-  subproject to depend on `"dev.zio" %% "zio-sbt-source"`. Prefer this for a project that has neither
-  convention yet — it needs no custom Scala utility to maintain.
+  subproject to depend on `"dev.zio" %% "zio-sbt-source"`. Prefer this for a project that has neither.
 
-Either way, the embedded file must exist on disk **before** mdoc runs — both mechanisms fail outright
-if the path they name is absent. Commission every example file (this whole skill) before running the
-page's own mdoc verification pass, never after.
+Either way, the embedded file must exist on disk **before** mdoc runs. Commission every example file
+before the page's own mdoc verification pass, never after.
 
-For data type references and module references where examples need detailed documentation:
+### Guides and tutorials
 
-Place the "Running the Examples" section at the end of the documentation, after all type/module documentation. Use this template:
+At the end of each section that has a file (never in a separate section at the end of the page):
 
-```
-    ## Running the Examples
-    
-    All code from this guide is available as runnable examples in the `<examples-module>` module.
-    
-    **1. Clone the repository and navigate to the project:**
-    
-    ```bash
-    git clone https://github.com/zio/<repo-name>.git
-    cd <repo-name>
-    ```
-    
-    **2. Run individual examples with sbt:**
-    
-    ### <Example Title>
-    
-    <Short description of what this App demonstrates and the use case it covers. For module examples, explain which types work together. For type examples, describe the usage pattern.>
-    
-    ```scala mdoc:passthrough
-    import docs.SourceFile
-    
-    SourceFile.print("<examples-module>/src/main/scala/<package>/<ObjectName>.scala")
-    ```
-    
-    ([source](https://github.com/zio/<repo-name>/blob/main/<examples-module>/src/main/scala/<package>/<ObjectName>.scala))
-    
-    ```bash
-    sbt "<examples-module>/runMain <package>.<ObjectName>"
-    ```
-    
-    ### <Next Example Title>
-    
-    <Short description highlighting key patterns or type composition.>
-    
-    ```scala mdoc:passthrough
-    import docs.SourceFile
-    
-    SourceFile.print("<examples-module>/src/main/scala/<package>/<ObjectName2>.scala")
-    ```
-    
-    ([source](https://github.com/zio/<repo-name>/blob/main/<examples-module>/src/main/scala/<package>/<ObjectName2>.scala))
-    
-    ```bash
-    sbt "<examples-module>/runMain <package>.<ObjectName2>"
-    ```
+````markdown
+<details>
+  <summary>Runnable version, with setup from sections 1–2: <code>Step3UpsertRowsExample.scala</code></summary>
+
+```scala mdoc:embed:<module-dir>/src/main/scala/<packagename>/Step3UpsertRowsExample.scala:show-line-numbers
 ```
 
-**Optional parameters:**
-- `lines = Seq((from, to))` — include only specific line ranges (1-indexed)
-- `showLineNumbers = true` — render with line numbers
-- `showTitle = false` — suppress the file path title
+</details>
+````
 
-#### When Examples Use Basic Shell Commands
+The summary says what the file adds beyond the inline code (setup from earlier sections, a real
+`EnvSource`, a running server). A shared file (`Model.scala`) is embedded once, in the first section
+that uses it.
 
-For how-to guides and tutorials where examples are listed simply:
+"Running the Examples" is a short pointer, nothing more:
 
 ```markdown
-    ## Running the Examples
-    
-    All code from this guide/tutorial is available as runnable examples in the `<examples-module>` module.
-    
-    **1. Clone the repository and navigate to the project:**
-    
-    ```bash
-    git clone https://github.com/zio/<repo-name>.git
-    cd <repo-name>
-    ```
-    
-    **2. Run individual examples with sbt:**
-    
-    ```bash
-    # Step/Concept 1: <brief description>
-    sbt "<examples-module>/runMain <packagename>.<Step1ObjectName>"
-    
-    # Step/Concept 2: <brief description>
-    sbt "<examples-module>/runMain <packagename>.<Step2ObjectName>"
-    
-    # ...additional steps/concepts...
-    
-    # Complete example
-    sbt "<examples-module>/runMain <packagename>.<CompleteObjectName>"
-    ```
-    
-    **3. Or compile all examples at once:**
-    
-    ```bash
-    sbt "<examples-module>/compile"
-    ```
+## Running the Examples
+
+All runnable code from this guide is in [`<module-dir>/src/main/scala/<packagename>/`](https://github.com/zio/<repo>/tree/main/<module-dir>/src/main/scala/<packagename>).
+Run any file from that folder with `scala-cli run <File>.scala`, or from `<module-dir>` with
+`sbt "runMain <packagename>.<ObjectName>"`.
 ```
 
-    
-- List **every `App` object** in the examples module, one entry per object
-- For each entry: use a `###` heading (simple, concise title), followed by a short descriptive paragraph
-- The paragraph explains what the example demonstrates and the use case/pattern it covers
-- For modules: emphasize which types compose in each example
-- Embed full source with `SourceFile.print` (keeps docs and examples in sync automatically)
-- Include source link and run command
-- Keep the two numbered steps (clone, run individually) in that order
+### Reference pages
+
+Place "Running the Examples" at the end of the page, one entry per example file:
+
+```
+    ## Running the Examples
+
+    All code from this page is available as runnable examples in the `<examples-module>` module.
+
+    ### <Example Title>
+
+    <Short description of what this example demonstrates. For module examples, explain which types
+    work together. For type examples, describe the usage pattern.>
+
+    ```scala mdoc:passthrough
+    import docs.SourceFile
+
+    SourceFile.print("<examples-module>/src/main/scala/<package>/<ObjectName>.scala")
+    ```
+
+    ([source](https://github.com/zio/<repo-name>/blob/main/<examples-module>/src/main/scala/<package>/<ObjectName>.scala))
+
+    Run with `scala-cli run <ObjectName>.scala` from that folder, or the project's sbt command.
+```
+
+`SourceFile.print` options: `lines = Seq((from, to))` (1-indexed ranges), `showLineNumbers = true`,
+`showTitle = false`.
