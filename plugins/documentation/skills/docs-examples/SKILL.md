@@ -1,7 +1,7 @@
 ---
 name: docs-examples
 description: Shared rules for companion example files — where they live, which sections get one, the file template, shared code, the complete example, verification, formatting, and how a page embeds them. Used by docs-data-type-ref, docs-module-ref, docs-how-to-guide, docs-tutorial, and the docs-examples-builder agent.
-allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scala-cli:*), Bash(scalafmt), Bash(git)
+allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scala-cli:*), Bash(git:*)
 ---
 
 **Never invent example code.** Every line in an example file traces back to a code block already in
@@ -66,8 +66,10 @@ inside it.
 **Names.** How-to: `Step<N><Topic>Example.scala`; tutorial: `Concept<N><Topic>Example.scala`; `N` counts
 only sections that have a file. ✅ `Step3UpsertRowsExample` ❌ `Step3Example` ❌ `UpsertRowsExample`
 
-**Package** = page id, lowercased, hyphens removed: `query-dsl-sql` → `querydslsql`,
-`upsert-and-paginate-with-keyset-cursors` → `upsertandpaginatewithkeysetcursors`.
+**Package** — follow the examples build's existing scheme (✅ `zio.blocks.async.gettingstarted` when the
+build's packages look like that); a page that already has a package keeps it. With no scheme: page id,
+lowercased, hyphens removed (`query-dsl-sql` → `querydslsql`). `<package-dir>` below is the package's
+directory under `src/main/scala/` (`zio/blocks/async/gettingstarted`).
 
 **Cumulative pages.** When a section builds on earlier sections' state, the file starts from that state,
 labelled. ✅ `// Setup from sections 1–2: table created, three books inserted` ❌ re-seeding different data,
@@ -84,6 +86,7 @@ once per examples build (`shared/`). Each file contains only what it uses.
 ```scala
 //> using scala <the examples build's scalaVersion>
 //> using dep <org>::<artifact>:<version>   // exactly what the examples build resolves for that Scala version
+//> using options <flags>                   // only the compiler flags the build adds that this file needs
 //> using file Model.scala                  // only when the file uses shared code
 // Run from this folder:  scala-cli run Step3UpsertRowsExample.scala
 // Or from <module-dir>:  sbt "runMain <packagename>.Step3UpsertRowsExample"
@@ -104,9 +107,10 @@ object Step3UpsertRowsExample {
 }
 ```
 
-- **Header.** The `//> using` lines make the file run alone with scala-cli, with no clone. Copy the
-  artifact name from the build's dependency helper, never guess it (✅ zio-blocks on Scala 3.9:
-  `zio-blocks-next-schema` ❌ `zio-blocks-schema`). A module that needs a newer JDK adds `//> using jvm 21`.
+- **Header.** The `//> using` lines make the file run alone with scala-cli, with no clone. Take the
+  artifact from what the build resolves, never from memory (✅ `sbt "show libraryDependencies"` in the
+  examples build ❌ guessing `-next-` from the Scala version). A module that needs a newer JDK adds
+  `//> using jvm 21`.
 - **Run commands go in `//` comments, never in Scaladoc.** Scalafmt rewraps Scaladoc and splits the
   command across two lines.
 - **Always `object X { def main(args: Array[String]): Unit }`**, on Scala 2.13 and 3.
@@ -175,7 +179,7 @@ At the end of each section that has a file (never in a separate section at the e
 <details>
   <summary>Runnable version, with setup from sections 1–2: <code>Step3UpsertRowsExample.scala</code></summary>
 
-```scala mdoc:embed:<module-dir>/src/main/scala/<packagename>/Step3UpsertRowsExample.scala:show-line-numbers
+```scala mdoc:embed:<module-dir>/src/main/scala/<package-dir>/Step3UpsertRowsExample.scala:show-line-numbers
 ```
 
 </details>
@@ -190,7 +194,7 @@ that uses it.
 ```markdown
 ## Running the Examples
 
-All runnable code from this guide is in [`<module-dir>/src/main/scala/<packagename>/`](https://github.com/zio/<repo>/tree/main/<module-dir>/src/main/scala/<packagename>).
+All runnable code from this guide is in [`<module-dir>/src/main/scala/<package-dir>/`](https://github.com/zio/<repo>/tree/main/<module-dir>/src/main/scala/<package-dir>).
 Run any file from that folder with `scala-cli run <File>.scala`, or from `<module-dir>` with
 `sbt "runMain <packagename>.<ObjectName>"`.
 ```
