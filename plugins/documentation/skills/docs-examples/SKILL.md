@@ -121,7 +121,13 @@ object Step3UpsertRowsExample {
 
 ## The Complete Example
 
-Only when the page plan records `page shape: one-program`; a `recipes` page has none.
+The page plan records a **page shape**:
+
+- `one-program` — the sections build one program step by step (✅ a SQLite repository, an htmx app, a
+  streaming job). Gets "Putting It Together" and `CompleteExample.scala`.
+- `recipes` — the sections are independent options for one task (✅ JSON field naming, ADT encoding and
+  optional fields as separate choices). No "Putting It Together", no complete example.
+
 `CompleteExample.scala` is assembled from the section files' code in page order. Every difference from
 the sections (a real `EnvSource` instead of the page's map stand-in, a resource file instead of a temp
 dir) is named in the page's "Putting It Together" prose.
@@ -216,3 +222,18 @@ Place "Running the Examples" at the end of the page, one entry per example file:
 
 `SourceFile.print` options: `lines = Seq((from, to))` (1-indexed ranges), `showLineNumbers = true`,
 `showTitle = false`.
+
+## Checklist
+
+How-to guide and tutorial checklists point here; a reviewer checks each item.
+
+- [ ] The examples follow the project's own examples layout and commands (`AGENTS.md`, existing builds)
+- [ ] Every section with runnable code has a file, and every skipped section matches a skip case
+- [ ] Every code block of a section is in its file, and nothing beyond page code is added unless the page names it
+- [ ] Each file has the `//> using` header, run commands in `//` comments, and `object … { def main … }` (no `extends App`)
+- [ ] Shared code lives once and is named with `//> using file`; no file copies another file's model or helper
+- [ ] Each file prints labelled output, and every output and prose claim on the page matches a real run
+- [ ] `scala-cli compile` passes for each file; the examples build compiles (all of it, if shared) and its tests pass
+- [ ] `CompleteExample.scala` exists only for a `one-program` page and is assembled from section code
+- [ ] Each runnable block sits at the end of its section, with a `<summary>` saying what the file adds
+- [ ] "Running the Examples" is the short pointer (guides, tutorials) — no re-embedded code
