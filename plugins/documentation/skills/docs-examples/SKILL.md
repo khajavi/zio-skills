@@ -147,8 +147,11 @@ output after the embed.
 
 1. Run every new main, batched (`sbt "runMain a.A" "runMain a.B"`), plus `src/test` if present. A shared
    build: compile all of it.
-2. Compare each run's output with the page's quoted output and prose claims, line by line.
-3. `scala-cli compile <file>` for each new file — this proves the `//> using` header.
+2. Compare each run's output with the page's quoted output and prose claims, line by line. To show that
+   something did NOT happen, print an ordering marker after the point where it would have
+   (✅ `"after cancel: body still running"` ❌ printing nothing and calling it proof).
+3. `scala-cli run <file>` for each new file — this proves the `//> using` header. Then delete the
+   `.scala-build/` and `.bsp/` folders it leaves in the package folder.
 
 **Never kill sbt by pattern** (`pkill -f sbt`, `pkill -f sbt-launch`, `pkill java`). The caller
 and other sessions usually run their own sbt servers on the same machine (e.g. the docs build's
@@ -163,6 +166,13 @@ Use the project's documented format command, scoped to the files you created
 ❌ formatting a whole `src/`, which reflows other pages' files). Examples inside the main build:
 `sbt fmtChanged`, then `sbt check`. Page block and file may differ in layout only (line breaks,
 indentation); never mirror a formatter's reflow into the page.
+
+## Migrating an Existing Page
+
+- Rename with `git mv` (keeps history); keep the existing package.
+- Replace each file's old Scaladoc `Run with:` block with the `//` run comments.
+- Update every embed that names a renamed file (`grep -rn "mdoc:embed:.*<OldName>" docs/`).
+- Replace the old "Running the Examples" section (clone steps, re-embeds) with the short pointer.
 
 ## Embedding in the Page
 
@@ -244,7 +254,7 @@ How-to guide and tutorial checklists point here; a reviewer checks each item.
 - [ ] Each file has the `//> using` header, run commands in `//` comments, and `object … { def main … }` (no `extends App`)
 - [ ] Shared code lives once and is named with `//> using file`; no file copies another file's model or helper
 - [ ] Each file prints labelled output, and every output and prose claim on the page matches a real run
-- [ ] `scala-cli compile` passes for each file; the examples build compiles (all of it, if shared) and its tests pass
+- [ ] `scala-cli run` passes for each file; the examples build compiles (all of it, if shared) and its tests pass
 - [ ] `CompleteExample.scala` exists only for a `one-program` page, uses only what the sections show, and its differences and output are on the page
 - [ ] Each runnable block sits at the end of its section, with a `<summary>` saying what the file adds
 - [ ] "Running the Examples" is the short pointer (guides, tutorials) — no re-embedded code

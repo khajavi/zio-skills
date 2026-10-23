@@ -21,7 +21,8 @@ shared code, the complete example, verification and formatting. Follow it; this 
    gives you (`one-program` or `recipes`) and every embed path the page already names.
 3. Create one file per section that has code to run (see "Which Sections Get a File"), at exactly the
    paths the page embeds, plus `CompleteExample.scala` only for a `one-program` page.
-4. Run, compare and `scala-cli compile` per "Verify"; then format per "Format". Fix every failure.
+4. Verify per "Verify", then format per "Format". Fix every failure. Migrating an existing page: also
+   follow "Migrating an Existing Page".
 
 ## Report
 
