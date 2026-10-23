@@ -139,7 +139,7 @@ Based on your research answers, design the tutorial's section structure before w
 - **One concept per section**: Each section introduces exactly one new idea or builds incrementally on previous sections.
 - **Concept before code**: Always explain what the code will do and why before showing it.
 - **Every section has code**: No pure-prose sections. Every concept is demonstrated with code.
-- **Line-by-line annotation**: Every code block is followed by a bullet-point breakdown explaining each line or block of lines.
+- **Line-by-line annotation**: Every code block is followed by a bullet-point breakdown explaining each line or block of lines. When a block has only one or two meaningful lines, annotate it in one prose sentence instead — `docs-writing-style` rule 21 forbids one- or two-item bullet lists, and reviewers flag both directions. When several sections repeat the same pattern (e.g. one format per section), keep the bullets short and parallel rather than dropping them.
 - **Show intermediate output**: After meaningful steps, show or print results so the learner can verify they're on track.
 - **Limit scope aggressively**: A tutorial about "understanding Scope" should not become "everything you can do with Scope". Stay on the learning objective.
 
@@ -382,6 +382,15 @@ stops running.
 Use the **`docs-companion-examples`** skill to commission and verify companion examples — it delegates
 the build (directory structure, file templates, compilation, lint) and checks what came back.
 
+**Browser-side behaviour needs a browser check.** When a tutorial's claims happen in the browser
+(htmx, Datastar, any JS library the page loads), mdoc and `sbt run` only prove the server half. Pin
+the JS library to an exact CDN version, read its real dist file for the behaviour you describe, and
+run the CompleteExample against headless Chromium (Playwright: type, select, reload, Back; log the
+request URLs and headers). Seen in zio-blocks T-10: this caught that htmx 2 sends `HX-Request: true`
+on a history-restore cache miss, so "fragment whenever HX-Request" breaks the Back button. Server
+examples that keep running for a browser can be verified with `timeout N java -cp <classpath from
+sbt "export Runtime / fullClasspath"> <main> <port>` plus `curl`, without killing sbt.
+
 ---
 
 ## Step 5: Verify Mdoc Compilation
@@ -450,6 +459,9 @@ Task(
   subagent_type: "documentation:docs-integrator",
   prompt: "Page: docs/guides/<tutorial-id>.md
            Category: Guides
+           Also add the tutorial to every guide list in docs/index.md (CHECKLIST.md requires it;
+           in zio-blocks there are two: the module section and the full guides list), and a
+           forward link from the prerequisite tutorial's 'Where to Go Next'.
            Cross-reference direction: add 'See also' links from related reference pages that already
            exist (e.g. if this tutorial teaches Scope, from docs/reference/scope.md) — check first, and
            name which do. Never ask for a reference page to be created to satisfy a link, and never

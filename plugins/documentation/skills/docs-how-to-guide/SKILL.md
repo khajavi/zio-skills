@@ -225,6 +225,13 @@ In this guide, we'll solve this by [brief preview of the library's approach].
   shows it — prefer a concrete scenario description there instead: "Imagine you have 40 case classes
   representing your API schema and you need to keep JSON codecs, database mappings, and OpenAPI specs
   in sync."
+- **Migration guides ("Coming from X") are the exception to `mdoc:compile-only`.** Their "before"
+  code uses a third-party library (circe, cats-effect, ...) that is not on the docs mdoc classpath, and
+  adding it just for a page needs approval. Use a plain ` ```scala ` fence labelled "This is the old
+  code, <library> <version> (not compiled here):", and verify every such block outside mdoc: compile and
+  run it verbatim with `scala-cli` (`//> using dep ...`) against the library's current release, and
+  quote only output you saw. Check the Scala version a release needs (e.g. zio-json 1.1.x is built with
+  Scala 3.9 and fails on 3.3). The same applies to every "You Wrote This" block, not just The Problem.
 - **Never use the library being documented in this block.** A "before" that already uses the library
   being taught is not a before — it has no contrast in it. And an uncompiled block naming a real
   method from the library is the one place a wrong signature could sit in a finished page uncaught.
@@ -292,7 +299,7 @@ Follow the **"Running the Examples" section template** from the `docs-examples` 
 
 Two details specific to this guide's needs:
 - Clone and `cd` in one path straight into the examples module directory — `cd <repo>/<examples-module>`, not a separate `cd <repo>` followed by a separate `cd <examples-module>`.
-- Embed each step's file, in order, the same way "Putting It Together" does: a collapsible `<details><summary>` wrapping `` scala mdoc:embed:<path>:show-line-numbers ``, a short sentence on how to run it, and its `sbt "<examples-module>/runMain ..."` command.
+- Embed each step's file, in order, the same way "Putting It Together" does: a collapsible `<details><summary>` wrapping `` scala mdoc:embed:<path>:show-line-numbers ``, a short sentence on how to run it, and its `sbt "<examples-module>/runMain ..."` command. When the examples module is a standalone sbt build (its own `build.sbt` and `project/build.properties`, as with zio-blocks' `*-examples/` directories), the reader is already inside it after the `cd`, so the command is `sbt "runMain ..."` — there is no `<examples-module>` project to scope to.
 
 #### Going Further (Optional)
 

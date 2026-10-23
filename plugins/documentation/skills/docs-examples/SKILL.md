@@ -143,6 +143,13 @@ object <ObjectName> extends App {
 }
 ```
 
+On Scala 3, an `object ... extends App` runs its whole body inside the object's initializer. If the
+example starts another thread that reads the object's fields and then waits for that thread (an HTTP
+server handler answering a request the example sends itself, an executor task it joins), the other
+thread blocks on the class-initialization lock and the program hangs. Write such an example as
+`object <ObjectName> { def main(args: Array[String]): Unit = ... }` and keep the threaded code inside
+`main`, with a comment saying why.
+
 ### Step 4: The Complete Example
 
 The final example file (`CompleteExample.scala` or descriptively-named equivalent like `CompleteHttpRequest.scala`) must contain the **entire "Putting It Together" or most complex code block** from the document, wrapped in a runnable program (either a Scala 3 `@main def` function or a Scala 2.13 `object` extending `App`). This is the most important example file.
@@ -156,6 +163,12 @@ sbt "<examples-module>/compile"
 ```
 
 Fix any compilation failures before proceeding. The examples must compile successfully.
+
+**Never kill sbt by pattern** (`pkill -f sbt`, `pkill -f sbt-launch`, `pkill java`). The caller
+and other sessions usually run their own sbt servers on the same machine (e.g. the docs build's
+mdoc), and a pattern kill takes them down mid-task ("sbt server disconnected"). Stop only what you
+started: `sbt --client shutdown` from your own build directory, or use batch-mode `sbt`, which exits
+on its own.
 
 ### Step 6: Lint Check (Mandatory Before Integration)
 

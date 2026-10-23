@@ -35,7 +35,7 @@ After writing, verify every item on this checklist:
 - [ ] A package directory exists in `<examples-module>/src/main/scala/<packagename>/` (the module name comes from this guide's own examples setup, not a fixed name — see `docs-examples`)
 - [ ] There is one example file per major guide step (typically 3-5 files)
 - [ ] There is a `CompleteExample.scala` (or descriptively named equivalent) with the full "Putting It Together" code
-- [ ] Each example file is fully self-contained (compiles and runs independently)
+- [ ] Each example file is fully self-contained (compiles and runs independently). Shared support files in the same package (an adapter, a domain model) are acceptable when the page embeds them under Running the Examples and the "Putting It Together" intro names them
 - [ ] Each example file has complete imports
 - [ ] Each example file has a scaladoc with guide title, step description, and `sbt runMain` command
 - [ ] Each example file includes `println` output showing meaningful results
@@ -46,7 +46,7 @@ After writing, verify every item on this checklist:
 - [ ] The guide includes a "Running the Examples" section after "Putting It Together"
 - [ ] The section clones and `cd`s in one path straight into the examples module dir (`cd <repo>/<examples-module>`, not a separate `cd <repo>` then `cd <examples-module>`)
 - [ ] Every companion example file is embedded, per step in order, inside a collapsible `<details><summary>` via `mdoc:embed:<path>:show-line-numbers` (same pattern as "Putting It Together"), with a short sentence on how to run it and its `sbt "<examples-module>/runMain ..."` command
-- [ ] The section includes `sbt "<examples-module>/compile"` as an alternative
+- [ ] The section includes `sbt "<examples-module>/compile"` as an alternative (for a standalone examples build that the reader has already `cd`-ed into, such as zio-blocks' `*-examples/` directories, this is plain `sbt compile`)
 
 ## Style and Integration
 

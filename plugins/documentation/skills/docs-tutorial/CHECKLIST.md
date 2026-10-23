@@ -43,8 +43,8 @@ After writing, verify every item on this checklist:
 
 - [ ] The tutorial includes a "Running the Examples" section after "Putting It Together"
 - [ ] The section clones and `cd`s in one path straight into the examples module dir (`cd <repo>/<examples-module>`, not a separate `cd <repo>` then `cd <examples-module>`)
-- [ ] Every companion example file is embedded, per concept in order, inside a collapsible `<details><summary>` via `mdoc:embed:<path>:show-line-numbers` (same pattern as "Putting It Together"), with a short sentence on how to run it and its `sbt "<examples-module>/runMain ..."` command
-- [ ] The section includes `sbt "<examples-module>/compile"` as an alternative
+- [ ] Every companion example file is embedded, per concept in order, inside a collapsible `<details><summary>` via `mdoc:embed:<path>:show-line-numbers` (same pattern as "Putting It Together"), with a short sentence on how to run it and its `sbt "<examples-module>/runMain ..."` command — or, when the examples module is a standalone sbt build with its own `build.sbt` (e.g. zio-blocks `schema-examples/`), `sbt "runMain ..."` run from inside that directory
+- [ ] The section includes `sbt "<examples-module>/compile"` (standalone build: `sbt compile` from inside it) as an alternative
 
 ## Style and Integration
 
