@@ -7,10 +7,13 @@ allowed-tools: Read, Glob, Grep, Bash(sbt:*), Bash(scala-cli:*), Bash(git:*)
 **Never invent example code.** Every line in an example file traces back to a code block already in
 the documentation page being written — package declaration, imports, a runnable wrapper, and `println`
 calls for output the page renders are the only things you may add beyond what the page's blocks
-already contain. If the page doesn't show it, the example doesn't invent it.
+already contain. If the page doesn't show it, the example doesn't invent it. A line that changes
+behaviour to make the file run (a keep-alive `Thread.sleep`, a teardown) goes on the page too, commented.
 
 **Coverage runs both ways.** Every code block of a section that gets a file lands in that file.
 ✅ the page's `println(rawYaml)` is in the example ❌ an example that keeps only the fixed end state
+Version tabs (Scala 2 / Scala 3): the file follows the tab for the build's Scala version; the
+`<summary>` names that tab.
 
 ## Where Examples Live
 
@@ -63,8 +66,9 @@ inside it.
 **Reference pages:** `BasicUsage.scala`, `AdvancedPatterns.scala`, … or descriptive names
 (`CompleteHttpRequest.scala`); for a module reference, prefer files that exercise several types together.
 
-**Names.** How-to: `Step<N><Topic>Example.scala`; tutorial: `Concept<N><Topic>Example.scala`; `N` counts
-only sections that have a file. ✅ `Step3UpsertRowsExample` ❌ `Step3Example` ❌ `UpsertRowsExample`
+**Names.** How-to: `Step<N><Topic>Example.scala`; tutorial: `Concept<N><Topic>Example.scala`. `N` is the
+section's heading number when headings are numbered, else its position among the page's sections; gaps
+are fine. ✅ `Concept5ForkingExample` under `## 5. Forking` ❌ `Step3Example` ❌ `UpsertRowsExample`
 
 **Package** — follow the examples build's existing scheme (✅ `zio.blocks.async.gettingstarted` when the
 build's packages look like that); a page that already has a package keeps it. With no scheme: page id,
@@ -127,15 +131,17 @@ object Step3UpsertRowsExample {
 
 The page plan records a **page shape**:
 
-- `one-program` — the sections build one program step by step (✅ a SQLite repository, an htmx app, a
-  streaming job). Gets "Putting It Together" and `CompleteExample.scala`.
+- `one-program` — the page ends with one program built from its sections, either step by step (✅ a
+  SQLite repository, a streaming job) or as a capstone over independent concept sections (✅ an order
+  flow using each async concept). Gets "Putting It Together" and `CompleteExample.scala`.
 - `recipes` — the sections are independent options for one task (✅ JSON field naming, ADT encoding and
   optional fields as separate choices). No "Putting It Together", no complete example.
 
-`CompleteExample.scala` is assembled from the section files' code in page order. Every difference from
-the sections (a real `EnvSource` instead of the page's map stand-in, a resource file instead of a temp
-dir) is named in the page's "Putting It Together" prose.
-❌ new domain types, payloads, helpers or defaults the page never shows (e.g. a default `db.password`)
+`CompleteExample.scala` uses only APIs and code the sections show, in page order. Every difference from
+the sections (other literal values, a real `EnvSource` instead of the page's map stand-in, a resource
+file instead of a temp dir) is named in the page's "Putting It Together" prose, and the page quotes its
+output after the embed.
+❌ new domain types, helpers or defaults the page never shows (e.g. a default `db.password`)
 
 ## Verify
 
@@ -155,8 +161,8 @@ on its own.
 Use the project's documented format command, scoped to the files you created
 (✅ zio-blocks standalone builds: `scala-cli fmt --scalafmt-conf <repo>/.scalafmt.conf <files>`
 ❌ formatting a whole `src/`, which reflows other pages' files). Examples inside the main build:
-`sbt fmtChanged`, then `sbt check`. If formatting changes code that is also on the page, mirror the
-change into the page block.
+`sbt fmtChanged`, then `sbt check`. Page block and file may differ in layout only (line breaks,
+indentation); never mirror a formatter's reflow into the page.
 
 ## Embedding in the Page
 
@@ -185,8 +191,9 @@ At the end of each section that has a file (never in a separate section at the e
 </details>
 ````
 
-The summary says what the file adds beyond the inline code (setup from earlier sections, a real
-`EnvSource`, a running server). A shared file (`Model.scala`) is embedded once, in the first section
+Default summary: `Runnable version: <code>File.scala</code>`. When the file adds more than a `main`
+wrapper, say what (✅ "Runnable version, with setup from sections 1–2" ✅ "…, against a real
+`EnvSource`" ✅ "…, the Scala 3 tab"). A shared file (`Model.scala`) is embedded once, in the first section
 that uses it.
 
 "Running the Examples" is a short pointer, nothing more:
@@ -238,6 +245,6 @@ How-to guide and tutorial checklists point here; a reviewer checks each item.
 - [ ] Shared code lives once and is named with `//> using file`; no file copies another file's model or helper
 - [ ] Each file prints labelled output, and every output and prose claim on the page matches a real run
 - [ ] `scala-cli compile` passes for each file; the examples build compiles (all of it, if shared) and its tests pass
-- [ ] `CompleteExample.scala` exists only for a `one-program` page and is assembled from section code
+- [ ] `CompleteExample.scala` exists only for a `one-program` page, uses only what the sections show, and its differences and output are on the page
 - [ ] Each runnable block sits at the end of its section, with a `<summary>` saying what the file adds
 - [ ] "Running the Examples" is the short pointer (guides, tutorials) — no re-embedded code
