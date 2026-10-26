@@ -38,8 +38,12 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
 
 - **`mdoc:compile-only`** — Renders source code only, isolated scope (no definitions carry over).
   This is the **default** for self-contained examples where you want to show the structure but not
-  the evaluated output. Each block compiles alone; subsequent blocks cannot reference definitions
-  from a `compile-only` block.
+  the evaluated output. Subsequent blocks cannot reference definitions from a `compile-only` block.
+  Isolation is one-way: a `compile-only` block is still compiled *inside* the scope of the page's
+  earlier evaluated blocks (since the last `:reset`), so an earlier wildcard import can still shadow
+  names in it. Seen in zio-blocks: an earlier `import zio.blocks.sql._` (whose package has a `zio`
+  subpackage) broke the `import zio.blocks.schema.Schema` line of every later self-contained
+  `compile-only` block; the fix was an `mdoc:invisible` block with `import _root_.zio` before them.
 
 - **`mdoc:silent`** — Renders the source but not the evaluated output, scope shared with subsequent blocks.
   Use to define types, values, or imports that later blocks will reference. Scope persists until
@@ -72,8 +76,29 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
   when a companion file already carries it. Requires the docs subproject to depend on
   `"dev.zio" %% "zio-sbt-source"` — add it if missing.
 
+- **A plain-fenced JMH benchmark still gets verified.** JMH can't run in mdoc, but compile and smoke-run
+  the snippet verbatim with `scala-cli --power run --jmh <file> -- -wi 1 -i 1 -f 1 -w 1s -r 1s`. JMH's
+  bytecode generator rejects classes in the default package ("Benchmark class should have package other
+  than default"), so the snippet needs a `package` line. Prefer `val` state fields over `var x = _`
+  (deprecated syntax on Scala 3.4+). Seen in zio-blocks `docs/guides/tune-json-throughput.md`.
+
+- **Read the rendered output against the prose, line by line.** A block can compile, run and still
+  contradict its own sentence. Seen in zio-blocks H-50: a failed `ByteBuffer` decode before `flip()`
+  advanced `position` by one byte, so the "after flip" decode printed `Left(expected end of input)`
+  under prose promising the book. Both mdoc and the companion example printed it; nobody flagged it.
+
 - **No mdoc** (plain `` ```scala ``) — Renders source code only, not compiled.
   Use for pseudocode, ASCII diagrams, type signatures for illustration, or non-Scala syntax (e.g., sbt configuration).
+
+- **Code that needs a live service still compiles in mdoc.** A snippet that opens a database pool,
+  a socket or a server would fail when mdoc *evaluates* it, but that's no reason for a plain fence:
+  put it in a `mdoc:silent` block as a `def` that no later block calls (`def openPool(): HikariDataSource
+  = new HikariDataSource(config())`). mdoc compiles the body and shares the name with later blocks,
+  and nothing runs. Add the third-party library to the docs project's `libraryDependencies` (ask
+  first) instead of downgrading the snippet; keep real output for the parts that need no service.
+  Mind the JDK the docs build runs on: an API newer than it (e.g. virtual threads on a JDK 17 docs
+  build) can't compile, so take it as a parameter (`executor: ExecutorService`) and show only the
+  JDK-specific line in a plain fence.
 
 - **Public API only.** An mdoc block compiles in the default package, exactly like user code —
   reference only PUBLIC symbols. A `private`/`private[pkg]`/`protected` type or member won't compile in
@@ -83,10 +108,55 @@ Each modifier has a specific role. Choose based on whether you need scope sharin
   needs a package-private symbol, pick a public alternative or drop the example.
 
 - -**Never hardcode expression output in comments**: Let mdoc render output automatically, don't add comments like `// None` or `// "hello"`. Use bare `mdoc` to show all vals; only use `mdoc:silent` when output is verbose boilerplate.
+- **Values that change every run (generated keys, random ids, timestamps) go in `mdoc:silent`**: a bare `mdoc` block prints every `val` binding (`// keys: KeyPair = ...`), so key bytes or a fresh token would land in the page and change on each build. Define them in `mdoc:silent`, then print only the stable results (verification outcomes, formats) with `println` in a following `mdoc` block. Pin clocks with an explicit "now" parameter where the API offers one.
 
 **Bad vs. Good:**
 - ❌ `val x = 42 // 42`  
   ✅ `val x = 42` (mdoc renders the output)
+
+- **mdoc's value printer ignores a custom `toString`.** mdoc renders a bare expression with pprint,
+  which walks case-class/product structure: a `Schema` prints as `Schema(Record(fields = Vector(Term(...`
+  instead of its readable `toString`, and a `String` holding JSON prints with escaped quotes
+  (`"{\"title\":...}"`). When the reader should see the type's own rendering (pretty-printers, JSON
+  text, error messages, multi-line output), wrap it in `println(...)` — mdoc shows stdout as plain
+  `// ...` lines. Keep bare expressions for values whose structural form is the point (e.g. `Right(Book(...))`).
+  The same applies to a `val` holding an opaque object (a derived codec, a deriver): an `mdoc` block
+  prints `codec: JsonCodec[Book] = ...JsonCodecDeriver$$anon$4@4b7f5201`. Define such values in an
+  `mdoc:silent` block and use them in the next `mdoc` block.
+- **mdoc captures Scala's `Console.out`, not `System.out` or `System.err`.** `println` output appears
+  in the page, but a library that writes with `System.out.println` or to `System.err` (a logger's default
+  console, a `StdoutWriter`/`StderrWriter`) prints to the sbt terminal and the page shows nothing. Check
+  the rendered page, not the sbt log. To render such output, add an `mdoc:invisible` block at the top
+  that stashes the real streams (e.g. in `System.getProperties`, which survives `:reset`) and replaces
+  both with a `PrintStream` whose `OutputStream` forwards each line to `Console.out` (resolved at write
+  time, so it lands in the current block). The same stream can mask per-run values (timestamps, ids:
+  number each distinct id so equal ids stay visibly equal). Restore both streams in an `mdoc:invisible`
+  block at the end, or later pages in the same mdoc JVM are captured too. Worked example: zio-blocks
+  `docs/guides/instrument-a-program-with-logs-traces-and-metrics.md`.
+
+- **Literal `\uXXXX` escapes in prose get decoded by the Write/Edit tools.** Tool arguments are JSON, so a
+  page sentence meant to show `\u003cscript\u003e` (e.g. JSON that escapes `<`) lands on disk as `<script>`.
+  Write such text with a byte-safe edit (e.g. Python building the backslash from `chr(92)`), then confirm with
+  `grep -n 'u003c' <file>`. Subagent reports and reviewer findings are decoded the same way in transit, so check the
+  raw bytes before accepting or rejecting a finding about such text.
+
+- **`mdoc:fail` on Scala 3 ignores earlier `:reset`s.** The fail block is compiled together with the
+  page's earlier code, so a page that redefines the same names across `:reset` sections (e.g. a
+  how-to guide with one `Book` per recipe) renders bogus `Book is already defined as class Book`
+  errors instead of the intended one — `mdoc:reset:fail` doesn't help. Use `mdoc:fail` only on pages
+  whose names are unique across all sections; otherwise describe the compile error in prose (quoting
+  the message from source or a test that pins it). Always read the rendered `// error:` lines.
+
+- **`mdoc:fail` / `mdoc:warn` also inline earlier `compile-only` blocks.** Their instrumented program
+  is every earlier evaluated block of the page *plus* the earlier `compile-only` blocks, pasted in
+  unwrapped. A broken `class Book` followed by a `compile-only` fix that defines `case class Book` in
+  the same section compiles fine on its own, but every later `mdoc:warn` then fails with only
+  `Expected compile warnings but program failed to compile` (no reason given), and later `mdoc:fail`
+  blocks may fail for the clash instead of their intended error. Seen on Scala 3.9 (zio-blocks
+  fix-scope-and-wire-compile-errors guide, where redefinitions across `:reset` sections *did* work).
+  Fix: start any fix block that redefines a name with `mdoc:silent:reset` instead of `compile-only`.
+  To see the hidden error, rerun with `docs/mdoc --verbose ...` and read the `FailSection("...")`
+  string that contains the failing block.
 
 ## Choosing the Right Modifier
 
@@ -263,6 +333,8 @@ ScalaEmitter.emit(file, EmitterConfig())
 - **Test locally with `sbt docs`** before committing mdoc blocks
 - **Group related setup blocks** — define all prerequisites in one `silent` block if possible
 - **Use `:reset` at the right scope** — once per independent example in multi-example documents; prefer `:nest` for minor redefinitions *within* a single example
+- **Objects are nested in `repl.MdocSession.MdocApp`** — `getClass.getName` of an `object Foo` defined in an mdoc block is `repl.MdocSession$MdocApp$Foo$`. APIs that derive a name from the class (e.g. zio-blocks `StaticFlag`/`DynamicFlag`, whose name is the fully-qualified object name) show that prefix in output; say so once on the page, and point to the companion examples for real package names. Prefer reading the name back (`Foo.name`) after first touch over hard-coding it
+- **Global singletons leak across blocks and reruns** — mdoc evaluates the page in one JVM, and a rerun in the same sbt server may reuse library classes. If the library keeps a global registry (zio-blocks `FlagSource.Registry`, `Flag.registry`), clear it in an `mdoc:invisible` block at the top of the page, or a rerun can throw duplicate-registration errors
 
 ## Mechanical Validation
 
@@ -313,6 +385,8 @@ command to get the real error.
 If mdoc produces more than 3 compilation errors, the blocks are likely not properly isolated. Check for missing `:reset` or `:nest` modifiers, or name collisions between blocks. If the issue persists, strip all mdoc modifiers from the reported lines, confirm the errors are gone, then re-apply the correct modifiers one by one using the decision tree — running `sbt "docs/mdoc --in <path> --out website/<path>"` after each change to verify before continuing.
 
 Common mistakes when writing mdoc blocks? See **`references/troubleshooting.md`** for solutions to.
+
+mdoc wraps every top-level definition in a class, so `@tailrec` on a top-level `def` fails with "TailRec optimisation not applicable, method ... is neither private nor final". Drop the annotation in the page (keep it in the companion example, where the `def` lives in an `object`).
 
 ---
 

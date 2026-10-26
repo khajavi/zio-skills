@@ -112,11 +112,14 @@ Based on your research answers, design the guide's section structure before writ
 3. Prerequisites (dependencies, imports, assumed knowledge)
 4. The Core Model (define the domain types we'll work with)
 5. Step-by-step sections (each building toward the goal)
-   - Each section: brief explanation → code → result/output
-6. Putting It Together (the complete working example)
-7. Running the Examples (how to clone the repo and run companion code)
+   - Each section: brief explanation → code → result/output → runnable block (when `docs-examples` calls for one)
+6. Putting It Together (only for page shape `one-program`)
+7. Running the Examples (a short pointer to the examples folder)
 8. Going Further (optional: variations, advanced techniques, links)
 ```
+
+Record the page shape — `one-program` or `recipes` — in the plan (definitions: `docs-examples`,
+"The Complete Example").
 
 ### Section Design Rules
 
@@ -225,6 +228,13 @@ In this guide, we'll solve this by [brief preview of the library's approach].
   shows it — prefer a concrete scenario description there instead: "Imagine you have 40 case classes
   representing your API schema and you need to keep JSON codecs, database mappings, and OpenAPI specs
   in sync."
+- **Migration guides ("Coming from X") are the exception to `mdoc:compile-only`.** Their "before"
+  code uses a third-party library (circe, cats-effect, ...) that is not on the docs mdoc classpath, and
+  adding it just for a page needs approval. Use a plain ` ```scala ` fence labelled "This is the old
+  code, <library> <version> (not compiled here):", and verify every such block outside mdoc: compile and
+  run it verbatim with `scala-cli` (`//> using dep ...`) against the library's current release, and
+  quote only output you saw. Check the Scala version a release needs (e.g. zio-json 1.1.x is built with
+  Scala 3.9 and fails on 3.3). The same applies to every "You Wrote This" block, not just The Problem.
 - **Never use the library being documented in this block.** A "before" that already uses the library
   being taught is not a before — it has no contrast in it. And an uncompiled block naming a real
   method from the library is the one place a wrong signature could sit in a finished page uncaught.
@@ -278,21 +288,20 @@ Do not [common mistake] — it will [bad consequence].
 
 #### Putting It Together
 
-Near the end, show the complete working example that combines everything from the guide. **This is
-not an inline code block.** It is an EMPTY block fenced `` scala mdoc:embed:<path-to-CompleteExample.scala> ``
-(or the project's `SourceFile.print` equivalent — see `docs-examples`) pointing at the companion
-`CompleteExample.scala` that Step 4 builds. Never soften this to "may include an embedded example" or
-write the code inline instead: the embedded file is what the examples build actually compiles, so
-inlining ships code no build has verified as standalone — and Step 4 then has nothing to build, since
-nothing in the page names a file for it to create.
+Only for page shape `one-program`; a `recipes` guide has no such section. One or two sentences on
+what the program does and on every way it differs from the sections, then an EMPTY block fenced
+`` scala mdoc:embed:<path-to-CompleteExample.scala> `` (or the project's `SourceFile.print`
+equivalent — see `docs-examples`).
+
+#### Runnable Blocks in Capability Sections
+
+A capability section gets a collapsible runnable block only when `docs-examples` "Embedding in the
+Page" calls for one — never for a file that only wraps the section's snippet. The block ends its
+section; never collect blocks in a separate section.
 
 #### Running the Examples
 
-Follow the **"Running the Examples" section template** from the `docs-examples` skill. It provides the exact Markdown pattern to use in your guide, substituting the correct `<packagename>` and example object names.
-
-Two details specific to this guide's needs:
-- Clone and `cd` in one path straight into the examples module directory — `cd <repo>/<examples-module>`, not a separate `cd <repo>` followed by a separate `cd <examples-module>`.
-- Embed each step's file, in order, the same way "Putting It Together" does: a collapsible `<details><summary>` wrapping `` scala mdoc:embed:<path>:show-line-numbers ``, a short sentence on how to run it, and its `sbt "<examples-module>/runMain ..."` command.
+The short pointer from `docs-examples` "Embedding in the Page" — no re-embedded code.
 
 #### Going Further (Optional)
 
@@ -324,14 +333,12 @@ See the **`docs-mdoc-conventions`** skill for admonition syntax and usage guidel
 
 ## Step 4: Create Companion Examples
 
-**Every how-to guide has them — this step is never optional.** "Putting It Together" and each step in
-"Running the Examples" are `mdoc:embed` blocks (Step 3), not inline code, so those embeds have nothing
-to resolve to until this step runs. If you find yourself skipping this step because the guide "doesn't
-need it," that means Step 3 was written wrong — go back and fix the page to embed, then build the
-files here.
+Every runnable block and "Putting It Together" embed written in Step 3 names a file this step builds.
+A guide with no runnable code at all (e.g. an install-only guide) skips this step and its "Running the
+Examples" section.
 
-Use the **`docs-companion-examples`** skill to commission and verify companion examples — it delegates
-the build (directory structure, file templates, compilation, lint) and checks what came back.
+Use the **`docs-companion-examples`** skill to commission and verify companion examples, passing the
+page shape from Step 2.
 
 ---
 
@@ -420,7 +427,7 @@ Task(
   description: "Review <guide-id> how-to guide",
   subagent_type: "documentation:docs-reviewer",
   prompt: "Full-page review (not a fact-check): evaluate docs/guides/<guide-id>.md against this
-           checklist: <CHECKLIST.md's content>
+           checklist: <CHECKLIST.md's content, with the docs-examples "Checklist" items pasted in place of its pointer>
            For every failing item, give the exact corrected statement to apply."
 )
 ```

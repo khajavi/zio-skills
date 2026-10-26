@@ -116,14 +116,15 @@ Based on your research answers, design the tutorial's section structure before w
    - Explanation of the concept (1-3 sentences)
    - Minimal working code block (annotated line-by-line)
    - Output or result showing it worked
+   - Runnable block (when `docs-examples` calls for one)
    - No branching, no "alternatively"
 
-4. Putting It Together
-   - The complete, runnable example combining all concepts
-   - mdoc:compile-only block
+4. Putting It Together (only for page shape `one-program`)
+   - What the program does and how it differs from the sections
+   - Embed of CompleteExample.scala
 
 5. Running the Examples
-   - Git clone + sbt runMain per step (same format as how-to guides)
+   - A short pointer to the examples folder
 
 6. What You've Learned
    - Bullet-point recap of each learning objective
@@ -133,13 +134,16 @@ Based on your research answers, design the tutorial's section structure before w
    - Links to reference pages (for API depth)
 ```
 
+Record the page shape — `one-program` (the usual case for a tutorial) or `recipes` — in the plan
+(definitions: `docs-examples`, "The Complete Example").
+
 ### Section Design Rules
 
 - **Linear progression**: No branching. Never say "if you need X, do Y instead". Pick one path.
 - **One concept per section**: Each section introduces exactly one new idea or builds incrementally on previous sections.
 - **Concept before code**: Always explain what the code will do and why before showing it.
 - **Every section has code**: No pure-prose sections. Every concept is demonstrated with code.
-- **Line-by-line annotation**: Every code block is followed by a bullet-point breakdown explaining each line or block of lines.
+- **Line-by-line annotation**: Every code block is followed by a bullet-point breakdown explaining each line or block of lines. When a block has only one or two meaningful lines, annotate it in one prose sentence instead — `docs-writing-style` rule 21 forbids one- or two-item bullet lists, and reviewers flag both directions. When several sections repeat the same pattern (e.g. one format per section), keep the bullets short and parallel rather than dropping them.
 - **Show intermediate output**: After meaningful steps, show or print results so the learner can verify they're on track.
 - **Limit scope aggressively**: A tutorial about "understanding Scope" should not become "everything you can do with Scope". Stay on the learning objective.
 
@@ -299,23 +303,20 @@ The code above:
 
 #### Putting It Together
 
-Near the end, show the complete working example that combines everything from the tutorial. **This is
-not an inline code block.** It is an EMPTY block fenced `` scala mdoc:embed:<path-to-CompleteExample.scala> ``
-(or the project's `SourceFile.print` equivalent — see `docs-examples`) pointing at the companion
-`CompleteExample.scala` that Step 4 builds. Never soften this to "may include an embedded example" or
-write the code inline instead: the embedded file is what the examples build actually compiles, so
-inlining ships code no build has verified as standalone — and it also means Step 4 has nothing to
-build, since nothing in the page names a file for it to create.
+Only for page shape `one-program`. A brief explanation — "This example combines all the concepts
+we've learned — [quick summary]" — naming every way it differs from the sections, then an EMPTY block
+fenced `` scala mdoc:embed:<path-to-CompleteExample.scala> `` (or the project's `SourceFile.print`
+equivalent — see `docs-examples`).
 
-Add a brief explanation: "This example combines all the concepts we've learned — [quick summary]."
+#### Runnable Blocks in Concept Sections
+
+A concept section gets a collapsible runnable block only when `docs-examples` "Embedding in the
+Page" calls for one — never for a file that only wraps the section's snippet. The block ends its
+section; never collect blocks in a separate section.
 
 #### Running the Examples
 
-Follow the **"Running the Examples" section template** from the `docs-examples` skill. It provides the exact Markdown pattern to use in your tutorial, substituting the correct `<packagename>` and example object names.
-
-Two tutorial-specific details:
-- Clone and `cd` in one path straight into the examples module directory — `cd <repo>/<examples-module>`, not a separate `cd <repo>` followed by a separate `cd <examples-module>`.
-- Embed each concept's file, in order, the same way "Putting It Together" does: a collapsible `<details><summary>` wrapping `` scala mdoc:embed:<path>:show-line-numbers ``, a short sentence on how to run it, and its `sbt "<examples-module>/runMain ..."` command.
+The short pointer from `docs-examples` "Embedding in the Page" — no re-embedded code.
 
 #### What You've Learned
 
@@ -372,15 +373,20 @@ See the **`docs-mdoc-conventions`** skill for admonition syntax and usage guidel
 
 ## Step 4: Create Companion Examples
 
-**Every tutorial has them — this step is never optional.** "Putting It Together" and each concept in
-"Running the Examples" are `mdoc:embed` blocks (Step 3), not inline code, so those embeds have nothing
-to resolve to until this step runs. If you find yourself skipping this step because the page "doesn't
-need it," that means Step 3 was written wrong — go back and fix the page to embed, then build the
-files here. Skipping this because nothing appears to embed is how the whole examples phase silently
-stops running.
+Every runnable block and "Putting It Together" embed written in Step 3 names a file this step builds.
+A tutorial always has runnable code, so this step always runs.
 
-Use the **`docs-companion-examples`** skill to commission and verify companion examples — it delegates
-the build (directory structure, file templates, compilation, lint) and checks what came back.
+Use the **`docs-companion-examples`** skill to commission and verify companion examples, passing the
+page shape from Step 2.
+
+**Browser-side behaviour needs a browser check.** When a tutorial's claims happen in the browser
+(htmx, Datastar, any JS library the page loads), mdoc and `sbt run` only prove the server half. Pin
+the JS library to an exact CDN version, read its real dist file for the behaviour you describe, and
+run the server example against headless Chromium (Playwright: type, select, reload, Back; log the
+request URLs and headers). Seen in zio-blocks T-10: this caught that htmx 2 sends `HX-Request: true`
+on a history-restore cache miss, so "fragment whenever HX-Request" breaks the Back button. Server
+examples that keep running for a browser can be verified with `timeout N java -cp <classpath from
+sbt "export Runtime / fullClasspath"> <main> <port>` plus `curl`, without killing sbt.
 
 ---
 
@@ -450,6 +456,9 @@ Task(
   subagent_type: "documentation:docs-integrator",
   prompt: "Page: docs/guides/<tutorial-id>.md
            Category: Guides
+           Also add the tutorial to every guide list in docs/index.md (CHECKLIST.md requires it;
+           in zio-blocks there are two: the module section and the full guides list), and a
+           forward link from the prerequisite tutorial's 'Where to Go Next'.
            Cross-reference direction: add 'See also' links from related reference pages that already
            exist (e.g. if this tutorial teaches Scope, from docs/reference/scope.md) — check first, and
            name which do. Never ask for a reference page to be created to satisfy a link, and never
@@ -473,7 +482,7 @@ Task(
   description: "Review <tutorial-id> tutorial",
   subagent_type: "documentation:docs-reviewer",
   prompt: "Full-page review (not a fact-check): evaluate docs/guides/<tutorial-id>.md against this
-           checklist: <CHECKLIST.md's content>
+           checklist: <CHECKLIST.md's content, with the docs-examples "Checklist" items pasted in place of its pointer>
            For every failing item, give the exact corrected statement to apply."
 )
 ```
