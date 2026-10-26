@@ -30,5 +30,6 @@ shared code, the complete example, verification and formatting. Follow it; this 
 - Per file: the page section it belongs to, its object name, and its run command.
 - Sections you gave no file, with the skip reason.
 - Every place where a run's output or behaviour differs from the page's quoted output or prose.
-- Anything you added beyond page code (setup carried from earlier sections, a real source instead of a
-  page stand-in), so the author can name it on the page.
+- Per file, anything you added beyond page code (setup carried from earlier sections, a real source
+  instead of a page stand-in), or "wrapper only". The author shows a runnable block, naming the
+  addition, only for files with additions.

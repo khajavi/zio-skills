@@ -112,7 +112,7 @@ Based on your research answers, design the guide's section structure before writ
 3. Prerequisites (dependencies, imports, assumed knowledge)
 4. The Core Model (define the domain types we'll work with)
 5. Step-by-step sections (each building toward the goal)
-   - Each section: brief explanation → code → result/output → runnable block (when it has a file)
+   - Each section: brief explanation → code → result/output → runnable block (when `docs-examples` calls for one)
 6. Putting It Together (only for page shape `one-program`)
 7. Running the Examples (a short pointer to the examples folder)
 8. Going Further (optional: variations, advanced techniques, links)
@@ -295,8 +295,9 @@ equivalent — see `docs-examples`).
 
 #### Runnable Blocks in Capability Sections
 
-End each capability section that has a companion file with its collapsible runnable block, as
-`docs-examples` "Embedding in the Page" shows. Never collect them in a separate section.
+A capability section gets a collapsible runnable block only when `docs-examples` "Embedding in the
+Page" calls for one — never for a file that only wraps the section's snippet. The block ends its
+section; never collect blocks in a separate section.
 
 #### Running the Examples
 

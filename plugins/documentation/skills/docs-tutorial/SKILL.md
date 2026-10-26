@@ -116,7 +116,7 @@ Based on your research answers, design the tutorial's section structure before w
    - Explanation of the concept (1-3 sentences)
    - Minimal working code block (annotated line-by-line)
    - Output or result showing it worked
-   - Runnable block (when the section has a file)
+   - Runnable block (when `docs-examples` calls for one)
    - No branching, no "alternatively"
 
 4. Putting It Together (only for page shape `one-program`)
@@ -310,8 +310,9 @@ equivalent — see `docs-examples`).
 
 #### Runnable Blocks in Concept Sections
 
-End each concept section that has a companion file with its collapsible runnable block, as
-`docs-examples` "Embedding in the Page" shows. Never collect them in a separate section.
+A concept section gets a collapsible runnable block only when `docs-examples` "Embedding in the
+Page" calls for one — never for a file that only wraps the section's snippet. The block ends its
+section; never collect blocks in a separate section.
 
 #### Running the Examples
 

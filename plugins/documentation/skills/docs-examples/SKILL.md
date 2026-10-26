@@ -63,6 +63,9 @@ inside it.
 - is an `mdoc:fail` compile-error demo,
 - only repeats code an earlier section's file already runs.
 
+Getting a file does not mean being embedded: the page shows a file only when "Embedding in the Page"
+calls for it.
+
 **Reference pages:** `BasicUsage.scala`, `AdvancedPatterns.scala`, … or descriptive names
 (`CompleteHttpRequest.scala`); for a module reference, prefer files that exercise several types together.
 
@@ -173,6 +176,7 @@ indentation); never mirror a formatter's reflow into the page.
 - Replace each file's old Scaladoc `Run with:` block with the `//` run comments.
 - Update every embed that names a renamed file (`grep -rn "mdoc:embed:.*<OldName>" docs/`).
 - Replace the old "Running the Examples" section (clone steps, re-embeds) with the short pointer.
+- Drop each runnable block whose file only wraps the section's snippet (see "Embedding in the Page").
 
 ## Embedding in the Page
 
@@ -189,7 +193,15 @@ before the page's own mdoc verification pass, never after.
 
 ### Guides and tutorials
 
-At the end of each section that has a file (never in a separate section at the end of the page):
+**A runnable block only when the file shows the reader something the section doesn't.** A file that is
+the section's one snippet plus the allowed additions (package, imports, `main`, `println`) gets no block —
+the reader already saw that code; the file still exists and the "Running the Examples" pointer leads to it.
+
+- ✅ setup carried from earlier sections ✅ several of the section's blocks joined into one program
+  ✅ shared code from another file ✅ a real source instead of the page's stand-in ✅ a keep-alive or teardown
+- ❌ a one-snippet section whose file only wraps that snippet in `main` and prints its result
+
+The block goes at the end of its section (never in a separate section at the end of the page):
 
 ````markdown
 <details>
@@ -201,9 +213,8 @@ At the end of each section that has a file (never in a separate section at the e
 </details>
 ````
 
-Default summary: `Runnable version: <code>File.scala</code>`. When the file adds more than a `main`
-wrapper, say what (✅ "Runnable version, with setup from sections 1–2" ✅ "…, against a real
-`EnvSource`" ✅ "…, the Scala 3 tab"). A shared file (`Model.scala`) is embedded once, in the first section
+The `<summary>` names what the file adds (✅ "Runnable version, with setup from sections 1–2" ✅ "…,
+against a real `EnvSource`" ✅ "…, the Scala 3 tab" ❌ "Runnable version" alone). A shared file (`Model.scala`) is embedded once, in the first section
 that uses it.
 
 "Running the Examples" is a short pointer, nothing more:
@@ -256,5 +267,5 @@ How-to guide and tutorial checklists point here; a reviewer checks each item.
 - [ ] Each file prints labelled output, and every output and prose claim on the page matches a real run
 - [ ] `scala-cli run` passes for each file; the examples build compiles (all of it, if shared) and its tests pass
 - [ ] `CompleteExample.scala` exists only for a `one-program` page, uses only what the sections show, and its differences and output are on the page
-- [ ] Each runnable block sits at the end of its section, with a `<summary>` saying what the file adds
+- [ ] A section has a runnable block only when its file adds something the section doesn't show; the block sits at the end of the section, with a `<summary>` naming that addition
 - [ ] "Running the Examples" is the short pointer (guides, tutorials) — no re-embedded code

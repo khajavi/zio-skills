@@ -38,7 +38,8 @@ The delegation is done when:
 - the builder ran every file and reported no output that contradicts the page — fix the page or the
   file for each difference it lists,
 - everything the builder added beyond page code is named on the page (e.g. in the section's
-  `<summary>` or the "Putting It Together" prose).
+  `<summary>` or the "Putting It Together" prose), and no section embeds a file the builder reported
+  as "wrapper only".
 
 If mdoc later reports an unresolved embed, the file is missing or at the wrong path — fix the path or
 re-commission it rather than deleting the embed to make the page compile.
